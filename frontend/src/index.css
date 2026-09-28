@@ -1,0 +1,75 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/plus-jakarta-sans';
+
+@theme {
+  --font-sans: 'Plus Jakarta Sans Variable', system-ui, sans-serif;
+
+  /* Màu thương hiệu (lấy từ bản UI Liquid Glass) */
+  --color-brand: #f26a1b;
+  --color-brand-dark: #d9570d;
+  --color-brand-light: #ff8f45;
+  --color-brand-soft: #fff4ec;
+
+  /* Toàn bộ shadow dưới đây KHÔNG dùng inset — tránh viền sáng/tối bên trong tạo cảm giác nút/thẻ "nổi khối 3D" */
+  --shadow-glass: 0 8px 24px rgba(120, 60, 20, 0.08);
+  --shadow-chip: 0 4px 14px rgba(120, 60, 20, 0.06);
+  --shadow-brand: 0 4px 12px rgba(242, 106, 27, 0.22);
+  --shadow-brand-chip: 0 3px 8px rgba(242, 106, 27, 0.18);
+  --shadow-card-hover: 0 14px 32px rgba(120, 60, 20, 0.14);
+}
+
+/* Kính mờ: khung lớn (header, card, dropdown...). Đổi nền bằng [--glass-bg:...] */
+@utility glass {
+  background: var(--glass-bg, rgba(255, 255, 255, 0.42));
+  backdrop-filter: blur(22px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow: var(--shadow-glass);
+}
+
+/* Kính mờ nhỏ: chip danh mục, dropdown filter, phân trang */
+@utility glass-chip {
+  background: var(--chip-bg, rgba(255, 255, 255, 0.42));
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--chip-border, rgba(255, 255, 255, 0.75));
+  box-shadow: var(--shadow-chip);
+}
+
+/* Nút/chip đang được chọn: cam đặc (flat) — không dùng gradient sáng/tối để tránh cảm giác nút nổi khối 3D */
+@utility bg-brand-gradient {
+  background: var(--color-brand);
+}
+
+@layer base {
+  body {
+    @apply bg-white font-sans text-stone-900 antialiased;
+  }
+  button {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: default;
+  }
+}
+
+/* Lưới khóa học: 4 cột (dạng lưới) hoặc 2 cột (dạng danh sách) */
+.course-grid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(max(270px, calc((100% - 60px) / 4)), 1fr));
+}
+.course-grid[data-view='list'] {
+  grid-template-columns: repeat(auto-fill, minmax(max(480px, calc((100% - 20px) / 2)), 1fr));
+}
+@media (max-width: 560px) {
+  .course-grid,
+  .course-grid[data-view='list'] {
+    grid-template-columns: 1fr;
+  }
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
