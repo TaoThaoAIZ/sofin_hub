@@ -1,10 +1,38 @@
 import { Router } from 'express';
 import { authRouter } from './modules/auth/auth.routes.js';
+import { mailRouter } from './modules/mail/mail.routes.js';
+import { supportRouter } from './modules/support/support.routes.js';
+import { usersRouter } from './modules/users/users.routes.js';
+import { classroomRouter } from './modules/classroom/classroom.routes.js';
+import { communitiesRouter } from './modules/communities/communities.routes.js';
+import { communityRouter } from './modules/community/community.routes.js';
 import { coursesRouter } from './modules/courses/courses.routes.js';
+import { eventsRouter } from './modules/events/events.routes.js';
 import { metaRouter } from './modules/meta/meta.routes.js';
+import { notificationsRouter } from './modules/notifications/notifications.routes.js';
+import { paymentsRouter } from './modules/payments/payments.routes.js';
+import { searchRouter } from './modules/search/search.routes.js';
+import { postsRouter } from './modules/posts/posts.routes.js';
+import { messagesRouter } from './modules/messages/messages.routes.js';
+import { uploadsRouter } from './modules/uploads/uploads.routes.js';
+import { moderationRouter } from './modules/moderation/moderation.routes.js';
 
 export const apiRouter = Router();
 
 apiRouter.use('/auth', authRouter);
+apiRouter.use('/', mailRouter);
+apiRouter.use('/', usersRouter);
+apiRouter.use('/', supportRouter);
 apiRouter.use('/courses', coursesRouter);
 apiRouter.use('/', metaRouter);
+apiRouter.use('/', postsRouter);
+apiRouter.use('/', moderationRouter);
+apiRouter.use('/', classroomRouter);
+apiRouter.use('/', eventsRouter);
+apiRouter.use('/', communityRouter);
+apiRouter.use('/', paymentsRouter);
+apiRouter.use('/', notificationsRouter);
+apiRouter.use('/', searchRouter);
+apiRouter.use('/', uploadsRouter);
+apiRouter.use('/', messagesRouter);
+apiRouter.use('/', communitiesRouter);

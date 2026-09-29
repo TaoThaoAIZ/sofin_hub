@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
+import { ApiError } from '../../lib/api';
+import { subscribeNewsletter } from '../../features/support/api';
 import { Button } from '../ui/Button';
 import { PathIcon } from '../ui/icons';
 
@@ -12,7 +14,7 @@ const COLUMNS: { title: string; links: { label: string; to?: string }[] }[] = [
     title: 'Hỗ trợ',
     links: [
       { label: 'Trung tâm trợ giúp' },
-      { label: 'Liên hệ' },
+      { label: 'Liên hệ', to: '/contact' },
       { label: 'Câu hỏi thường gặp', to: '/faq' },
       { label: 'Về chúng tôi' },
     ],
@@ -37,12 +39,30 @@ const LEGAL = [
 
 export function Footer() {
   const [subscribed, setSubscribed] = useState(false);
+  const [email, setEmail] = useState('');
+  const [sending, setSending] = useState(false);
+  const [subError, setSubError] = useState<string | null>(null);
 
-  // Chưa có API bản tin: chỉ hiện lời cảm ơn (xem PLAN.md)
-  const subscribe = (e: FormEvent<HTMLFormElement>) => {
+  const subscribe = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setSubscribed(true);
-    e.currentTarget.reset();
+    setSending(true);
+    setSubError(null);
+    setSubscribed(false);
+    try {
+      await subscribeNewsletter(email.trim());
+      setSubscribed(true);
+      setEmail('');
+    } catch (err) {
+      setSubError(
+        err instanceof ApiError && err.status === 429
+          ? 'Bạn thao tác quá nhanh, vui lòng thử lại sau.'
+          : err instanceof ApiError
+            ? err.message
+            : 'Không đăng ký được, vui lòng thử lại.',
+      );
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -102,12 +122,19 @@ export function Footer() {
                 required
                 placeholder="Email của bạn"
                 aria-label="Email của bạn"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className="min-w-0 flex-1 border-0 bg-transparent px-2.5 text-sm outline-0 placeholder:text-stone-400"
               />
-              <Button type="submit" variant="brand-chip" className="h-10 rounded-xl px-4 text-sm font-semibold whitespace-nowrap">
-                Đăng ký
+              <Button type="submit" variant="brand-chip" disabled={sending} className="h-10 rounded-xl px-4 text-sm font-semibold whitespace-nowrap">
+                {sending ? 'Đang gửi…' : 'Đăng ký'}
               </Button>
             </form>
+            {subError && (
+              <div role="alert" className="mt-2.5 text-[13px] text-red-600">
+                {subError}
+              </div>
+            )}
             {subscribed && (
               <div role="status" className="mt-2.5 text-[13px] text-[#15803d]">
                 Cảm ơn bạn đã đăng ký!

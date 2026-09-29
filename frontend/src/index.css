@@ -73,3 +73,29 @@
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* Icon font dùng cho khu vực Cộng đồng (đúng font "Material Symbols Rounded" lấy từ bản thiết kế
+   gốc SofinHub Community.html) — KHÔNG dùng ở đâu khác trong app, các icon SVG hiện có ở
+   components/ui/icons.tsx giữ nguyên không đổi. */
+@font-face {
+  font-family: 'Material Symbols Rounded';
+  font-style: normal;
+  font-weight: 100 700;
+  font-display: swap;
+  src: url('/fonts/material-symbols-rounded.woff2') format('woff2');
+}
+.material-symbols-rounded {
+  font-family: 'Material Symbols Rounded';
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}

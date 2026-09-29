@@ -109,4 +109,10 @@ export interface CourseDetail extends Course {
   facts: CourseFact[];
   stats: { members: number; online: number; admins: number };
   viewerEnrolled?: boolean;
+  /** Vai trò hiệu lực của người xem trong cộng đồng (null nếu chưa tham gia). */
+  viewerRole?: 'member' | 'mod' | 'admin' | 'owner' | 'platform_admin' | null;
+  /** Cộng đồng đang bị Platform Admin khóa (BE trả kèm khi khóa). */
+  locked?: boolean;
+  /** Có ở cộng đồng do người dùng tạo; cộng đồng seed không có. */
+  ownerId?: string;
 }

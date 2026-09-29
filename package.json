@@ -1,11 +1,17 @@
 {
-  "name": "skool-clone",
+  "name": "sofin_hub",
   "private": true,
   "scripts": {
     "install:all": "npm --prefix frontend install && npm --prefix backend install",
     "dev": "concurrently -n api,web -c blue,magenta \"npm --prefix backend run dev\" \"npm --prefix frontend run dev\"",
     "build": "npm run install:all && npm --prefix backend run build && npm --prefix frontend run build",
-    "typecheck": "npm --prefix backend run typecheck && npm --prefix frontend run typecheck"
+    "typecheck": "npm --prefix backend run typecheck && npm --prefix frontend run typecheck",
+    "db:up": "npm --prefix backend run db:up",
+    "db:down": "npm --prefix backend run db:down",
+    "db:migrate": "npm --prefix backend run db:migrate",
+    "db:seed": "npm --prefix backend run db:seed",
+    "db:reset": "npm --prefix backend run db:reset",
+    "db:studio": "npm --prefix backend run db:studio"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"

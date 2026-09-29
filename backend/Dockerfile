@@ -2,17 +2,18 @@
 FROM node:22-alpine AS build
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci
-COPY tsconfig*.json ./
+RUN npm ci --ignore-scripts
+COPY tsconfig*.json prisma.config.ts ./
+COPY prisma ./prisma
 COPY src ./src
-RUN npm run build
+RUN npx prisma generate && npm run build
 
 # ---- runtime ----
 FROM node:22-alpine
 ENV NODE_ENV=production
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 COPY --from=build /app/dist ./dist
 USER node
 EXPOSE 4000

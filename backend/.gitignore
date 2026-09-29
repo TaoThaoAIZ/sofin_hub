@@ -2,3 +2,5 @@ node_modules
 dist
 .env
 /data/*.json
+# Prisma client sinh bởi `npm run db:generate` (tự chạy ở postinstall)
+/src/generated

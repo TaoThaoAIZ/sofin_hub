@@ -105,9 +105,9 @@ export function LoginPage() {
             error={fieldErrors.password}
           />
 
-          <a href="#" className="self-end text-[15px] font-medium">
+          <Link to="/forgot-password" className="self-end text-[15px] font-medium">
             Quên mật khẩu?
-          </a>
+          </Link>
 
           {error && (
             <div role="alert" className="rounded-xl bg-red-50 px-4 py-2.5 text-sm font-medium text-red-600">

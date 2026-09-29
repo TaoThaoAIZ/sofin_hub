@@ -1,0 +1,5 @@
+node_modules/
+test-results/
+playwright-results.json
+playwright-stderr.log
+parsed_results.json

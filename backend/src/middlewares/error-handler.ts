@@ -20,6 +20,17 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     return;
   }
 
+  // Lỗi đọc body của express.json: JSON sai cú pháp -> 400, quá 1MB -> 413 (trước đây rơi xuống 500).
+  const bodyErr = err as { type?: string; status?: number };
+  if (bodyErr?.type === 'entity.parse.failed') {
+    res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'Nội dung gửi lên không phải JSON hợp lệ' } });
+    return;
+  }
+  if (bodyErr?.type === 'entity.too.large') {
+    res.status(413).json({ error: { code: 'PAYLOAD_TOO_LARGE', message: 'Nội dung gửi lên quá lớn' } });
+    return;
+  }
+
   console.error(err);
   res.status(500).json({
     error: {

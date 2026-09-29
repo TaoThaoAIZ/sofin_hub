@@ -21,8 +21,17 @@ export class HttpError extends Error {
     return new HttpError(401, 'UNAUTHORIZED', message);
   }
 
+  static forbidden(message = 'Bạn không có quyền thực hiện thao tác này') {
+    return new HttpError(403, 'FORBIDDEN', message);
+  }
+
   static conflict(message: string) {
     return new HttpError(409, 'CONFLICT', message);
+  }
+
+  /** Lỗi với mã nghiệp vụ riêng (vd. PAYMENT_REQUIRED, COMMUNITY_LOCKED) để FE phân biệt. */
+  static coded(status: number, code: string, message: string, details?: unknown) {
+    return new HttpError(status, code, message, details);
   }
 
   static tooMany(message = 'Bạn thao tác quá nhanh, vui lòng thử lại sau') {

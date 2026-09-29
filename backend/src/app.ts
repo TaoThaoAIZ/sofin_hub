@@ -5,6 +5,7 @@ import express from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import { env, isProd } from './config/env.js';
+import { prisma } from './db/prisma.js';
 import { errorHandler, notFoundHandler } from './middlewares/error-handler.js';
 import { apiRouter } from './routes.js';
 
@@ -18,13 +19,27 @@ export function createApp() {
   app.use(helmet());
   app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
   app.use(compression());
-  app.use(express.json({ limit: '1mb' }));
+  // `verify` giữ nguyên bytes gốc (rawBody) CHỈ cho webhook thanh toán: chữ ký HMAC phải tính trên raw body, không phải JSON đã parse.
+  app.use(
+    express.json({
+      limit: '1mb',
+      verify: (req, _res, buf) => {
+        const r = req as typeof req & { originalUrl?: string; rawBody?: Buffer };
+        if (r.originalUrl?.startsWith('/api/payments/webhook')) r.rawBody = Buffer.from(buf);
+      },
+    }),
+  );
   app.use(cookieParser());
   if (env.NODE_ENV !== 'test') app.use(morgan(isProd ? 'combined' : 'dev'));
 
   // Health check cho ALB / ECS / Docker HEALTHCHECK
-  app.get('/health', (_req, res) => {
-    res.json({ status: 'ok', uptime: process.uptime() });
+  app.get('/health', async (_req, res) => {
+    try {
+      await prisma.$queryRaw`SELECT 1`; // DB chết thì báo 503 để ALB/ECS loại instance
+      res.json({ status: 'ok', uptime: process.uptime() });
+    } catch {
+      res.status(503).json({ status: 'db_unavailable' });
+    }
   });
 
   app.use('/api', apiRouter);

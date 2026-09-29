@@ -1,9 +1,9 @@
-# Skool Clone
+# SofinHub
 
 Nền tảng cộng đồng & khóa học (lấy cảm hứng từ skool.com). Hiện đã có **Trang chủ (Liquid Glass)**.
 
 ```
-skool-clone/
+sofin_hub/
 ├─ frontend/   React 19 + Vite + TypeScript + Tailwind CSS v4 + TanStack Query
 └─ backend/    Node.js + Express 5 + TypeScript + Zod (Docker-ready cho AWS)
 ```
@@ -42,7 +42,23 @@ routes.ts, app.ts        gắn router, middleware (helmet, cors, compression, mo
 index.ts                 khởi động + graceful shutdown (SIGTERM)
 ```
 
-API hiện có:
+### Chạy backend với database thật (Postgres)
+
+```bash
+# 1) bật Docker Desktop, rồi trong backend/:
+cd backend
+cp .env.example .env            # lần đầu; thêm PLATFORM_ADMIN_EMAILS=admin@sofinhub.test để có tài khoản admin nền tảng
+npm install
+npm run db:up                   # Postgres 16 (docker compose, cổng 5435)
+npm run db:deploy               # áp migration
+npm run db:seed                 # nạp dữ liệu test (idempotent). Mật khẩu chung: Passw0rd!x
+npm run dev                     # API :4000
+# frontend (terminal khác): cd frontend && npm install && npm run dev   # :5173
+```
+
+Tài khoản test (`@sofinhub.test`): admin (Platform Admin), owner, cadmin, mod, member1..3, newbie, banned. Test tự động: `cd backend && npm test` (224 test trên DB thật, mỗi file một schema tạm). Tài liệu: `backend/docs/{API,DATABASE,CONVENTIONS}.md`, `docs/features/*.md`, `SofinHub_HuongDan_TestThuCong.docx` (hướng dẫn test thủ công).
+
+API hiện có (bảng dưới là nhóm đầu tiên; **danh sách đầy đủ ~150 route, phân quyền, biến môi trường và các giới hạn xem `backend/docs/API.md`**, chi tiết từng nhóm ở `backend/docs/api/`). Chạy test: `cd backend && npm test`.
 
 | Method | Path | Mô tả |
 |---|---|---|

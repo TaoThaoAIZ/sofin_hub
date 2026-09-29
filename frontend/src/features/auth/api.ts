@@ -1,5 +1,5 @@
 import { apiPost } from '../../lib/api';
-import type { AuthSession, LoginInput, RegisterInput } from './types';
+import type { AuthSession, AuthUser, LoginInput, RegisterInput } from './types';
 
 export const register = (input: RegisterInput) =>
   apiPost<{ data: AuthSession }>('/auth/register', input).then((r) => r.data);
@@ -29,3 +29,15 @@ export const refresh = (): Promise<AuthSession> => {
 };
 
 export const logout = (accessToken: string) => apiPost<void>('/auth/logout', undefined, { token: accessToken });
+
+// ---- Quên/đặt lại mật khẩu, xác thực email (không cần đăng nhập, trừ send-verification) ----
+export const forgotPassword = (email: string) =>
+  apiPost<{ data: { message: string } }>('/auth/forgot-password', { email }, { skipAuthRetry: true }).then((r) => r.data);
+
+export const resetPassword = (token: string, password: string) =>
+  apiPost<{ data: { message: string } }>('/auth/reset-password', { token, password }, { skipAuthRetry: true }).then((r) => r.data);
+
+export const verifyEmail = (token: string) =>
+  apiPost<{ data: AuthUser }>('/auth/verify-email', { token }, { skipAuthRetry: true }).then((r) => r.data);
+
+export const sendVerification = () => apiPost<{ data: { message: string } }>('/auth/send-verification').then((r) => r.data);

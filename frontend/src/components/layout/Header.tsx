@@ -1,8 +1,11 @@
 import { useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useIsPlatformAdmin } from '../../features/admin/queries';
 import { useAuth } from '../../features/auth/AuthContext';
+import { MessagesButton } from '../../features/messages/components/MessagesButton';
+import { NotificationBell } from '../../features/notifications/components/NotificationBell';
 import { useClickOutside } from '../../lib/useClickOutside';
-import { Button } from '../ui/Button';
+import { ButtonLink } from '../ui/Button';
 import { GlobeIcon, SearchIcon } from '../ui/icons';
 
 // `to` = có route thật đã dựng; thiếu `to` = mục chưa có màn hình riêng (xem PLAN.md các phase sau).
@@ -16,6 +19,7 @@ const NAV_ITEMS: { label: string; to?: string }[] = [
 
 export function Header({ active = 'Khám phá' }: { active?: string }) {
   const { user, status, logout } = useAuth();
+  const { isAdmin } = useIsPlatformAdmin();
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -50,13 +54,15 @@ export function Header({ active = 'Khám phá' }: { active?: string }) {
       </nav>
 
       <div className="ml-auto flex flex-none items-center gap-3 whitespace-nowrap md:ml-0">
-        <button
-          type="button"
-          aria-label="Tìm kiếm"
-          className="glass grid size-10 place-items-center rounded-full"
-        >
+        <Link to="/search" aria-label="Tìm kiếm" className="glass grid size-10 place-items-center rounded-full">
           <SearchIcon />
-        </button>
+        </Link>
+        {status === 'authenticated' && (
+          <div className="hidden items-center gap-3 sm:flex">
+            <MessagesButton variant="header" />
+            <NotificationBell variant="header" />
+          </div>
+        )}
         <div className="hidden items-center gap-1.5 px-2 text-sm font-medium lg:flex">
           <GlobeIcon size={18} />
           VI
@@ -75,8 +81,26 @@ export function Header({ active = 'Khám phá' }: { active?: string }) {
               <span className="hidden max-w-[120px] truncate sm:inline">{user.firstName}</span>
             </button>
             {menuOpen && (
-              <div className="glass absolute top-[calc(100%+8px)] right-0 flex w-48 flex-col gap-1 rounded-2xl p-2 text-sm">
+              <div className="glass absolute top-[calc(100%+8px)] right-0 flex w-56 flex-col gap-1 rounded-2xl p-2 text-sm">
                 <div className="truncate px-3 py-1.5 text-stone-500">{user.email}</div>
+                {[
+                  { label: 'Hồ sơ của tôi', to: `/users/${user.id}` },
+                  { label: 'Cộng đồng của tôi', to: '/me/communities' },
+                  { label: 'Cài đặt tài khoản', to: '/settings' },
+                  { label: 'Thông báo', to: '/notifications' },
+                  { label: 'Tin nhắn', to: '/messages' },
+                  { label: 'Gói & thanh toán', to: '/billing' },
+                  ...(isAdmin ? [{ label: 'Quản trị', to: '/admin' }] : []),
+                ].map((item) => (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    onClick={() => setMenuOpen(false)}
+                    className="rounded-xl px-3 py-2 text-left font-medium text-stone-900 hover:bg-brand/10 hover:text-brand"
+                  >
+                    {item.label}
+                  </Link>
+                ))}
                 <button
                   type="button"
                   onClick={doLogout}
@@ -97,7 +121,9 @@ export function Header({ active = 'Khám phá' }: { active?: string }) {
           </Link>
         )}
 
-        <Button className="h-10 rounded-[14px] px-[18px] text-sm font-semibold">Tạo cộng đồng</Button>
+        <ButtonLink to="/communities/new" className="h-10 rounded-[14px] px-[18px] text-sm font-semibold">
+          Tạo cộng đồng
+        </ButtonLink>
       </div>
     </header>
   );

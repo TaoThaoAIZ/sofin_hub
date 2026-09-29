@@ -1,0 +1,27 @@
+# Postgres local cho dev/test. Chạy: `npm run db:up` (ở gốc hoặc backend/).
+# Cổng mặc định 5435 (tránh đụng các Postgres khác ở 5432-5434). Đổi cổng: đặt POSTGRES_PORT trong .env cạnh file này (và DATABASE_URL trong backend/.env cho khớp).
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: sofinhub-postgres
+    restart: unless-stopped
+    # Chỉ cho dev/test: tắt fsync để TRUNCATE/CREATE SCHEMA nhanh (mất điện có thể hỏng DB, tạo lại bằng db:reset).
+    command: ['postgres', '-c', 'fsync=off', '-c', 'synchronous_commit=off', '-c', 'full_page_writes=off']
+    environment:
+      POSTGRES_USER: sofinhub
+      POSTGRES_PASSWORD: sofinhub
+      POSTGRES_DB: sofinhub
+    ports:
+      - '${POSTGRES_PORT:-5435}:5432'
+    volumes:
+      - sofinhub_pgdata:/var/lib/postgresql/data
+      # Chạy 1 lần khi volume còn trống: tạo thêm DB sofinhub_test cho test tích hợp.
+      - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U sofinhub -d sofinhub']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  sofinhub_pgdata:

@@ -4,6 +4,11 @@ export interface AuthUser {
   firstName: string;
   lastName: string;
   createdAt: string;
+  bio?: string;
+  location?: string;
+  website?: string;
+  avatarUrl?: string;
+  emailVerified: boolean;
 }
 
 export interface AuthSession {

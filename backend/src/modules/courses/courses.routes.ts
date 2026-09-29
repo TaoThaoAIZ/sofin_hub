@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { optionalAuth, requireAuth } from '../../middlewares/auth.js';
 import { enrollmentService } from '../enrollments/enrollments.service.js';
+import { reviewsService } from '../communities/reviews.service.js';
+import { getRole } from '../permissions/policy.js';
 import { listCoursesQuery } from './courses.schema.js';
 import { courseService } from './courses.service.js';
 
@@ -14,7 +16,9 @@ coursesRouter.get('/', async (req, res) => {
 coursesRouter.get('/:id', optionalAuth, async (req, res) => {
   const id = req.params.id as string;
   const viewerEnrolled = req.userId ? await enrollmentService.isEnrolled(req.userId, id) : undefined;
-  res.json({ data: await courseService.getDetailById(id, viewerEnrolled) });
+  const detail = await courseService.getDetailById(id, viewerEnrolled, await reviewsService.forDetail(id));
+  const viewerRole = req.userId ? await getRole(req.userId, id) : null;
+  res.json({ data: { ...detail, viewerRole } });
 });
 
 coursesRouter.post('/:id/enroll', requireAuth, async (req, res) => {

@@ -22,6 +22,8 @@ export interface CourseReview {
   time: string;
   color: string;
   text: string;
+  /** Chỉ có ở đánh giá thật (do thành viên viết). */
+  rating?: number;
 }
 
 export interface CourseFact {
@@ -116,15 +118,31 @@ function buildModules(course: Course): CourseModule[] {
   });
 }
 
-export function buildCourseDetail(course: Course, viewerEnrolled?: boolean): CourseDetail {
+/** Số liệu thật từ DB cho khối stats (nếu bỏ trống thì suy ra từ `students` như cũ). */
+export interface RealStats {
+  online: number;
+  admins: number;
+}
+
+export function buildCourseDetail(
+  course: Course,
+  viewerEnrolled?: boolean,
+  realReviews: CourseReview[] = [],
+  real?: RealStats,
+): CourseDetail {
   const seed = hashSeed(course.id);
-  const online = Math.min(course.students, Math.max(2, Math.round(course.students / 350) + (seed % 5)));
-  const reviews = REVIEW_POOL.slice(0, Math.max(1, Math.min(REVIEW_POOL.length, Math.round(course.ratingCount / 20) + 3)));
+  // Giữ con số online minh họa (hành vi cũ) nhưng không bao giờ thấp hơn số người thật đang hoạt động.
+  const illustrativeOnline = Math.min(course.students, Math.max(2, Math.round(course.students / 350) + (seed % 5)));
+  const online = real ? Math.min(course.students, Math.max(real.online, illustrativeOnline)) : illustrativeOnline;
+  const admins = real ? Math.max(1, real.admins) : 1;
+  const demoReviews = REVIEW_POOL.slice(0, Math.max(1, Math.min(REVIEW_POOL.length, Math.round(course.ratingCount / 20) + 3)));
+  // Đánh giá thật lên đầu, giữ đánh giá minh họa phía sau để trang không trống.
+  const reviews = [...realReviews, ...demoReviews];
 
   const facts: CourseFact[] = [
     { label: 'Thành viên', value: course.students.toLocaleString('vi-VN'), bg: '#ffe7d4', fg: '#f26a1b', icon: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21v-1a6 6 0 0 1 12 0v1M16 3.5a4 4 0 0 1 0 7.5M22 21v-1a6 6 0 0 0-4-5.6' },
     { label: 'Bài học', value: String(course.lessons), bg: '#ede9fe', fg: '#7c3aed', icon: 'M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5zM20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5a1.5 1.5 0 0 0 1.5-1.5z' },
-    { label: 'Quản trị viên', value: '1', bg: '#dcfce7', fg: '#16a34a', icon: 'M4 5h16v11H9l-5 4zM8 10h.01M12 10h.01M16 10h.01' },
+    { label: 'Quản trị viên', value: String(admins), bg: '#dcfce7', fg: '#16a34a', icon: 'M4 5h16v11H9l-5 4zM8 10h.01M12 10h.01M16 10h.01' },
     { label: 'Chi phí tham gia', value: course.priceUsd === 0 ? 'Miễn phí' : `$${course.priceUsd}/tháng`, bg: '#ffe4e6', fg: '#e11d48', icon: 'M3 12V4h8l10 10-8 8zM7.5 7.5h.01' },
     { label: 'Cộng đồng', value: course.visibility === 'private' ? 'Riêng tư' : 'Công khai', bg: '#dbeafe', fg: '#2563eb', icon: 'M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4' },
   ];
@@ -139,7 +157,7 @@ export function buildCourseDetail(course: Course, viewerEnrolled?: boolean): Cou
     faqs: FAQS,
     reviews,
     facts,
-    stats: { members: course.students, online, admins: 1 },
+    stats: { members: course.students, online, admins },
     viewerEnrolled,
   };
 }

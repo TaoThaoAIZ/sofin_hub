@@ -12,6 +12,8 @@ interface AuthContextValue {
   login: (input: LoginInput) => Promise<AuthUser>;
   register: (input: RegisterInput) => Promise<AuthUser>;
   logout: () => Promise<void>;
+  /** Ghi đè thông tin user hiện tại (sau khi sửa hồ sơ / xác thực email). */
+  updateUser: (user: AuthUser) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -95,8 +97,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearSession();
   }, [accessToken, clearSession]);
 
+  const updateUser = useCallback((next: AuthUser) => setUser(next), []);
+
   return (
-    <AuthContext.Provider value={{ user, accessToken, status, login, register, logout }}>
+    <AuthContext.Provider value={{ user, accessToken, status, login, register, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

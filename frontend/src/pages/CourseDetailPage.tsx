@@ -1,15 +1,22 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Footer } from '../components/layout/Footer';
 import { Header } from '../components/layout/Header';
 import { Button, ButtonLink } from '../components/ui/Button';
+import { MaterialIcon } from '../components/ui/MaterialIcon';
 import { PathIcon, StarIcon, UserIcon } from '../components/ui/icons';
 import { SectionTitle } from '../components/ui/SectionTitle';
 import { useAuth } from '../features/auth/AuthContext';
 import { TAG_UI } from '../features/courses/constants';
 import { useCategories, useCourseDetail, useToggleEnrollment } from '../features/courses/queries';
 import type { CourseDetail, CourseFaq, CourseHighlight, CourseModule } from '../features/courses/types';
+import { ApiError } from '../lib/api';
 import { formatCompact } from '../lib/format';
+import { JoinRequestDialog, loadPendingRequestId, savePendingRequestId } from '../features/communities/components/JoinRequestDialog';
+import { errorText } from '../features/communities/components/Modal';
+import { ReviewsSection } from '../features/communities/components/ReviewsSection';
+import { useCancelJoinRequest } from '../features/communities/queries';
+import { isAtLeast } from '../features/communities/types';
 
 type TabKey = 'overview' | 'content' | 'faq';
 const TABS: { key: TabKey | 'reviews'; label: string }[] = [
@@ -35,7 +42,24 @@ export function CourseDetailPage() {
   const { data: course, isPending, error } = useCourseDetail(id);
   const enroll = useToggleEnrollment(id);
   const [tab, setTab] = useState<TabKey>('overview');
+  const [showPaidDialog, setShowPaidDialog] = useState(false);
   const reviewsRef = useRef<HTMLDivElement>(null);
+  // Luồng cộng đồng riêng tư: hộp thoại gửi yêu cầu + trạng thái yêu cầu đang chờ ('unknown' = biết là đang chờ nhưng không còn id để hủy)
+  const [showRequestDialog, setShowRequestDialog] = useState(false);
+  const [pendingRequest, setPendingRequest] = useState<string | null>(() => loadPendingRequestId(id));
+  const [joinNotice, setJoinNotice] = useState<string | null>(null);
+  const cancelRequest = useCancelJoinRequest();
+  useEffect(() => {
+    setPendingRequest(loadPendingRequestId(id));
+    setJoinNotice(null);
+  }, [id]);
+  // Đã vào được cộng đồng (duyệt xong/tham gia bằng cách khác) → bỏ trạng thái chờ đã nhớ.
+  useEffect(() => {
+    if (course?.viewerEnrolled && pendingRequest) {
+      savePendingRequestId(id, null);
+      setPendingRequest(null);
+    }
+  }, [course?.viewerEnrolled, pendingRequest, id]);
 
   if (isPending) {
     return (
@@ -70,12 +94,71 @@ export function CourseDetailPage() {
   const scrollToReviews = () =>
     reviewsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
+  const isPrivate = course.visibility === 'private';
+  const canJoinFlow = !course.viewerEnrolled;
+  const hasPendingRequest = canJoinFlow && pendingRequest !== null;
+  const isLocked = !!course.locked;
+
+  const onJoinError = (err: unknown) => {
+    const code = err instanceof ApiError ? err.code : undefined;
+    if (code === 'JOIN_REQUEST_REQUIRED') {
+      // Cộng đồng riêng tư: phải xin phép, không tham gia thẳng được.
+      if (pendingRequest === null) setShowRequestDialog(true);
+      return;
+    }
+    if (code === 'PAYMENT_REQUIRED') {
+      setShowPaidDialog(true);
+      return;
+    }
+    if (code === 'COMMUNITY_LOCKED') {
+      setJoinNotice('Cộng đồng này đang bị khóa bởi quản trị nền tảng nên chưa thể tham gia.');
+      return;
+    }
+    setJoinNotice(errorText(err)); // gồm cả 403 "bị cấm khỏi cộng đồng"
+  };
+
   const handleJoin = () => {
+    setJoinNotice(null);
     if (status !== 'authenticated') {
       navigate('/login', { state: { from: `/courses/${id}` } });
       return;
     }
-    enroll.mutate();
+    // Đã tham gia rồi: giữ nguyên hành vi toggle rời khóa học hiện có, không đổi.
+    if (course.viewerEnrolled) {
+      enroll.mutate(undefined, { onError: (e) => setJoinNotice(errorText(e)) });
+      return;
+    }
+    // Đã gửi yêu cầu, đang chờ duyệt: không gửi lại.
+    if (hasPendingRequest) return;
+    // Cộng đồng riêng tư: để BE quyết (403 JOIN_REQUEST_REQUIRED → hộp thoại gửi yêu cầu).
+    if (isPrivate) {
+      enroll.mutate(undefined, { onSuccess: () => navigate(`/courses/${id}/community`), onError: onJoinError });
+      return;
+    }
+    // Chưa tham gia + khóa học có phí: hiện dialog xác nhận trước khi sang trang thanh toán
+    // (tham khảo flow skool.com), thay vì tham gia thẳng như khóa miễn phí.
+    if (course.priceUsd > 0) {
+      setShowPaidDialog(true);
+      return;
+    }
+    enroll.mutate(undefined, { onSuccess: () => navigate(`/courses/${id}/community`), onError: onJoinError });
+  };
+
+  const handleCancelRequest = () => {
+    if (!pendingRequest || pendingRequest === 'unknown') return;
+    cancelRequest.mutate(pendingRequest, {
+      onSuccess: () => {
+        savePendingRequestId(id, null);
+        setPendingRequest(null);
+      },
+      onError: (e) => {
+        // 404/409: yêu cầu đã được xử lý hoặc không còn → bỏ trạng thái chờ để người dùng gửi lại được.
+        if (e instanceof ApiError && (e.status === 404 || e.status === 409)) {
+          savePendingRequestId(id, null);
+          setPendingRequest(null);
+        }
+      },
+    });
   };
 
   return (
@@ -211,21 +294,56 @@ export function CourseDetailPage() {
                 ))}
               </div>
 
+              {isLocked && (
+                <p className="rounded-xl bg-red-50 px-3 py-2 text-center text-[13px] font-medium text-red-700">
+                  Cộng đồng này đang bị khóa bởi quản trị nền tảng.
+                </p>
+              )}
               <Button
                 onClick={handleJoin}
-                disabled={enroll.isPending}
+                disabled={enroll.isPending || hasPendingRequest}
                 variant={course.viewerEnrolled ? 'success' : 'brand'}
                 className="h-[52px] gap-2.5 rounded-2xl text-base font-bold"
               >
-                {course.viewerEnrolled ? 'Đã tham gia' : 'Tham gia ngay'}
+                {course.viewerEnrolled
+                  ? 'Đã tham gia'
+                  : hasPendingRequest
+                    ? 'Đã gửi yêu cầu – chờ duyệt'
+                    : isPrivate
+                      ? 'Gửi yêu cầu tham gia'
+                      : 'Tham gia ngay'}
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
                   <path d={course.viewerEnrolled ? 'M5 12l5 5 9-10' : 'M5 12h14M13 6l6 6-6 6'} />
                 </svg>
               </Button>
-              {enroll.isError && (
-                <p className="text-center text-sm text-red-600">
-                  {enroll.error instanceof Error ? enroll.error.message : 'Có lỗi xảy ra, vui lòng thử lại'}
-                </p>
+              {isPrivate && !course.viewerEnrolled && !hasPendingRequest && (
+                <p className="text-center text-xs text-stone-500">Cộng đồng riêng tư — cần quản trị viên duyệt yêu cầu.</p>
+              )}
+              {hasPendingRequest && (
+                <div className="flex flex-col items-center gap-1.5 text-center text-[13px] text-stone-600">
+                  <span>Quản trị viên sẽ xem xét yêu cầu của bạn và thông báo kết quả.</span>
+                  {pendingRequest !== 'unknown' && (
+                    <button
+                      type="button"
+                      onClick={handleCancelRequest}
+                      disabled={cancelRequest.isPending}
+                      className="font-semibold text-brand hover:underline disabled:opacity-50"
+                    >
+                      {cancelRequest.isPending ? 'Đang hủy…' : 'Hủy yêu cầu'}
+                    </button>
+                  )}
+                  {cancelRequest.isError && <span className="text-red-600">{errorText(cancelRequest.error)}</span>}
+                </div>
+              )}
+              {joinNotice && <p className="text-center text-sm text-red-600">{joinNotice}</p>}
+              {isAtLeast(course.viewerRole, 'admin') && (
+                <Link
+                  to={`/courses/${id}/community/cai-dat`}
+                  className="flex h-10 items-center justify-center gap-2 rounded-xl bg-brand/10 text-sm font-semibold text-brand hover:bg-brand/15"
+                >
+                  <MaterialIcon name="settings" size={18} color="#f26a1b" />
+                  Cài đặt cộng đồng
+                </Link>
               )}
             </div>
           </div>
@@ -273,34 +391,54 @@ export function CourseDetailPage() {
       </div>
 
       <section ref={reviewsRef} className="mx-auto max-w-[1400px] scroll-mt-24 px-4 pt-10 pb-16 md:px-10">
-        <div className="glass flex flex-col gap-[22px] rounded-[26px] p-[26px]">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <SectionTitle>Đánh giá từ học viên</SectionTitle>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-[48px] leading-none font-extrabold tracking-[-1px]">{course.rating}</span>
-            <StarIcon size={24} />
-            <span className="text-[15px] text-stone-600">{course.ratingCount} đánh giá</span>
-          </div>
-          <div className="flex flex-col gap-3">
-            {course.reviews.map((r) => (
-              <div key={r.name} className="rounded-[18px] border border-white/95 bg-white/75 p-[18px] shadow-[0_6px_18px_rgba(120,60,20,.06)]">
-                <div className="flex items-center gap-2.5">
-                  <span className="size-[38px] flex-none rounded-full" style={{ background: r.color }} />
-                  <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-                    <b className="text-sm">{r.name}</b>
-                    <StarIcon size={14} />
-                    <span className="text-xs text-stone-400">{r.time}</span>
-                  </div>
-                </div>
-                <p className="mt-3 text-sm leading-[1.6] text-stone-700 text-pretty">{r.text}</p>
-              </div>
-            ))}
-          </div>
-        </div>
+        <ReviewsSection
+          courseId={id}
+          viewerEnrolled={!!course.viewerEnrolled}
+          viewerRole={course.viewerRole}
+          fallbackRating={course.rating}
+          fallbackCount={course.ratingCount}
+        />
       </section>
 
       <Footer />
+
+      {showRequestDialog && (
+        <JoinRequestDialog
+          courseId={id}
+          courseTitle={course.title}
+          onClose={() => setShowRequestDialog(false)}
+          onSent={(req) => {
+            savePendingRequestId(id, req.id);
+            setPendingRequest(req.id);
+          }}
+        />
+      )}
+
+      {showPaidDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowPaidDialog(false)}>
+          <div className="w-full max-w-[420px] rounded-3xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="grid size-14 place-items-center rounded-2xl bg-brand/10">
+              <MaterialIcon name="payments" size={26} color="#f26a1b" />
+            </div>
+            <h2 className="mt-4 text-lg font-extrabold">Khóa học có phí</h2>
+            <p className="mt-2 text-sm leading-relaxed text-stone-600">
+              "{course.title}" có phí <b>${course.priceUsd}/tháng</b>. Bạn sẽ được chuyển tới trang thanh toán để hoàn tất tham gia
+              (có 7 ngày dùng thử miễn phí, hủy bất cứ lúc nào).
+            </p>
+            <div className="mt-5 flex gap-3">
+              <button
+                onClick={() => setShowPaidDialog(false)}
+                className="h-11 flex-1 rounded-xl border border-[rgba(120,60,20,.15)] text-sm font-semibold text-stone-700"
+              >
+                Để sau
+              </button>
+              <Button onClick={() => navigate(`/courses/${id}/checkout`)} className="h-11 flex-1 rounded-xl text-sm font-bold">
+                Đi tới thanh toán
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

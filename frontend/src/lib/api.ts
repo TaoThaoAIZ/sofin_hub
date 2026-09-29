@@ -12,7 +12,7 @@ export class ApiError extends Error {
 }
 
 type Params = object;
-type RequestOptions = { signal?: AbortSignal; token?: string; skipAuthRetry?: boolean };
+type RequestOptions = { signal?: AbortSignal; token?: string; skipAuthRetry?: boolean; headers?: Record<string, string> };
 
 async function parseErrorBody(res: Response): Promise<never> {
   const body = (await res.json().catch(() => null)) as { error?: { message?: string; code?: string } } | null;
@@ -41,8 +41,8 @@ export function setAuthHandlers(handlers: { refresh: () => Promise<string | null
   sessionExpiredHandler = handlers.onSessionExpired;
 }
 
-async function doFetch(method: string, url: string, body: unknown, token: string | null, signal?: AbortSignal) {
-  const headers: Record<string, string> = {};
+async function doFetch(method: string, url: string, body: unknown, token: string | null, signal?: AbortSignal, extra?: Record<string, string>) {
+  const headers: Record<string, string> = { ...extra };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   if (token) headers.Authorization = `Bearer ${token}`;
   return fetch(url, {
@@ -56,7 +56,7 @@ async function doFetch(method: string, url: string, body: unknown, token: string
 
 async function request<T>(method: string, url: string, body: unknown, opts?: RequestOptions): Promise<T> {
   const token = opts?.token ?? currentToken;
-  let res = await doFetch(method, url, body, token, opts?.signal);
+  let res = await doFetch(method, url, body, token, opts?.signal, opts?.headers);
 
   // Access token hết hạn giữa phiên (khác lúc mới tải trang): thử xin token mới 1 lần rồi gọi lại
   // đúng request này. Bỏ qua cho chính các endpoint đăng nhập/đăng ký/refresh (`skipAuthRetry`) để
@@ -64,7 +64,7 @@ async function request<T>(method: string, url: string, body: unknown, opts?: Req
   if (res.status === 401 && token && refreshHandler && !opts?.skipAuthRetry) {
     const newToken = await refreshHandler();
     if (newToken) {
-      res = await doFetch(method, url, body, newToken, opts?.signal);
+      res = await doFetch(method, url, body, newToken, opts?.signal, opts?.headers);
     } else {
       sessionExpiredHandler?.();
     }
@@ -86,3 +86,47 @@ export async function apiGet<T>(path: string, params?: Params, signal?: AbortSig
 
 export const apiPost = <T>(path: string, body?: unknown, opts?: RequestOptions) =>
   request<T>('POST', `${API_URL}${path}`, body, opts);
+
+export const apiPatch = <T>(path: string, body?: unknown, opts?: RequestOptions) =>
+  request<T>('PATCH', `${API_URL}${path}`, body, opts);
+
+export const apiDelete = <T>(path: string, body?: unknown, opts?: RequestOptions) =>
+  request<T>('DELETE', `${API_URL}${path}`, body, opts);
+
+export const apiPut = <T>(path: string, body?: unknown, opts?: RequestOptions) =>
+  request<T>('PUT', `${API_URL}${path}`, body, opts);
+
+/** Ghép đường dẫn API với base URL đã cấu hình — dùng cho EventSource. */
+export const apiUrl = (path: string) => `${API_URL}${path}`;
+
+/**
+ * Đổi đường dẫn do BE trả ("/api/files/<key>", "/api/uploads/...") thành URL dùng được trên trình duyệt:
+ * nếu VITE_API_URL là URL tuyệt đối (khác origin) thì ghép origin của API, ngược lại giữ nguyên.
+ */
+export function resolveApiPath(path: string): string {
+  if (/^https?:\/\//i.test(path)) return path;
+  if (/^https?:\/\//i.test(API_URL)) return `${new URL(API_URL).origin}${path}`;
+  return path;
+}
+
+/** Tải một endpoint trả file (vd. .ics) kèm Bearer rồi cho trình duyệt lưu xuống. */
+export async function apiDownload(path: string, filename: string, opts?: RequestOptions): Promise<void> {
+  const token = opts?.token ?? currentToken;
+  const url = `${API_URL}${path}`;
+  let res = await doFetch('GET', url, undefined, token);
+  if (res.status === 401 && token && refreshHandler && !opts?.skipAuthRetry) {
+    const newToken = await refreshHandler();
+    if (newToken) res = await doFetch('GET', url, undefined, newToken);
+    else sessionExpiredHandler?.();
+  }
+  if (!res.ok) await parseErrorBody(res);
+  const blob = await res.blob();
+  const href = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = href;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(href), 1000);
+}

@@ -1,5 +1,5 @@
 import type { RequestHandler } from 'express';
-import { verifyAccessToken } from '../modules/auth/tokens.js';
+import { authenticateAccessToken } from '../modules/auth/tokens.js';
 import { HttpError } from '../utils/http-error.js';
 
 declare global {
@@ -7,25 +7,38 @@ declare global {
   namespace Express {
     interface Request {
       userId?: string;
+      /** Id phiên đăng nhập (`sid` trong access token). */
+      sessionId?: string;
     }
   }
 }
 
-function extractUserId(authHeader: string | undefined): string | undefined {
+async function authenticate(authHeader: string | undefined) {
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : undefined;
-  return token ? (verifyAccessToken(token)?.sub ?? undefined) : undefined;
+  return token ? authenticateAccessToken(token) : null;
 }
 
-/** Bắt buộc đăng nhập: 401 nếu thiếu/hết hạn access token. */
-export const requireAuth: RequestHandler = (req, _res, next) => {
-  const userId = extractUserId(req.headers.authorization);
-  if (!userId) return next(HttpError.unauthorized());
-  req.userId = userId;
-  next();
+/** Bắt buộc đăng nhập: 401 nếu thiếu/hết hạn/bị thu hồi access token (kiểm tra cả phiên và tokenVersion trong DB). */
+export const requireAuth: RequestHandler = async (req, _res, next) => {
+  try {
+    const auth = await authenticate(req.headers.authorization);
+    if (!auth) return next(HttpError.unauthorized());
+    req.userId = auth.userId;
+    req.sessionId = auth.sid;
+    next();
+  } catch (e) {
+    next(e);
+  }
 };
 
 /** Gắn req.userId nếu có access token hợp lệ, nhưng không bắt buộc phải đăng nhập. */
-export const optionalAuth: RequestHandler = (req, _res, next) => {
-  req.userId = extractUserId(req.headers.authorization);
-  next();
+export const optionalAuth: RequestHandler = async (req, _res, next) => {
+  try {
+    const auth = await authenticate(req.headers.authorization);
+    req.userId = auth?.userId;
+    req.sessionId = auth?.sid;
+    next();
+  } catch (e) {
+    next(e);
+  }
 };

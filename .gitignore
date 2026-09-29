@@ -2,3 +2,21 @@ node_modules
 dist
 .env
 .playwright-mcp
+
+# QA output nặng, tự sinh lại được bằng qa/gen_testcases.py + qa/apply_playwright_results.py +
+# qa/embed_evidence_images.py — không cần lên git.
+e2e/report/
+e2e/evidence/
+
+# File người dùng upload (LocalDiskStorage)
+backend/data/uploads/
+
+# Python cache (qa/*.py)
+__pycache__/
+*.pyc
+
+# Cache/artifact của trình biên dịch TypeScript
+*.tsbuildinfo
+
+# Log
+*.log

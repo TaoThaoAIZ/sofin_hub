@@ -1,0 +1,136 @@
+import { Link } from 'react-router-dom';
+import { MaterialIcon } from '../../../components/ui/MaterialIcon';
+import { formatCompact } from '../../../lib/format';
+import { useCourses } from '../../courses/queries';
+import type { CourseDetail } from '../../courses/types';
+import { useMembers } from '../queries';
+
+// Màu lấy đúng từ bảng pal[]/logoStyle trong file thiết kế gốc SofinHub Community.html.
+const AVATAR_PALETTE = ['#d6d3f5', '#cfe3f7', '#e5e7c9', '#cfe6d6', '#f3d4e6', '#dcd6cf', '#f5dcc8', '#d4dbe8'];
+const LOGO_PALETTE = ['#1e3a8a', '#65a30d', '#1d4ed8', '#7c3aed', '#0f766e'];
+
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/);
+  return parts.length > 1 ? (parts[0]!.charAt(0) + parts[parts.length - 1]!.charAt(0)).toUpperCase() : name.slice(0, 2).toUpperCase();
+}
+
+export function CommunityRightSidebar({ course }: { course: CourseDetail }) {
+  const members = useMembers(course.id, {});
+  const suggested = useCourses({ page: 1, limit: 4, sort: 'trending' });
+  const shownMembers = members.data?.data.slice(0, 6) ?? [];
+  const remaining = Math.max(0, course.stats.members - shownMembers.length);
+  const suggestedCourses = (suggested.data?.data ?? []).filter((c) => c.id !== course.id).slice(0, 3);
+
+  return (
+    <aside className="sticky top-[70px] flex flex-col gap-4 max-lg:static">
+      <div className="glass overflow-hidden rounded-[22px]">
+        <div className="relative h-[110px]">
+          <img src={course.thumbnail} alt="" className="size-full object-cover" />
+          <span className="absolute -bottom-[26px] left-[18px] grid size-[58px] place-items-center rounded-2xl border-[3px] border-white bg-[#0f1a2e] text-lg font-extrabold text-white shadow-lg">
+            {course.title.charAt(0).toUpperCase()}
+          </span>
+        </div>
+        <div className="px-[18px] pt-9 pb-[18px]">
+          <div className="truncate text-[17px] font-extrabold">{course.title}</div>
+          <div className="mt-1 truncate text-[12.5px] text-stone-500">Bởi {course.instructor.name}</div>
+          <div className="mt-2.5 grid grid-cols-3 border-t border-[rgba(120,60,20,.08)] pt-3 text-center">
+            <div>
+              <div className="text-[15px] font-bold">{formatCompact(course.stats.members)}</div>
+              <div className="mt-0.5 text-[11px] text-stone-500">Thành viên</div>
+            </div>
+            <div className="border-x border-[rgba(120,60,20,.08)]">
+              <div className="text-[15px] font-bold">{course.stats.online}</div>
+              <div className="mt-0.5 text-[11px] text-stone-500">Trực tuyến</div>
+            </div>
+            <div>
+              <div className="text-[15px] font-bold">{course.stats.admins}</div>
+              <div className="mt-0.5 text-[11px] text-stone-500">Quản trị viên</div>
+            </div>
+          </div>
+
+          {shownMembers.length > 0 && (
+            <div className="mt-3.5 flex items-center">
+              {shownMembers.map((m, i) => (
+                <span
+                  key={m.id}
+                  className="grid size-[26px] flex-none place-items-center rounded-full border-2 border-white text-[9.5px] font-bold text-stone-700"
+                  style={{ background: AVATAR_PALETTE[i % AVATAR_PALETTE.length], marginLeft: i ? -6 : 0 }}
+                >
+                  {initials(m.name)}
+                </span>
+              ))}
+              {remaining > 0 && <span className="ml-2 text-[12.5px] text-stone-600">+{formatCompact(remaining)}</span>}
+            </div>
+          )}
+
+          <div className="mt-3.5 flex">
+            <button
+              type="button"
+              disabled
+              className="flex h-[42px] flex-1 items-center justify-center gap-2 rounded-2xl bg-brand/10 text-[13.5px] font-bold text-brand disabled:cursor-default"
+            >
+              <MaterialIcon name="check_circle" size={20} filled color="#f26a1b" />
+              Đã tham gia
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {suggestedCourses.length > 0 && (
+        <div className="glass rounded-[22px] p-4 pb-2.5">
+          <div className="mb-1.5 flex items-center justify-between">
+            <span className="text-[14.5px] font-bold">Cộng đồng được đề xuất</span>
+            <Link to="/#courses" className="text-[12.5px] text-brand">
+              Xem tất cả →
+            </Link>
+          </div>
+          {suggestedCourses.map((c, i) => (
+            <Link key={c.id} to={`/courses/${c.id}`} className="flex items-center gap-3 py-[7px] hover:opacity-90">
+              <span
+                className="grid size-[38px] flex-none place-items-center rounded-[10px] text-[11.5px] font-extrabold text-white"
+                style={{ background: LOGO_PALETTE[i % LOGO_PALETTE.length] }}
+              >
+                {c.title.charAt(0).toUpperCase()}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[13.5px] font-medium">{c.title}</div>
+                <div className="text-xs text-stone-500">{formatCompact(c.students)} thành viên</div>
+              </div>
+              <span className="flex-none rounded-full border border-brand/20 bg-brand-soft px-3 py-1.5 text-[12.5px] font-semibold text-brand">
+                + Tham gia
+              </span>
+            </Link>
+          ))}
+        </div>
+      )}
+
+      <div className="glass flex flex-col gap-3.5 rounded-[22px] p-[18px] text-center">
+        <span className="mx-auto grid size-12 place-items-center rounded-full bg-amber-100">
+          <MaterialIcon name="workspace_premium" size={26} filled color="#f59e0b" />
+        </span>
+        <div>
+          <div className="text-[14.5px] font-extrabold">Trở thành thành viên Premium</div>
+          <div className="mt-2.5 flex flex-col gap-1.5 text-left text-[12.5px] text-stone-600">
+            <span className="flex items-center gap-2">
+              <MaterialIcon name="check" size={16} color="#f26a1b" /> Truy cập khóa học độc quyền
+            </span>
+            <span className="flex items-center gap-2">
+              <MaterialIcon name="check" size={16} color="#f26a1b" /> Tài liệu chuyên sâu
+            </span>
+            <span className="flex items-center gap-2">
+              <MaterialIcon name="check" size={16} color="#f26a1b" /> Hỗ trợ 1:1 từ chuyên gia
+            </span>
+          </div>
+        </div>
+        <button
+          type="button"
+          disabled
+          title="Sắp ra mắt — Giai đoạn 8 trong PLAN.md (chưa chốt cổng thanh toán gói Premium)"
+          className="flex h-11 items-center justify-center gap-2 rounded-xl bg-brand text-[13.5px] font-bold text-white opacity-60"
+        >
+          <MaterialIcon name="arrow_forward" size={17} color="#fff" /> Nâng cấp (sắp ra mắt)
+        </button>
+      </div>
+    </aside>
+  );
+}

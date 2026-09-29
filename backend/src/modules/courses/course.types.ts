@@ -48,7 +48,16 @@ export interface Course {
   status: CourseStatus;
   language: Language;
   createdAt: string;
+  /** Chủ cộng đồng do người dùng tạo; vắng mặt = cộng đồng seed mẫu. */
+  ownerId?: string;
+  /** Bị Platform Admin khóa: ẩn khỏi danh sách công khai, chặn nội dung. */
+  locked?: boolean;
+  /** Xóa mềm: ẩn hoàn toàn (findById trả undefined). */
+  deletedAt?: string;
 }
+
+/** Patch cho courseService.update: mọi trường của Course + `lockReason` (không nằm trong Course để không lộ ra API). */
+export type CoursePatch = Partial<Course> & { lockReason?: string | null };
 
 export interface Category {
   id: CategoryId;

@@ -1,0 +1,133 @@
+export type PaymentMethod = 'stripe' | 'vnpay' | 'momo';
+
+export type PaymentStatus = 'pending' | 'succeeded' | 'failed' | 'refunded';
+
+export interface PaymentIntent {
+  id: string;
+  courseId: string;
+  userId: string;
+  method: PaymentMethod;
+  amountUsd: number;
+  trialDays: number;
+  status: PaymentStatus;
+  createdAt: string;
+  confirmedAt?: string;
+  amountCents?: number;
+  kind?: 'initial' | 'renewal';
+  subscriptionId?: string;
+  invoiceNumber?: string;
+  refundedCents?: number;
+  periodStart?: string;
+  periodEnd?: string;
+}
+
+export interface SubscriptionStatus {
+  enrolled: boolean;
+  latestPayment?: PaymentIntent;
+  subscription?: Subscription | null;
+}
+
+export type SubscriptionState = 'trialing' | 'active' | 'canceled' | 'expired';
+
+export interface Subscription {
+  id: string;
+  userId: string;
+  courseId: string;
+  status: SubscriptionState;
+  priceCents: number;
+  currentPeriodStart: string;
+  currentPeriodEnd: string;
+  cancelAtPeriodEnd: boolean;
+  trialEndsAt?: string;
+  canceledAt?: string;
+  createdAt: string;
+  courseTitle?: string;
+  accessUntil?: string | null;
+}
+
+export interface PageMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface PaymentRecord extends PaymentIntent {
+  courseTitle?: string;
+}
+
+export interface Invoice {
+  invoiceNumber: string;
+  issuedAt?: string;
+  status: PaymentStatus;
+  currency: string;
+  buyer: { id: string; name: string; email?: string };
+  community: { id: string; title: string };
+  items: { description: string; quantity: number; unitCents: number; amountCents: number }[];
+  subtotalCents: number;
+  refundedCents: number;
+  totalCents: number;
+  paymentId: string;
+}
+
+export type RefundStatus = 'pending' | 'approved' | 'rejected';
+
+export interface RefundRequest {
+  id: string;
+  paymentId: string;
+  courseId: string;
+  userId: string;
+  amountCents: number;
+  reason: string;
+  status: RefundStatus;
+  auto: boolean;
+  note?: string;
+  resolvedBy?: string;
+  createdAt: string;
+  resolvedAt?: string;
+}
+
+export type PayoutStatus = 'requested' | 'approved' | 'paid' | 'rejected';
+
+export interface Payout {
+  id: string;
+  courseId: string;
+  ownerId: string;
+  amountCents: number;
+  method: { type: 'bank'; bankName: string; accountHolder: string; accountLast4?: string; accountMasked?: string };
+  status: PayoutStatus;
+  note?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RevenueSummary {
+  currency: string;
+  range: { from: string | null; to: string | null };
+  grossCents: number;
+  refundsCents: number;
+  platformCommissionCents: number;
+  gatewayFeeCents: number;
+  netCents: number;
+  availableBalanceCents: number;
+  payoutRequestedCents: number;
+  activePaidMembers: number;
+  trialingMembers: number;
+  mrrCents: number;
+  assumptions: { platformCommissionPct: number; gatewayFeePct: number; gatewayFeeFixedCents: number; note: string };
+  recentTransactions: {
+    id: string;
+    userId: string;
+    kind: 'initial' | 'renewal';
+    status: PaymentStatus;
+    amountCents: number;
+    refundedCents: number;
+    invoiceNumber?: string;
+    confirmedAt?: string;
+  }[];
+}
+
+export interface PayoutInput {
+  amountCents: number;
+  method: { type: 'bank'; bankName: string; accountNumber: string; accountHolder: string };
+}
