@@ -2,6 +2,45 @@
 
 > Kiến trúc khuyến nghị: **Frontend → Vercel**, **Backend → Render**. Lý do vì sao *không* để Backend trên Vercel ở mục "⚠️" ngay dưới đây — đọc trước khi làm.
 
+## 🆕 CẬP NHẬT 30/09/2026 — Backend giờ CẦN PostgreSQL (đọc trước khi làm các phần bên dưới)
+
+> Các phần bên dưới được viết lúc backend còn lưu dữ liệu trong bộ nhớ/`users.json`. **Nay backend dùng Postgres thật (Prisma)** nên deploy cần thêm database, nếu không `/health` trả `{"status":"db_unavailable"}` (HTTP 503) và mọi API cần dữ liệu đều lỗi. Đoạn cảnh báo "chưa có database" ở mục ⚠️ bên dưới đã lỗi thời (Vercel vẫn không phù hợp vì SSE/scheduler cần tiến trình chạy liên tục, nên vẫn dùng Render cho backend).
+
+### Cách sửa lỗi `db_unavailable` trên Render
+1. **Tạo database**: Render → **New +** → **PostgreSQL** (Free được, nhưng DB free của Render **tự hết hạn sau ~30 ngày**; dùng lâu thì chọn gói trả phí hoặc Neon/Supabase free). Chọn **cùng Region** với Web Service. Sau khi tạo xong, mở database → copy:
+   - **Internal Database URL** (dùng cho Web Service — nhanh, không cần SSL),
+   - **External Database URL** (dùng để chạy migration/seed từ máy bạn).
+2. **Gắn vào Web Service** (tab Environment của service API), thêm:
+
+   | Key | Value |
+   |---|---|
+   | `DATABASE_URL` | **Internal Database URL** vừa copy |
+   | `PLATFORM_ADMIN_EMAILS` | email admin nền tảng (vd `admin@sofinhub.test` nếu nạp seed) |
+   | `FRONTEND_URL` | URL frontend trên Vercel (dùng dựng link trong email) |
+   | `CORS_ORIGIN` | URL frontend trên Vercel (không dấu `/` cuối) |
+   | `UPLOAD_SIGNING_SECRET`, `PAYMENT_WEBHOOK_SECRET` | 2 chuỗi ngẫu nhiên khác nhau (`node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`) |
+
+   (Giữ `NODE_ENV`, `PORT`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`… như Phần 1.) Bấm **Save** → Render tự deploy lại.
+3. **Tạo bảng + nạp dữ liệu** (làm 1 lần, chạy trên MÁY BẠN nhưng trỏ tới DB Render bằng **External URL**; thêm `?sslmode=require` vào cuối URL vì kết nối từ ngoài vào bắt buộc SSL):
+
+   ```powershell
+   cd backend
+   $env:DATABASE_URL = "<External Database URL>?sslmode=require"
+   npm ci
+   npm run db:deploy     # tạo 37 bảng (prisma migrate deploy)
+   npm run db:seed       # (tùy chọn) nạp tài khoản/dữ liệu test, mật khẩu chung Passw0rd!x
+   ```
+   Không chạy `db:seed` nếu đây là môi trường thật có người dùng thật (seed tạo các tài khoản `@sofinhub.test` với mật khẩu công khai). Mỗi lần có migration mới, chạy lại `npm run db:deploy` với cùng `DATABASE_URL` **trước** khi deploy code mới.
+4. **Kiểm tra**: mở `https://<url-render>/health` → phải là `{"status":"ok",...}`. Nếu vẫn `db_unavailable`, xem **Logs** của service: dòng `[health] kiểm tra DB thất bại: ...` cho biết lý do (sai URL, chưa mở kết nối, sai mật khẩu...).
+
+### Lưu ý khi chạy trên Render
+- **File upload** lưu ổ đĩa của container → bị mất mỗi lần deploy/restart trên gói free (chưa có S3). Ảnh/tệp đính kèm chỉ nên dùng để demo.
+- **Thông báo/tin nhắn realtime (SSE), rate limit, job nhắc lịch/gia hạn** chạy trong 1 tiến trình: chỉ chạy đúng với **1 instance**. Gói free "ngủ" khi không có traffic nên job định kỳ sẽ không chạy trong lúc ngủ.
+- **Email chưa gửi thật**: link đặt lại mật khẩu/xác thực email không tới hộp thư (chỉ ghi vào outbox dev, và endpoint `/api/dev/outbox` bị tắt khi `NODE_ENV=production`). Với môi trường test trên Render, đặt tạm `NODE_ENV=development` **hoặc** dùng tài khoản seed đã xác thực sẵn; nối AWS SES/SMTP khi lên thật (`setMailProvider()` trong `mail.service.ts`).
+- **Thanh toán**: vẫn là cổng giả (`MockGateway`), chưa thu tiền thật.
+
+---
+
 ## ⚠️ Vì sao Backend không nên deploy lên Vercel lúc này
 
 Vercel chạy backend dưới dạng **serverless function**: mỗi request có thể được xử lý bởi một container khác nhau, container bị hủy sau vài phút không dùng, và ổ đĩa **không ghi được** (trừ thư mục `/tmp` tạm thời, cũng bị xóa liên tục).

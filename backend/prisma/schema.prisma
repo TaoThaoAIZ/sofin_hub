@@ -33,6 +33,9 @@ enum CourseCategory {
   self
   hobby
   relationships
+  /// Thêm bởi Admin đợt 2 (danh mục Discovery): chỉ dùng được sau khi admin tạo trong DiscoveryCategory.
+  marketing
+  design
 }
 
 enum CourseTag {
@@ -125,6 +128,10 @@ enum ReportReason {
   inappropriate
   misinformation
   other
+  hate_speech
+  scam
+  copyright
+  nsfw
 }
 
 enum ReportTargetType {
@@ -137,12 +144,44 @@ enum ReportStatus {
   open
   resolved
   dismissed
+  under_review
 }
 
 enum ReportAction {
   dismiss
   hide_content
   ban_member
+  warn_user
+  remove_content
+  restrict_user
+  suspend_user
+  ban_user
+  none
+}
+
+enum ReportRisk {
+  low
+  medium
+  high
+  critical
+}
+
+/// Trạng thái tài khoản do Platform Admin đặt (đợt 1 admin). restricted = chỉ đọc; suspended/banned = không đăng nhập được.
+enum UserStatus {
+  active
+  restricted
+  suspended
+  banned
+}
+
+/// Trạng thái kiểm duyệt cộng đồng (tách khỏi Course.status = open/soon/completed).
+enum CommunityModeration {
+  pending_review
+  changes_requested
+  rejected
+  active
+  suspended
+  deleted
 }
 
 enum PaymentMethod {
@@ -168,6 +207,9 @@ enum SubscriptionStatus {
   active
   canceled
   expired
+  /// Admin đợt 2: quá hạn thanh toán / tạm dừng bởi admin.
+  past_due
+  paused
 }
 
 enum RefundStatus {
@@ -181,6 +223,44 @@ enum PayoutStatus {
   approved
   paid
   rejected
+  /// Admin đợt 2.
+  failed
+  on_hold
+}
+
+/// Admin đợt 2: xuất bản của khóa học (ClassroomModule).
+enum ContentPublishStatus {
+  published
+  draft
+  archived
+}
+
+enum DiscoveryStatus {
+  listed
+  hidden
+  unlisted
+}
+
+enum SearchVisibility {
+  searchable
+  reduced
+  hidden
+}
+
+enum ChargebackStatus {
+  open
+  under_review
+  won
+  lost
+}
+
+enum ChargebackReason {
+  fraudulent
+  product_not_received
+  duplicate
+  subscription_cancelled
+  unrecognized
+  product_not_as_described
 }
 
 enum UploadPurpose {
@@ -208,25 +288,35 @@ enum OneTimeTokenPurpose {
 // ============================================================================
 
 model User {
-  id            String   @id @default(uuid())
+  id                 String     @id @default(uuid())
   /// Luôn lưu chữ thường (service chuẩn hóa trước khi ghi).
-  email         String   @unique
-  firstName     String
-  lastName      String
-  passwordHash  String
-  bio           String?
-  location      String?
-  website       String?
-  avatarUrl     String?
-  emailVerified Boolean  @default(false)
+  email              String     @unique
+  firstName          String
+  lastName           String
+  passwordHash       String
+  bio                String?
+  location           String?
+  website            String?
+  avatarUrl          String?
+  emailVerified      Boolean    @default(false)
   /// Tăng khi đổi mật khẩu / xóa tài khoản: access token mang tokenVersion cũ bị từ chối.
-  tokenVersion  Int      @default(0)
+  tokenVersion       Int        @default(0)
   /// Thành viên minh họa (thay cho id "seed:..."): mật khẩu không đăng nhập được.
-  isDemo        Boolean  @default(false)
+  isDemo             Boolean    @default(false)
   /// Tài khoản đã xóa = ẩn danh hóa (giữ hàng để bài viết/điểm/thanh toán còn tham chiếu được).
-  deletedAt     DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  deletedAt          DateTime?
+  /// Trạng thái do Platform Admin đặt; statusUntil = hạn (null = vô thời hạn); statusRestrictions = các quyền bị chặn khi restricted
+  /// (post|comment|dm|create_community|purchase).
+  status             UserStatus @default(active)
+  statusReason       String?
+  statusUntil        DateTime?
+  statusRestrictions String[]   @default([])
+  statusChangedAt    DateTime?
+  /// Admin đặt trạng thái (không FK để không ràng buộc khi admin bị xóa).
+  statusChangedById  String?
+  lastLoginAt        DateTime?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
 
   sessions            Session[]
   oneTimeTokens       OneTimeToken[]
@@ -258,15 +348,23 @@ model User {
   reportsFiled        Report[]                @relation("ReportReporter")
   reportsAgainst      Report[]                @relation("ReportTargetUser")
   reportsResolved     Report[]                @relation("ReportResolver")
+  reportsAssigned     Report[]                @relation("ReportAssignee")
+  reportEvents        ReportEvent[]
+  auditLogs           AdminAuditLog[]         @relation("AuditActor")
   payments            Payment[]
   subscriptions       Subscription[]
   refundRequests      RefundRequest[]         @relation("RefundRequester")
   refundsResolved     RefundRequest[]         @relation("RefundResolver")
   payouts             Payout[]
+  chargebacks         Chargeback[]
   idempotencyKeys     IdempotencyKey[]
   uploads             Upload[]
+  ticketsRequested    SupportTicket[]         @relation("TicketRequester")
+  ticketsAssigned     SupportTicket[]         @relation("TicketAssignee")
+  adminAccount        AdminAccount?           @relation("AdminAccountUser")
 
   @@index([isDemo])
+  @@index([status])
 }
 
 /// Phiên đăng nhập = 1 chuỗi refresh token xoay vòng (rotation). id chính là `sid` trong JWT refresh.
@@ -308,38 +406,55 @@ model OneTimeToken {
 
 /// Cộng đồng/khóa học. `id` là slug chuỗi ('photo'), do seed hoặc service sinh.
 model Course {
-  id              String         @id
-  title           String
-  description     String
-  category        CourseCategory
-  tag             CourseTag?
-  thumbnail       String
-  instructorName  String
-  instructorRole  String
+  id                   String               @id
+  title                String
+  description          String
+  category             CourseCategory
+  tag                  CourseTag?
+  thumbnail            String
+  instructorName       String
+  instructorRole       String
   /// Số bài học khai báo (dùng sinh lớp học mẫu). Số bài thật nằm ở ClassroomLesson.
-  lessons         Int            @default(0)
-  durationMinutes Int            @default(0)
+  lessons              Int                  @default(0)
+  durationMinutes      Int                  @default(0)
   /// Số liệu nền của seed (học viên/đánh giá) để trang chủ không trống; đánh giá thật trộn thêm từ Review.
-  students        Int            @default(0)
-  rating          Float          @default(0)
-  ratingCount     Int            @default(0)
+  students             Int                  @default(0)
+  rating               Float                @default(0)
+  ratingCount          Int                  @default(0)
   /// Giá theo tháng, cent (domain `priceUsd` = priceCents / 100).
-  priceCents      Int            @default(0)
-  pricing         Pricing        @default(paid)
-  visibility      Visibility     @default(public)
-  status          CourseStatus   @default(open)
-  language        Language       @default(vi)
+  priceCents           Int                  @default(0)
+  pricing              Pricing              @default(paid)
+  visibility           Visibility           @default(public)
+  status               CourseStatus         @default(open)
+  language             Language             @default(vi)
   /// Thứ hạng "trending" của seed (nhỏ = đứng trước); null = cộng đồng người dùng tạo.
-  trendingRank    Int?
+  trendingRank         Int?
   /// null = cộng đồng seed mẫu (chưa có chủ).
-  ownerId         String?
+  ownerId              String?
   /// Bị Platform Admin khóa.
-  locked          Boolean        @default(false)
-  lockReason      String?
+  locked               Boolean              @default(false)
+  lockReason           String?
   /// Xóa mềm.
-  deletedAt       DateTime?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  deletedAt            DateTime?
+  /// Kiểm duyệt của Platform Admin (đợt 1 admin). Cộng đồng seed/hiện có = active. Chỉ `active` mới hiện ở danh sách công khai.
+  moderationStatus     CommunityModeration  @default(active)
+  moderationReason     String?
+  moderationNote       String?
+  moderationUntil      DateTime?
+  moderationUpdatedAt  DateTime?
+  moderatedById        String?
+  /// Trạng thái trước khi xóa (để undelete trả về đúng); lý do/người xóa (null = chủ tự xóa).
+  preDeleteStatus      CommunityModeration?
+  deleteReason         String?
+  deletedById          String?
+  /// Discovery (Admin đợt 2): chỉ `listed` mới hiện ở danh sách công khai; searchVisibility điều khiển tìm kiếm.
+  discoveryStatus      DiscoveryStatus      @default(listed)
+  searchVisibility     SearchVisibility     @default(searchable)
+  discoveryReason      String?
+  discoveryUpdatedAt   DateTime?
+  discoveryUpdatedById String?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
 
   owner User? @relation("CourseOwner", fields: [ownerId], references: [id], onDelete: SetNull)
 
@@ -362,10 +477,13 @@ model Course {
   refundRequests    RefundRequest[]
   payouts           Payout[]
   uploads           Upload[]
+  chargebacks       Chargeback[]
+  discoveryFeatures DiscoveryFeature[]
 
   @@index([category])
   @@index([ownerId])
   @@index([deletedAt, locked])
+  @@index([moderationStatus])
   @@index([createdAt])
 }
 
@@ -472,6 +590,11 @@ model Post {
   commentsCount Int          @default(0)
   /// PollDef: { question?, options: [{id,text}], multiple, closesAt? }. null = không có bình chọn.
   poll          Json?
+  /// Gỡ bởi Platform Admin (Admin đợt 2). hidden=true kèm removedAt = trạng thái removed.
+  removedAt     DateTime?
+  modReason     String?
+  modAt         DateTime?
+  modById       String?
   createdAt     DateTime     @default(now())
   editedAt      DateTime?
   updatedAt     DateTime     @updatedAt
@@ -494,6 +617,10 @@ model PostComment {
   authorId  String
   content   String
   hidden    Boolean   @default(false)
+  removedAt DateTime?
+  modReason String?
+  modAt     DateTime?
+  modById   String?
   createdAt DateTime  @default(now())
   editedAt  DateTime?
   updatedAt DateTime  @updatedAt
@@ -548,17 +675,24 @@ model PollVote {
 // ============================================================================
 
 model CommunityEvent {
-  id          String   @id @default(uuid())
-  courseId    String
-  hostId      String
-  title       String
-  description String   @default("")
-  startAt     DateTime
-  timezone    String
-  meetingLink String?
-  capacity    Int?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String    @id @default(uuid())
+  courseId     String
+  hostId       String
+  title        String
+  description  String    @default("")
+  startAt      DateTime
+  timezone     String
+  meetingLink  String?
+  capacity     Int?
+  /// Admin đợt 2: hủy (vẫn hiển thị, không RSVP được) / gỡ (ẩn khỏi API công khai).
+  cancelledAt  DateTime?
+  cancelReason String?
+  removedAt    DateTime?
+  modReason    String?
+  modAt        DateTime?
+  modById      String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
   host   User   @relation(fields: [hostId], references: [id], onDelete: Cascade)
@@ -608,17 +742,23 @@ model PointEvent {
 // ============================================================================
 
 model ClassroomModule {
-  id            String   @id @default(uuid())
+  id            String               @id @default(uuid())
   courseId      String
   /// Thứ tự hiển thị 1..n trong khóa (service đánh lại khi thêm/xóa/sắp xếp; không đặt unique để đổi chỗ trong 1 transaction).
   index         Int
   title         String
-  description   String   @default("")
+  description   String               @default("")
   thumbnail     String?
   /// Cấp độ (1..9) tối thiểu để mở khóa; null = không yêu cầu.
   requiredLevel Int?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  /// Admin đợt 2: xuất bản + gỡ. Thành viên chỉ thấy module published và chưa bị gỡ.
+  publishStatus ContentPublishStatus @default(published)
+  removedAt     DateTime?
+  modReason     String?
+  modAt         DateTime?
+  modById       String?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
 
   course  Course            @relation(fields: [courseId], references: [id], onDelete: Cascade)
   lessons ClassroomLesson[]
@@ -640,6 +780,12 @@ model ClassroomLesson {
   embedUrl    String?
   /// [{ name, url, size? }]
   attachments Json       @default("[]")
+  /// Admin đợt 2: ẩn / gỡ khỏi thành viên.
+  hidden      Boolean    @default(false)
+  removedAt   DateTime?
+  modReason   String?
+  modAt       DateTime?
+  modById     String?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
@@ -799,14 +945,68 @@ model Report {
   resolvedById  String?
   resolvedAt    DateTime?
   createdAt     DateTime         @default(now())
+  /// Mã hiển thị CASE-00012 (số tăng dần).
+  caseNo        Int              @unique @default(autoincrement())
+  risk          ReportRisk       @default(low)
+  assignedToId  String?
+  escalatedAt   DateTime?
 
-  course     Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  reporter   User   @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
-  targetUser User   @relation("ReportTargetUser", fields: [targetUserId], references: [id], onDelete: Cascade)
-  resolvedBy User?  @relation("ReportResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+  events     ReportEvent[]
+  assignedTo User?         @relation("ReportAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  course     Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  reporter   User          @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  targetUser User          @relation("ReportTargetUser", fields: [targetUserId], references: [id], onDelete: Cascade)
+  resolvedBy User?         @relation("ReportResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
 
-  @@index([courseId, status, createdAt])
   @@unique([reporterId, targetType, targetId])
+  @@index([courseId, status, createdAt])
+  @@index([status, risk, createdAt])
+  @@index([targetUserId])
+  @@index([targetType, targetId])
+}
+
+/// Lịch sử xử lý 1 case (giao việc, cảnh cáo, gỡ nội dung...). Append-only.
+model ReportEvent {
+  id        String   @id @default(uuid())
+  reportId  String
+  actorId   String?
+  /// assign | warn | remove_content | restrict_user | suspend_user | ban_user | dismiss | escalate | resolve
+  type      String
+  note      String?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  actor  User?  @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([reportId, createdAt])
+}
+
+/// Nhật ký hành động của Platform Admin (append-only). actorName/targetLabel là ảnh chụp tại thời điểm làm.
+model AdminAuditLog {
+  id          String   @id @default(uuid())
+  actorId     String?
+  actorName   String
+  /// vd. user.ban, community.approve, case.warn
+  action      String
+  /// community | user | case | content | payment | refund | payout | report
+  targetType  String
+  targetId    String
+  targetLabel String   @default("")
+  reason      String?
+  note        String?
+  evidence    String?
+  caseId      String?
+  metadata    Json?
+  ip          String?
+  createdAt   DateTime @default(now())
+
+  actor User? @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([actorId, createdAt])
+  @@index([targetType, targetId, createdAt])
+  @@index([action, createdAt])
 }
 
 // ============================================================================
@@ -829,6 +1029,8 @@ model Payment {
   invoiceNumber   String?       @unique
   gatewayChargeId String?
   refundedCents   Int           @default(0)
+  /// Lý do thất bại (cổng trả về / seed).
+  failureReason   String?
   periodStart     DateTime?
   periodEnd       DateTime?
   confirmedAt     DateTime?
@@ -839,7 +1041,8 @@ model Payment {
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
 
-  refunds RefundRequest[]
+  refunds     RefundRequest[]
+  chargebacks Chargeback[]
 
   @@index([userId, createdAt])
   @@index([courseId, createdAt])
@@ -900,18 +1103,21 @@ model RefundRequest {
 
 /// Yêu cầu rút tiền của chủ cộng đồng. Chỉ lưu 4 số cuối tài khoản.
 model Payout {
-  id            String       @id @default(uuid())
-  courseId      String
-  ownerId       String
-  amountCents   Int
+  id             String        @id @default(uuid())
+  courseId       String
+  ownerId        String
+  amountCents    Int
   /// method.type luôn là 'bank' (chưa có kiểu khác) nên không có cột riêng.
-  bankName      String
-  accountHolder String
-  accountLast4  String
-  status        PayoutStatus @default(requested)
-  note          String?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  bankName       String
+  accountHolder  String
+  accountLast4   String
+  status         PayoutStatus  @default(requested)
+  note           String?
+  /// Admin đợt 2: lý do thất bại; trạng thái trước khi bị giữ (để release trả lại).
+  failureReason  String?
+  heldFromStatus PayoutStatus?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   course Course @relation(fields: [courseId], references: [id], onDelete: Restrict)
   owner  User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
@@ -919,6 +1125,36 @@ model Payout {
   @@index([courseId, status])
   @@index([status, createdAt])
   @@index([ownerId])
+}
+
+/// MÔ PHỎNG (Admin đợt 2): tranh chấp thẻ do bên phát hành mở. Không tích hợp cổng — chỉ là bản ghi phía admin để theo dõi/xử lý.
+model Chargeback {
+  id                  String           @id @default(uuid())
+  /// Mã hiển thị CB-00771.
+  caseNo              Int              @unique @default(autoincrement())
+  paymentId           String
+  courseId            String
+  userId              String
+  amountCents         Int
+  reason              ChargebackReason
+  status              ChargebackStatus @default(open)
+  deadlineAt          DateTime
+  evidenceNote        String?
+  evidenceUrls        String[]         @default([])
+  evidenceSubmittedAt DateTime?
+  gatewayDisputeId    String?
+  resolutionNote      String?
+  resolvedById        String?
+  openedAt            DateTime         @default(now())
+  resolvedAt          DateTime?
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  course  Course  @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, deadlineAt])
+  @@index([paymentId])
+  @@index([courseId])
 }
 
 /// Bộ đếm số hóa đơn theo năm. Tăng nguyên tử: UPDATE ... SET lastNumber = lastNumber + 1 RETURNING (upsert trong transaction).
@@ -960,6 +1196,13 @@ model Upload {
   purpose     UploadPurpose
   courseId    String?
   status      UploadStatus  @default(pending)
+  /// Admin đợt 2: gắn cờ để xem xét / gỡ (file không còn được phục vụ công khai).
+  flagged     Boolean       @default(false)
+  flagReason  String?
+  removedAt   DateTime?
+  modReason   String?
+  modAt       DateTime?
+  modById     String?
   createdAt   DateTime      @default(now())
 
   owner  User    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
@@ -975,4 +1218,218 @@ model NewsletterSubscriber {
   subscribedAt   DateTime  @default(now())
   /// Hủy đăng ký = đặt giá trị; đăng ký lại = đặt null.
   unsubscribedAt DateTime?
+}
+
+// ============================================================================
+// DISCOVERY (Admin đợt 2)
+// ============================================================================
+
+/// Danh mục hiển thị ở Discovery: mỗi dòng ứng với 1 giá trị enum CourseCategory (khóa học hiện có không đổi). disabled = ẩn khỏi /categories.
+model DiscoveryCategory {
+  key         CourseCategory @id
+  name        String
+  description String?
+  status      String         @default("active")
+  position    Int
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+/// Ghim cộng đồng vào section Discovery (featured | trending | editors_picks | new_noteworthy), có thứ tự và khoảng hiệu lực.
+model DiscoveryFeature {
+  id          String    @id @default(uuid())
+  section     String
+  courseId    String
+  position    Int
+  startsAt    DateTime?
+  endsAt      DateTime?
+  createdAt   DateTime  @default(now())
+  createdById String?
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([section, courseId])
+  @@index([section, position])
+}
+
+/// Cấu hình key-value của nền tảng (hiện dùng: `discovery.rankingWeights`).
+model PlatformSetting {
+  key         String   @id
+  value       Json
+  updatedAt   DateTime @updatedAt
+  updatedById String?
+}
+
+/// ============================ Admin đợt 3 ============================
+enum SupportCategory {
+  user
+  creator
+  payment
+}
+
+enum SupportPriority {
+  low
+  medium
+  high
+  urgent
+}
+
+enum SupportTicketStatus {
+  new
+  open
+  awaiting_reply
+  resolved
+  closed
+}
+
+enum SupportMessageKind {
+  customer
+  staff
+  internal_note
+  system
+}
+
+/// Ticket hỗ trợ (form liên hệ / người dùng tạo / admin tạo hộ). Mã hiển thị `T-${2000 + number}`.
+model SupportTicket {
+  id              String              @id @default(uuid())
+  number          Int                 @unique @default(autoincrement())
+  subject         String
+  category        SupportCategory     @default(user)
+  priority        SupportPriority     @default(medium)
+  status          SupportTicketStatus @default(new)
+  /// null = khách chưa có tài khoản (chỉ có email).
+  requesterId     String?
+  requesterName   String
+  requesterEmail  String
+  /// contact_form | user | admin | seed
+  source          String              @default("user")
+  assigneeId      String?
+  escalated       Boolean             @default(false)
+  escalatedAt     DateTime?
+  firstResponseAt DateTime?
+  resolvedAt      DateTime?
+  closedAt        DateTime?
+  lastActivityAt  DateTime            @default(now())
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  requester User?                  @relation("TicketRequester", fields: [requesterId], references: [id], onDelete: SetNull)
+  assignee  User?                  @relation("TicketAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  messages  SupportTicketMessage[]
+
+  @@index([status, lastActivityAt])
+  @@index([category, status])
+  @@index([assigneeId, status])
+  @@index([requesterId])
+  @@index([requesterEmail])
+  @@index([createdAt])
+}
+
+model SupportTicketMessage {
+  id         String             @id @default(uuid())
+  ticketId   String
+  kind       SupportMessageKind
+  authorId   String?
+  authorName String
+  body       String
+  createdAt  DateTime           @default(now())
+
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, createdAt])
+}
+
+/// Vai trò nhân viên (hệ thống + tuỳ chỉnh). `key` là khóa; super_admin luôn đủ quyền (permissions chỉ để hiển thị).
+model AdminRole {
+  key         String   @id
+  name        String
+  description String   @default("")
+  permissions String[] @default([])
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  accounts AdminAccount[]
+}
+
+/// Nhân viên admin ngoài danh sách env PLATFORM_ADMIN_EMAILS (những email đó luôn là Super Admin, không có hàng ở đây).
+model AdminAccount {
+  userId           String   @id
+  roleKey          String
+  /// active | suspended
+  status           String   @default("active")
+  /// Chỉ là cờ lưu trữ — chưa có 2FA thật.
+  twoFactorEnabled Boolean  @default(false)
+  suspendedReason  String?
+  invitedById      String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user User      @relation("AdminAccountUser", fields: [userId], references: [id], onDelete: Cascade)
+  role AdminRole @relation(fields: [roleKey], references: [key], onDelete: Restrict)
+
+  @@index([roleKey])
+}
+
+model FeatureFlag {
+  key            String   @id
+  name           String
+  description    String   @default("")
+  /// draft | beta | active
+  stage          String   @default("draft")
+  enabled        Boolean  @default(false)
+  rolloutPercent Int      @default(100)
+  updatedById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Integration {
+  key         String    @id
+  name        String
+  initials    String
+  color       String    @default("#57534e")
+  description String    @default("")
+  category    String    @default("other")
+  connected   Boolean   @default(false)
+  /// Cấu hình KHÔNG nhạy cảm (account id, region...).
+  config      Json      @default("{}")
+  /// Chỉ 4 ký tự cuối của khóa (••••abcd); khóa thật không bao giờ được lưu.
+  secretMask  String?
+  connectedAt DateTime?
+  updatedById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model EmailTemplate {
+  key         String   @id
+  name        String
+  description String   @default("")
+  /// active | draft | disabled
+  status      String   @default("draft")
+  isSystem    Boolean  @default(false)
+  variables   String[] @default([])
+  /// { en: "...", vi: "..." }
+  subject     Json
+  body        Json
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+/// Thông báo hệ thống gửi hàng loạt (audience: all | creators | paid_members | community | users).
+model PlatformBroadcast {
+  id             String   @id @default(uuid())
+  title          String
+  body           String
+  link           String?
+  audience       Json
+  recipientCount Int
+  emailCount     Int      @default(0)
+  sentById       String?
+  sentByName     String   @default("")
+  createdAt      DateTime @default(now())
+
+  @@index([createdAt])
 }

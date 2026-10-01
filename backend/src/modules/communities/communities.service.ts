@@ -1,5 +1,8 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import { HttpError } from '../../utils/http-error.js';
+import { assertUserCan } from '../auth/user-status.js';
+import { auditService } from '../admin/admin-audit.service.js';
+import { clearModerationSuspension } from '../admin/admin-communities.service.js';
 import { userRepository } from '../auth/auth.repository.js';
 import { userBriefView } from '../auth/user-view.js';
 import { handleFor } from '../community/community.handle.js';
@@ -88,6 +91,7 @@ export function createCommunitiesService(repo: CommunitiesRepository = communiti
   return {
     // ---------- tạo & quản trị cộng đồng ----------
     async create(userId: string, input: CreateCommunityBody) {
+      await assertUserCan(userId, 'create_community');
       const id = await uniqueSlug(input.title);
       const owner = await userBriefView(userId);
       await courseService.create({
@@ -165,6 +169,7 @@ export function createCommunitiesService(repo: CommunitiesRepository = communiti
           courseId,
         });
       }
+      await auditService.record(adminId, { action: 'community.lock', targetType: 'community', targetId: courseId, targetLabel: course.title, reason });
       return { id: courseId, locked: true, reason };
     },
 
@@ -181,6 +186,8 @@ export function createCommunitiesService(repo: CommunitiesRepository = communiti
           courseId,
         });
       }
+      await clearModerationSuspension(courseId);
+      await auditService.record(adminId, { action: 'community.unlock', targetType: 'community', targetId: courseId, targetLabel: course.title });
       return { id: courseId, locked: false };
     },
 

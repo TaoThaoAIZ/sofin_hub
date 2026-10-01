@@ -99,3 +99,13 @@
   font-feature-settings: 'liga';
   -webkit-font-smoothing: antialiased;
 }
+
+/* Admin: lưới cột của từng "hàng" thẻ — 1 cột khi hẹp, nhiều cột (--cols) khi màn > 1180px (như bản thiết kế). */
+.admin-row {
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 1181px) {
+  .admin-row {
+    grid-template-columns: var(--cols, minmax(0, 1fr));
+  }
+}

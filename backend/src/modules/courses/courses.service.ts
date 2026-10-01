@@ -6,8 +6,8 @@ import type { ListCoursesQuery } from './courses.schema.js';
 
 export function createCourseService(repo: CourseRepository = courseRepository) {
   return {
-    async list(query: ListCoursesQuery) {
-      const { items, total } = await repo.findMany(query);
+    async list(query: ListCoursesQuery, opts?: { forSearch?: boolean }) {
+      const { items, total } = await repo.findMany(query, opts);
       return {
         data: items,
         meta: { page: query.page, limit: query.limit, total, totalPages: Math.max(1, Math.ceil(total / query.limit)) },

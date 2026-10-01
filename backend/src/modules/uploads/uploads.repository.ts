@@ -26,6 +26,7 @@ const toDomain = (u: Upload): UploadRecord => ({
   purpose: u.purpose,
   ...(u.courseId ? { courseId: u.courseId } : {}),
   status: u.status,
+  ...(u.removedAt ? { removed: true } : {}),
   createdAt: u.createdAt.toISOString(),
 });
 

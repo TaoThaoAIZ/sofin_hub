@@ -25,7 +25,7 @@ const isSearchable = (c: Course) => {
 async function publicCourses(): Promise<Course[]> {
   const out: Course[] = [];
   for (let page = 1; page <= MAX_PAGES_PER_COURSE; page++) {
-    const r = await courseService.list({ visibility: 'public', sort: 'newest', page, limit: PAGE });
+    const r = await courseService.list({ visibility: 'public', sort: 'newest', page, limit: PAGE }, { forSearch: true });
     out.push(...r.data);
     if (page >= r.meta.totalPages) break;
   }
@@ -36,6 +36,8 @@ export function createSearchService() {
   async function searchCourses(needle: string, courseId?: string): Promise<SearchResult[]> {
     return (await publicCourses())
       .filter((c) => (!courseId || c.id === courseId) && (matches(c.title, needle) || matches(c.description, needle)))
+      // searchVisibility=reduced: xếp sau các kết quả bình thường (sort ổn định giữ thứ tự cũ trong mỗi nhóm).
+      .sort((a, b) => Number(a.searchVisibility === 'reduced') - Number(b.searchVisibility === 'reduced'))
       .map((c) => ({
         type: 'course' as const,
         id: c.id,

@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { requireAuth } from '../../middlewares/auth.js';
 import { HttpError } from '../../utils/http-error.js';
+import { auditService } from '../admin/admin-audit.service.js';
+import { adminOnly } from '../admin/admin.common.js';
 import { WEBHOOK_SIGNATURE_HEADER } from './payments.gateway.js';
 import {
   cancelSubscriptionBody,
@@ -69,14 +71,19 @@ paymentsRouter.post('/payments/:paymentId/refund-request', requireAuth, async (r
   res.status(201).json({ data: refund });
 });
 
-paymentsRouter.get('/admin/refunds', requireAuth, async (req, res) => {
+paymentsRouter.get('/admin/refunds', ...adminOnly, async (req, res) => {
   const q = listRefundsQuery.parse(req.query);
   res.json(await paymentsService.listRefunds(req.userId!, q.status, q.page, q.limit));
 });
 
-paymentsRouter.patch('/admin/refunds/:refundId', requireAuth, async (req, res) => {
+paymentsRouter.patch('/admin/refunds/:refundId', ...adminOnly, async (req, res) => {
   const body = resolveRefundBody.parse(req.body);
-  res.json({ data: await paymentsService.resolveRefund(req.userId!, id(req.params.refundId), body.action, body.note) });
+  const data = await paymentsService.resolveRefund(req.userId!, id(req.params.refundId), body.action, body.note);
+  await auditService.record(req.userId!, {
+    action: 'payment.refund_resolve', targetType: 'refund', targetId: id(req.params.refundId), targetLabel: `Refund ${id(req.params.refundId).slice(0, 8)}`,
+    note: body.note, metadata: { decision: body.action },
+  });
+  res.json({ data });
 });
 
 // ---- webhook: không đăng nhập, xác thực bằng chữ ký HMAC trên raw body (app.ts giữ rawBody cho đúng path này)
@@ -102,12 +109,17 @@ paymentsRouter.get('/courses/:id/payouts', requireAuth, async (req, res) => {
   res.json(await paymentsService.listPayouts(id(req.params.id), req.userId!, q.page, q.limit));
 });
 
-paymentsRouter.get('/admin/payouts', requireAuth, async (req, res) => {
+paymentsRouter.get('/admin/payouts', ...adminOnly, async (req, res) => {
   const q = listPayoutsQuery.parse(req.query);
   res.json(await paymentsService.adminListPayouts(req.userId!, q.status, q.page, q.limit));
 });
 
-paymentsRouter.patch('/admin/payouts/:payoutId', requireAuth, async (req, res) => {
+paymentsRouter.patch('/admin/payouts/:payoutId', ...adminOnly, async (req, res) => {
   const body = resolvePayoutBody.parse(req.body);
-  res.json({ data: await paymentsService.resolvePayout(req.userId!, id(req.params.payoutId), body.action, body.note) });
+  const data = await paymentsService.resolvePayout(req.userId!, id(req.params.payoutId), body.action, body.note);
+  await auditService.record(req.userId!, {
+    action: 'payment.payout_resolve', targetType: 'payout', targetId: id(req.params.payoutId), targetLabel: `Payout ${id(req.params.payoutId).slice(0, 8)}`,
+    note: body.note, metadata: { decision: body.action },
+  });
+  res.json({ data });
 });

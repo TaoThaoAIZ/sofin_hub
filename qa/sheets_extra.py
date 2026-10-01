@@ -53,7 +53,7 @@ def _table(ws, r, headers, data, code_cols=()):
 # Sheet: Tài khoản & dữ liệu test
 # ---------------------------------------------------------------------------
 ACCOUNTS = [
-    ("admin", "admin@sofinhub.test", "Platform Admin", "Platform Admin (đội SofinHub). Không thuộc cộng đồng nào nhưng ghi đè quyền mọi cộng đồng. Cần PLATFORM_ADMIN_EMAILS=admin@sofinhub.test trong backend/.env.",
+    ("admin", "admin@sofinhub.test", "Platform Admin = Super Admin", "Super Admin (đội SofinHub, nguồn env). Từ đợt 3 có thêm các nhân viên Moderator/Support/Finance (mục A5). Không thuộc cộng đồng nào nhưng ghi đè quyền mọi cộng đồng. Cần PLATFORM_ADMIN_EMAILS=admin@sofinhub.test trong backend/.env.",
      "/admin/refunds?status=pending có 1 yêu cầu hoàn tiền NGOÀI cửa sổ 7 ngày (người yêu cầu: thành viên minh họa demo-paid-demo-2); /admin/payouts?status=requested có 1 payout chờ duyệt (của owner); khóa/mở khóa cộng đồng; xem/xử lý báo cáo mọi cộng đồng.",
      "Khu quản trị nền tảng, khóa cộng đồng (COMMUNITY_LOCKED), duyệt hoàn tiền/rút tiền, ma trận quyền Platform Admin, ban tài khoản."),
     ("owner", "owner@sofinhub.test", "Olivia Owner", "Owner của photo, yt, fin, private-demo, paid-demo (Course.ownerId).",
@@ -80,6 +80,17 @@ ACCOUNTS = [
     ("banned", "banned@sofinhub.test", "Bao Banned", "Bị cấm khỏi photo (có CommunityBan, vẫn còn dòng Enrollment nhưng không được coi là thành viên).",
      "Chỉ ảnh hưởng photo; các cộng đồng khác không bị chặn.",
      "Mọi hành động ở photo bị từ chối; không tham gia lại được; không hiện trong danh sách thành viên/xếp hạng."),
+]
+
+# Tài khoản seed của Admin đợt 1 (backend/prisma/seed/admin.ts): <key>@sofinhub.test, mật khẩu Passw0rd!x, id = seed-admin-user-<key>.
+ADMIN_ACCOUNTS = [
+    ("sarah / alex / daniel / liam / noah / emma / ava", "<tên>@sofinhub.test", "Người dùng thường (status active)", "Đối tượng bị hạn chế/tạm ngưng/cấm/cảnh cáo, người báo cáo, chủ cộng đồng chờ duyệt (noah: design-circle, emma: creator-academy, ava: no-code-nation + photo-walks, daniel: startup-grind + side-hustle-squad).", "Đăng ký rải 3-84 ngày trước; có phiên gần nhất (Chrome · macOS, IP 113.161.24.1x) để cột 'Hoạt động gần nhất' có giá trị."),
+    ("maya", "maya@sofinhub.test", "RESTRICTED: không đăng bài, không bình luận (đến +7 ngày, lý do Spam)", "Case ACCOUNT_RESTRICTED (post/comment), trang Hạn chế / Tạm ngưng, case cảnh cáo Maya (vụ việc #11).", "Thành viên yt, mkt, creator-academy; đăng nhập được."),
+    ("ethan", "ethan@sofinhub.test", "RESTRICTED: không nhắn tin, không tạo cộng đồng (đến +3 ngày, lý do Scam)", "Case ACCOUNT_RESTRICTED (dm/create_community), tự hết hạn khi sửa statusUntil, đối tượng vụ việc #8; chủ crypto-signals-pro (bị tạm ngưng).", "Đăng nhập được."),
+    ("olivia", "olivia@sofinhub.test", "SUSPENDED đến +14 ngày (Harassment); phiên đã thu hồi", "Đăng nhập -> 403 ACCOUNT_SUSPENDED; đối tượng vụ việc #9 (hate_speech, critical); tự hết hạn khi sửa statusUntil.", "Mật khẩu đúng nhưng bị chặn; sai mật khẩu vẫn 401."),
+    ("lucas", "lucas@sofinhub.test", "SUSPENDED vô thời hạn (Spam)", "Đối tượng bị báo cáo nhiều nhất (#1,#2,#3,#5), chủ quick-rich-club (rejected) và pixel-traders (đã xóa).", "Đăng nhập -> 403 ACCOUNT_SUSPENDED, until=null."),
+    ("sophia", "sophia@sofinhub.test", "BANNED (Scam)", "Đăng nhập -> 403 ACCOUNT_BANNED; trang Người dùng bị cấm; đối tượng vụ việc #4, #10; audit seed user.ban.", "Không đăng nhập được."),
+    ("john.carter / mia.lopez", "john.carter@ / mia.lopez@sofinhub.test", "Từ 2026-10-03 là NHÂN VIÊN vai trò Moderator (seed admin đợt 3 gán AdminAccount); trước đó chỉ là nhân sự hiển thị", "Cột 'Phụ trách' trong hàng đợi (john: #1,#2,#5,#9,#11; mia: #4,#7,#10,#12); đăng nhập vào /admin được với quyền Moderator (dashboard, cộng đồng, người dùng, kiểm duyệt, nội dung, khám phá, phân tích, danh mục) - KHÔNG có thanh toán/hỗ trợ/hệ thống; gán vụ việc cho họ qua assign vẫn 400 (không phải Super Admin).", "Dùng để test Moderator ở đợt 3 (mật khẩu Passw0rd!x, 2FA bật); xem mục A5."),
 ]
 
 SPECIAL = [
@@ -109,7 +120,71 @@ SPECIAL = [
     ("Thông báo", "seed-notif-member1-1..7", "7 thông báo của member1 (4 chưa đọc: post_liked, post_commented, event_reminder, message_received; 3 đã đọc: event_created, payment_succeeded, system).", "member1"),
     ("Tin nhắn", "seed-conv-member1-member2", "Hội thoại 8 tin giữa member1 và member2, 1 tin đã thu hồi, 3 tin member2 gửi chưa đọc (phía member1).", "member1, member2, member3 (IDOR)"),
     ("Điểm & cấp độ", "SeedPoints photo", "member1=110, member2=30, member3=6 điểm ở photo; các thành viên minh họa có 3 mốc thời gian (<=7d, 8-30d, >30d) đủ Cấp 1..6.", "member1..3"),
+    ("Admin: cộng đồng chờ duyệt", "design-circle / creator-academy / no-code-nation", "pending_review, tạo ~6 / 15 / 27 giờ trước (chủ noah / emma / ava; giá $29 / $59 / $39). KPI 'Cộng đồng chờ duyệt' = 3, 'Lâu nhất đã chờ' ≈ 27 giờ.", "admin"),
+    ("Admin: cộng đồng khác trạng thái", "startup-grind / quick-rich-club / crypto-signals-pro", "changes_requested (ghi chú 'Vui lòng làm rõ mô tả và bổ sung ảnh bìa.') / rejected ('Misleading claims') / suspended+locked ('Payment risk'). Cộng đồng seed-base ai/mkt/fit/des/biz được gán chủ alex/daniel/liam/sophia/ethan (dùng 'fit' để thử tạm ngưng, 'mkt' để thử xóa, 'des'/'biz' để thử khóa nhanh).", "admin"),
+    ("Admin: thùng rác", "side-hustle-squad / photo-walks / keto-kitchen / pixel-traders", "Đã xóa mềm 3 / 7 / 11 / 15 ngày trước (còn ~27 / 23 / 19 / 15 ngày); side-hustle-squad & pixel-traders do chủ tự xóa, hai cái còn lại admin xóa (Fraud, Spam).", "admin"),
+    ("Admin: vụ việc (Report)", "seed-admin-report-1..12 (#1..#12)", "#1,#2,#3 cùng báo cáo bài seed-admin-post-1 (lucas, photo; scam/scam/spam) -> hàng đợi gộp, reportCount=3, hiện #3; #4 bình luận sophia (harassment, under_review, mia); #5 bài post-2 (lucas, yt, copyright, john); #6 bình luận noah (low); #7 dismissed; #8 bài post-4 ethan (fin, scam, medium); #9 bình luận olivia (hate_speech, critical, john); #10 báo cáo thành viên sophia (under_review, mia); #11 resolved warn_user (maya); #12 resolved none. Mã hiển thị CASE-xxxxx theo caseNo trong DB.", "admin"),
+    ("Admin: nội dung bị báo cáo", "seed-admin-post-1..5, seed-admin-cmt-1..4", "5 bài (post-1 lừa đảo cọc $49 của lucas, post-2 'Cracked AI tools pack', post-3 bình thường của sarah, post-4 'Guaranteed 10x returns' của ethan, post-5 Telegram referral của maya) và 4 bình luận (cmt-1 sophia, cmt-2 noah, cmt-3 olivia, cmt-4 liam).", "admin"),
+    ("Admin: nhật ký audit seed", "seed-admin-audit-1..11", "11 dòng: user.ban (Sophia, 48h trước), user.suspend (Olivia), user.restrict (Maya), case.dismiss (#7), case.warn (Maya, #11), case.resolve (#12), case.remove_content (post-5), community.suspend (crypto-signals-pro), community.delete (photo-walks), community.reject (quick-rich-club), community.request_changes (startup-grind).", "admin"),
+    ("Admin: thanh toán cũ trong khung mới", "seed-pay-pendref / payout requested", "/admin/payments/refunds có 1 yêu cầu hoàn tiền pending (demo-paid-demo-2, ngoài cửa sổ 7 ngày); /admin/payments/payouts có 1 payout requested của owner (xem phần Thanh toán ở trên).", "admin"),
+    ("Admin đợt 2: nội dung", "POST-D186CDF7 / POST-6976F0F3 / POST-11AABCCE / POST-1926A141", "Bài ẩn (spam-hub, growth-lab) và đã gỡ (spam-hub, mindful-money); bài có báo cáo mở: POST-D70BB72C (2), POST-F687D03E (1), POST-129F0682 (1); bình luận ẩn CMT-88427752, gỡ CMT-2B7C14C7/CMT-B213F111, có báo cáo CMT-D923CB58. Tổng seed sạch: 163 bài (7 có báo cáo, 2 gỡ, 3 ẩn), 227 bình luận.", "admin"),
+    ("Admin đợt 2: khóa học/bài học", "System Design Drafts / Budgeting 101 / Get Rich Quick Secrets; LSN-408423DE, LSN-303F7046, LSN-DA91F381", "Khóa draft/archived/removed; bài ẩn 2, gỡ 5 (gồm 4 bài của khóa bị gỡ). Tổng: 124 khóa, 473 bài.", "admin, daniel (thành viên growth-lab)"),
+    ("Admin đợt 2: sự kiện & media", "Growth AMA / Hack night / Secret wealth webinar / Mobility workshop; notion-template.pdf / leaked-meal-plan.pdf / signals-pack.zip", "8 sự kiện đặc biệt (RSVP 2-5 người, 1 hủy, 1 gỡ, 1 'live now' chỉ 2 giờ); 12 tệp media metadata (2 gắn cờ, 1 gỡ; 1,4 GB).", "admin, emma, noah"),
+    ("Admin đợt 2: thanh toán", "112 giao dịch, 35 gói, 11 hoàn tiền, 7 tranh chấp (mô phỏng), 12 payout", "Giao dịch lẻ đặc biệt: TXN-70F1FA03/E2DB5581 (chờ), TXN-5ECCCEFC/6134AE3A/EDCA0F1F (thất bại), TXN-BE8C2E88/E9A88057/EFAAEA9E (hoàn), TXN-763C9F36/F49368D6/A6B4BFE4/F699FA13 (có yêu cầu hoàn chờ), TXN-E8AF54EA/84E9A3BA (dùng thử hoàn trực tiếp/chargeback). KPI seed sạch: gộp $4.589,00; phí nền tảng $438,25; MRR $1.132,00.", "admin"),
+    ("Admin đợt 2: khám phá", "photo/yt/growth-lab (featured), 8 danh mục, trọng số 25/25/20/15/10/5", "23 listed / 3 featured / 4 hidden / 5 unlisted; searchable 33 / reduced 1 (biz) / hidden 1 (spam-hub); /courses công khai = 29; mục new_noteworthy có 1 mục hết hạn (fit-forever).", "admin"),
+    ("Admin đợt 2: nhật ký audit seed", "seed-admin2-audit-1..13", "13 dòng: post.hide, post.remove, course.remove, media.remove, event.remove, event.cancel, refund.approve, payout.hold, payout.mark_failed, discovery.status, discovery.search_visibility, discovery.feature, chargeback.create.", "admin"),
+    ("Admin: lưu ý reset", "npm run db:reset", "Seed admin chỉ TẠO (id cố định, update:{}) nên npm run db:seed KHÔNG hoàn tác thao tác admin đã làm (đổi trạng thái người dùng/cộng đồng/vụ việc). Sau các case có ghi chú 'Case làm thay đổi dữ liệu seed' phải chạy npm run db:reset (xóa sạch + seed lại) trước khi test tiếp.", "admin"),
 ]
+
+
+# Admin đợt 2 (backend/prisma/seed/admin-batch2.ts): id cố định dạng UUID suy từ md5('seed-admin2-<tên>') -> mã hiển thị cố định.
+BATCH2_COMMUNITIES = [
+    ("growth-lab (Growth Lab)", "sarah ($49/tháng)", "Khám phá: Nổi bật (featured #3, còn hạn) · Danh mục Kinh doanh", "alex, ava, daniel, emma, maya (restricted), sarah (owner); lucas/sophia không đăng nhập được", "Cộng đồng nhiều dữ liệu nhất: 9 gói đăng ký đủ trạng thái, 7 tranh chấp, sự kiện AMA + Retention teardown, 2 khóa seed + 2 mô-đun mặc định."),
+    ("code-camp (Code Camp)", "alex ($29)", "Đang hiển thị · trending #2 · Công nghệ", "ava, daniel, noah, sarah; owner alex", "Khóa 'System Design Drafts' (draft), sự kiện 'Hack night' đã hủy, 'Live coding' có capacity 30, payout PO-12AA363D."),
+    ("fit-forever (Fit Forever)", "noah ($79)", "Đang hiển thị · new_noteworthy #1 HẾT HẠN · Sức khỏe", "alex, emma, sarah; owner noah", "Sự kiện 'Mobility workshop (live now)' (chỉ 'Đang diễn ra' trong 2 giờ đầu), bài học ẩn LSN-408423DE, payout tạm giữ PO-50974388."),
+    ("mindful-money (Mindful Money)", "liam ($19)", "Đang hiển thị · editors_picks #2 · Tài chính", "emma, noah, sarah; owner liam", "Khóa 'Budgeting 101' (archived), bài POST-1926A141 đã gỡ, ảnh budget-preview.png, payout đã chi/đã từ chối."),
+    ("pixel-pro (Pixel Pro)", "emma ($99)", "Đang hiển thị · editors_picks #1 · Sáng tạo nội dung", "maya, ethan (restricted); owner emma; olivia/sophia không đăng nhập được", "Bài có báo cáo POST-D70BB72C, bình luận CMT-D923CB58, payout PO-4F3DDE23 ($250), PO-55B8FDCB (thất bại)."),
+    ("spam-hub (Spam Hub)", "lucas (miễn phí)", "Gỡ khỏi khám phá (unlisted) · searchVisibility hidden · điểm chất lượng 35", "chỉ chủ lucas (bị tạm ngưng)", "Bài POST-D186CDF7 (ẩn), POST-6976F0F3 (gỡ), khóa 'Get Rich Quick Secrets' (gỡ), sự kiện 'Secret wealth webinar' (gỡ), tệp signals-pack.zip (gỡ)."),
+    ("biz / fit (cộng đồng seed-base)", "ethan / liam", "biz: ẩn thật + reduced ('Under quality review'); fit: unlisted ('Owner request')", "-", "Dùng thử 'Hiển thị lại' (đưa về listed) và so sánh /search với /courses?q=."),
+]
+
+BATCH2_FIND = [
+    ("Mã hiển thị", "Tiền tố + 8 ký tự đầu của uuid viết hoa: POST-, CMT-, LSN-, TXN-, SUB-, RF-, PO-; chargeback CB-000nn là số tự tăng (không cố định)", "POST-D186CDF7, TXN-5ECCCEFC, SUB-651D6D23, RF-1542230F, PO-60986918", "Ô tìm kiếm của mỗi trang nhận đúng các mã này (kể cả 4-8 ký tự đầu, không phân biệt hoa thường)."),
+    ("Id đầy đủ", "uuid = md5('seed-admin2-<tên>'): <8hex>-<4hex>-4<3hex>-a<3hex>-<12hex>; tên: post-N, cmt-N, mod-N, lsn-N, event-N, pay-N, sub-N, refund-N, cb-N, payout-N, feat-<section>-N, audit-N; tệp media-N -> key = md5(id).<ext>", "post-8 -> POST-D186CDF7; payout-1 -> PO-60986918; media-4 -> 7e67c7a1b47e2661c431b37641431f15.pdf", "Lấy id đầy đủ cho API bằng GET danh sách (trường id) rồi lọc theo q."),
+    ("Bài viết / bình luận", "Tìm theo nội dung đặc trưng ('MAKE $10,000', 'cheap-pills', 'Stop buying this course') hoặc tác giả", "q=MAKE $10,000 -> POST-D186CDF7", "Mỗi cộng đồng seed còn có bài/bình luận 'demo' do các seed khác tạo (mã POST-SEEDPOST...)."),
+    ("Khóa học / bài học", "Tìm theo tên khóa ('System Design Drafts', 'Get Rich Quick Secrets') hoặc mã LSN-; mô-đun mặc định id dạng mod-<cộng đồng>", "q=Get Rich Quick -> 4 bài đã gỡ", "'Khóa học' = ClassroomModule; tab Nháp/Đã lưu trữ/Đã gỡ lọc nhanh 3 khóa đặc biệt."),
+    ("Sự kiện / media", "Tìm theo tên sự kiện/tên tệp; tab Đã hủy cho Hack night; chip Bị gắn cờ/Đã gỡ cho media đặc biệt", "q=leaked -> leaked-meal-plan.pdf", "Giờ sự kiện tính từ lúc nạp seed; seed chỉ có metadata tệp (không có file thật)."),
+    ("Giao dịch / gói / hoàn tiền / chi trả", "Lọc theo trạng thái rồi tìm theo tên khách; mã cố định (xem sheet ADM2 phần tiền điều kiện)", "Trạng thái Thất bại + Lần đầu -> TXN-5ECCCEFC, TXN-6134AE3A, TXN-EDCA0F1F", "Chip 7/30/90 ngày của Giao dịch/Creator lọc theo ngày: giao dịch seed cũ nhất ~95 ngày."),
+    ("Khám phá", "id cộng đồng = slug (growth-lab, mkt, biz...); nổi bật theo mục; danh mục theo key", "q=spam-hub; tab Gỡ khỏi khám phá", "Reset sau khi test: npm run db:reset (db:seed không hoàn tác thao tác admin)."),
+]
+
+# Admin đợt 3 (backend/prisma/seed/admin-batch3.ts): nhân viên + dữ liệu Hỗ trợ / Hệ thống.
+BATCH3_STAFF = [
+    ("admin", "admin@sofinhub.test", "Super Admin (nguồn env PLATFORM_ADMIN_EMAILS)", "Luôn đủ 16 quyền; 2FA hiển thị tắt; khóa: không đổi vai trò/tạm ngưng/gỡ được từ giao diện", "Mọi route; Tài khoản quản trị, Vai trò & Quyền, Cài đặt chung, Feature flags, Audit."),
+    ("moderator", "moderator@sofinhub.test", "Moderator (Moderator Test) - nhân viên", "2FA bật · đăng nhập gần nhất ~2 giờ trước", "7 quyền: dashboard.view, community.manage, report.resolve, user.ban, users.view, content.manage, analytics.view."),
+    ("support", "support@sofinhub.test", "Support (Ryan Cho) - nhân viên", "2FA bật · ~1 giờ trước · phụ trách 9 ticket seed", "6 quyền: dashboard.view, report.resolve, payment.refund, users.view, payment.view, support.manage."),
+    ("finance", "finance@sofinhub.test", "Finance (Grace Lee) - nhân viên", "2FA bật · ~6 giờ trước", "6 quyền: dashboard.view, payment.refund, payout.approve, payment.view, payment.manage, analytics.view."),
+    ("tom", "tom@sofinhub.test", "Support (Tom Baker) - nhân viên, KHÔNG 2FA", "2FA tắt · ~30 giờ trước · phụ trách 6 ticket seed", "Cùng quyền Support; dùng test cột 2FA tắt, đổi vai trò/tạm ngưng/gỡ quyền."),
+    ("nina", "nina@sofinhub.test", "Moderator (Nina Ross) - ĐANG TẠM KHÓA ('Nghỉ việc, chờ thu hồi')", "2FA bật · ~200 giờ trước", "Đăng nhập thường được; mọi /admin/* trả 403 'Tài khoản admin của bạn đã bị tạm khóa'; dùng test Kích hoạt lại."),
+    ("john.carter / mia.lopez", "john.carter@ / mia.lopez@sofinhub.test", "Moderator - nhân viên (đợt 1 là nhân sự hiển thị, đợt 3 thành nhân viên)", "2FA bật", "Cùng quyền Moderator; dùng test lọc Vai trò = Moderator (tổng 4 Moderator gồm moderator@ và nina@)."),
+    ("(vai trò tùy chỉnh)", "content_reviewer - 'Content Reviewer'", "Vai trò tùy chỉnh mẫu, CHƯA gán cho ai", "3 quyền: dashboard.view, users.view, content.manage", "Gán cho một user thường (vd member1@) bằng Tạo quản trị viên để test vai trò tùy chỉnh; sau test dùng db:reset."),
+    ("member1 / owner / cadmin", "<tên>@sofinhub.test", "KHÔNG phải nhân viên", "-", "Mọi /admin/* trả 403 'Chỉ nhân viên admin mới có quyền này'. Chủ/quản trị cộng đồng KHÁC nhân viên nền tảng."),
+]
+
+BATCH3_DATA = [
+    ("Ticket hỗ trợ", "T-2001..T-2022 (22 ticket)", "Mã T-<2000 + số tự tăng> theo thứ tự tạo trên DB sạch. Mới 5 / Đang mở 7 / Chờ phản hồi 4 / Đã xử lý 4 / Đã đóng 2; 'Đang mở' (mới+mở+chờ) = 16 (người dùng 6, creator 5, thanh toán 5); chưa giao 7; chuyển cấp 2 (T-2004, T-2014); ưu tiên Thấp 7 / TB 8 / Cao 5 / Khẩn cấp 2; Ryan Cho phụ trách 9, Tom Baker 6. Nhóm: người dùng T-2001..2007 + T-2021; creator T-2008..2013 + T-2022; thanh toán T-2014..2020.", "support@, tom@, admin@; người gửi: sarah, alex, daniel, maya, liam, ethan, noah, emma, olivia, ava"),
+    ("Ticket hỗ trợ", "T-2001 / T-2004 / T-2007 / T-2005", "T-2001 (sarah, Đang mở, Cao, Ryan, có ghi chú nội bộ + 1 phản hồi nhân viên + 1 tin khách thêm: người dùng thấy 3 tin, admin 4); T-2004 (maya, Khẩn cấp, đã chuyển cấp, có tin 'Hệ thống'); T-2005 (liam, Đã xử lý, Tom); T-2007 (noah, Đã đóng, Ryan) - dùng test Mở lại / khóa ô trả lời.", "support@, sarah@, maya@"),
+    ("Ticket hỗ trợ", "T-2002, T-2006, T-2010, T-2012, T-2015, T-2018, T-2020", "Ticket CHƯA GIAO (7) - dùng test 'Nhận xử lý', Giao, Chuyển cấp, trả lời lần đầu (firstResponseAt).", "support@"),
+    ("Feature flags", "dm_v2 / premium_lock / ai_moderation / app_banner / native_live / leaderboard_v2", "dm_v2 Thử nghiệm BẬT 50%; premium_lock, ai_moderation, leaderboard_v2 Đang chạy BẬT 100%; app_banner Thử nghiệm TẮT; native_live Bản nháp TẮT 0%. GET /api/feature-flags (khách): premium_lock, ai_moderation, leaderboard_v2 = true, còn lại false.", "admin@"),
+    ("Tích hợp", "stripe, paypal, momo, zoom, mailgun, cloudflare / google_analytics, slack", "6 đã kết nối (khóa che ••••9f2a, ••••77c1, ••••0b3d, ••••e5aa, ••••41d8, ••••b290), 2 chưa kết nối. Dữ liệu mô phỏng, không có khóa thật.", "admin@"),
+    ("Mẫu email", "welcome, verify_email, reset_password, receipt, warning, payout_sent (Đang dùng) / suspended (Bản nháp)", "7 mẫu hệ thống đủ EN + VI. Chỉ verify_email và reset_password được dùng thật khi gửi email; đọc email ở GET /api/dev/outbox?to=<email>.", "admin@"),
+    ("Lịch sử thông báo", "2 broadcast seed", "'Bảo trì hệ thống đêm Chủ nhật' (Mọi người dùng, 2.480 người nhận, ~9 ngày trước) và 'Chính sách phí mới cho Creator' (Creator, 12, ~3 ngày trước) - chỉ là dòng lịch sử, không phát lại thông báo.", "admin@"),
+    ("Audit của nhân viên", "6 dòng seed có IP", "support.ticket.reply / support.ticket.escalate (Ryan Cho, 113.161.24.10), refund.approve (Grace Lee, 113.161.24.55), content.hide + user.warn (Moderator Test, 113.161.30.2), support.ticket.resolve (Tom Baker, 14.232.8.77). Nhãn đối tượng của dòng seed ghi T-2002/T-2004/T-2005 (dòng đầu lệch 1 so với mã ticket thật).", "admin@"),
+    ("Analytics", "Thành viên demo (isDemo) rải ~150 ngày", "Seed rải lại ngày đăng ký và thêm phiên 'quay lại' ở tuần 1/2/4/8/12 (~62/48/38/30/24%) để cohort/retention có hình dạng. Số liệu đổi theo ngày chạy -> luôn đối chiếu bằng SQL/API cùng range.", "admin@, moderator@, finance@"),
+    ("Cài đặt chung", "Mặc định lấy từ env", "commissionPct 10, gatewayFeePct 2.9, gatewayFeeFixedCents 30, refundWindowDays 7, payoutMinUsd 50, trialDays 7, subscriptionPeriodDays 30, currency USD, autoPayouts true, require2fa false, sessionTimeoutMin 30, maintenanceMode false, defaultLanguage vi. Ghi đè lưu ở PlatformSetting 'global.settings' (db:seed KHÔNG hoàn tác; dùng 'Khôi phục' hoặc db:reset).", "admin@"),
+    ("Đợt 3: lưu ý reset", "npm run db:reset", "Case 'MUTATE' (tạo/sửa/xóa nhân viên, vai trò, cờ, mẫu email, cài đặt, ticket...) làm bẩn dữ liệu: chạy npm run db:reset sau đó. Đặc biệt nhớ tắt chế độ bảo trì (nếu quên, mọi API công khai trả 503).", "-"),
+]
+
 
 SETUP = [
     ("1", "Cài đặt phụ thuộc (lần đầu)", "npm run install:all && npm install   (ở thư mục gốc sofin_hub)"),
@@ -137,6 +212,16 @@ def build_accounts_sheet(wb):
     # Cột: Key | Email | Mật khẩu | Vai trò (tên + mô tả) | Dữ liệu đặc biệt gắn với tài khoản | Dùng để test
     table = [(a[0], a[1], "Passw0rd!x", f"{a[2]} — {a[3]}", a[4], a[5]) for a in ACCOUNTS]
     r = _table(ws, r, ["Key", "Email", "Mật khẩu", "Tên & vai trò", "Dữ liệu đặc biệt gắn với tài khoản", "Dùng để test"], table, code_cols=(1, 2, 3))
+    r = _h2(ws, r, "A2. Tài khoản seed của Admin đợt 1 (module ADM) - mật khẩu Passw0rd!x, id = seed-admin-user-<key>")
+    r = _table(ws, r, ["Key", "Email", "Trạng thái / vai trò", "Dùng để test", "Ghi chú"], ADMIN_ACCOUNTS, code_cols=(1, 2))
+    r = _h2(ws, r, "A3. Dữ liệu seed Admin đợt 2 (module ADM2): 6 cộng đồng mới có phí + người dùng đợt 1 làm chủ/thành viên")
+    r = _table(ws, r, ["Cộng đồng (id)", "Chủ / giá", "Trạng thái Khám phá · danh mục", "Thành viên đăng nhập được (mật khẩu Passw0rd!x)", "Dữ liệu đặc biệt"], BATCH2_COMMUNITIES, code_cols=(1,))
+    r = _h2(ws, r, "A4. Cách tìm bản ghi Admin đợt 2 (id suy từ md5('seed-admin2-<tên>') nên mã hiển thị cố định sau db:reset)")
+    r = _table(ws, r, ["Loại", "Quy tắc / cách tìm", "Ví dụ", "Ghi chú"], BATCH2_FIND, code_cols=(2, 3))
+    r = _h2(ws, r, "A5. Nhân viên admin & vai trò seed của Admin đợt 3 (module ADM3) - mật khẩu Passw0rd!x")
+    r = _table(ws, r, ["Key", "Email", "Vai trò / nguồn", "Trạng thái / 2FA", "Quyền & dùng để test"], BATCH3_STAFF, code_cols=(1, 2))
+    r = _h2(ws, r, "A6. Dữ liệu seed Admin đợt 3 (Hỗ trợ, Hệ thống, Phân tích, Audit)")
+    r = _table(ws, r, ["Nhóm", "Mã / ID", "Mô tả & số liệu", "Tài khoản liên quan"], BATCH3_DATA, code_cols=(2,))
     r = _h2(ws, r, "B. Ma trận thành viên cộng đồng (Enrollment seed)")
     matrix = [
         ("photo", "owner", "cadmin (admin), mod (mod)", "member1, member2, member3", "banned (CommunityBan)", "Chưa: newbie"),
@@ -160,9 +245,13 @@ def build_accounts_sheet(wb):
 # Sheet: Nhật ký thay đổi
 # ---------------------------------------------------------------------------
 def build_changelog_sheet(wb, stats):
+    stats = dict(stats)
+    stats["adm_count"] = next((nw for (c, n, o, nw) in stats["by_module"] if c == "ADM"), 0)
+    stats["adm2_count"] = next((nw for (c, n, o, nw) in stats["by_module"] if c == "ADM2"), 0)
+    stats["adm3_count"] = next((nw for (c, n, o, nw) in stats["by_module"] if c == "ADM3"), 0)
     """stats: dict(old_total, new_total, by_module=[(code,name,old,new)], flipped=int, still_plan=int)"""
     ws = wb.create_sheet("Nhật ký thay đổi")
-    _title(ws, "NHẬT KÝ THAY ĐỔI — ĐỢT HOÀN THIỆN BACKEND + TÍCH HỢP FRONTEND (2026-09-30)", 5)
+    _title(ws, "NHẬT KÝ THAY ĐỔI — 2026-09-30 (BACKEND + FRONTEND) · 2026-10-01 (ADMIN CONSOLE ĐỢT 1) · 2026-10-02 (ADMIN CONSOLE ĐỢT 2) · 2026-10-03 (ADMIN CONSOLE ĐỢT 3)", 5)
     ws.cell(row=2, column=1, value="Ghi lại theo thứ tự thực hiện những gì đã làm và tác động tới bộ test case.").font = BOLD
     r = 4
     r = _h2(ws, r, "A. Những gì đã làm (theo thứ tự)")
@@ -184,6 +273,50 @@ def build_changelog_sheet(wb, stats):
     ]
     r = _table(ws, r, ["#", "Hạng mục", "Nội dung đã làm", "Tài liệu / nguồn", "Ảnh hưởng tới test case"], log)
 
+    r = _h2(ws, r, "A2. 2026-10-01 - Admin console đợt 1 (Tổng quan · Cộng đồng · Người dùng · Kiểm duyệt · Nhật ký hoạt động)")
+    admin_log = [
+        ("2026-10-01", "Backend /api/admin/* (đợt 1)", "Migration admin_batch1: trạng thái cộng đồng (Course.moderationStatus: pending_review|changes_requested|rejected|active|suspended|deleted; xóa mềm giữ 30 ngày), trạng thái tài khoản (User.status active|restricted|suspended|banned + statusUntil/restrictions), case kiểm duyệt (Report.caseNo/risk/assignee + ReportEvent), bảng AdminAuditLog. API: dashboard, communities (duyệt/yêu cầu chỉnh sửa/từ chối/tạm ngưng/khôi phục/xóa/undelete), users (restrict/suspend/ban/reinstate/warn, thu hồi phiên), moderation (assign/warn/remove-content/restrict/suspend/ban/dismiss/escalate/resolve, decisions), audit-logs. Route admin cũ (refunds/payouts/lock) nay cũng ghi audit. Chặn theo trạng thái ở đăng nhập/refresh (ACCOUNT_SUSPENDED/BANNED) và ở đăng bài/bình luận/tạo cộng đồng/nhắn tin/checkout (ACCOUNT_RESTRICTED). 15 test tích hợp mới ở tests/admin.test.ts.",
+         "backend/docs/api/admin.md, backend/src/modules/admin/*, backend/tests/admin.test.ts", "Module mới ADM. Case cũ ADMIN/ROLE/SEC về Platform Admin không đổi kỳ vọng; cộng đồng chưa duyệt/tạm ngưng/đã xóa nay ẩn khỏi /courses và tìm kiếm."),
+        ("2026-10-01", "Frontend /admin/* (khung admin mới)", "Thay AdminPage/AdminReportsPage bằng khung admin: sidebar 10 nhóm (đợt 1 có màn thật, còn lại 'Sắp có'), topbar (tìm kiếm Ctrl/⌘K, thao tác nhanh, menu tài khoản), drawer ở màn hẹp, guard Platform Admin (GET /admin/me). Trang: Bảng điều khiển; Cộng đồng (danh sách, chi tiết 6 tab, xét duyệt, tạm ngưng, xóa/khôi phục); Người dùng (danh sách, hạn chế/tạm ngưng, cấm, chi tiết 6 tab); Kiểm duyệt (hàng đợi, chi tiết vụ việc, cảnh cáo/gỡ nội dung/tạm ngưng/cấm); Nhật ký hoạt động; Hoàn tiền/Chi trả cũ đặt trong khung mới; /admin/reports chuyển hướng sang /admin/moderation. CHƯA chạy Playwright trên bản mới.",
+         "docs/features/admin-batch1.md, frontend/ADMIN_BACKEND_GAPS.md", "UI của case ADM bám nhãn tiếng Việt thật trong frontend/src/features/admin/**; Test 1 (Playwright) chưa có kết quả."),
+        ("2026-10-01", "Seed dữ liệu admin", "backend/prisma/seed/admin.ts (idempotent, id cố định seed-admin-*): 12 người dùng (maya/ethan restricted, olivia/lucas suspended, sophia banned) + 2 nhân sự, 10 cộng đồng (3 chờ duyệt, 1 yêu cầu chỉnh sửa, 1 từ chối, 1 tạm ngưng, 4 trong thùng rác), 5 bài + 4 bình luận bị báo cáo, 12 vụ việc, 11 dòng audit. Lưu ý: seed chỉ tạo, db:seed không hoàn tác thao tác admin -> dùng db:reset.",
+         "backend/prisma/seed/admin.ts", "Tiền điều kiện của case ADM dùng đúng id/tên/email này (xem sheet 'Tài khoản & dữ liệu test' mục A2 và C)."),
+        ("2026-10-01", "Bộ test QA: thêm module ADM", f"Thêm qa/cases_admin.py: {stats['adm_count']} testcase TC-ADM-001.. (module 'ADM - Admin Console (đợt 1)', sheet thứ 18) gồm quyền truy cập (guest/member/owner/cadmin/Platform Admin), khung admin & responsive, dashboard (KPI đối chiếu DB), cộng đồng (danh sách/chi tiết/xét duyệt/tạm ngưng/xóa-khôi phục), người dùng (danh sách/chi tiết/hạn chế-tạm ngưng-cấm-cảnh cáo + hiệu lực ACCOUNT_*), kiểm duyệt (hàng đợi, gộp báo cáo trùng, xử lý vụ việc, nhật ký quyết định), audit log, hồi quy hoàn tiền/chi trả/khóa cũ, phi chức năng, và các điểm chưa làm giữ 'Kế hoạch' (cộng đồng tự tạo chưa cần duyệt, chưa có job hết hạn/xóa vĩnh viễn, gói đăng ký không bị hủy khi đình chỉ, chưa có vai trò Moderator/Finance, export/bulk...). Tách thành 18 sheet; README thêm quy tắc: mỗi tính năng mới -> thêm cases_*.py + mục nhật ký + sinh lại.",
+         "qa/cases_admin.py, qa/gen_testcases.py, qa/split_sheets.py, qa/sheets_extra.py, qa/README.md", "Kết quả Test 1/Test 2 đều 'Chưa test'. Case có ghi chú 'thay đổi dữ liệu seed' phải db:reset sau khi chạy. Case cũ không đổi mã/thứ tự; kết quả Pass/Fail cũ được khôi phục nguyên."),
+    ]
+    r = _table(ws, r, ["Ngày", "Hạng mục", "Nội dung đã làm", "Tài liệu / nguồn", "Ảnh hưởng tới test case"], admin_log)
+
+    r = _h2(ws, r, "A3. 2026-10-02 - Admin console đợt 2 (Nội dung · Thanh toán · Khám phá)")
+    admin2_log = [
+        ("2026-10-02", "Backend /api/admin/{content,payments,discovery}/*", "Migration admin_batch2: cột kiểm duyệt cho Post/PostComment/ClassroomModule/ClassroomLesson/CommunityEvent/Upload (hidden/removedAt/modReason...), Course.discoveryStatus + searchVisibility, bảng Chargeback (mô phỏng), DiscoveryCategory, DiscoveryFeature, PlatformSetting (trọng số xếp hạng). "
+         "Nội dung: bài viết/bình luận (+ bulk), khóa học (ClassroomModule), bài học, sự kiện (sửa/hủy/gỡ), media (gắn cờ/gỡ/tải); Thanh toán: giao dịch (hoàn tiền một phần/toàn phần, thử lại), gói đăng ký (tạm dừng/tiếp tục/hủy ngay hoặc cuối kỳ), hoàn tiền (duyệt một phần/từ chối), tranh chấp (mô phỏng), doanh thu creator, chi trả (7 trạng thái); Khám phá: cộng đồng hiển thị, danh mục, nổi bật 4 mục, xếp hạng (preview/publish/reset), hiển thị tìm kiếm. 24 test tích hợp.",
+         "backend/docs/api/admin-batch2.md, backend/tests/admin-batch2.test.ts", "Module mới ADM2. Hành vi công khai đổi: /courses chỉ trả cộng đồng discoveryStatus=listed; /search & /courses?q= loại searchVisibility=hidden, reduced xếp sau; /categories ẩn danh mục tắt; bài/bình luận/bài học/sự kiện/tệp bị admin gỡ biến mất với người dùng; sự kiện hủy không RSVP được (409); thêm /courses/featured và /courses?sort=ranked."),
+        ("2026-10-02", "Frontend /admin/{content,payments,discovery}/*", "17 trang mới (Bài viết, Bình luận, Khóa học, Bài học, Sự kiện, Media, Giao dịch + chi tiết, Gói đăng ký, Hoàn tiền + chi tiết, Tranh chấp, Doanh thu creator + chi tiết, Chi trả, Cộng đồng hiển thị, Danh mục, Nổi bật, Xếp hạng, Hiển thị tìm kiếm); thay RefundsTab/PayoutsTab cũ; ActionDialog dùng chung (lý do + ghi chú + thông báo), DataTable có chọn nhiều + thanh bulk. Chưa có: xuất CSV, tải biên nhận, dropdown Cộng đồng/Tác giả, bulk ngoài Bài viết, kéo-thả, tên gói.",
+         "docs/features/admin-batch2.md, frontend/ADMIN_BACKEND_GAPS.md", "UI của case ADM2 bám nhãn tiếng Việt thật trong frontend/src/features/admin/pages/{Content,Payments,Discovery}Views.tsx; Test 1 (Playwright) chưa có kết quả."),
+        ("2026-10-02", "Seed dữ liệu admin đợt 2", "backend/prisma/seed/admin-batch2.ts (idempotent, id suy từ md5 nên mã hiển thị cố định): 6 cộng đồng có phí (growth-lab, code-camp, fit-forever, mindful-money, pixel-pro, spam-hub) + gói đăng ký đủ trạng thái, 112 giao dịch, 11 yêu cầu hoàn tiền, 7 tranh chấp mô phỏng, 12 chi trả, 14 bài + 10 bình luận (ẩn/gỡ/bị báo cáo), 8 khóa + bài học, 8 sự kiện, 12 tệp media (chỉ metadata), mục nổi bật 4 section, trọng số xếp hạng, 13 dòng audit.",
+         "backend/prisma/seed/admin-batch2.ts", "Tiền điều kiện của case ADM2 dùng đúng mã/tên này (xem sheet 'Tài khoản & dữ liệu test' mục A3, A4 và C). Thao tác admin không bị db:seed hoàn tác -> dùng npm run db:reset."),
+        ("2026-10-02", "Bộ test QA: thêm module ADM2", f"Thêm qa/cases_admin2.py: {stats['adm2_count']} testcase TC-ADM2-001.. (module 'ADM2 - Admin Console (đợt 2)', sheet thứ 19) gồm quyền truy cập 3 nhóm, Nội dung (Bài viết/Bình luận/Khóa học/Bài học/Sự kiện/Media: UI + API + hiệu lực ở API công khai), Thanh toán (Giao dịch, Gói đăng ký, Hoàn tiền, Tranh chấp mô phỏng, Doanh thu creator, Chi trả + hồi quy /admin/refunds và /admin/payouts), Khám phá (Cộng đồng hiển thị, Danh mục, Nổi bật, Xếp hạng, Hiển thị tìm kiếm), tác động lên API công khai, audit/thông báo, validate/đồng thời, và các điểm chưa làm/mô phỏng giữ 'Kế hoạch'. Case làm thay đổi dữ liệu seed ghi rõ MUTATE (npm run db:reset); case phụ thuộc giá trị chưa chốt gắn [PHỤ THUỘC QUYẾT ĐỊNH CHƯA CHỐT].",
+         "qa/cases_admin2.py, qa/gen_testcases.py, qa/split_sheets.py, qa/sheets_extra.py, qa/README.md", "Kết quả Test 1/Test 2 đều 'Chưa test'. Phát hiện khi viết case (ghi 'HIỆN TẠI' trong kỳ vọng): tab 'Hoạt động' của Gói đăng ký đếm 30 nhưng liệt kê 35; sắp xếp 'Điểm chất lượng thấp nhất' trả cao nhất trước; 'Hiển thị lại' cộng đồng riêng tư/chờ duyệt báo 409; /courses vẫn liệt kê cộng đồng riêng tư; Nhật ký hoạt động chưa Việt hóa/lọc cho hành động đợt 2; với giao dịch seed hoàn toàn bộ/chargeback thua không hủy gói."),
+    ]
+    r = _table(ws, r, ["Ngày", "Hạng mục", "Nội dung đã làm", "Tài liệu / nguồn", "Ảnh hưởng tới test case"], admin2_log)
+
+    r = _h2(ws, r, "A4. 2026-10-03 - Admin console đợt 3 (Phân tích · Hỗ trợ · Hệ thống + vai trò/quyền nhân viên)")
+    admin3_log = [
+        ("2026-10-03", "Backend /api/admin/{analytics,support,system}/* + phân quyền nhân viên", "Migration admin_batch3: AdminRole (4 vai trò hệ thống + tùy chỉnh), AdminAccount, SupportTicket + SupportTicketMessage, FeatureFlag, Integration, EmailTemplate, PlatformBroadcast, cột ip cho audit. "
+         "Phân quyền TẬP TRUNG: middleware adminOnly suy quyền từ (method, path) trong admin-staff.permissions.ts (16 khóa), áp cho TOÀN BỘ /api/admin/* của đợt 1-2 và route cũ /admin/refunds, /admin/payouts; Super Admin = email trong PLATFORM_ADMIN_EMAILS hoặc vai trò super_admin; nhân viên tạm khóa -> 403; nhân viên không thể bị ban/suspend qua /admin/users. "
+         "Phân tích 6 trang (users/communities/engagement/retention/revenue/conversion, range 7/30/90, tính trực tiếp bằng SQL); Hỗ trợ (ticket: gán/trả lời bằng email + thông báo/ghi chú nội bộ/chuyển cấp/giải quyết/đóng/mở lại, form liên hệ POST /api/contact tạo ticket, ticket người dùng /api/support/tickets); Hệ thống (Tài khoản quản trị, Vai trò & Quyền, Danh mục dùng chung Khám phá, Feature flags + GET /api/feature-flags công khai, Tích hợp mô phỏng, Thông báo + broadcast, Mẫu email có preview/test-send và dùng thật cho verify_email/reset_password, Audit export CSV, Cài đặt chung có hiệu lực thật lên thanh toán + chế độ bảo trì 503 MAINTENANCE).",
+         "backend/docs/api/admin-batch3.md, backend/docs/API.md, backend/tests/admin-batch3.test.ts (39 test)", "Module mới ADM3. Hành vi công khai đổi: GET /api/feature-flags; POST /api/contact tạo ticket (202); khi bật bảo trì mọi API công khai trừ /admin, /auth, /feature-flags, /dev, /payments/webhook trả 503 MAINTENANCE; hoa hồng/phí cổng/cửa sổ hoàn tiền/rút tối thiểu/dùng thử/chu kỳ gói đọc từ Cài đặt chung (mặc định env). Đợt 1-2: /admin/* nay theo QUYỀN VAI TRÒ chứ không còn 'chỉ Platform Admin'; case ADM/ADM2 viết 'Platform Admin' hiểu là Super Admin (admin@)."),
+        ("2026-10-03", "Frontend khung admin theo quyền + 19 trang đợt 3", "useCan()/visibleNav(can)/requiredPerm: sidebar ẩn nhóm/mục theo quyền, trang không đủ quyền hiện 'Không đủ quyền' trong khung; bỏ ComingSoon. Trang mới: 6 trang Phân tích, 4 trang Hỗ trợ (+ chi tiết ticket), Tài khoản quản trị, Vai trò & Quyền (ma trận bấm ô), Danh mục, Tính năng thử nghiệm, Tích hợp, Thông báo, Mẫu email (trình soạn + xem trước), Nhật ký (lọc, xuất CSV), Cài đặt chung.",
+         "docs/features/admin-batch3.md, frontend/ADMIN_BACKEND_GAPS.md (mục Admin đợt 3)", "UI của case ADM3 bám nhãn tiếng Việt thật trong frontend/src/features/admin/pages/{Analytics,Support,SystemAccess,SystemConfig}Views.tsx, EmailTemplatesView.tsx, AuditView.tsx và nav.ts; Test 1 (Playwright) chưa có kết quả."),
+        ("2026-10-03", "Seed dữ liệu admin đợt 3", "backend/prisma/seed/admin-batch3.ts (idempotent chỉ-tạo): nhân viên moderator@/support@/finance@/tom@/nina@(tạm khóa) + john.carter@/mia.lopez@ (Moderator), vai trò Content Reviewer, 22 ticket (đủ nhóm/trạng thái/ưu tiên/người xử lý), 6 feature flag, 8 tích hợp, 7 mẫu email, 2 broadcast, 6 dòng audit có IP, rải ngày đăng ký/phiên cho Phân tích.",
+         "backend/prisma/seed/admin-batch3.ts", "Tiền điều kiện của case ADM3 dùng đúng mã/tên này (sheet 'Tài khoản & dữ liệu test' mục A5, A6). Mã ticket T-2001.. phụ thuộc số tự tăng nên chỉ cố định trên DB sạch."),
+        ("2026-10-03", "Sheet 'Phân quyền' viết lại", "Thêm tầng quyền NHÂN VIÊN ADMIN (Super Admin/Moderator/Support/Finance/vai trò tùy chỉnh): ma trận route × vai trò, 16 khóa quyền × vai trò, sidebar theo vai trò, trạng thái nhân viên tạm khóa, quy tắc mới; bỏ ghi chú 'chưa có Moderator/Finance/Support' và 'john/mia không có quyền'.",
+         "qa/sheets_extra.py (build_roles_sheet), backend/src/modules/admin/admin-staff.permissions.ts", "Đổi quyền ở admin-staff.permissions.ts thì sửa PERMS trong qa/cases_admin3.py (sheet Phân quyền và case ma trận sinh từ bảng này)."),
+        ("2026-10-03", "Bộ test QA: thêm module ADM3", f"Thêm qa/cases_admin3.py: {stats['adm3_count']} testcase TC-ADM3-001.. (module 'ADM3 - Admin Console (đợt 3)', sheet thứ 20) gồm khung admin theo quyền (UI), MA TRẬN PHÂN QUYỀN (vai trò × route của đợt 1-3, route cũ refunds/payouts, nhân viên tạm khóa, nhân viên không bị ban qua /admin/users, vai trò tùy chỉnh, hiệu lực ngay), Phân tích (6 trang UI + API + đối chiếu SQL + xấp xỉ), Hỗ trợ (danh sách/tab/lọc/chi tiết/trả lời/ghi chú/giao/chuyển cấp/giải quyết/đóng/mở lại/tạo hộ khách + API admin + API người dùng + POST /api/contact), Hệ thống (Tài khoản quản trị, Vai trò & Quyền, Danh mục, Feature flags + public, Tích hợp, Thông báo/broadcast, Mẫu email + hiệu lực lên email thật, Audit + CSV, Cài đặt chung + hiệu lực thật + bảo trì), responsive/XSS và các điểm chưa làm/lệch (Kế hoạch). Nhiều case ma trận được SINH bằng vòng lặp từ bảng PERMS/ROUTES.",
+         "qa/cases_admin3.py, qa/gen_testcases.py, qa/split_sheets.py, qa/sheets_extra.py, qa/README.md", "Kết quả Test 1/Test 2 đều 'Chưa test'. Phát hiện khi viết case (ghi 'HIỆN TẠI'/'KỲ VỌNG' trong case, trạng thái 'Kế hoạch'): (1) FE cho phép tạo ticket hộ khách không có email ('tùy chọn') nhưng BE bắt buộc requesterEmail (tài liệu ghi optional); (2) FE khóa cờ 'a-z0-9_' nhưng BE bắt buộc bắt đầu bằng chữ và dài 2-60; (3) FE biến mẫu cho phép dấu chấm, BE chỉ chữ-số-gạch dưới; (4) FE cho trialDays 0, BE min 1; chu kỳ gói/ mức rút/ phí cố định lệch khoảng FE-BE; (5) bộ lọc nhóm Audit 'Hệ thống'/'Nội dung'/'Thanh toán' theo tiền tố không khớp mã thật; mã support.ticket.* và vài mã khác hiện nguyên mã (chưa dịch); (6) tài liệu admin-batch3.md ghi route chi trả đợt 2 chỉ có GET nhưng có POST cần payout.approve; (7) giao diện ghi 'thành viên sẽ thấy trang bảo trì' nhưng FE người dùng chưa đọc cờ maintenance/feature flags; (8) nhãn vai trò FE 'Kiểm duyệt viên/Hỗ trợ/Tài chính' khác tên API; (9) dòng audit seed T-2002 lệch mã ticket thật T-2001; (10) tạm khóa nhân viên không thu hồi phiên đăng nhập thường (chỉ chặn /admin)."),
+    ]
+    r = _table(ws, r, ["Ngày", "Hạng mục", "Nội dung đã làm", "Tài liệu / nguồn", "Ảnh hưởng tới test case"], admin3_log)
+
     r = _h2(ws, r, "B. Giá trị TẠM chưa chốt (đang dùng cấu hình mặc định, test theo hành vi thực tế)")
     pending = [
         ("Hoa hồng nền tảng", "10% (PLATFORM_COMMISSION_PCT) + phí cổng 2.9% + 30¢ (GATEWAY_FEE_PCT, GATEWAY_FEE_FIXED_CENTS)", "Chờ chốt mô hình doanh thu (PLAN câu hỏi #6)", "PAY: công thức doanh thu ròng/số dư owner"),
@@ -195,6 +328,11 @@ def build_changelog_sheet(wb, stats):
         ("Xác thực SSE (thông báo/tin nhắn)", "Vé ngắn hạn vs cookie; còn hỗ trợ ?access_token= hay bỏ", "Chưa chốt", "NOTI/SEC: case SSE ghi rõ cơ chế đang dùng"),
         ("/files cho tệp đính kèm tin nhắn", "Hiện /files/:key công khai (bảo mật bằng khóa ngẫu nhiên); chưa chốt có bắt đăng nhập", "Chưa chốt", "UPLOAD: case truy cập file"),
         ("Chứng nhận khi mod thêm bài sau khi đã cấp", "Chưa quyết định xử lý", "Chưa chốt", "CERT"),
+        ("Phí cổng trong doanh thu admin", "Phí cổng = 2,9% × số tiền + 30¢ tính trên số tiền gốc (không hoàn khi hoàn tiền) nên giao dịch hoàn đủ có 'Creator nhận' âm", "Chưa chốt (cùng #6)", "ADM2: Giao dịch, Doanh thu creator"),
+        ("Trọng số xếp hạng mặc định & công thức", "25/25/20/15/10/5; revenue 100 điểm = MRR $450; reportPenalty = báo cáo 30 ngày × 10", "Chưa chốt", "ADM2: Xếp hạng, sort=ranked"),
+        ("Quy tắc hiển thị Khám phá hidden/unlisted", "hidden (ẩn) vs unlisted (gỡ): cộng đồng riêng tư hiển thị 'Đã ẩn', chưa active hiển thị 'Gỡ khỏi khám phá', nhưng /courses chỉ lọc theo cột discoveryStatus", "Chưa chốt", "ADM2: Cộng đồng hiển thị"),
+        ("Các giá trị tiền tạm ở trên (hoa hồng, phí cổng, cửa sổ hoàn tiền, rút tối thiểu, dùng thử, chu kỳ gói)", "Từ 2026-10-03 chỉnh được ở Admin > Hệ thống > Cài đặt chung (PATCH /api/admin/system/settings), mặc định vẫn lấy từ env và Khôi phục được", "Giá trị cuối cùng vẫn chưa chốt", "ADM3: nhóm case 'Cài đặt chung: hiệu lực thật lên thanh toán' + case Kế hoạch 'Giá trị nghiệp vụ tạm...'"),
+        ("Công thức điểm chất lượng tìm kiếm", "40×rating/5 + 25×tương tác + 15 (mô tả ≥80 ký tự) + 10 (ảnh bìa) + 10 (bài 30 ngày) − 8×vi phạm", "Chưa chốt", "ADM2: Hiển thị tìm kiếm"),
     ]
     r = _table(ws, r, ["Hạng mục", "Giá trị tạm hiện tại", "Trạng thái", "Ảnh hưởng tới test"], pending)
 
@@ -207,6 +345,7 @@ def build_changelog_sheet(wb, stats):
         ("Upload S3/MinIO", "Đang lưu ổ đĩa cục bộ (StorageProvider đã tách sẵn)."),
         ("i18n VI/EN, SEO meta/OG, sitemap", "Chưa làm (nút 'VI' chỉ là hình)."),
         ("Nhiều instance BE", "Vé/kết nối SSE, rate limit, nonce vé upload nằm trong bộ nhớ tiến trình -> cần Redis khi scale; chưa có job dọn Session hết hạn."),
+        ("Admin đợt 3 - chưa làm / mô phỏng", "2FA thật (chỉ cờ lưu trữ); require2fa/sessionTimeoutMin/currency/autoPayouts/timezone chỉ lưu cấu hình; job gửi cảnh báo/báo cáo admin chưa có; tích hợp là mô phỏng; cờ tính năng chưa được backend áp dụng và FE người dùng chưa đọc (kể cả maintenance); ticket chưa có SLA/đính kèm/nhận email trả lời; chỉ verify_email & reset_password đọc mẫu từ DB; chưa ẩn nút theo quyền; Phân tích chưa có CSV/khoảng ngày tùy ý/lượt truy cập/nguồn đăng ký; chưa có màn 'Ticket của tôi' cho người dùng."),
         ("Thiếu ở BE mà FE tạm xử lý", "Endpoint 'yêu cầu tham gia của tôi', 'yêu cầu hoàn tiền của tôi', cờ viewerBanned, cờ Platform Admin trong /auth/me, tìm người dùng để bắt đầu chat, Retry-After cho 429, postId trong báo cáo bình luận, trường tệp đính kèm cho bài viết."),
     ]
     r = _table(ws, r, ["Hạng mục", "Ghi chú"], todo)
@@ -245,5 +384,217 @@ def build_changelog_sheet(wb, stats):
 
     for i, w in enumerate([24, 44, 80, 40, 50], start=1):
         ws.column_dimensions[get_column_letter(i)].width = w
+    ws.freeze_panes = "A4"
+    return ws
+
+
+# ---------------------------------------------------------------------------
+# Sheet: Phân quyền (vai trò & ma trận quyền) - nguồn: backend/src/modules/permissions/policy.ts, backend/docs/API.md
+# ---------------------------------------------------------------------------
+ROLE_OVERVIEW = [
+    ("Khách (guest)", "Chưa đăng nhập", "Người đứng ngoài cổng trường", "Xem trang chủ, trang giới thiệu khóa học công khai, form liên hệ POST /api/contact, GET /api/feature-flags. Mọi thao tác tương tác (đăng bài, bình luận, thích...) bị chuyển sang trang đăng nhập.", "Không có tài khoản"),
+    ("Thành viên (member)", "Role cộng đồng, bậc 0", "Học sinh trong lớp", "Đọc bảng tin, đăng bài, bình luận, thích, đăng ký sự kiện, học bài, nhắn tin, xem xếp hạng; gửi/xem/trả lời ticket hỗ trợ của chính mình (/api/support/tickets). Chỉ sửa/xóa nội dung của chính mình.", "member1, member2, member3"),
+    ("Điều hành viên (mod)", "Role cộng đồng, bậc 1", "Lớp phó / trực ban", "Mọi quyền của member + ghim/ẩn bài, xóa bình luận người khác, tạo/sửa/xóa sự kiện, quản lý nội dung lớp học, xử lý báo cáo trong cộng đồng.", "mod"),
+    ("Quản trị cộng đồng (admin)", "Role cộng đồng, bậc 2", "Giáo viên chủ nhiệm", "Mọi quyền của mod + sửa thông tin cộng đồng, đặt/bỏ mod, kick/ban thành viên, duyệt yêu cầu tham gia, tạo lời mời, bật chứng nhận.", "cadmin"),
+    ("Chủ cộng đồng (owner)", "Role cộng đồng, bậc 3", "Hiệu trưởng của lớp đó", "Mọi quyền của admin + cấp/thu hồi admin, đổi giá/chế độ riêng tư, xóa cộng đồng, chuyển quyền, xem doanh thu, yêu cầu rút tiền (chỉ đúng Owner).", "owner (photo, yt, fin, paid-demo, private-demo)"),
+    ("Super Admin = Platform Admin (nền tảng)", "Role nền tảng, bậc 4 (cũng là 1 vai trò nhân viên)", "Đội vận hành SofinHub", "Toàn quyền: ghi đè Owner ở mọi cộng đồng; vào khu /admin với ĐỦ 16 khóa quyền. Xác định bằng email trong PLATFORM_ADMIN_EMAILS (nguồn 'env', không lưu trong DB, không sửa/xóa được từ giao diện) HOẶC vai trò nhân viên super_admin.", "admin (env)"),
+]
+
+# Vai trò NHÂN VIÊN ADMIN (từ đợt 3): (vai trò, làm được gì, khóa quyền, tài khoản test, ghi chú)
+STAFF_ROLES = [
+    ("Super Admin", "Mọi thứ trong /admin kể cả Tài khoản quản trị, Vai trò & Quyền, Cài đặt chung, Feature flags, Audit; ghi đè Owner ở cộng đồng (chỉ nguồn env).", "Đủ 16 khóa (cột khóa cố định, không sửa được)", "admin@sofinhub.test (env)", "Tự thân/Super Admin env bị khóa: không đổi vai trò/tạm ngưng/gỡ quyền được (409)."),
+    ("Moderator ('Kiểm duyệt viên' trên giao diện)", "Cộng đồng (duyệt/đình chỉ/xóa/khóa), Khám phá + Danh mục hệ thống, Người dùng (xem + hạn chế/đình chỉ/cấm/cảnh cáo), Kiểm duyệt, Nội dung, Phân tích. KHÔNG: thanh toán, hỗ trợ, nhật ký, cờ, cài đặt, quản trị viên.", "dashboard.view, community.manage, report.resolve, user.ban, users.view, content.manage, analytics.view", "moderator@, john.carter@, mia.lopez@, nina@ (tạm khóa)", "Không ban/suspend được NHÂN VIÊN khác (403)."),
+    ("Support ('Hỗ trợ')", "Hỗ trợ (ticket), Người dùng (chỉ xem), Kiểm duyệt (xử lý báo cáo), Thanh toán (xem) + duyệt/từ chối hoàn tiền. KHÔNG: ban người dùng, duyệt chi trả, payment.manage, phân tích, nội dung, cộng đồng.", "dashboard.view, report.resolve, payment.refund, users.view, payment.view, support.manage", "support@ (Ryan Cho), tom@ (không 2FA)", "Nút ghi vẫn hiện nhưng BE trả 403 khi thiếu quyền (chưa ẩn nút theo quyền)."),
+    ("Finance ('Tài chính')", "Thanh toán (xem + thử lại/gói/tranh chấp), hoàn tiền, duyệt/giữ chi trả, Phân tích. KHÔNG: người dùng, kiểm duyệt, nội dung, hỗ trợ, hệ thống.", "dashboard.view, payment.refund, payout.approve, payment.view, payment.manage, analytics.view", "finance@ (Grace Lee)", "Không có users.view nên không mở được hồ sơ người dùng từ giao dịch."),
+    ("Vai trò tùy chỉnh (do Super Admin tạo)", "Tập con quyền tự chọn ở Hệ thống > Vai trò & Quyền. Không được có admin.manage. Mẫu: Content Reviewer = dashboard.view + users.view + content.manage.", "Tùy chọn (tối đa 15 khóa, không gồm admin.manage)", "Chưa có tài khoản seed (gán cho user thường để test)", "Xóa chỉ khi không còn nhân viên dùng; sửa ô ma trận có hiệu lực ngay ở request kế tiếp."),
+    ("Nhân viên bị tạm khóa (AdminAccount.status=suspended)", "Không dùng được /admin dù vai trò còn nguyên: mọi /admin/* (kể cả /admin/me) trả 403 'Tài khoản admin của bạn đã bị tạm khóa'. Tài khoản thường vẫn đăng nhập bình thường.", "(giữ vai trò nhưng vô hiệu)", "nina@ (Moderator, tạm khóa)", "Trục RIÊNG với trạng thái tài khoản người dùng; Kích hoạt lại ở Tài khoản quản trị."),
+    ("Người dùng thường / chủ cộng đồng (không có AdminAccount)", "Không vào được /admin: 401 khi thiếu token, 403 'Chỉ nhân viên admin mới có quyền này'.", "-", "member1, owner, cadmin...", "Chủ/quản trị cộng đồng KHÁC nhân viên nền tảng."),
+]
+
+# Ma trận quyền CỘNG ĐỒNG: (nhóm, hành động, khách, member, mod, admin, owner, super_admin). Y = được, N = không.
+MATRIX = [
+    ("Xem", "Xem trang chủ, danh sách & giới thiệu khóa học công khai", "Y", "Y", "Y", "Y", "Y", "Y"),
+    ("Xem", "Xem bảng tin, lớp học, lịch, thành viên, xếp hạng của cộng đồng đã tham gia", "N", "Y", "Y", "Y", "Y", "Y"),
+    ("Tương tác", "Đăng bài, bình luận, thích, vote khảo sát", "N", "Y", "Y", "Y", "Y", "Y"),
+    ("Tương tác", "Đăng ký sự kiện (RSVP), học bài, nhận chứng nhận, nhắn tin", "N", "Y", "Y", "Y", "Y", "Y"),
+    ("Tương tác", "Sửa/xóa bài & bình luận của CHÍNH MÌNH", "N", "Y", "Y", "Y", "Y", "Y"),
+    ("Hỗ trợ (người dùng)", "Gửi / xem / trả lời ticket của CHÍNH MÌNH (/api/support/tickets, đăng nhập)", "N", "Y", "Y", "Y", "Y", "Y"),
+    ("Hỗ trợ (người dùng)", "Gửi form liên hệ POST /api/contact (không cần đăng nhập)", "Y", "Y", "Y", "Y", "Y", "Y"),
+    ("Nội dung", "Sửa/xóa bài & bình luận của NGƯỜI KHÁC", "N", "N", "Y", "Y", "Y", "Y"),
+    ("Nội dung", "Ghim / ẩn bài viết", "N", "N", "Y", "Y", "Y", "Y"),
+    ("Nội dung", "Tạo / sửa / xóa sự kiện", "N", "N", "Y", "Y", "Y", "Y"),
+    ("Nội dung", "Quản lý nội dung lớp học (module, bài học)", "N", "N", "Y", "Y", "Y", "Y"),
+    ("Kiểm duyệt", "Báo cáo bài / bình luận / thành viên vi phạm", "N", "Y", "Y", "Y", "Y", "Y"),
+    ("Kiểm duyệt", "Xem & xử lý hàng đợi báo cáo của cộng đồng", "N", "N", "Y", "Y", "Y", "Y"),
+    ("Quản lý cộng đồng", "Sửa thông tin cộng đồng (tên, mô tả, cài đặt)", "N", "N", "N", "Y", "Y", "Y"),
+    ("Quản lý cộng đồng", "Duyệt yêu cầu tham gia, tạo / thu hồi lời mời", "N", "N", "N", "Y", "Y", "Y"),
+    ("Quản lý cộng đồng", "Bật / tắt chứng nhận", "N", "N", "N", "Y", "Y", "Y"),
+    ("Quản lý thành viên", "Đặt / bỏ vai trò mod", "N", "N", "N", "Y", "Y", "Y"),
+    ("Quản lý thành viên", "Kick / ban thành viên (chỉ người bậc THẤP HƠN mình, không bao giờ lên Owner)", "N", "N", "N", "Y", "Y", "Y"),
+    ("Quản lý thành viên", "Cấp / thu hồi vai trò admin, chuyển quyền owner", "N", "N", "N", "N", "Y", "Y"),
+    ("Chủ sở hữu", "Đổi giá, đổi chế độ công khai/riêng tư, xóa cộng đồng", "N", "N", "N", "N", "Y", "Y"),
+    ("Chủ sở hữu", "Xem doanh thu cộng đồng", "N", "N", "N", "N", "Y", "Y"),
+    ("Chủ sở hữu", "Yêu cầu rút tiền (CHỈ đúng Owner, kể cả Super Admin cũng không)", "N", "N", "N", "N", "Y", "N"),
+    ("Nền tảng", "Nhân viên Moderator/Support/Finance KHÔNG có quyền ghi đè Owner trong cộng đồng (chỉ Super Admin nguồn env mới có)", "N", "N", "N", "N", "N", "Y"),
+    ("Nền tảng", "Truy cập khu /admin: xem tầng NHÂN VIÊN (mục B2) - quyền theo vai trò nhân viên, không còn 'chỉ Platform Admin'", "N", "N", "N", "N", "N", "Y"),
+]
+
+# Ma trận NHÂN VIÊN ADMIN theo nhóm route: (nhóm, hành động / route, khóa quyền, non-staff, super, moderator, support, finance, content_reviewer)
+# Sinh từ qa/cases_admin3.py (PERMS) để sheet này và các case ma trận luôn khớp.
+STAFF_MATRIX_ROWS = [
+    ("Chung", "Vào khu /admin, GET /admin/me (mọi nhân viên đang hoạt động)", None),
+    ("Đợt 1", "Tổng quan (GET /admin/dashboard)", "dashboard.view"),
+    ("Đợt 1", "Cộng đồng: danh sách, duyệt/yêu cầu sửa/từ chối/tạm ngưng/xóa/khôi phục (/admin/communities/**)", "community.manage"),
+    ("Đợt 2", "Khám phá: cộng đồng hiển thị, danh mục, nổi bật, xếp hạng, hiển thị tìm kiếm (/admin/discovery/**) + Hệ thống > Danh mục (/admin/system/categories/**)", "community.manage"),
+    ("Đợt 1", "Người dùng: XEM danh sách/chi tiết (GET /admin/users/**)", "users.view"),
+    ("Đợt 1", "Người dùng: hạn chế / tạm ngưng / cấm / khôi phục / cảnh cáo / thu hồi phiên (POST|DELETE /admin/users/**)", "user.ban"),
+    ("Đợt 1", "Kiểm duyệt: hàng đợi báo cáo, xử lý vụ việc (/admin/moderation/**, /admin/reports*)", "report.resolve"),
+    ("Đợt 2", "Nội dung: bài viết, bình luận, khóa học, bài học, sự kiện, media (/admin/content/**)", "content.manage"),
+    ("Đợt 2", "Thanh toán: XEM giao dịch, gói đăng ký, hoàn tiền, tranh chấp, doanh thu creator, chi trả (GET /admin/payments/**) + route cũ GET /admin/refunds, /admin/payouts", "payment.view"),
+    ("Đợt 2", "Hoàn tiền: duyệt/từ chối, hoàn tiền trực tiếp giao dịch (POST payments/refunds/:id/approve|reject, payments/transactions/:id/refund) + route cũ PATCH /admin/refunds/:id", "payment.refund"),
+    ("Đợt 2", "Thanh toán khác: thử lại thanh toán, tạm dừng/tiếp tục/hủy gói, tranh chấp (POST còn lại của /admin/payments/**)", "payment.manage"),
+    ("Đợt 2", "Chi trả: giữ/giải ngân/đánh dấu thất bại (POST /admin/payments/payouts/**) + route cũ PATCH /admin/payouts/:id", "payout.approve"),
+    ("Đợt 3", "Phân tích: 6 trang (GET /admin/analytics/**)", "analytics.view"),
+    ("Đợt 3", "Hỗ trợ: ticket (xem, tạo hộ khách, giao, trả lời, ghi chú, chuyển cấp, giải quyết, đóng, mở lại) (/admin/support/**)", "support.manage"),
+    ("Đợt 1/3", "Nhật ký hoạt động + xuất CSV (/admin/audit-logs*)", "audit.view"),
+    ("Đợt 3", "Tính năng thử nghiệm (/admin/system/flags/**)", "system.flags"),
+    ("Đợt 3", "Cài đặt chung, Tích hợp, Thông báo/broadcast, Mẫu email (/admin/system/{settings,integrations,notifications,email-templates}/**)", "system.settings"),
+    ("Đợt 3", "Tài khoản quản trị + Vai trò & Quyền (/admin/system/{admins,roles}/**)", "admin.manage"),
+    ("Khác", "Route /admin/* không có trong bảng luật (an toàn mặc định)", "super"),
+]
+PERM_LABEL = {
+    "dashboard.view": ("View dashboard", "Xem bảng điều khiển", "GET /admin/dashboard; /admin/me không cần quyền"),
+    "community.manage": ("Manage communities", "Quản lý cộng đồng", "/admin/communities/**, /admin/discovery/**, /admin/system/categories/**"),
+    "content.manage": ("Manage content", "Quản lý nội dung", "/admin/content/**"),
+    "report.resolve": ("Resolve reports", "Xử lý báo cáo", "/admin/moderation/**, /admin/reports*"),
+    "user.ban": ("Ban users", "Cấm người dùng", "POST/DELETE /admin/users/**"),
+    "users.view": ("View users", "Xem người dùng", "GET /admin/users/**"),
+    "payment.view": ("View payments", "Xem thanh toán", "GET /admin/payments/**, GET /admin/refunds|payouts"),
+    "payment.refund": ("Issue refunds", "Hoàn tiền", "payments/refunds/:id/approve|reject, payments/transactions/:id/refund, PATCH /admin/refunds/:id"),
+    "payment.manage": ("Manage payments", "Quản lý thanh toán", "POST còn lại của /admin/payments/** (retry, subscriptions, chargebacks)"),
+    "payout.approve": ("Approve payouts", "Duyệt chi trả", "POST /admin/payments/payouts/**, PATCH /admin/payouts/:id"),
+    "analytics.view": ("View analytics", "Xem phân tích", "/admin/analytics/**"),
+    "support.manage": ("Handle support tickets", "Xử lý ticket hỗ trợ", "/admin/support/**"),
+    "audit.view": ("View audit logs", "Xem nhật ký hoạt động", "/admin/audit-logs*"),
+    "system.flags": ("Edit feature flags", "Sửa tính năng thử nghiệm", "/admin/system/flags/**"),
+    "system.settings": ("System settings", "Cài đặt hệ thống", "/admin/system/{settings,integrations,notifications,email-templates}/**"),
+    "admin.manage": ("Manage admins", "Quản lý quản trị viên", "/admin/system/{admins,roles}/** - CHỈ Super Admin (không gán được cho vai trò khác)"),
+}
+
+ACCOUNT_STATUS = [
+    ("Bình thường (active)", "Dùng đầy đủ theo vai trò của mình.", "Đăng nhập được", "member1, owner, sarah...", "-"),
+    ("Hạn chế (restricted)", "Vẫn ĐỌC được nhưng bị chặn một số việc: đăng bài, bình luận, nhắn tin, tạo cộng đồng, checkout (403 ACCOUNT_RESTRICTED). Có thể có hạn (statusUntil), hết hạn tự gỡ.", "Đăng nhập được", "maya (chặn đăng bài + bình luận, còn 7 ngày), ethan (chặn nhắn tin + tạo cộng đồng, còn 3 ngày)", "Giống phạt cấm nói"),
+    ("Tạm ngưng (suspended)", "Không đăng nhập được (403 ACCOUNT_SUSPENDED); mọi phiên đăng nhập bị thu hồi ngay. Có thể có hạn hoặc vô thời hạn.", "KHÔNG", "olivia (14 ngày), lucas (vô thời hạn)", "Giống đình chỉ học"),
+    ("Cấm (banned)", "Không đăng nhập được vĩnh viễn (403 ACCOUNT_BANNED), phiên bị thu hồi.", "KHÔNG", "sophia", "Giống đuổi học"),
+    ("Bị ban khỏi 1 cộng đồng", "Chỉ mất tư cách thành viên của cộng đồng đó (bản ghi CommunityBan), vẫn đăng nhập và dùng các phần khác bình thường.", "Đăng nhập được", "banned@sofinhub.test (bị ban khỏi photo)", "Khác hoàn toàn với 'Cấm' ở trên"),
+    ("Nhân viên admin bị tạm khóa (AdminAccount suspended)", "Chỉ mất quyền /admin (403 'Tài khoản admin của bạn đã bị tạm khóa' ở mọi /admin/*, kể cả /admin/me); tài khoản thường và phiên đăng nhập KHÔNG bị ảnh hưởng. Quản lý ở Hệ thống > Tài khoản quản trị (Tạm ngưng / Kích hoạt lại).", "Đăng nhập thường được; /admin bị chặn", "nina@ (Moderator)", "Trục khác với 'Tạm ngưng' của người dùng; nhân viên không thể bị ban/suspend qua /admin/users (403)."),
+]
+
+RULES = [
+    ("Hai tầng quyền độc lập", "(1) Vai trò CỘNG ĐỒNG theo từng cộng đồng (member<mod<admin<owner); (2) Vai trò NHÂN VIÊN ADMIN toàn nền tảng (Super Admin/Moderator/Support/Finance/tùy chỉnh) quyết định ai gọi được /api/admin/*. Nhân viên Moderator/Support/Finance KHÔNG có quyền ghi đè Owner trong cộng đồng; chỉ Super Admin nguồn env mới có."),
+    ("Vai trò gắn theo TỪNG cộng đồng", "Một người có thể là owner ở cộng đồng A và member ở cộng đồng B. Test phân quyền phải nêu rõ cộng đồng nào."),
+    ("Quyền cộng dồn theo thứ bậc (cộng đồng)", "member < mod < admin < owner < super admin (env); bậc cao làm được mọi việc của bậc thấp."),
+    ("Chỉ tác động lên người bậc thấp hơn", "Kick/ban/đổi vai trò trong cộng đồng chỉ áp lên người có bậc THẤP HƠN mình và không bao giờ lên Owner."),
+    ("Quyền do server quyết định", "FE chỉ ẩn/hiện menu/trang cho gọn (nhóm/mục sidebar, 'Không đủ quyền'); nút thao tác vẫn hiện nên test bảo mật phải gọi thẳng API bằng token của vai trò thấp để xác nhận 403."),
+    ("Guard TẬP TRUNG cho /api/admin/*", "Middleware adminOnly: 401 nếu thiếu token -> phải là nhân viên đang hoạt động (403 'Chỉ nhân viên admin mới có quyền này' / 'Tài khoản admin của bạn đã bị tạm khóa') -> có đúng khóa quyền suy ra từ (method, path) (403 'Vai trò X không có quyền \"khóa\"'). Quyền kiểm TRƯỚC khi validate body/tìm bản ghi nên id giả vẫn 403 với route không được phép. Route không có trong bảng luật: chỉ Super Admin."),
+    ("Quyền đọc từ DB mỗi request", "Đổi ô ma trận / đổi vai trò / tạm khóa / gỡ nhân viên có hiệu lực ngay ở request kế tiếp (không cần đăng nhập lại, không cache theo token)."),
+    ("Super Admin nguồn env", "Email trong PLATFORM_ADMIN_EMAILS: không lưu trong DB, không sửa/tạm ngưng/gỡ được (409); chính mình cũng không tự sửa được (409). owner/cadmin KHÔNG vào được /admin dù là chủ cộng đồng."),
+    ("admin.manage không gán được", "Khóa 'Quản lý quản trị viên' chỉ thuộc Super Admin; gán cho vai trò khác (tạo/sửa vai trò, bật ô ma trận) bị 400. Giao diện chặn trước ở ô ma trận."),
+    ("Nhân viên được bảo vệ khỏi /admin/users", "Không ai (kể cả Super Admin) ban/suspend/restrict/reinstate/warn một NHÂN VIÊN qua /admin/users/* (403); phải quản lý ở Tài khoản quản trị."),
+    ("Route cũ đi qua cùng guard", "/admin/refunds (xem=payment.view, PATCH=payment.refund) và /admin/payouts (xem=payment.view, PATCH=payout.approve) không còn là 'chỉ Platform Admin'."),
+    ("Trạng thái tài khoản là trục riêng", "Áp lên người dùng bất kể vai trò (Owner bị tạm ngưng vẫn không đăng nhập được); trạng thái nhân viên (active/suspended) là trục thứ ba, chỉ ảnh hưởng /admin."),
+    ("Nội dung bị admin tác động (đợt 2)", "Bài viết/bình luận/bài học/sự kiện/tệp bị nhân viên có content.manage GỠ biến mất với mọi người kể cả mod, admin cộng đồng, owner và tác giả (chỉ nhân viên admin còn thấy); bị ẨN thì member thường không thấy nhưng tác giả và mod+ vẫn thấy. Khóa học bị hủy xuất bản/lưu trữ/gỡ cũng ẩn với mod cộng đồng."),
+    ("Mod/admin cộng đồng không đảo ngược được thao tác của nhân viên admin", "Mod cộng đồng không khôi phục được nội dung do nhân viên admin gỡ; chỉ khôi phục ở /admin/content/*."),
+]
+
+NOT_BUILT = [
+    ("2FA thật cho nhân viên admin", "Chỉ có cờ twoFactorEnabled (lưu + email khi 'Đặt lại 2FA'); security.require2fa chỉ lưu cấu hình, không bắt buộc (case Kế hoạch ở ADM3)."),
+    ("Quyền ở mức NÚT bấm", "FE chỉ ẩn nhóm/mục menu và chặn trang; Support vẫn thấy nút 'Cảnh cáo/Tạm ngưng', Support/Finance thấy nút chi trả - bấm bị BE trả 403 + toast lỗi."),
+    ("Thu hồi phiên đăng nhập khi tạm khóa/gỡ nhân viên", "Chỉ chặn /admin ở mỗi request; phiên thường vẫn còn (xem case Kế hoạch ADM3)."),
+    ("Tách quyền 'xem' và 'ghi' ở mọi nhóm", "Chỉ Người dùng (users.view/user.ban) và Thanh toán (payment.view/refund/manage/payout.approve) được tách; Cộng đồng, Nội dung, Kiểm duyệt, Hỗ trợ dùng 1 khóa cho cả xem và ghi."),
+    ("Ticket người dùng ở giao diện", "API /api/support/tickets đã có nhưng frontend người dùng chưa có màn 'Ticket của tôi'."),
+]
+
+
+def _matrix(ws, r, hdr, rows, ncols, yes_fill, no_fill, text_cols=2, wrap_h=32):
+    for i, h in enumerate(hdr, start=1):
+        c = ws.cell(row=r, column=i, value=h)
+        c.font, c.fill, c.border = HDR_FONT, HDR_FILL, BORDER
+        c.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    ws.row_dimensions[r].height = 32
+    r += 1
+    for g, action, *marks in rows:
+        ws.cell(row=r, column=1, value=g).font = BOLD
+        ws.cell(row=r, column=2, value=action).font = BASE
+        for i, m in enumerate(marks, start=text_cols + 1):
+            if m in ("Y", "N"):
+                c = ws.cell(row=r, column=i, value="✔" if m == "Y" else "✖")
+                c.fill = yes_fill if m == "Y" else no_fill
+                c.font = Font(name=FONT, size=11, bold=True, color="006100" if m == "Y" else "9C0006")
+                c.alignment = Alignment(horizontal="center", vertical="center")
+            else:
+                c = ws.cell(row=r, column=i, value=m)
+                c.font = BASE
+                c.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        for i in (1, 2):
+            ws.cell(row=r, column=i).alignment = WRAP
+        for i in range(1, ncols + 1):
+            ws.cell(row=r, column=i).border = BORDER
+        ws.row_dimensions[r].height = max(20, 15 * (len(action) // 62 + 1) + 4)
+        r += 1
+    return r + 1
+
+
+def build_roles_sheet(wb):
+    """Sheet 'Phân quyền' (viết lại 2026-10-03): tầng cộng đồng + tầng NHÂN VIÊN ADMIN (16 khóa quyền). Ma trận nhân viên sinh từ PERMS của qa/cases_admin3.py."""
+    from cases_admin3 import PERMS, ALL_PERMS, NAV, can, sidebar_for, ROLE_NAME  # cùng thư mục qa/
+    ws = wb.create_sheet("Phân quyền")
+    ncols = 8
+    _title(ws, "PHÂN QUYỀN — VAI TRÒ CỘNG ĐỒNG & VAI TRÒ NHÂN VIÊN ADMIN SOFINHUB", ncols)
+    ws.cell(row=2, column=1, value="Nguồn: backend/src/modules/permissions/policy.ts (cộng đồng), backend/src/modules/admin/admin-staff.permissions.ts + backend/docs/api/admin-batch3.md mục 0 (nhân viên admin, từ 2026-10-03). Đổi quyền thì sửa PERMS trong qa/cases_admin3.py (ma trận bên dưới và case ADM3 sinh từ đó) và các bảng trong qa/sheets_extra.py.").font = BOLD
+    yes_fill, no_fill = PatternFill("solid", fgColor="C6EFCE"), PatternFill("solid", fgColor="FFC7CE")
+    r = 4
+    r = _h2(ws, r, "A. Vai trò CỘNG ĐỒNG và Super Admin (tầng 1: ai làm gì TRONG một cộng đồng)")
+    r = _table(ws, r, ["Vai trò", "Làm được gì", "Loại / bậc", "Ví dụ đời thường", "Tài khoản test"], [(a, d, b, c, e) for (a, b, c, d, e) in ROLE_OVERVIEW])
+    r = _h2(ws, r, "A2. Vai trò NHÂN VIÊN ADMIN (tầng 2: ai gọi được /api/admin/* và thấy mục nào ở /admin) - đã xây từ Admin đợt 3")
+    r = _table(ws, r, ["Vai trò nhân viên", "Làm được gì", "Khóa quyền", "Tài khoản test", "Ghi chú"], STAFF_ROLES)
+    r = _h2(ws, r, "B. Ma trận quyền CỘNG ĐỒNG (✔ = được, ✖ = bị chặn: server trả 403 hoặc chuyển sang đăng nhập)")
+    r = _matrix(ws, r, ["Nhóm", "Hành động", "Khách", "Member", "Mod", "Admin", "Owner", "Super Admin (env)"], MATRIX, ncols, yes_fill, no_fill)
+    r = _h2(ws, r, "B2. Ma trận NHÂN VIÊN ADMIN theo nhóm route (✔ = qua guard, ✖ = 403). Cột 'Content Reviewer' là vai trò tùy chỉnh mẫu")
+    rows2 = []
+    for g, action, perm in STAFF_MATRIX_ROWS:
+        marks = ["Y" if perm is None and False else "N"]  # người dùng thường: không vào /admin
+        for role in ("super_admin", "moderator", "support", "finance", "content_reviewer"):
+            marks.append("Y" if can(role, perm) else "N")
+        rows2.append((g, f"{action}  [quyền: {perm if perm else 'chỉ cần là nhân viên'}]", *marks))
+    r = _matrix(ws, r, ["Đợt", "Nhóm route / hành động", "Người dùng thường / khách", "Super Admin", "Moderator", "Support", "Finance", "Content Reviewer (tùy chỉnh)"], rows2, ncols, yes_fill, no_fill)
+    r = _h2(ws, r, "B3. 16 KHÓA QUYỀN × vai trò nhân viên (mặc định; sửa được ở Hệ thống > Vai trò & Quyền trừ cột Super Admin)")
+    rows3 = []
+    for k in ALL_PERMS:
+        en, vi, routes = PERM_LABEL[k]
+        marks = ["Y" if k in PERMS[role] else "N" for role in ("super_admin", "moderator", "support", "finance", "content_reviewer")]
+        rows3.append((k, f"{vi} ({en}) - {routes}", *marks, "KHÔNG (chỉ Super Admin)" if k == "admin.manage" else "Có thể gán"))
+    r = _matrix(ws, r, ["Khóa quyền", "Nhãn & route được phủ", "Super Admin", "Moderator", "Support", "Finance", "Content Reviewer", "Gán cho vai trò tùy chỉnh?"], rows3, ncols, yes_fill, no_fill)
+    tot = ["Tổng số khóa", "Số quyền mỗi vai trò"] + [str(len(PERMS[role])) for role in ("super_admin", "moderator", "support", "finance", "content_reviewer")] + [""]
+    for i, v in enumerate(tot, start=1):
+        c = ws.cell(row=r - 1, column=i, value=v)
+        c.font, c.border = BOLD, BORDER
+        c.alignment = Alignment(horizontal="center" if i > 2 else "left", vertical="center")
+    r += 1
+    r = _h2(ws, r, "B4. Sidebar /admin hiển thị theo vai trò (nhóm ẩn hoàn toàn khi không có mục con truy cập được; trang không đủ quyền hiện 'Không đủ quyền')")
+    side = []
+    for role in ("super_admin", "moderator", "support", "finance", "content_reviewer"):
+        shown, hidden = sidebar_for(role)
+        side.append((ROLE_NAME[role], "; ".join(shown), ", ".join(hidden) if hidden else "(không)"))
+    r = _table(ws, r, ["Vai trò", "Nhóm hiển thị", "Nhóm ẩn"], side)
+    r = _h2(ws, r, "C. Trạng thái tài khoản (trục riêng, áp lên mọi vai trò) và trạng thái nhân viên")
+    r = _table(ws, r, ["Trạng thái", "Ảnh hưởng", "Đăng nhập?", "Tài khoản seed", "Hình dung"], ACCOUNT_STATUS)
+    r = _h2(ws, r, "D. Quy tắc cần nhớ khi test phân quyền")
+    r = _table(ws, r, ["Quy tắc", "Giải thích"], RULES)
+    r = _h2(ws, r, "E. Chưa có / lưu ý (không test như tính năng đã hoàn thiện)")
+    r = _table(ws, r, ["Hạng mục", "Ghi chú"], NOT_BUILT)
+    for i, w in enumerate([34, 66, 20, 30, 34, 16, 16, 22], start=1):
+        ws.column_dimensions[get_column_letter(i)].width = w
+    ws.sheet_properties.tabColor = "C00000"
     ws.freeze_panes = "A4"
     return ws

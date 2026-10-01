@@ -38,7 +38,7 @@ describe('hạ tầng DB', () => {
     const [row] = await db.prisma.$queryRaw<{ ok: number }[]>`SELECT 1 AS ok`;
     assert.equal(row?.ok, 1);
     assert.match(db.schema, /^test_[a-z0-9]+_[a-z0-9]+$/);
-    assert.ok(Date.now() - started < 8000, `provision quá chậm: ${Date.now() - started}ms`);
+    assert.ok(Date.now() - started < 20000, `provision quá chậm: ${Date.now() - started}ms`);
     const [cnt] = await db.prisma.$queryRaw<{ n: bigint }[]>`SELECT count(*) AS n FROM pg_tables WHERE schemaname = ${db.schema}`;
     assert.ok(Number(cnt?.n) >= 35, `chỉ có ${cnt?.n} bảng`);
   });

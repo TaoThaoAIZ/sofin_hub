@@ -1,0 +1,1 @@
+export { CommentsView as AdminCommentsPage, CoursesView as AdminCoursesPage, EventsView as AdminEventsPage, LessonsView as AdminLessonsPage, MediaView as AdminMediaPage, PostsView as AdminPostsPage } from '../../features/admin/pages/ContentViews';

@@ -55,24 +55,25 @@ const toEvent = (e: DbEvent): CommunityEvent => ({
   timezone: e.timezone,
   meetingLink: e.meetingLink ?? undefined,
   capacity: e.capacity ?? undefined,
+  ...(e.cancelledAt ? { cancelledAt: e.cancelledAt.toISOString() } : {}),
   createdAt: e.createdAt.toISOString(),
   updatedAt: e.updatedAt.toISOString(),
 });
 
 export const eventsRepository: EventsRepository = {
   async listByCourse(courseId) {
-    const rows = await prisma.communityEvent.findMany({ where: { courseId }, orderBy: [{ startAt: 'asc' }, { id: 'asc' }] });
+    const rows = await prisma.communityEvent.findMany({ where: { courseId, removedAt: null }, orderBy: [{ startAt: 'asc' }, { id: 'asc' }] });
     return rows.map(toEvent);
   },
 
   async listStartingBetween(from, to) {
-    const rows = await prisma.communityEvent.findMany({ where: { startAt: { gt: from, lte: to } }, orderBy: { startAt: 'asc' } });
+    const rows = await prisma.communityEvent.findMany({ where: { startAt: { gt: from, lte: to }, cancelledAt: null, removedAt: null }, orderBy: { startAt: 'asc' } });
     return rows.map(toEvent);
   },
 
   async findById(eventId) {
     const e = await prisma.communityEvent.findUnique({ where: { id: eventId } });
-    return e ? toEvent(e) : undefined;
+    return e && !e.removedAt ? toEvent(e) : undefined;
   },
 
   async create(event) {

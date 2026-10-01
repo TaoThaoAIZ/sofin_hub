@@ -1,0 +1,1 @@
+export { CategoriesView as AdminCategoriesPage, FeaturedView as AdminFeaturedPage, ListedView as AdminListedPage, RankingsView as AdminRankingsPage, SearchVisibilityView as AdminSearchVisibilityPage } from '../../features/admin/pages/DiscoveryViews';

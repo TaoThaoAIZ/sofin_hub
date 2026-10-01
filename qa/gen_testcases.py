@@ -1261,7 +1261,7 @@ STILL_PLAN_OLD_COUNT = sum(1 for _r in rows if _r[6] == PLAN)
 
 # Nạp testcase mới từ qa/cases_*.py (mỗi file có hàm load(add)).
 CASE_MODULES = ["cases_auth", "cases_community", "cases_content", "cases_classroom",
-                "cases_payments", "cases_comms", "cases_platform"]
+                "cases_payments", "cases_comms", "cases_platform", "cases_admin", "cases_admin2", "cases_admin3"]
 for _m in CASE_MODULES:
     try:
         _mod = importlib.import_module(_m)
@@ -1351,9 +1351,9 @@ ws0.row_dimensions[1].height = 30
 
 info = [
     ("Dự án", "SofinHub — Nền tảng Cộng đồng & Khóa học trực tuyến"),
-    ("Nguồn tài liệu", "SofinHub-BRD.docx (BRD v1.0, 28/09/2026) + backend/docs/API.md, backend/docs/api/*.md, docs/features/*.md, backend/docs/DATABASE.md, backend/prisma/seed* (đợt 30/09/2026)"),
-    ("Ngày tạo bộ test case", "29/09/2026 — cập nhật đợt backend Postgres + frontend 30/09/2026 (xem sheet 'Nhật ký thay đổi')"),
-    ("Cách xem testcase", "MỖI MODULE MỘT SHEET (17 sheet, tên dạng 'MÃ - Tên': HOME, AUTH, COMM, COURSE, FEED, PAY, ROLE...). Bấm tên module ở bảng 'Thống kê theo Module' bên dưới để nhảy tới sheet; mỗi sheet có sẵn bộ lọc theo Chức năng/Loại test/Ưu tiên/Phù hợp Playwright và cột Mã TC + Chức năng được cố định khi cuộn ngang. Cột tiến độ Test 1/Test 2 (Pass/Fail/Chưa test) ở bảng thống kê tự cập nhật khi tester điền kết quả."),
+    ("Nguồn tài liệu", "SofinHub-BRD.docx (BRD v1.0, 28/09/2026) + backend/docs/API.md, backend/docs/api/*.md, docs/features/*.md, backend/docs/DATABASE.md, backend/prisma/seed* (đợt 30/09/2026), backend/docs/api/admin.md + docs/features/admin-batch1.md (đợt 01/10/2026)"),
+    ("Ngày tạo bộ test case", "29/09/2026 — cập nhật đợt backend Postgres + frontend 30/09/2026 và đợt Admin console 01/10/2026 (xem sheet 'Nhật ký thay đổi')"),
+    ("Cách xem testcase", "MỖI MODULE MỘT SHEET (20 sheet, tên dạng 'MÃ - Tên': HOME, AUTH, COMM, COURSE, FEED, PAY, ADM, ADM2, ADM3, ROLE...). Bấm tên module ở bảng 'Thống kê theo Module' bên dưới để nhảy tới sheet; mỗi sheet có sẵn bộ lọc theo Chức năng/Loại test/Ưu tiên/Phù hợp Playwright và cột Mã TC + Chức năng được cố định khi cuộn ngang. Cột tiến độ Test 1/Test 2 (Pass/Fail/Chưa test) ở bảng thống kê tự cập nhật khi tester điền kết quả."),
     ("Sheet phụ", "'Tài khoản & dữ liệu test' (tài khoản/dữ liệu seed, cách dựng môi trường) · 'Nhật ký thay đổi' · 'Bằng chứng (ảnh)' (ảnh Playwright)"),
     ("Người soạn thảo", "QA/Tester"),
     ("Tổng số test case", len(rows)),
@@ -1390,8 +1390,8 @@ ws0[f"A{r}"] = "Chú giải cột 'Trạng thái test' (điền khi thực thi)"
 ws0[f"A{r}"].font = h2_font
 r += 1
 legend2 = [
-    ("Chưa test", "D9D9D9"), ("Pass", "C6EFCE"), ("Fail", "FFC7CE"),
-    ("Blocked", "FFEB9C"), ("N/A", "D9D9D9"),
+    ("Chưa test", "EDEDED"), ("Pass", "C6EFCE"), ("Fail", "FFC7CE"),
+    ("Blocked", "FFEB9C"), ("N/A", "BDD7EE"),
 ]
 for name, color in legend2:
     ws0[f"A{r}"] = name
@@ -1646,11 +1646,12 @@ MODULE_SHEETS = split_test_cases(wb, ws, ws0, seen_modules, data_start, hdr_row,
 print(f"[split] {len(MODULE_SHEETS)} sheet module: " + ", ".join(t for _, _, t in MODULE_SHEETS))
 
 # ---- Sheet phụ ----
-from sheets_extra import build_accounts_sheet, build_changelog_sheet
+from sheets_extra import build_accounts_sheet, build_changelog_sheet, build_roles_sheet
 _new_by_module = OrderedDict()
 for _r in rows:
     _new_by_module[(_r[0], _r[1])] = _new_by_module.get((_r[0], _r[1]), 0) + 1
 build_accounts_sheet(wb)
+build_roles_sheet(wb)
 build_changelog_sheet(wb, {
     "old_total": OLD_TOTAL, "new_total": len(rows), "flipped": FLIPPED, "still_plan": STILL_PLAN_OLD_COUNT,
     "by_module": [(c, n, OLD_BY_MODULE.get((c, n), 0), v) for (c, n), v in _new_by_module.items()],

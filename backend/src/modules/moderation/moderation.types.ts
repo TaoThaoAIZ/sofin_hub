@@ -1,13 +1,15 @@
-export const REPORT_REASONS = ['spam', 'harassment', 'inappropriate', 'misinformation', 'other'] as const;
+export const REPORT_REASONS = ['spam', 'harassment', 'inappropriate', 'misinformation', 'other', 'hate_speech', 'scam', 'copyright', 'nsfw'] as const;
 export type ReportReason = (typeof REPORT_REASONS)[number];
 
 export const REPORT_TARGET_TYPES = ['post', 'comment', 'member'] as const;
 export type ReportTargetType = (typeof REPORT_TARGET_TYPES)[number];
 
-export const REPORT_STATUSES = ['open', 'resolved', 'dismissed'] as const;
+export const REPORT_STATUSES = ['open', 'under_review', 'resolved', 'dismissed'] as const;
 export type ReportStatus = (typeof REPORT_STATUSES)[number];
 
-export const REPORT_ACTIONS = ['dismiss', 'hide_content', 'ban_member'] as const;
+/** Hành động mà mod cộng đồng chọn qua PATCH /reports/:id (3 giá trị đầu); phần còn lại do Platform Admin đặt qua /admin/moderation. */
+export const REPORT_ACTIONS = ['dismiss', 'hide_content', 'ban_member', 'warn_user', 'remove_content', 'restrict_user', 'suspend_user', 'ban_user', 'none'] as const;
+export const MOD_REPORT_ACTIONS = ['dismiss', 'hide_content', 'ban_member'] as const;
 export type ReportAction = (typeof REPORT_ACTIONS)[number];
 
 export interface Report {

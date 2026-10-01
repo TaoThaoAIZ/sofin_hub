@@ -20,6 +20,8 @@ export interface UploadRecord {
   purpose: UploadPurpose;
   courseId?: string;
   status: 'pending' | 'uploaded';
+  /** true khi Platform Admin đã gỡ file: không còn phục vụ công khai. */
+  removed?: boolean;
   createdAt: string;
 }
 

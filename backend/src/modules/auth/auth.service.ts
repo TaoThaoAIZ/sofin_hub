@@ -2,10 +2,11 @@ import bcrypt from 'bcryptjs';
 import { env } from '../../config/env.js';
 import { HttpError } from '../../utils/http-error.js';
 import { enrollmentService } from '../enrollments/enrollments.service.js';
-import { mailService } from '../mail/mail.service.js';
+import { mailTemplates } from '../mail/mail-templates.service.js';
 import { userRepository, type UserRepository } from './auth.repository.js';
 import type { LoginBody, RegisterBody, UpdateProfileBody } from './auth.schema.js';
 import { toAuthUser, type AuthUser, type User } from './auth.types.js';
+import { assertCanSignIn, recordLogin } from './user-status.js';
 import { consumeOneTimeToken, issueOneTimeToken, oneTimeTokenAgeMs, purgeOneTimeTokens } from './one-time-tokens.js';
 import {
   consumeRefreshToken,
@@ -71,6 +72,9 @@ export function createAuthService(repo: UserRepository = userRepository) {
       if (!user || user.isDemo || user.deletedAt || !(await bcrypt.compare(password, user.passwordHash))) {
         throw HttpError.unauthorized('Email hoặc mật khẩu không đúng');
       }
+      // Sau khi mật khẩu đúng mới báo tình trạng tài khoản (không lộ trạng thái cho người đoán mật khẩu).
+      await assertCanSignIn(user.id);
+      await recordLogin(user.id);
       return issueSession(user, meta);
     },
 
@@ -79,6 +83,7 @@ export function createAuthService(repo: UserRepository = userRepository) {
       if (!payload) throw HttpError.unauthorized('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại');
       const user = await repo.findById(payload.sub);
       if (!user || user.deletedAt) throw HttpError.unauthorized('Tài khoản không tồn tại');
+      await assertCanSignIn(user.id);
       return issueSession(user, meta, payload.sid);
     },
 
@@ -116,8 +121,7 @@ export function createAuthService(repo: UserRepository = userRepository) {
       if (!user) return;
       const token = await issueOneTimeToken(user.id, 'reset-password', RESET_TTL_MS);
       const link = `${env.FRONTEND_URL}/reset-password?token=${encodeURIComponent(token)}`;
-      await mailService.send({
-        to: user.email,
+      await mailTemplates.send('reset_password', user.email, { name: user.firstName, link }, {
         subject: 'Đặt lại mật khẩu SofinHub',
         text: `Xin chào ${user.firstName},\n\nBấm vào liên kết sau để đặt lại mật khẩu (hiệu lực 30 phút):\n${link}\n\nNếu bạn không yêu cầu, hãy bỏ qua email này.`,
         html: `<p>Xin chào ${escapeHtml(user.firstName)},</p><p><a href="${link}">Đặt lại mật khẩu</a> (hiệu lực 30 phút).</p><p>Nếu bạn không yêu cầu, hãy bỏ qua email này.</p>`,
@@ -160,8 +164,7 @@ export function createAuthService(repo: UserRepository = userRepository) {
       }
       const token = await issueOneTimeToken(userId, 'verify-email', VERIFY_TTL_MS);
       const link = `${env.FRONTEND_URL}/verify-email?token=${encodeURIComponent(token)}`;
-      await mailService.send({
-        to: user.email,
+      await mailTemplates.send('verify_email', user.email, { name: user.firstName, link }, {
         subject: 'Xác thực email SofinHub',
         text: `Xin chào ${user.firstName},\n\nBấm vào liên kết sau để xác thực email (hiệu lực 24 giờ):\n${link}`,
         html: `<p>Xin chào ${escapeHtml(user.firstName)},</p><p><a href="${link}">Xác thực email</a> (hiệu lực 24 giờ).</p>`,

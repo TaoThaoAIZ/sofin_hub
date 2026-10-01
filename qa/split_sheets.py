@@ -15,6 +15,8 @@ from copy import copy
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
+from openpyxl.formatting.rule import CellIsRule
+from openpyxl.styles import PatternFill, Font as _Font
 
 FONT_NAME = "Arial"
 
@@ -34,13 +36,16 @@ SHORT_NAMES = {
     "UPLOAD": "Upload tệp & ảnh",
     "PAY": "Thanh toán & Gói",
     "ADMIN": "Quản trị & Kiểm duyệt",
+    "ADM": "Admin Console (đợt 1)",
+    "ADM2": "Admin Console (đợt 2)",
+    "ADM3": "Admin Console (đợt 3)",
     "ROLE": "Ma trận phân quyền",
     "SEC": "Bảo mật & Phi chức năng",
     "INTEG": "API & Concurrency",
 }
 # Thứ tự hiển thị các sheet module (theo luồng người dùng); mã không có trong danh sách xếp cuối theo thứ tự xuất hiện.
 ORDER = ["HOME", "AUTH", "COMM", "COMMVP", "COURSE", "CERT", "FEED", "MEMBER", "EVENT", "NOTI", "SEARCH", "UPLOAD",
-         "PAY", "ADMIN", "ROLE", "SEC", "INTEG"]
+         "PAY", "ADMIN", "ADM", "ADM2", "ADM3", "ROLE", "SEC", "INTEG"]
 
 _BAD = set('[]:*?/\\')
 
@@ -116,6 +121,13 @@ def split_test_cases(wb, stage, overview, seen_modules, data_start, hdr_row, don
             dv = DataValidation(type="list", formula1=formula, allow_blank=True)
             ws.add_data_validation(dv)
             dv.add(f"{col_letter}2:{col_letter}{last}")
+        # Tô màu trạng thái test (điều kiện => đổi màu ngay khi tester chọn giá trị): cột N (Test 1) và Q (Test 2).
+        for _col in ("N", "Q"):
+            _rng = f"{_col}2:{_col}{last}"
+            for _val, _bg, _fg in (("Pass", "C6EFCE", "006100"), ("Fail", "FFC7CE", "9C0006"), ("Blocked", "FFEB9C", "9C5700"),
+                                   ("N/A", "BDD7EE", "1F4E78"), ("Chưa test", "EDEDED", "7F7F7F")):
+                ws.conditional_formatting.add(_rng, CellIsRule(operator="equal", formula=[f'"{_val}"'],
+                                              fill=PatternFill("solid", bgColor=_bg, fgColor=_bg), font=_Font(color=_fg, bold=_val != "Chưa test")))
         created.append((code, names[code], title))
 
     del wb[stage.title]

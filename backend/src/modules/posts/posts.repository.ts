@@ -87,6 +87,7 @@ export const postsRepository: PostsRepository = {
     if (!tag) {
       const where: Prisma.PostWhereInput = {
         courseId,
+        removedAt: null, // bài bị Platform Admin gỡ: không ai thấy (kể cả tác giả/mod)
         ...(category ? { category: postCategoryFromDomain(category) } : {}),
         ...(seeHidden ? {} : { OR: [{ hidden: false }, ...(viewerId ? [{ authorId: viewerId }] : [])] }),
       };
@@ -101,6 +102,7 @@ export const postsRepository: PostsRepository = {
     // Lọc theo thẻ cần unnest mảng -> truy vấn thô; chỉ lấy id đã sắp xếp/phân trang rồi nạp bản ghi.
     const conds: Prisma.Sql[] = [
       Prisma.sql`p."courseId" = ${courseId}`,
+      Prisma.sql`p."removedAt" IS NULL`,
       Prisma.sql`EXISTS (SELECT 1 FROM unnest(p."tags") AS t(v) WHERE ${NORM_TAG_SQL(Prisma.sql`t.v`)} = ${tag})`,
     ];
     if (category) conds.push(Prisma.sql`p."category" = ${category}::"PostCategory"`);
@@ -139,7 +141,7 @@ export const postsRepository: PostsRepository = {
 
   async findById(postId) {
     const p = await prisma.post.findUnique({ where: { id: postId } });
-    return p ? toPost(p) : undefined;
+    return p && !p.removedAt ? toPost(p) : undefined;
   },
 
   async create(courseId, authorId, content, category, tags, imageUrl, poll) {
@@ -219,13 +221,13 @@ export const postsRepository: PostsRepository = {
   },
 
   async listComments(postId) {
-    const rows = await prisma.postComment.findMany({ where: { postId }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] });
+    const rows = await prisma.postComment.findMany({ where: { postId, removedAt: null }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] });
     return rows.map(toComment);
   },
 
   async findComment(commentId) {
     const c = await prisma.postComment.findUnique({ where: { id: commentId } });
-    return c ? toComment(c) : undefined;
+    return c && !c.removedAt ? toComment(c) : undefined;
   },
 
   async addComment(postId, authorId, content) {

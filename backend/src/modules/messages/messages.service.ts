@@ -1,5 +1,6 @@
 import { env } from '../../config/env.js';
 import { HttpError } from '../../utils/http-error.js';
+import { assertUserCan } from '../auth/user-status.js';
 import { fileUserRepository } from '../auth/auth.repository.js';
 import { userBriefView } from '../auth/user-view.js';
 import { enrollmentService } from '../enrollments/enrollments.service.js';
@@ -128,6 +129,7 @@ export function createMessageService(repo: MessageRepository = prismaMessageRepo
     },
 
     async send(userId: string, conversationId: string, content: string, attachments: Attachment[] = []) {
+      await assertUserCan(userId, 'dm');
       const c = await requireParticipant(userId, conversationId);
       const otherId = otherOf(c, userId);
       await assertNotBlocked(userId, otherId);

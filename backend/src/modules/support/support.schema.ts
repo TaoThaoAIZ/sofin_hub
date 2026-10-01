@@ -9,5 +9,13 @@ export const contactBody = z.object({
   email,
   subject: z.string().trim().min(1, 'Vui lòng nhập tiêu đề').max(200),
   message: z.string().trim().min(1, 'Vui lòng nhập nội dung').max(5000, 'Nội dung tối đa 5000 ký tự'),
+  category: z.enum(['user', 'creator', 'payment']).default('user'),
 });
 export type ContactBody = z.infer<typeof contactBody>;
+
+export const myTicketBody = z.object({
+  subject: z.string().trim().min(1, 'Vui lòng nhập tiêu đề').max(200),
+  message: z.string().trim().min(1, 'Vui lòng nhập nội dung').max(5000, 'Nội dung tối đa 5000 ký tự'),
+  category: z.enum(['user', 'creator', 'payment']).default('user'),
+});
+export const myTicketReplyBody = z.object({ body: z.string().trim().min(1, 'Vui lòng nhập nội dung').max(5000, 'Nội dung tối đa 5000 ký tự') });

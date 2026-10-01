@@ -1,8 +1,8 @@
-import { Route, Routes } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import { ScrollToTop } from './components/ScrollToTop';
 import { MessagesProvider } from './features/messages/MessagesProvider';
 import { NotificationsProvider } from './features/notifications/NotificationsProvider';
-import { AdminPage } from './pages/AdminPage';
 import { BillingPage } from './pages/BillingPage';
 import { MessagesPage } from './pages/MessagesPage';
 import { NotificationsPage } from './pages/NotificationsPage';
@@ -28,7 +28,6 @@ import { NotFoundPage } from './pages/NotFoundPage';
 import { PrivacyPage } from './pages/PrivacyPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { TermsPage } from './pages/TermsPage';
-import { AdminReportsPage } from './pages/AdminReportsPage';
 import { CertificateVerifyPage } from './pages/CertificateVerifyPage';
 import { LessonPage } from './pages/LessonPage';
 import { ModerationPage } from './features/community/components/ModerationPanel';
@@ -38,6 +37,9 @@ import { ClassroomTab } from './features/community/components/ClassroomTab';
 import { FeedTab } from './features/community/components/FeedTab';
 import { LeaderboardTab } from './features/community/components/LeaderboardTab';
 import { MembersTab } from './features/community/components/MembersTab';
+
+// Khu vực admin tải theo yêu cầu (chỉ Platform Admin dùng) để không làm nặng bundle chính.
+const AdminRoutes = lazy(() => import('./pages/admin/AdminRoutes'));
 
 export default function App() {
   return (
@@ -71,14 +73,21 @@ export default function App() {
         <Route path="/me/communities" element={<MyCommunitiesPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/certificates/:code" element={<CertificateVerifyPage />} />
-        <Route path="/admin/reports" element={<AdminReportsPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/messages" element={<MessagesPage />} />
         <Route path="/messages/:id" element={<MessagesPage />} />
         <Route path="/search" element={<SearchPage />} />
         <Route path="/billing" element={<BillingPage />} />
         <Route path="/courses/:id/revenue-dashboard" element={<RevenuePage />} />
-        <Route path="/admin" element={<AdminPage />} />
+        <Route path="/admin/reports" element={<Navigate to="/admin/moderation" replace />} />
+        <Route
+          path="/admin/*"
+          element={
+            <Suspense fallback={<div role="status" className="grid min-h-screen place-items-center text-stone-400">Đang tải…</div>}>
+              <AdminRoutes />
+            </Suspense>
+          }
+        />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/faq" element={<FaqPage />} />

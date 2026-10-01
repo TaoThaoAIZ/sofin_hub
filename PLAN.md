@@ -200,6 +200,11 @@
 
 ---
 
+## Admin console — đợt 1 (backend ✅)
+
+Dashboard, Communities (danh sách/chi tiết/hàng chờ duyệt/đình chỉ/thùng rác 30 ngày), Users (hạn chế/đình chỉ/cấm/khôi phục, chặn đăng nhập + thu hồi phiên), Moderation (hàng đợi case, giao việc, cảnh cáo, gỡ nội dung, đình chỉ/cấm, bỏ qua, leo thang) và Audit log. Mọi hành động admin ghi `AdminAuditLog`. API ở `/api/admin/*` (chỉ Platform Admin) — xem `backend/docs/api/admin.md`; schema/seed ở `backend/docs/DATABASE.md` (migration `admin_batch1`); test ở `backend/tests/admin.test.ts`.
+Còn lại cho các đợt sau: Content, Payments, Discovery, Analytics, Support, System (quản lý đội admin/2FA). Cần chốt: có bắt duyệt cộng đồng mới trước khi hiển thị không (câu hỏi #7 — hiện vẫn tạo xong là `active`), chính sách tiền khi xóa/đình chỉ cộng đồng đang có thuê bao, tự gỡ đình chỉ khi hết hạn.
+
 ## Nợ kỹ thuật / việc nhỏ đã biết (làm xen kẽ)
 
 - [x] Nút mũi tên trên card trỏ `/courses/:id` → đã có trang chi tiết khóa học thật (xem Phase 1.5)
@@ -230,3 +235,11 @@
 10. Xác thực 2 lớp (2FA) có cần ở MVP không, hay để sau khi có nhiều người dùng hơn?
 
 > Chi tiết đầy đủ về vai trò, mô hình nghiệp vụ và luồng nghiệp vụ xem tài liệu `SofinHub-BRD.docx` ở thư mục gốc dự án.
+
+## Admin console — đợt 2 (backend ✅)
+Content (Posts/Comments/Courses/Lessons/Events/Media: danh sách toàn nền tảng, chi tiết, hide/remove/restore, unpublish/archive, hủy/gỡ sự kiện, gắn cờ/gỡ media — có tác động thật lên API công khai), Payments (Transactions: hoàn tiền trực tiếp/retry; Subscriptions: pause/resume/cancel; Refunds: duyệt một phần/từ chối; Chargebacks **mô phỏng** (nộp bằng chứng/accept/thắng/thua, không có cổng thật); Creator Revenue: tổng hợp theo chủ cộng đồng; Payouts: approve/hold/release/failed/retry/paid/reject), Discovery (trạng thái listed/hidden/unlisted, danh mục do admin quản lý, ghim 4 section có thời hạn, trọng số xếp hạng + `sort=ranked`, search visibility). API `/api/admin/{content,payments,discovery}/*` — xem `backend/docs/api/admin-batch2.md`; schema/seed ở `backend/docs/DATABASE.md` (migration `admin_batch2`); test ở `backend/tests/admin-batch2.test.ts`.
+Chưa làm / cần chốt: cổng thanh toán thật (chargeback, retry, payout đều đang giả lập), chủ cộng đồng phản hồi hoàn tiền (`creatorResponse` luôn null), ghim bài viết/boost xếp hạng thủ công (mockup không có), export CSV, kiểm duyệt media tự động (hiện chỉ gắn cờ thủ công), các giá trị tạm: hoa hồng, phí cổng, cửa sổ hoàn tiền, ngưỡng rút tối thiểu.
+
+## Admin console — đợt 3 (backend ✅)
+Analytics (Users/Communities/Engagement/Retention/Revenue/Conversion với `range=7|30|90` + so sánh kỳ trước, tính từ bảng thật), Support (hệ thống ticket thật: form liên hệ + người dùng + admin tạo, gán, trả lời qua email/dev outbox + thông báo trong app, escalate, resolve/close/reopen, ghi chú nội bộ), System (Admin Accounts + Roles & Permissions với **vai trò nhân viên thật Super Admin/Moderator/Support/Finance + vai trò tuỳ chỉnh, quyền áp cho TOÀN BỘ `/api/admin/*`** qua middleware tập trung; Categories; Feature Flags + `GET /api/feature-flags` công khai (rollout theo %); Integrations (mô phỏng, khóa thật không lưu); Notifications (cài đặt cảnh báo + broadcast hệ thống tới all/creators/paid/community/users); Email Templates (biến `{{x}}`, preview, test-send vào dev outbox, `verify_email`/`reset_password` được dùng thật); Audit (IP, vai trò actor, bộ lọc, export CSV); **Global Settings** — các giá trị nghiệp vụ "tạm" (hoa hồng, phí cổng, cửa sổ hoàn tiền, ngưỡng rút, dùng thử, chu kỳ gói) chỉnh được không cần sửa code, env là mặc định; có chế độ bảo trì thật). API `/api/admin/{analytics,support,system}/*` — xem `backend/docs/api/admin-batch3.md`; schema/seed ở `backend/docs/DATABASE.md` (migration `admin_batch3`); test ở `backend/tests/admin-batch3.test.ts` (**307 test xanh toàn bộ**).
+Chưa làm / cần chốt: 2FA thật (chỉ lưu cờ), thực thi `sessionTimeout`/`currency`/`autoPayouts`, job gửi cảnh báo và báo cáo định kỳ cho đội admin, tích hợp thật (Stripe/Mailgun/Slack... đang mô phỏng), backend tự chặn tính năng theo feature flag; các giá trị "tạm" nay chỉnh được ở Global Settings nhưng **vẫn cần chốt con số chính thức** (hoa hồng 10%, hoàn tiền 7 ngày, rút tối thiểu $50, cổng thanh toán, hoàn tiền khi kick, xác thực SSE).

@@ -97,6 +97,7 @@ export function createEventsService(repo: EventsRepository = eventsRepository) {
 
     async toggleRsvp(eventId: string, userId: string) {
       const event = await this.getOrThrow(eventId);
+      if (event.cancelledAt) throw HttpError.conflict('Sự kiện đã bị hủy, không thể đăng ký');
       if (new Date(event.startAt).getTime() < Date.now()) throw HttpError.badRequest('Sự kiện đã diễn ra, không thể đăng ký');
 
       // Kiểm sức chứa nằm trong transaction của repo (khóa hàng sự kiện) nên an toàn khi nhiều người RSVP đồng thời.

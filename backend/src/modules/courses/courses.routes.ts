@@ -3,7 +3,14 @@ import { optionalAuth, requireAuth } from '../../middlewares/auth.js';
 import { enrollmentService } from '../enrollments/enrollments.service.js';
 import { reviewsService } from '../communities/reviews.service.js';
 import { getRole } from '../permissions/policy.js';
+import { z } from 'zod';
+import { FEATURE_SECTIONS, listFeaturedCourses } from '../discovery/featured.js';
 import { listCoursesQuery } from './courses.schema.js';
+
+const featuredQuery = z.object({
+  section: z.enum(FEATURE_SECTIONS).default('featured'),
+  limit: z.coerce.number().int().min(1).max(50).default(12),
+});
 import { courseService } from './courses.service.js';
 
 export const coursesRouter = Router();
@@ -11,6 +18,12 @@ export const coursesRouter = Router();
 coursesRouter.get('/', async (req, res) => {
   const query = listCoursesQuery.parse(req.query);
   res.json(await courseService.list(query));
+});
+
+// Phải đứng TRƯỚC '/:id'. Mục ghim ở Discovery (Admin đợt 2): `?section=featured|trending|editors_picks|new_noteworthy`.
+coursesRouter.get('/featured', async (req, res) => {
+  const { section, limit } = featuredQuery.parse(req.query);
+  res.json({ data: await listFeaturedCourses(section, limit) });
 });
 
 coursesRouter.get('/:id', optionalAuth, async (req, res) => {

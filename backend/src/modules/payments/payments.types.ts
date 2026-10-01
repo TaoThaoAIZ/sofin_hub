@@ -29,11 +29,13 @@ export interface PaymentIntent {
   invoiceNumber?: string;
   gatewayChargeId?: string;
   refundedCents: number;
+  /** Lý do thất bại (nếu status=failed). */
+  failureReason?: string;
   periodStart?: string;
   periodEnd?: string;
 }
 
-export const SUBSCRIPTION_STATUSES = ['trialing', 'active', 'canceled', 'expired'] as const;
+export const SUBSCRIPTION_STATUSES = ['trialing', 'active', 'canceled', 'expired', 'past_due', 'paused'] as const;
 export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUSES)[number];
 
 /** active + cancelAtPeriodEnd=true nghĩa là "đã hủy, còn truy cập tới hết kỳ". */
@@ -71,7 +73,7 @@ export interface RefundRequest {
   resolvedAt?: string;
 }
 
-export const PAYOUT_STATUSES = ['requested', 'approved', 'paid', 'rejected'] as const;
+export const PAYOUT_STATUSES = ['requested', 'approved', 'paid', 'rejected', 'failed', 'on_hold'] as const;
 export type PayoutStatus = (typeof PAYOUT_STATUSES)[number];
 
 /** Chỉ lưu 4 số cuối tài khoản — không giữ số tài khoản đầy đủ trong hệ thống. */

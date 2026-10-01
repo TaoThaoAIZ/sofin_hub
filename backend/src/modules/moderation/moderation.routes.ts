@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { requireAuth } from '../../middlewares/auth.js';
 import { courseService } from '../courses/courses.service.js';
-import { requireRole, requirePlatformAdmin } from '../permissions/policy.js';
+import { requireRole, requirePlatformAdmin, isPlatformAdmin } from '../permissions/policy.js';
+import { auditService } from '../admin/admin-audit.service.js';
 import { createReportBody, listReportsQuery, resolveReportBody } from './moderation.schema.js';
 import { moderationService } from './moderation.service.js';
 
@@ -40,5 +41,13 @@ moderationRouter.patch('/reports/:id', requireAuth, async (req, res) => {
   const report = await moderationService.getOrThrow(req.params.id as string);
   await requireRole(req.userId!, report.courseId, 'mod'); // mod+ của cộng đồng đó hoặc Platform Admin
   const body = resolveReportBody.parse(req.body);
-  res.json({ data: await moderationService.resolve(report.id, req.userId!, body) });
+  const data = await moderationService.resolve(report.id, req.userId!, body);
+  // Chỉ Platform Admin mới vào nhật ký admin (mod cộng đồng xử lý báo cáo là việc của cộng đồng).
+  if (await isPlatformAdmin(req.userId!)) {
+    await auditService.record(req.userId!, {
+      action: 'report.resolve', targetType: 'report', targetId: report.id, targetLabel: report.targetExcerpt?.slice(0, 120) ?? report.targetType,
+      note: body.note, caseId: report.id, metadata: { decision: body.action },
+    });
+  }
+  res.json({ data });
 });

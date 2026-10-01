@@ -6,6 +6,9 @@
  */
 import bcrypt from 'bcryptjs';
 import { prisma } from '../src/db/prisma.js';
+import { seedAdmin } from './seed/admin.js';
+import { seedAdminBatch2 } from './seed/admin-batch2.js';
+import { seedAdminBatch3 } from './seed/admin-batch3.js';
 import { seedClassroom } from './seed/classroom.js';
 import { seedDemoMembers } from './seed/demo-members.js';
 import { seedEvents } from './seed/events.js';
@@ -78,5 +81,11 @@ export async function runSeed(db: Db = prisma): Promise<SeedContext> {
   await seedPoints(ctx);
   await seedPayments(ctx);
   await seedMessagesNotifications(ctx);
+  // Cuối cùng: dữ liệu Admin đợt 1 (người dùng bị hạn chế, cộng đồng chờ duyệt, case kiểm duyệt, audit).
+  await seedAdmin(ctx);
+  // Admin đợt 2: nội dung, thanh toán (giao dịch/gói/hoàn tiền/chargeback mô phỏng/payout), Discovery.
+  await seedAdminBatch2(ctx);
+  // Admin đợt 3: nhân viên + ticket hỗ trợ + flags/tích hợp/mẫu email/broadcast + dữ liệu cho Analytics.
+  await seedAdminBatch3(ctx);
   return ctx;
 }

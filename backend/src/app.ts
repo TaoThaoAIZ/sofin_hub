@@ -37,7 +37,9 @@ export function createApp() {
     try {
       await prisma.$queryRaw`SELECT 1`; // DB chết thì báo 503 để ALB/ECS loại instance
       res.json({ status: 'ok', uptime: process.uptime() });
-    } catch {
+    } catch (err) {
+      // Ghi lý do vào log (Render/CloudWatch) — response ra ngoài vẫn không lộ chi tiết.
+      console.error('[health] kiểm tra DB thất bại:', err);
       res.status(503).json({ status: 'db_unavailable' });
     }
   });

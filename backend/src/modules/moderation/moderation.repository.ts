@@ -14,7 +14,7 @@ export interface ModerationRepository {
    * Chuyển báo cáo từ open sang trạng thái xử lý — atomic (`updateMany ... WHERE status = 'open'`).
    * Trả báo cáo mới, hoặc undefined nếu nó không còn open (đã có người xử lý trước).
    */
-  resolve(id: string, patch: { status: Exclude<ReportStatus, 'open'>; action: ReportAction; note?: string; resolvedBy: string }): Promise<Report | undefined>;
+  resolve(id: string, patch: { status: 'resolved' | 'dismissed'; action: ReportAction; note?: string; resolvedBy: string }): Promise<Report | undefined>;
 }
 
 const toReport = (r: DbReport): Report => ({
@@ -73,7 +73,7 @@ export const moderationRepository: ModerationRepository = {
 
   async resolve(id, patch) {
     const r = await prisma.report.updateMany({
-      where: { id, status: 'open' },
+      where: { id, status: { in: ['open', 'under_review'] } },
       data: { status: patch.status, action: patch.action, note: patch.note, resolvedById: patch.resolvedBy, resolvedAt: new Date() },
     });
     if (r.count === 0) return undefined;

@@ -58,3 +58,16 @@ export async function isCourseOwner(userId: string, courseId: string): Promise<b
   if (!(await enrollmentService.isEnrolled(userId, courseId))) return false;
   return (await enrollmentService.getMember(userId, courseId))?.role === 'owner';
 }
+
+/** Nhân viên admin đang hoạt động? (email trong env HOẶC có AdminAccount `active`). Quyền chi tiết do middleware admin kiểm tra theo route. */
+export async function isStaff(userId: string): Promise<boolean> {
+  if (await isPlatformAdmin(userId)) return true;
+  const { prisma } = await import('../../db/prisma.js');
+  const acc = await prisma.adminAccount.findUnique({ where: { userId }, select: { status: true } });
+  return acc?.status === 'active';
+}
+
+/** 403 nếu không phải nhân viên admin (dùng cho service mà route đã kiểm tra quyền chi tiết ở tầng admin). */
+export async function requireStaff(userId: string): Promise<void> {
+  if (!(await isStaff(userId))) throw HttpError.forbidden('Chỉ nhân viên admin mới có quyền này');
+}

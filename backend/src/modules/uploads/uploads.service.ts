@@ -112,18 +112,19 @@ export function createUploadService(repo: UploadRepository = prismaUploadReposit
     },
 
     /** Mở file để phục vụ; contentType suy từ đuôi (đã whitelist), không tin tên file người dùng. */
-    async open(key: string) {
+    async open(key: string, opts: { includeRemoved?: boolean } = {}) {
       if (!KEY_PATTERN.test(key)) return null;
       const contentType = EXT_TO_TYPE[key.split('.')[1]!];
       if (!contentType) return null;
+      const rec = await repo.get(key);
+      if (rec?.removed && !opts.includeRemoved) return null; // file bị admin gỡ: chỉ admin tải được
       const f = await storage.getStream(key);
       if (!f) return null;
-      const rec = await repo.get(key);
       return { ...f, contentType, isImage: contentType in IMAGE_TYPES, filename: rec?.filename ?? key };
     },
 
     async listMine(userId: string) {
-      const list = (await repo.listByUser(userId)).filter((r) => r.status === 'uploaded');
+      const list = (await repo.listByUser(userId)).filter((r) => r.status === 'uploaded' && !r.removed);
       return list.map((r) => ({
         key: r.key,
         url: storage.publicUrl(r.key),
@@ -148,7 +149,7 @@ export function createUploadService(repo: UploadRepository = prismaUploadReposit
     async getUploaded(key: string): Promise<UploadRecord | undefined> {
       if (!KEY_PATTERN.test(key)) return undefined;
       const rec = await repo.get(key);
-      return rec?.status === 'uploaded' ? rec : undefined;
+      return rec?.status === 'uploaded' && !rec.removed ? rec : undefined;
     },
   };
 }

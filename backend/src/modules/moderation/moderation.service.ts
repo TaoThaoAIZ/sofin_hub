@@ -5,6 +5,7 @@ import { notify } from '../notifications/notifications.service.js';
 import { getRole, isPlatformAdmin, ROLES, type Role } from '../permissions/policy.js';
 import { postsService } from '../posts/posts.service.js';
 import { userRepository } from '../auth/auth.repository.js';
+import { bumpRiskForTarget } from '../admin/admin-cases.view.js';
 import { moderationRepository, type ModerationRepository } from './moderation.repository.js';
 import type { CreateReportBody, ListReportsQuery, ResolveReportBody } from './moderation.schema.js';
 import type { Report, ReportStatus, ReportTargetType, ReportView } from './moderation.types.js';
@@ -57,7 +58,9 @@ export function createModerationService(repo: ModerationRepository = moderationR
         if ((e as { code?: string }).code === 'P2002') throw HttpError.conflict('Bạn đã báo cáo mục này rồi');
         throw e;
       }
-      return toView(report);
+      // Tự nâng mức rủi ro theo lý do + số báo cáo trên cùng đối tượng (hàng đợi admin sắp theo risk). Lỗi ở đây không được làm hỏng báo cáo.
+      await bumpRiskForTarget(targetType, targetId).catch(() => undefined);
+      return toView((await repo.findById(report.id)) ?? report);
     },
 
     async reportPost(reporterId: string, postId: string, body: CreateReportBody) {
@@ -90,7 +93,7 @@ export function createModerationService(repo: ModerationRepository = moderationR
     /** Xử lý báo cáo. Caller đã kiểm actor là mod+ của cộng đồng (hoặc Platform Admin). */
     async resolve(reportId: string, actorId: string, body: ResolveReportBody): Promise<ReportView> {
       const report = await this.getOrThrow(reportId);
-      if (report.status !== 'open') throw HttpError.conflict('Báo cáo này đã được xử lý');
+      if (report.status !== 'open' && report.status !== 'under_review') throw HttpError.conflict('Báo cáo này đã được xử lý');
 
       if (body.action === 'hide_content') {
         if (report.targetType === 'post') await postsService.setHidden(report.targetId, true);

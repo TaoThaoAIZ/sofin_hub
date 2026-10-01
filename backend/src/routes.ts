@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authRouter } from './modules/auth/auth.routes.js';
 import { mailRouter } from './modules/mail/mail.routes.js';
 import { supportRouter } from './modules/support/support.routes.js';
+import { ticketsRouter } from './modules/support/tickets.routes.js';
 import { usersRouter } from './modules/users/users.routes.js';
 import { classroomRouter } from './modules/classroom/classroom.routes.js';
 import { communitiesRouter } from './modules/communities/communities.routes.js';
@@ -15,14 +16,22 @@ import { searchRouter } from './modules/search/search.routes.js';
 import { postsRouter } from './modules/posts/posts.routes.js';
 import { messagesRouter } from './modules/messages/messages.routes.js';
 import { uploadsRouter } from './modules/uploads/uploads.routes.js';
+import { adminRouter } from './modules/admin/admin.routes.js';
+import { adminBatch2Router } from './modules/admin/admin-b2.routes.js';
+import { adminBatch3Router } from './modules/admin/admin-b3.routes.js';
+import { maintenanceGuard, platformRouter } from './modules/platform/platform.routes.js';
 import { moderationRouter } from './modules/moderation/moderation.routes.js';
 
 export const apiRouter = Router();
+
+apiRouter.use(maintenanceGuard);
+apiRouter.use('/', platformRouter);
 
 apiRouter.use('/auth', authRouter);
 apiRouter.use('/', mailRouter);
 apiRouter.use('/', usersRouter);
 apiRouter.use('/', supportRouter);
+apiRouter.use('/', ticketsRouter);
 apiRouter.use('/courses', coursesRouter);
 apiRouter.use('/', metaRouter);
 apiRouter.use('/', postsRouter);
@@ -36,3 +45,9 @@ apiRouter.use('/', searchRouter);
 apiRouter.use('/', uploadsRouter);
 apiRouter.use('/', messagesRouter);
 apiRouter.use('/', communitiesRouter);
+// Admin đợt 1 (dashboard/communities/users/moderation/audit). Đăng ký cuối: route /admin/* cũ ở module khác khớp trước.
+apiRouter.use('/', adminRouter);
+// Admin đợt 2 (content / payments / discovery).
+apiRouter.use('/', adminBatch2Router);
+// Admin đợt 3 (analytics / support / system).
+apiRouter.use('/', adminBatch3Router);

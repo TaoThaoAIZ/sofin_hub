@@ -1,4 +1,6 @@
-import { env } from '../../config/env.js';
+import { cfg } from '../settings/settings.service.js';
+import { userRepository } from '../auth/auth.repository.js';
+import { createTicket } from './tickets.core.js';
 import { mailService } from '../mail/mail.service.js';
 import type { ContactBody } from './support.schema.js';
 import { prismaNewsletterRepository, type NewsletterRepository } from './support.repository.js';
@@ -26,9 +28,22 @@ export function createSupportService(repo: NewsletterRepository = prismaNewslett
 
     async contact(body: ContactBody): Promise<void> {
       await mailService.send({
-        to: env.SUPPORT_EMAIL,
+        to: cfg().platform.supportEmail,
         subject: `[Liên hệ] ${body.subject}`,
-        text: `Từ: ${body.name} <${body.email}>\n\n${body.message}`,
+        text: `Từ: ${body.name} <${body.email}>
+
+${body.message}`,
+      });
+      // Đồng thời tạo ticket để đội hỗ trợ xử lý trong Admin (liên kết user nếu email khớp tài khoản).
+      const user = await userRepository.findByEmail(body.email);
+      await createTicket({
+        subject: body.subject,
+        message: body.message,
+        category: body.category,
+        requesterId: user?.id ?? null,
+        requesterName: body.name,
+        requesterEmail: body.email,
+        source: 'contact_form',
       });
     },
   };

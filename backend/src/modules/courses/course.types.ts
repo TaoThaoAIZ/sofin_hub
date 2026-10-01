@@ -7,6 +7,9 @@ export const CATEGORY_IDS = [
   'self',
   'hobby',
   'relationships',
+  // Admin đợt 2: chỉ dùng được sau khi admin thêm trong Discovery > Categories.
+  'marketing',
+  'design',
 ] as const;
 export type CategoryId = (typeof CATEGORY_IDS)[number];
 
@@ -25,7 +28,7 @@ export type CourseStatus = (typeof COURSE_STATUSES)[number];
 export const LANGUAGES = ['vi', 'en'] as const;
 export type Language = (typeof LANGUAGES)[number];
 
-export const COURSE_SORTS = ['trending', 'top', 'newest'] as const;
+export const COURSE_SORTS = ['trending', 'top', 'newest', 'ranked'] as const;
 export type CourseSort = (typeof COURSE_SORTS)[number];
 
 export interface Course {
@@ -52,6 +55,8 @@ export interface Course {
   ownerId?: string;
   /** Bị Platform Admin khóa: ẩn khỏi danh sách công khai, chặn nội dung. */
   locked?: boolean;
+  /** Chỉ có khi admin đặt khác `searchable` (Discovery > Search Visibility). */
+  searchVisibility?: 'reduced' | 'hidden';
   /** Xóa mềm: ẩn hoàn toàn (findById trả undefined). */
   deletedAt?: string;
 }

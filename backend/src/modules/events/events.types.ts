@@ -9,6 +9,8 @@ export interface CommunityEvent {
   timezone: string;
   meetingLink?: string;
   capacity?: number;
+  /** Có giá trị khi Platform Admin đã hủy sự kiện (vẫn hiển thị, không RSVP được). */
+  cancelledAt?: string;
   createdAt: string;
   updatedAt?: string;
 }

@@ -130,25 +130,27 @@ async function applyOrder(tx: Tx, table: 'ClassroomModule' | 'ClassroomLesson', 
 export const classroomRepository: ClassroomRepository = {
   async getModules(courseId) {
     const rows = await prisma.classroomModule.findMany({
-      where: { courseId },
+      // Admin đợt 2: module nháp/lưu trữ/bị gỡ và bài học bị ẩn/gỡ không hiện với thành viên.
+      where: { courseId, publishStatus: 'published', removedAt: null },
       orderBy: [{ index: 'asc' }, { createdAt: 'asc' }],
-      include: { lessons: { select: { id: true }, orderBy: [{ index: 'asc' }, { createdAt: 'asc' }] } },
+      include: { lessons: { where: { hidden: false, removedAt: null }, select: { id: true }, orderBy: [{ index: 'asc' }, { createdAt: 'asc' }] } },
     });
     return rows.map((m) => toModule(m, m.lessons.map((l) => l.id)));
   },
 
   async getLessons(moduleId) {
-    const rows = await prisma.classroomLesson.findMany({ where: { moduleId }, orderBy: [{ index: 'asc' }, { createdAt: 'asc' }] });
+    const rows = await prisma.classroomLesson.findMany({ where: { moduleId, hidden: false, removedAt: null }, orderBy: [{ index: 'asc' }, { createdAt: 'asc' }] });
     return rows.map(toLesson);
   },
 
   async getCourseLessons(courseId) {
-    return (await prisma.classroomLesson.findMany({ where: { courseId } })).map(toLesson);
+    return (await prisma.classroomLesson.findMany({ where: { courseId, hidden: false, removedAt: null, module: { publishStatus: 'published', removedAt: null } } })).map(toLesson);
   },
 
   async findLesson(lessonId) {
-    const row = await prisma.classroomLesson.findUnique({ where: { id: lessonId } });
-    return row ? toLesson(row) : undefined;
+    const row = await prisma.classroomLesson.findUnique({ where: { id: lessonId }, include: { module: { select: { publishStatus: true, removedAt: true } } } });
+    if (!row || row.hidden || row.removedAt || row.module.publishStatus !== 'published' || row.module.removedAt) return undefined;
+    return toLesson(row);
   },
 
   async createModule(courseId, input) {

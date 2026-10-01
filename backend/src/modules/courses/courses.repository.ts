@@ -2,6 +2,7 @@ import { centsToUsd, usdToCents } from '../../db/enums.js';
 import { prisma } from '../../db/prisma.js';
 import type { Course as DbCourse, Prisma } from '../../generated/prisma/client.js';
 import type { Course, CoursePatch } from './course.types.js';
+import { rankedScores } from '../discovery/ranking.js';
 import type { ListCoursesQuery } from './courses.schema.js';
 
 export interface CourseMemberStats {
@@ -13,7 +14,11 @@ export interface CourseMemberStats {
 
 /** Lớp truy cập dữ liệu khóa học/cộng đồng (Postgres qua Prisma, bảng Course). */
 export interface CourseRepository {
-  findMany(query: ListCoursesQuery): Promise<{ items: Course[]; total: number }>;
+  /**
+   * Danh sách công khai. Mặc định chỉ cộng đồng `discoveryStatus=listed`; `forSearch` (tìm kiếm nội bộ) lấy cả hidden/unlisted
+   * nhưng loại những cộng đồng đặt `searchVisibility=hidden`.
+   */
+  findMany(query: ListCoursesQuery, opts?: { forSearch?: boolean }): Promise<{ items: Course[]; total: number }>;
   findById(id: string): Promise<Course | undefined>;
   countByCategory(): Promise<Record<string, number>>;
   /** Thêm cộng đồng do người dùng tạo. */
@@ -76,6 +81,7 @@ function toCourse(row: DbCourse, real: number): Course {
     status: row.status,
     language: row.language,
     createdAt: row.createdAt.toISOString(),
+    ...(row.searchVisibility !== 'searchable' ? { searchVisibility: row.searchVisibility } : {}),
     // Chỉ thêm khi có giá trị để hình dạng JSON giữ nguyên như bản cũ.
     ...(row.ownerId ? { ownerId: row.ownerId } : {}),
     ...(row.locked ? { locked: true } : {}),
@@ -92,6 +98,8 @@ const rankOf = (r: DbCourse) => r.trendingRank ?? 1e9;
 
 const sorters: Record<ListCoursesQuery['sort'], (a: DbCourse, b: DbCourse) => number> = {
   // Cộng đồng mới tạo (không có trong seed) xếp sau seed, mới hơn lên trước.
+  // Điểm `ranked` được gán ở findMany (cần dữ liệu thật); ở đây chỉ là thứ tự dự phòng.
+  ranked: (a, b) => rankOf(a) - rankOf(b) || b.createdAt.getTime() - a.createdAt.getTime() || a.id.localeCompare(b.id),
   trending: (a, b) => rankOf(a) - rankOf(b) || b.createdAt.getTime() - a.createdAt.getTime() || a.id.localeCompare(b.id),
   top: (a, b) =>
     b.rating * Math.log1p(b.ratingCount) - a.rating * Math.log1p(a.ratingCount) ||
@@ -130,13 +138,18 @@ function toRowPatch(patch: CoursePatch): Prisma.CourseUpdateInput {
 }
 
 export const courseRepository: CourseRepository = {
-  async findMany({ q, category, pricing, visibility, status, language, sort, page, limit }) {
+  async findMany({ q, category, pricing, visibility, status, language, sort, page, limit }, opts = {}) {
     // Cộng đồng bị xóa mềm hoặc bị khóa không xuất hiện ở danh sách công khai.
-    const where: Prisma.CourseWhereInput = { deletedAt: null, locked: false, category, pricing, visibility, status, language };
+    const where: Prisma.CourseWhereInput = { deletedAt: null, locked: false, moderationStatus: 'active', category, pricing, visibility, status, language };
+    if (opts.forSearch) where.searchVisibility = { not: 'hidden' };
+    else {
+      where.discoveryStatus = 'listed';
+      if (q) where.searchVisibility = { not: 'hidden' }; // Admin ẩn khỏi tìm kiếm => cũng không ra khi lọc theo từ khóa
+    }
     const needle = q ? normalize(q) : '';
 
     // Không tìm kiếm + sort trending/newest: để DB sắp xếp và phân trang.
-    if (!needle && sort !== 'top') {
+    if (!needle && sort !== 'top' && sort !== 'ranked') {
       const orderBy: Prisma.CourseOrderByWithRelationInput[] =
         sort === 'trending'
           ? [{ trendingRank: { sort: 'asc', nulls: 'last' } }, { createdAt: 'desc' }, { id: 'asc' }]
@@ -154,6 +167,12 @@ export const courseRepository: CourseRepository = {
       rows = rows.filter((c) => normalize(`${c.title} ${c.description} ${c.instructorName}`).includes(needle));
     }
     rows.sort(sorters[sort]);
+    if (sort === 'ranked') {
+      const scores = await rankedScores(rows.map((r) => r.id));
+      rows = rows.map((r, i) => ({ r, i })).sort((a, b) => (scores.get(b.r.id) ?? 0) - (scores.get(a.r.id) ?? 0) || a.i - b.i).map((x) => x.r);
+    }
+    // `reduced`: giảm hiển thị khi tìm kiếm — xếp sau mọi kết quả `searchable` (sắp ổn định nên thứ tự cũ được giữ trong mỗi nhóm).
+    if (needle) rows = rows.map((r, i) => ({ r, i })).sort((a, b) => Number(a.r.searchVisibility === 'reduced') - Number(b.r.searchVisibility === 'reduced') || a.i - b.i).map((x) => x.r);
     const start = (page - 1) * limit;
     return { items: await withCounts(rows.slice(start, start + limit)), total: rows.length };
   },
@@ -164,7 +183,7 @@ export const courseRepository: CourseRepository = {
   },
 
   async countByCategory() {
-    const groups = await prisma.course.groupBy({ by: ['category'], where: { deletedAt: null, locked: false }, _count: { _all: true } });
+    const groups = await prisma.course.groupBy({ by: ['category'], where: { deletedAt: null, locked: false, moderationStatus: 'active', discoveryStatus: 'listed' }, _count: { _all: true } });
     return Object.fromEntries(groups.map((g) => [g.category, g._count._all]));
   },
 

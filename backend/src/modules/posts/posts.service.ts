@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { HttpError } from '../../utils/http-error.js';
 import { userBriefView } from '../auth/user-view.js';
+import { assertUserCan } from '../auth/user-status.js';
 import { courseService } from '../courses/courses.service.js';
 import { notify } from '../notifications/notifications.service.js';
 import { atLeast, canManageContent, getRole } from '../permissions/policy.js';
@@ -100,6 +101,7 @@ export function createPostsService(repo: PostsRepository = postsRepository) {
       imageUrl?: string,
       pollBody?: CreatePollBody,
     ): Promise<PostView> {
+      await assertUserCan(authorId, 'post');
       let poll: PollDef | undefined;
       if (pollBody) {
         if (pollBody.closesAt && new Date(pollBody.closesAt).getTime() <= Date.now()) {
@@ -199,6 +201,7 @@ export function createPostsService(repo: PostsRepository = postsRepository) {
     },
 
     async addComment(postId: string, authorId: string, content: string): Promise<CommentView> {
+      await assertUserCan(authorId, 'comment');
       const post = await this.getVisibleOrThrow(postId, authorId);
       const comment = await repo.addComment(postId, authorId, content);
       if (post.authorId !== authorId && !(await userRepository.findById(post.authorId))?.isDemo) {

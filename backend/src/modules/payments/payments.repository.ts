@@ -25,7 +25,7 @@ export type NewPayment = Omit<PaymentIntent, 'id' | 'status' | 'createdAt' | 'co
 
 export type PaymentPatch = Partial<Omit<PaymentIntent, 'id'>>;
 export type SubscriptionPatch = Partial<Omit<Subscription, 'id' | 'canceledAt'>> & { canceledAt?: string | null };
-export type RefundPatch = Partial<Pick<RefundRequest, 'status' | 'note' | 'resolvedBy' | 'resolvedAt'>>;
+export type RefundPatch = Partial<Pick<RefundRequest, 'status' | 'note' | 'resolvedBy' | 'resolvedAt' | 'amountCents'>>;
 export type PayoutPatch = Partial<Pick<Payout, 'status' | 'note'>>;
 
 /** Tỷ lệ hoa hồng/phí cổng ở dạng basis point nguyên (tính doanh thu bằng số nguyên ngay trong SQL). */
@@ -143,6 +143,7 @@ function toPayment(r: PaymentRow): PaymentIntent {
     invoiceNumber: r.invoiceNumber ?? undefined,
     gatewayChargeId: r.gatewayChargeId ?? undefined,
     refundedCents: r.refundedCents,
+    failureReason: r.failureReason ?? undefined,
     periodStart: iso(r.periodStart),
     periodEnd: iso(r.periodEnd),
     confirmedAt: iso(r.confirmedAt),
@@ -207,6 +208,7 @@ function paymentData(p: PaymentPatch): Prisma.PaymentUncheckedUpdateManyInput {
     periodStart: dateOrUndef(p.periodStart),
     periodEnd: dateOrUndef(p.periodEnd),
     refundedCents: p.refundedCents,
+    failureReason: p.failureReason,
   };
 }
 
@@ -375,7 +377,7 @@ function makeOps(db: Db): PaymentsOps {
     async transitionRefund(id, from, patch) {
       const { count } = await db.refundRequest.updateMany({
         where: { id, status: { in: from } },
-        data: { status: patch.status, note: patch.note, resolvedById: patch.resolvedBy, resolvedAt: patch.resolvedAt ? new Date(patch.resolvedAt) : undefined },
+        data: { status: patch.status, note: patch.note, amountCents: patch.amountCents, resolvedById: patch.resolvedBy, resolvedAt: patch.resolvedAt ? new Date(patch.resolvedAt) : undefined },
       });
       return count === 0 ? undefined : ops.findRefund(id);
     },
