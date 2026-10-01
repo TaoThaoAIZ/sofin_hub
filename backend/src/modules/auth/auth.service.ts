@@ -185,7 +185,7 @@ export function createAuthService(repo: UserRepository = userRepository) {
       if (memberships.some((m) => m.role === 'owner')) {
         throw HttpError.conflict('Bạn đang là chủ của một cộng đồng, hãy chuyển quyền sở hữu trước khi xóa tài khoản');
       }
-      for (const m of memberships) await enrollmentService.remove(userId, m.courseId);
+      for (const m of memberships) await enrollmentService.remove(userId, m.communityId);
       // Ẩn danh hóa (không xóa hàng User): bài viết, bình luận, điểm, thanh toán được giữ; bài cũ hiển thị "Thành viên đã xóa".
       // Thu hồi trước để access token chết ngay cả khi bước ẩn danh hóa thất bại giữa chừng.
       await repo.bumpTokenVersion(userId);

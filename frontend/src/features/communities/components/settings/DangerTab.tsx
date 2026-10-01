@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { MaterialIcon } from '../../../../components/ui/MaterialIcon';
 import { useAuth } from '../../../auth/AuthContext';
 import { useMembers } from '../../../community/queries';
-import type { CourseDetail } from '../../../courses/types';
+import type { CommunityDetail } from '../../../courses/types';
 import { useDeleteCommunity, useLockCommunity, useTransferOwnership } from '../../queries';
 import { ROLE_RANK, type ViewerRole } from '../../types';
 import { CancelButton, ErrorLine, errorText, INPUT_CLASS, Modal, PrimaryButton } from '../Modal';
@@ -20,7 +20,7 @@ function Zone({ title, desc, children }: { title: string; desc: string; children
 
 const dangerBtn = 'h-10 rounded-xl border border-red-300 bg-white px-5 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50';
 
-export function DangerTab({ course, viewerRole }: { course: CourseDetail; viewerRole: ViewerRole }) {
+export function DangerTab({ course, viewerRole }: { course: CommunityDetail; viewerRole: ViewerRole }) {
   const isOwner = ROLE_RANK[viewerRole] >= ROLE_RANK.owner;
   const isPlatformAdmin = viewerRole === 'platform_admin';
   return (
@@ -33,7 +33,7 @@ export function DangerTab({ course, viewerRole }: { course: CourseDetail; viewer
   );
 }
 
-function TransferZone({ course }: { course: CourseDetail }) {
+function TransferZone({ course }: { course: CommunityDetail }) {
   const { user } = useAuth();
   const [q, setQ] = useState('');
   const [target, setTarget] = useState<{ id: string; name: string } | null>(null);
@@ -103,7 +103,7 @@ function TransferZone({ course }: { course: CourseDetail }) {
   );
 }
 
-function DeleteZone({ course }: { course: CourseDetail }) {
+function DeleteZone({ course }: { course: CommunityDetail }) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState('');
@@ -138,7 +138,7 @@ function DeleteZone({ course }: { course: CourseDetail }) {
   );
 }
 
-function LockZone({ course }: { course: CourseDetail }) {
+function LockZone({ course }: { course: CommunityDetail }) {
   const [reason, setReason] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
   const lock = useLockCommunity(course.id);

@@ -1,6 +1,6 @@
 /**
  * Danh tính thành viên minh họa (User.isDemo=true) DÙNG CHUNG cho mọi file seed nội dung.
- * Id xác định: `demo-<courseId>-<i>` (i = 0..DEMO_NAMES.length-1); email `seed-<courseId>-<i>@demo.sofinhub.invalid`.
+ * Id xác định: `demo-<communityId>-<i>` (i = 0..DEMO_NAMES.length-1); email `seed-<communityId>-<i>@demo.sofinhub.invalid`.
  * Thành viên i=0 là quản trị viên minh họa (role admin) của cộng đồng đó. Do agent `communities` tạo User + Enrollment
  * thật trong prisma/seed/demo-members.ts (chạy TRƯỚC các seed nội dung khác); các seed khác chỉ tham chiếu id này.
  */
@@ -14,5 +14,5 @@ export const DEMO_NAMES: readonly string[] = [
   'Văn Toàn', 'Diệu Linh', 'Nhật Minh', 'Phương Thảo', 'Tiến Dũng', 'Cẩm Tú', 'Đình Khôi', 'Thanh Tùng',
 ];
 
-export const demoUserId = (courseId: string, i: number) => `demo-${courseId}-${i}`;
-export const demoEmail = (courseId: string, i: number) => `seed-${courseId}-${i}@demo.sofinhub.invalid`;
+export const demoUserId = (communityId: string, i: number) => `demo-${communityId}-${i}`;
+export const demoEmail = (communityId: string, i: number) => `seed-${communityId}-${i}@demo.sofinhub.invalid`;

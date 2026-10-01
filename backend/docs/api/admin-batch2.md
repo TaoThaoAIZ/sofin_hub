@@ -44,7 +44,9 @@ Giống Posts, đường dẫn `/admin/content/comments[...]` (summary, list, :i
 `AdminComment = { id, code: "CMT-xxxxxxxx", title (excerpt), excerpt, author: Person, post: { id, title }, community: Ref, reports, underReview, status, moderationReason, moderatedAt, moderatedBy, createdAt }`.
 List query thêm `postId`. Detail thêm `content`, `reportList`, `history`.
 
-## A3. Courses (khóa học trong lớp học = `ClassroomModule`)
+## A3. Courses (khóa học = entity `Course`, bảng `LearningCourse`; trước STEP 6 là `ClassroomModule`)
+
+> Đổi nguồn dữ liệu sang entity Khóa học mới (xem [communities-courses.md](./communities-courses.md) §5). `id` = id khóa học; `courseId=` (legacy) = id **cộng đồng**, thêm `communityId=`; `AdminCourse` thêm `modules`; detail thêm `moduleList`; `/admin/content/lessons` thêm lọc `learningCourseId`. Hành động publish/unpublish/archive/remove/restore + audit `course.*` giữ nguyên, nhưng tác động lên khóa học (gỡ khóa ⇒ thành viên không thấy khóa và module bên trong).
 Trạng thái: `published | draft | archived | removed` (`removed` độc lập với xuất bản; restore bỏ cờ gỡ và giữ nguyên published/draft/archived trước đó).
 | Method | Path | Query / Body | Response |
 |---|---|---|---|

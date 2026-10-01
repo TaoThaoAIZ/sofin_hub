@@ -30,7 +30,7 @@ const toDomain = (r: Row): Notification => ({
   title: r.title,
   body: r.body,
   ...(r.link ? { link: r.link } : {}),
-  ...(r.courseId ? { courseId: r.courseId } : {}),
+  ...(r.communityId ? { communityId: r.communityId, courseId: r.communityId } : {}),
   readAt: r.readAt ? r.readAt.toISOString() : null,
   createdAt: r.createdAt.toISOString(),
 });
@@ -47,7 +47,7 @@ export const prismaNotificationsRepository: NotificationsRepository = {
         title: n.title,
         body: n.body,
         link: n.link ?? null,
-        courseId: n.courseId ?? null,
+        communityId: n.communityId ?? null,
         readAt: n.readAt ? new Date(n.readAt) : null,
         createdAt: new Date(n.createdAt),
       },

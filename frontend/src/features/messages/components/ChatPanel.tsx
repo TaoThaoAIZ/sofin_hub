@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
-import { ApiError, resolveApiPath } from '../../../lib/api';
+import { ApiError } from '../../../lib/api';
 import { formatDateTime } from '../../../lib/datetime';
+import { useFileUrl } from '../../../lib/files';
 import { useAuth } from '../../auth/AuthContext';
 import { useUpload, type UploadedFile } from '../../uploads/useUpload';
 import { messageErrorText, useBlockToggle, useMarkConversationRead, useRecallMessage, useSendMessage, useThread } from '../queries';
@@ -9,6 +10,34 @@ import type { ConversationView, MessageView } from '../types';
 
 function formatSize(bytes: number) {
   return bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)}MB` : `${Math.max(1, Math.round(bytes / 1024))}KB`;
+}
+
+function ChatAttachment({ a, mine }: { a: MessageView['attachments'][number]; mine: boolean }) {
+  // File tin nhắn là riêng tư: dùng URL ký hạn ngắn do BE cấp (<img>/<a> không gửi được Authorization).
+  const href = useFileUrl(a.url);
+  if (href === null) return <div className="mt-1.5 text-[12px] opacity-70">Không tải được tệp đính kèm</div>;
+  if (a.contentType.startsWith('image/')) {
+    return href ? (
+      <a href={href} target="_blank" rel="noreferrer" className="mt-1.5 block">
+        <img src={href} alt={a.name} className="max-h-56 rounded-xl object-cover" loading="lazy" />
+      </a>
+    ) : (
+      <div className="mt-1.5 h-24 w-40 animate-pulse rounded-xl bg-stone-900/10" />
+    );
+  }
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      download={a.name}
+      className={`mt-1.5 flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-[13px] ${mine ? 'bg-white/20' : 'bg-white'}`}
+    >
+      <MaterialIcon name="attach_file" size={17} />
+      <span className="min-w-0 flex-1 truncate">{a.name}</span>
+      <span className="flex-none text-[11px] opacity-70">{formatSize(a.size)}</span>
+    </a>
+  );
 }
 
 function Bubble({ m, mine, onRecall, recalling }: { m: MessageView; mine: boolean; onRecall: () => void; recalling: boolean }) {
@@ -28,26 +57,9 @@ function Bubble({ m, mine, onRecall, recalling }: { m: MessageView; mine: boolea
       )}
       <div className={`max-w-[78%] rounded-2xl px-3.5 py-2 text-[14px] ${mine ? 'bg-brand text-white' : 'bg-stone-900/5 text-stone-900'} ${m.deleted ? 'italic opacity-70' : ''}`}>
         {m.content && <p className="break-words whitespace-pre-wrap">{m.content}</p>}
-        {m.attachments.map((a) =>
-          a.contentType.startsWith('image/') ? (
-            <a key={a.url} href={resolveApiPath(a.url)} target="_blank" rel="noreferrer" className="mt-1.5 block">
-              <img src={resolveApiPath(a.url)} alt={a.name} className="max-h-56 rounded-xl object-cover" loading="lazy" />
-            </a>
-          ) : (
-            <a
-              key={a.url}
-              href={resolveApiPath(a.url)}
-              target="_blank"
-              rel="noreferrer"
-              download={a.name}
-              className={`mt-1.5 flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-[13px] ${mine ? 'bg-white/20' : 'bg-white'}`}
-            >
-              <MaterialIcon name="attach_file" size={17} />
-              <span className="min-w-0 flex-1 truncate">{a.name}</span>
-              <span className="flex-none text-[11px] opacity-70">{formatSize(a.size)}</span>
-            </a>
-          ),
-        )}
+        {m.attachments.map((a) => (
+          <ChatAttachment key={a.url} a={a} mine={mine} />
+        ))}
         <div className={`mt-0.5 text-[10.5px] ${mine ? 'text-white/75' : 'text-stone-500'}`}>{formatDateTime(m.createdAt)}</div>
       </div>
     </div>

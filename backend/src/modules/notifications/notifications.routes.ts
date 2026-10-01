@@ -1,4 +1,4 @@
-import { Router, type RequestHandler } from 'express';
+import { Router, type RequestHandler, type Response } from 'express';
 import { requireAuth } from '../../middlewares/auth.js';
 import { HttpError } from '../../utils/http-error.js';
 import { authenticateAccessToken } from '../auth/tokens.js';
@@ -8,25 +8,31 @@ import { notificationsService } from './notifications.service.js';
 export const notificationsRouter = Router();
 
 const HEARTBEAT_MS = 25_000;
+/** Các luồng SSE thông báo đang mở trên instance này (để đóng khi shutdown). */
+const openStreams = new Set<Response>();
+export function closeNotificationStreams(): void {
+  for (const res of [...openStreams]) res.end();
+  openStreams.clear();
+}
 
 /**
- * Xác thực riêng cho SSE: EventSource không đặt được header nên nhận ?ticket= (ưu tiên, dùng 1 lần)
- * hoặc ?access_token= (fallback, chỉ route này), và vẫn nhận Bearer header.
+ * Xác thực riêng cho SSE: EventSource không đặt được header nên nhận ?ticket= (dùng 1 lần, TTL 30s) hoặc Bearer header.
+ * KHÔNG nhận access token trong query string (lọt vào log/Referer).
  */
 const streamAuth: RequestHandler = async (req, _res, next) => {
   const q = streamQuery.parse(req.query);
   const header = req.headers.authorization;
   let userId: string | undefined;
   if (header?.startsWith('Bearer ')) userId = (await authenticateAccessToken(header.slice(7)))?.userId;
-  else if (q.ticket) userId = notificationsService.consumeStreamTicket(q.ticket);
-  else if (q.access_token) userId = (await authenticateAccessToken(q.access_token))?.userId;
+  else if (q.ticket) userId = await notificationsService.consumeStreamTicket(q.ticket);
   if (!userId) return next(HttpError.unauthorized());
   req.userId = userId;
   next();
 };
 
-notificationsRouter.get('/notifications/stream', streamAuth, (req, res) => {
+notificationsRouter.get('/notifications/stream', streamAuth, async (req, res) => {
   const userId = req.userId!;
+  await notificationsService.ready(); // đã subscribe pub/sub trước khi client thấy kết nối mở
   res.status(200).set({
     'Content-Type': 'text/event-stream; charset=utf-8',
     'Cache-Control': 'no-cache, no-transform',
@@ -40,14 +46,17 @@ notificationsRouter.get('/notifications/stream', streamAuth, (req, res) => {
     if (n.userId === userId) res.write(`event: notification\ndata: ${JSON.stringify(n)}\n\n`);
   });
   const heartbeat = setInterval(() => res.write(`: heartbeat\n\n`), HEARTBEAT_MS);
+  heartbeat.unref();
+  openStreams.add(res);
   req.on('close', () => {
     clearInterval(heartbeat);
+    openStreams.delete(res);
     off();
   });
 });
 
 notificationsRouter.post('/notifications/stream-ticket', requireAuth, async (req, res) => {
-  res.status(201).json({ data: notificationsService.issueStreamTicket(req.userId!) });
+  res.status(201).json({ data: await notificationsService.issueStreamTicket(req.userId!) });
 });
 
 notificationsRouter.get('/notifications/unread-count', requireAuth, async (req, res) => {

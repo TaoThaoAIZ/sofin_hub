@@ -26,18 +26,18 @@ export interface MemberQuery {
 const NON_MEMBER_ROLES: MemberRole[] = ['mod', 'admin', 'owner'];
 
 /** Điều kiện "đang là thành viên": có Enrollment và không bị cấm. */
-async function bannedIds(courseId: string): Promise<string[]> {
-  return (await prisma.communityBan.findMany({ where: { courseId }, select: { userId: true } })).map((b) => b.userId);
+async function bannedIds(communityId: string): Promise<string[]> {
+  return (await prisma.communityBan.findMany({ where: { communityId }, select: { userId: true } })).map((b) => b.userId);
 }
 
-function baseWhere(courseId: string, banned: string[]): Prisma.EnrollmentWhereInput {
-  return { courseId, ...(banned.length ? { userId: { notIn: banned } } : {}) };
+function baseWhere(communityId: string, banned: string[]): Prisma.EnrollmentWhereInput {
+  return { communityId, ...(banned.length ? { userId: { notIn: banned } } : {}) };
 }
 
 export const communityRepository = {
   /** Đếm thành viên: tất cả / online (lastActiveAt >= since) / quản trị (mod, admin, owner). */
-  async memberCounts(courseId: string, onlineSince: Date) {
-    const where = baseWhere(courseId, await bannedIds(courseId));
+  async memberCounts(communityId: string, onlineSince: Date) {
+    const where = baseWhere(communityId, await bannedIds(communityId));
     const [all, online, admins] = await Promise.all([
       prisma.enrollment.count({ where }),
       prisma.enrollment.count({ where: { ...where, lastActiveAt: { gte: onlineSince } } }),
@@ -47,9 +47,9 @@ export const communityRepository = {
   },
 
   /** Danh sách thành viên đã lọc + sắp xếp (mới hoạt động / mới tham gia trước) và tổng số khớp. */
-  async listMembers(courseId: string, onlineSince: Date, q: MemberQuery): Promise<{ rows: MemberRow[]; total: number }> {
+  async listMembers(communityId: string, onlineSince: Date, q: MemberQuery): Promise<{ rows: MemberRow[]; total: number }> {
     const where: Prisma.EnrollmentWhereInput = {
-      ...baseWhere(courseId, await bannedIds(courseId)),
+      ...baseWhere(communityId, await bannedIds(communityId)),
       ...(q.filter === 'online' ? { lastActiveAt: { gte: onlineSince } } : {}),
       ...(q.filter === 'admin' ? { role: { in: NON_MEMBER_ROLES } } : {}),
     };
@@ -78,8 +78,8 @@ export const communityRepository = {
   },
 
   /** Toàn bộ thành viên (mọi cột cần cho lọc theo tên + handle) — chỉ dùng khi có từ khóa `q`. */
-  async allMembers(courseId: string, onlineSince: Date, q: Pick<MemberQuery, 'filter' | 'sort'>): Promise<MemberRow[]> {
-    return (await this.listMembers(courseId, onlineSince, q)).rows;
+  async allMembers(communityId: string, onlineSince: Date, q: Pick<MemberQuery, 'filter' | 'sort'>): Promise<MemberRow[]> {
+    return (await this.listMembers(communityId, onlineSince, q)).rows;
   },
 
   async namesOf(userIds: string[]): Promise<Map<string, string>> {
@@ -92,14 +92,14 @@ export const communityRepository = {
    * Phân bố cấp độ của mọi thành viên (kể cả người 0 điểm) theo tổng điểm `all`: level -> số thành viên.
    * Toàn bộ tính trong DB: tổng điểm theo người rồi đếm số ngưỡng cấp độ mà tổng đạt tới.
    */
-  async levelDistribution(courseId: string): Promise<Map<number, number>> {
+  async levelDistribution(communityId: string): Promise<Map<number, number>> {
     const thresholds = LEVELS.map((l) => l.minPoints);
     const rows = await prisma.$queryRaw<{ level: number; n: number }[]>`
       SELECT (SELECT COUNT(*)::int FROM unnest(${thresholds}::int[]) t WHERE t <= m.total) AS "level", COUNT(*)::int AS "n"
       FROM (
         SELECT e."userId", COALESCE((SELECT SUM(p."points") FROM "PointEvent" p WHERE p."courseId" = e."courseId" AND p."userId" = e."userId"), 0)::int AS total
         FROM "Enrollment" e
-        WHERE e."courseId" = ${courseId}
+        WHERE e."courseId" = ${communityId}
           AND NOT EXISTS (SELECT 1 FROM "CommunityBan" b WHERE b."courseId" = e."courseId" AND b."userId" = e."userId")
       ) m
       GROUP BY 1`;
@@ -107,14 +107,14 @@ export const communityRepository = {
   },
 
   /** Hạng của 1 thành viên (1 = đứng đầu) trong bảng xếp hạng cửa sổ `window`; null nếu chưa có điểm > 0. */
-  async rankOf(courseId: string, userId: string, window: LeaderboardWindow): Promise<number | null> {
+  async rankOf(communityId: string, userId: string, window: LeaderboardWindow): Promise<number | null> {
     const since = windowStart(window);
     const [row] = await prisma.$queryRaw<{ rank: number | null }[]>`
       WITH totals AS (
         SELECT p."userId" AS uid, SUM(p."points")::int AS pts
         FROM "PointEvent" p
         JOIN "Enrollment" e ON e."courseId" = p."courseId" AND e."userId" = p."userId"
-        WHERE p."courseId" = ${courseId}
+        WHERE p."courseId" = ${communityId}
           AND (${since}::timestamp IS NULL OR p."createdAt" >= ${since}::timestamp)
           AND NOT EXISTS (SELECT 1 FROM "CommunityBan" b WHERE b."courseId" = p."courseId" AND b."userId" = p."userId")
         GROUP BY p."userId"

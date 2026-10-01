@@ -160,7 +160,7 @@ describe('thông báo', () => {
     assert.equal(oldest?.title, 'X4');
   });
 
-  it('SSE: xác thực bằng ticket một lần / access_token / Bearer, nhận event notification', async () => {
+  it('SSE: xác thực bằng ticket một lần / Bearer (access_token trong query bị từ chối), nhận event notification', async () => {
     const u = await c.registerUser('sse');
     assert.equal((await c.call('GET', '/notifications/stream?access_token=bad')).status, 401);
     assert.equal((await c.call('GET', '/notifications/stream?ticket=bad')).status, 401);
@@ -191,10 +191,7 @@ describe('thông báo', () => {
     assert.match(buf, /event: notification\ndata: .*Realtime!/);
     ac.abort();
 
-    // access_token fallback
-    const ac2 = new AbortController();
-    const res2 = await fetch(`${server.baseUrl}/notifications/stream?access_token=${u.token}`, { signal: ac2.signal });
-    assert.equal(res2.status, 200);
-    ac2.abort();
+    // access_token trên query KHÔNG còn được chấp nhận (lọt vào log/Referer)
+    assert.equal((await c.call('GET', `/notifications/stream?access_token=${u.token}`)).status, 401);
   });
 });

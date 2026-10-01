@@ -45,6 +45,9 @@ export const logOnlyMailProvider: MailProvider = {
 };
 
 let provider: MailProvider = isProd ? logOnlyMailProvider : memoryMailProvider;
+// Outbox in-memory CHỈ dành cho dev/test (không bao giờ dùng khi production: lộ token, mất khi restart, lệch giữa instance).
+// Production mặc định log-only => thư reset/verify bị bỏ: cảnh báo to ngay lúc khởi động để không bị bỏ sót.
+if (isProd) console.warn('[mail] CẢNH BÁO: production đang dùng provider log-only — email (đặt lại mật khẩu, xác thực...) KHÔNG được gửi. Gọi setMailProvider() với SES/SMTP trước khi mở cho người dùng thật.');
 
 export function setMailProvider(p: MailProvider) {
   provider = p;

@@ -50,16 +50,16 @@ describe('hạ tầng DB', () => {
     assert.equal(u.emailVerified, false);
     assert.match(u.id, /^[0-9a-f-]{36}$/);
 
-    await db.prisma.course.create({ data: course('photo') });
-    await db.prisma.enrollment.create({ data: { userId: u.id, courseId: 'photo', role: 'owner' } });
+    await db.prisma.community.create({ data: course('photo') });
+    await db.prisma.enrollment.create({ data: { userId: u.id, communityId: 'photo', role: 'owner' } });
 
     const found = await db.prisma.enrollment.findUnique({
-      where: { userId_courseId: { userId: u.id, courseId: 'photo' } },
-      include: { user: true, course: true },
+      where: { userId_communityId: { userId: u.id, communityId: 'photo' } },
+      include: { user: true, community: true },
     });
     assert.equal(found?.role, 'owner');
-    assert.equal(found?.course.id, 'photo');
-    assert.equal(found?.course.pricing, 'paid');
+    assert.equal(found?.community.id, 'photo');
+    assert.equal(found?.community.pricing, 'paid');
     assert.equal(found?.user.email, 'a@test.local');
   });
 
@@ -67,8 +67,8 @@ describe('hạ tầng DB', () => {
     const u = await db.prisma.user.create({ data: user('dup@test.local') });
     await assert.rejects(db.prisma.user.create({ data: user('dup@test.local') }), { code: 'P2002' });
 
-    await db.prisma.course.create({ data: course('c1') });
-    const key = { userId: u.id, courseId: 'c1' };
+    await db.prisma.community.create({ data: course('c1') });
+    const key = { userId: u.id, communityId: 'c1' };
     await db.prisma.enrollment.create({ data: key });
     await assert.rejects(db.prisma.enrollment.create({ data: key }), { code: 'P2002' });
 
@@ -77,18 +77,18 @@ describe('hạ tầng DB', () => {
   });
 
   it('ràng buộc FK: không ghi danh user/khóa không tồn tại; xóa user cascade', async () => {
-    await db.prisma.course.create({ data: course('c2') });
-    await assert.rejects(db.prisma.enrollment.create({ data: { userId: 'khong-ton-tai', courseId: 'c2' } }), { code: 'P2003' });
+    await db.prisma.community.create({ data: course('c2') });
+    await assert.rejects(db.prisma.enrollment.create({ data: { userId: 'khong-ton-tai', communityId: 'c2' } }), { code: 'P2003' });
 
     const u = await db.prisma.user.create({ data: user('fk@test.local') });
-    await assert.rejects(db.prisma.enrollment.create({ data: { userId: u.id, courseId: 'khong-co' } }), { code: 'P2003' });
+    await assert.rejects(db.prisma.enrollment.create({ data: { userId: u.id, communityId: 'khong-co' } }), { code: 'P2003' });
 
-    await db.prisma.enrollment.create({ data: { userId: u.id, courseId: 'c2' } });
+    await db.prisma.enrollment.create({ data: { userId: u.id, communityId: 'c2' } });
     await db.prisma.session.create({ data: { userId: u.id, expiresAt: new Date(Date.now() + 1000) } });
     await db.prisma.user.delete({ where: { id: u.id } });
     assert.equal(await db.prisma.enrollment.count(), 0);
     assert.equal(await db.prisma.session.count(), 0);
-    assert.equal(await db.prisma.course.count(), 1);
+    assert.equal(await db.prisma.community.count(), 1);
   });
 
   it('CHECK của Conversation (userAId < userBId) và Message.seq tự tăng', async () => {
@@ -104,15 +104,15 @@ describe('hạ tầng DB', () => {
 
   it('tiền lưu Int cent, enum PostCategory map sang tiếng Việt trong DB', async () => {
     const u = await db.prisma.user.create({ data: user('p@test.local') });
-    await db.prisma.course.create({ data: { ...course('c3'), priceCents: 700 } });
+    await db.prisma.community.create({ data: { ...course('c3'), priceCents: 700 } });
     const p = await db.prisma.post.create({
-      data: { courseId: 'c3', authorId: u.id, content: 'hi', category: 'qa', tags: ['a', 'b'], poll: { options: [{ id: '1', text: 'x' }], multiple: false } },
+      data: { communityId: 'c3', authorId: u.id, content: 'hi', category: 'qa', tags: ['a', 'b'], poll: { options: [{ id: '1', text: 'x' }], multiple: false } },
     });
     assert.equal(p.category, 'qa');
     assert.deepEqual(p.tags, ['a', 'b']);
     const [raw] = await db.prisma.$queryRaw<{ category: string }[]>`SELECT category::text AS category FROM "Post" WHERE id = ${p.id}`;
     assert.equal(raw?.category, 'Hỏi đáp');
-    assert.equal((await db.prisma.course.findUniqueOrThrow({ where: { id: 'c3' } })).priceCents, 700);
+    assert.equal((await db.prisma.community.findUniqueOrThrow({ where: { id: 'c3' } })).priceCents, 700);
   });
 
   it('reset() xóa sạch dữ liệu nhưng giữ cấu trúc', async () => {

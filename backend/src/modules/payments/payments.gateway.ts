@@ -27,7 +27,11 @@ export interface RefundResult {
 
 export interface PaymentGateway {
   createCharge(req: ChargeRequest): Promise<ChargeResult>;
-  refund(chargeId: string, amountCents: number): Promise<RefundResult>;
+  /**
+   * Hoàn tiền. `idempotencyKey` (= id RefundRequest) BẮT BUỘC: gọi lại cùng key (retry sau timeout, job đối soát) phải trả đúng khoản hoàn cũ,
+   * không hoàn thêm — nên service được phép gọi lại an toàn khi không biết lần trước đã thành công hay chưa.
+   */
+  refund(chargeId: string, amountCents: number, idempotencyKey: string): Promise<RefundResult>;
   /**
    * Xác thực chữ ký webhook trên RAW body (không phải JSON đã parse). Phải so sánh timing-safe và chặn replay
    * bằng timestamp trong chữ ký (dung sai ±WEBHOOK_TOLERANCE_SEC).
@@ -48,6 +52,8 @@ export function signWebhookPayload(rawBody: Buffer | string, secret: string, tim
 export class MockGateway implements PaymentGateway {
   private readonly failing = new Set<string>();
   private readonly refunded = new Map<string, number>();
+  /** Như cổng thật: cùng idempotencyKey ⇒ trả lại đúng khoản hoàn cũ (chỉ nhớ lần thành công). */
+  private readonly refundsByKey = new Map<string, RefundResult>();
   /** Như cổng thật: cùng idempotencyKey ⇒ trả lại đúng kết quả cũ, không trừ tiền lần nữa (chỉ nhớ lần thành công). */
   private readonly charges = new Map<string, ChargeResult>();
 
@@ -66,10 +72,19 @@ export class MockGateway implements PaymentGateway {
     return result;
   }
 
-  async refund(chargeId: string, amountCents: number): Promise<RefundResult> {
+  async refund(chargeId: string, amountCents: number, idempotencyKey: string): Promise<RefundResult> {
     if (amountCents <= 0) return { ok: false, refundId: '', failureReason: 'invalid_amount' };
+    const prior = idempotencyKey ? this.refundsByKey.get(idempotencyKey) : undefined;
+    if (prior) return prior;
     this.refunded.set(chargeId, (this.refunded.get(chargeId) ?? 0) + amountCents);
-    return { ok: true, refundId: `mock_re_${randomUUID()}` };
+    const result: RefundResult = { ok: true, refundId: `mock_re_${randomUUID()}` };
+    if (idempotencyKey) this.refundsByKey.set(idempotencyKey, result);
+    return result;
+  }
+
+  /** Test/dev: tổng đã hoàn cho 1 charge (sau khi dedupe theo idempotency key). */
+  refundedTotal(chargeId: string): number {
+    return this.refunded.get(chargeId) ?? 0;
   }
 
   verifyWebhookSignature(rawBody: Buffer | string, signature: string | undefined): boolean {

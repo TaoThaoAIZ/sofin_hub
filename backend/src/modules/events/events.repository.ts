@@ -1,4 +1,5 @@
 import { prisma } from '../../db/prisma.js';
+import { revokePointsInTx } from '../points/points.repository.js';
 import type { CommunityEvent as DbEvent } from '../../generated/prisma/client.js';
 import type { CommunityEvent } from './events.types.js';
 
@@ -13,7 +14,7 @@ export type EventPatch = Partial<Pick<CommunityEvent, 'title' | 'description' | 
 export type ToggleRsvpResult = 'rsvped' | 'cancelled' | 'full' | 'gone';
 
 export interface EventsRepository {
-  listByCourse(courseId: string): Promise<CommunityEvent[]>;
+  listByCourse(communityId: string): Promise<CommunityEvent[]>;
   /** Sự kiện có startAt trong (from, to] — dùng cho nhắc lịch. */
   listStartingBetween(from: Date, to: Date): Promise<CommunityEvent[]>;
   findById(eventId: string): Promise<CommunityEvent | undefined>;
@@ -41,13 +42,16 @@ export interface EventsRepository {
    * (UPDATE ... RETURNING) => nhiều instance chạy song song cũng không nhắc trùng. Trả về userId đã nhận.
    */
   claimReminders(eventId: string): Promise<string[]>;
+  /** Nhả cờ đã nhắc của 1 (sự kiện, user) — dùng khi ghi thông báo nhắc lịch thất bại để lượt sau nhắc lại. */
+  unclaimReminder(eventId: string, userId: string): Promise<void>;
   /** Cho phép nhắc lại (vd. đổi giờ): đặt remindedAt = null cho mọi RSVP của sự kiện. */
   clearReminded(eventId: string): Promise<void>;
 }
 
 const toEvent = (e: DbEvent): CommunityEvent => ({
   id: e.id,
-  courseId: e.courseId,
+  communityId: e.communityId,
+  courseId: e.communityId,
   hostId: e.hostId,
   title: e.title,
   description: e.description,
@@ -61,8 +65,8 @@ const toEvent = (e: DbEvent): CommunityEvent => ({
 });
 
 export const eventsRepository: EventsRepository = {
-  async listByCourse(courseId) {
-    const rows = await prisma.communityEvent.findMany({ where: { courseId, removedAt: null }, orderBy: [{ startAt: 'asc' }, { id: 'asc' }] });
+  async listByCourse(communityId) {
+    const rows = await prisma.communityEvent.findMany({ where: { communityId, removedAt: null }, orderBy: [{ startAt: 'asc' }, { id: 'asc' }] });
     return rows.map(toEvent);
   },
 
@@ -79,7 +83,7 @@ export const eventsRepository: EventsRepository = {
   async create(event) {
     const e = await prisma.communityEvent.create({
       data: {
-        courseId: event.courseId,
+        communityId: event.communityId,
         hostId: event.hostId,
         title: event.title,
         description: event.description,
@@ -110,7 +114,11 @@ export const eventsRepository: EventsRepository = {
   },
 
   async delete(eventId) {
-    await prisma.communityEvent.deleteMany({ where: { id: eventId } });
+    // Xóa sự kiện + điểm âm bù cho mọi người đã được cộng điểm RSVP của sự kiện này (cùng transaction).
+    await prisma.$transaction(async (tx) => {
+      await revokePointsInTx(tx, { sourceType: 'event', sourceId: eventId });
+      await tx.communityEvent.deleteMany({ where: { id: eventId } });
+    });
   },
 
   async rsvpCount(eventId) {
@@ -169,6 +177,10 @@ export const eventsRepository: EventsRepository = {
       WHERE "eventId" = ${eventId} AND "remindedAt" IS NULL
       RETURNING "userId"`;
     return rows.map((r) => r.userId);
+  },
+
+  async unclaimReminder(eventId, userId) {
+    await prisma.eventRsvp.updateMany({ where: { eventId, userId }, data: { remindedAt: null } });
   },
 
   async clearReminded(eventId) {

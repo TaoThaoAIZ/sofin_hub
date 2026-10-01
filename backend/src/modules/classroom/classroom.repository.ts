@@ -5,8 +5,10 @@ import type {
   ClassroomModule as DbModule,
   Certificate as DbCertificate,
 } from '../../generated/prisma/client.js';
+import { toCourseRecord } from './learning-courses.repository.js';
 import type {
   Certificate,
+  LearningCourseRecord,
   ClassroomLesson,
   ClassroomModule,
   ClassroomSettings,
@@ -14,9 +16,10 @@ import type {
 } from './classroom.types.js';
 
 /**
- * Nội dung Lớp học (module → bài học), tiến độ, cài đặt, chứng nhận — Postgres qua Prisma.
+ * Nội dung Lớp học (khóa học → module → bài học), tiến độ, cài đặt, chứng nhận — Postgres qua Prisma.
  * Nội dung minh họa được SEED (prisma/seed/classroom.ts), runtime không còn sinh lười.
- * Mọi thao tác đổi thứ tự/thêm/xóa chạy trong transaction, khóa dòng cha (Course/Module) để `index` không bị trùng khi đồng thời.
+ * Mọi thao tác đổi thứ tự/thêm/xóa chạy trong transaction, khóa dòng cha (khóa học / module) để `index` không bị trùng khi đồng thời.
+ * Thứ tự + khóa tuần tự của module là theo TỪNG khóa học (learningCourseId); cộng đồng (communityId) chỉ dùng để kiểm quyền sở hữu.
  */
 export type ModuleInput = { title: string; description: string; thumbnail?: string; requiredLevel?: number };
 export type ModulePatch = Partial<{ title: string; description: string; thumbnail: string | null; requiredLevel: number | null }>;
@@ -30,20 +33,25 @@ export type LessonPatch = Partial<
 >;
 
 export interface ClassroomRepository {
-  /** Module của khóa theo `index`, kèm `lessonIds` theo thứ tự (2 truy vấn, không N+1). */
-  getModules(courseId: string): Promise<ClassroomModule[]>;
+  /** Module HIỂN THỊ của 1 khóa học theo `index`, kèm `lessonIds` theo thứ tự (2 truy vấn, không N+1). */
+  getModules(learningCourseId: string): Promise<ClassroomModule[]>;
+  /** 1 module hiển thị (published, chưa gỡ) của cộng đồng, kèm lessonIds. */
+  findModule(communityId: string, moduleId: string): Promise<(ClassroomModule & { course: LearningCourseRecord }) | undefined>;
   getLessons(moduleId: string): Promise<ClassroomLesson[]>;
-  /** Mọi bài của khóa (không theo thứ tự đảm bảo) để service ghép theo module. */
-  getCourseLessons(courseId: string): Promise<ClassroomLesson[]>;
-  findLesson(lessonId: string): Promise<ClassroomLesson | undefined>;
+  /** 1 bài (hiển thị được: không ẩn/gỡ, module đã xuất bản) bằng 1 truy vấn; có `communityId` thì bài phải thuộc cộng đồng đó. Kèm khóa học chứa bài. */
+  findLesson(lessonId: string, communityId?: string): Promise<(ClassroomLesson & { learningCourseId: string; course: LearningCourseRecord }) | undefined>;
+  /** Tên + module của 1 bài (không nạp thân bài) — dùng cho "bài kế tiếp" ở trang tiến độ. */
+  findLessonBrief(lessonId: string): Promise<{ id: string; title: string; moduleId: string } | undefined>;
+  /** Tiến độ nhiều cộng đồng cùng lúc cho 1 user: communityId → { tổng bài hiển thị, số bài đã hoàn thành } (1 truy vấn; cộng dồn các khóa đã xuất bản). */
+  progressByCommunity(userId: string, communityIds: string[]): Promise<Map<string, { total: number; done: number }>>;
 
-  createModule(courseId: string, input: ModuleInput): Promise<ClassroomModule>;
-  updateModule(courseId: string, moduleId: string, patch: ModulePatch): Promise<ClassroomModule | undefined>;
-  /** Xóa module cùng bài học và tiến độ liên quan (cascade), đánh lại index. */
-  deleteModule(courseId: string, moduleId: string): Promise<boolean>;
-  /** `ids` đã được service kiểm tra là hoán vị đủ của danh sách hiện có. */
-  reorderModules(courseId: string, ids: string[]): Promise<void>;
-  createLesson(courseId: string, moduleId: string, input: LessonInput): Promise<ClassroomLesson | undefined>;
+  createModule(communityId: string, learningCourseId: string, input: ModuleInput): Promise<ClassroomModule>;
+  updateModule(communityId: string, moduleId: string, patch: ModulePatch): Promise<ClassroomModule | undefined>;
+  /** Xóa module cùng bài học và tiến độ liên quan (cascade), đánh lại index trong khóa. */
+  deleteModule(communityId: string, moduleId: string): Promise<boolean>;
+  /** `ids` đã được service kiểm tra là hoán vị đủ của danh sách hiện có trong khóa. */
+  reorderModules(learningCourseId: string, ids: string[]): Promise<void>;
+  createLesson(communityId: string, moduleId: string, input: LessonInput): Promise<ClassroomLesson | undefined>;
   updateLesson(lessonId: string, patch: LessonPatch): Promise<ClassroomLesson | undefined>;
   deleteLesson(lessonId: string): Promise<boolean>;
   reorderLessons(moduleId: string, ids: string[]): Promise<void>;
@@ -53,22 +61,24 @@ export interface ClassroomRepository {
    * — chỉ một lời gọi đồng thời duy nhất nhận firstTime=true nên điểm không bị cộng đôi.
    */
   toggleCompleted(userId: string, lessonId: string): Promise<{ completed: boolean; firstTime: boolean }>;
-  /** lessonId → thời điểm hoàn thành (ISO) của các bài đang được đánh dấu xong trong khóa (1 truy vấn). */
-  completedAtMap(userId: string, courseId: string): Promise<Map<string, string>>;
+  /** lessonId → thời điểm hoàn thành (ISO) của các bài đang được đánh dấu xong trong khóa học (1 truy vấn). */
+  completedAtMap(userId: string, learningCourseId: string): Promise<Map<string, string>>;
 
-  getSettings(courseId: string): Promise<ClassroomSettings>;
-  setSettings(courseId: string, patch: Partial<ClassroomSettings>): Promise<ClassroomSettings>;
+  /** Cài đặt MẶC ĐỊNH của cộng đồng (khóa học có thể ghi đè certificatesEnabled). */
+  getSettings(communityId: string): Promise<ClassroomSettings>;
+  setSettings(communityId: string, patch: Partial<ClassroomSettings>): Promise<ClassroomSettings>;
 
-  findCertificate(userId: string, courseId: string): Promise<Certificate | undefined>;
+  findCertificate(userId: string, learningCourseId: string): Promise<Certificate | undefined>;
   findCertificateByCode(code: string): Promise<Certificate | undefined>;
-  /** Lưu chứng nhận; nếu (user,course) đã có (cấp đồng thời) trả về bản đã có với created=false. */
+  /** Lưu chứng nhận; nếu (user,khóa học) đã có (cấp đồng thời) trả về bản đã có với created=false. */
   saveCertificate(cert: Certificate): Promise<{ cert: Certificate; created: boolean }>;
 }
 
 const toLesson = (l: DbLesson): ClassroomLesson => ({
   id: l.id,
   moduleId: l.moduleId,
-  courseId: l.courseId,
+  communityId: l.communityId,
+  courseId: l.communityId,
   index: l.index,
   title: l.title,
   type: l.type,
@@ -81,7 +91,9 @@ const toLesson = (l: DbLesson): ClassroomLesson => ({
 
 const toModule = (m: DbModule, lessonIds: string[]): ClassroomModule => ({
   id: m.id,
-  courseId: m.courseId,
+  communityId: m.communityId,
+  courseId: m.communityId,
+  learningCourseId: m.learningCourseId,
   index: m.index,
   title: m.title,
   description: m.description,
@@ -93,7 +105,9 @@ const toModule = (m: DbModule, lessonIds: string[]): ClassroomModule => ({
 const toCert = (c: DbCertificate): Certificate => ({
   code: c.code,
   userId: c.userId,
-  courseId: c.courseId,
+  communityId: c.communityId,
+  courseId: c.communityId,
+  learningCourseId: c.learningCourseId,
   holderName: c.holderName,
   courseTitle: c.courseTitle,
   completedAt: c.completedAt.toISOString(),
@@ -102,11 +116,19 @@ const toCert = (c: DbCertificate): Certificate => ({
 
 type Tx = Prisma.TransactionClient;
 
-/** Đánh lại index 1..n theo thứ tự hiện có (một câu lệnh). */
-const reindexModules = (tx: Tx, courseId: string) => tx.$executeRaw`
+/** Dòng JOIN của findLesson (cột khóa học có tiền tố c_). */
+interface RawLessonRow {
+  id: string; moduleId: string; communityId: string; index: number; title: string; type: ClassroomLesson['type']; durationMin: number; body: string;
+  videoUrl: string | null; embedUrl: string | null; attachments: unknown; learningCourseId: string;
+  c_id: string; c_communityId: string; c_title: string; c_description: string; c_thumbnailUrl: string | null; c_position: number;
+  c_publishStatus: LearningCourseRecord['publishStatus']; c_certificatesEnabled: boolean | null; c_removedAt: Date | null; c_createdAt: Date; c_updatedAt: Date;
+}
+
+/** Đánh lại index 1..n theo thứ tự hiện có trong khóa (một câu lệnh). */
+const reindexModules = (tx: Tx, learningCourseId: string) => tx.$executeRaw`
   UPDATE "ClassroomModule" m SET "index" = r.rn
   FROM (SELECT "id", ROW_NUMBER() OVER (ORDER BY "index", "createdAt", "id")::int AS rn
-        FROM "ClassroomModule" WHERE "courseId" = ${courseId}) r
+        FROM "ClassroomModule" WHERE "learningCourseId" = ${learningCourseId}) r
   WHERE m."id" = r."id" AND m."index" <> r.rn`;
 
 const reindexLessons = (tx: Tx, moduleId: string) => tx.$executeRaw`
@@ -115,7 +137,9 @@ const reindexLessons = (tx: Tx, moduleId: string) => tx.$executeRaw`
         FROM "ClassroomLesson" WHERE "moduleId" = ${moduleId}) r
   WHERE l."id" = r."id" AND l."index" <> r.rn`;
 
-const lockCourse = (tx: Tx, courseId: string) => tx.$queryRaw`SELECT "id" FROM "Course" WHERE "id" = ${courseId} FOR UPDATE`;
+/** Khóa dòng KHÓA HỌC cha (thứ tự module là theo từng khóa). */
+const lockLearningCourse = (tx: Tx, learningCourseId: string) =>
+  tx.$queryRaw`SELECT "id" FROM "LearningCourse" WHERE "id" = ${learningCourseId} FOR UPDATE`;
 const lockModule = (tx: Tx, moduleId: string) => tx.$queryRaw`SELECT "id" FROM "ClassroomModule" WHERE "id" = ${moduleId} FOR UPDATE`;
 
 /** Gán index = vị trí trong `ids` (ids đã là hoán vị đủ). */
@@ -127,39 +151,104 @@ async function applyOrder(tx: Tx, table: 'ClassroomModule' | 'ClassroomLesson', 
   );
 }
 
+const MODULE_VISIBLE = { publishStatus: 'published', removedAt: null } as const;
+const LESSON_VISIBLE = { hidden: false, removedAt: null } as const;
+
 export const classroomRepository: ClassroomRepository = {
-  async getModules(courseId) {
+  async getModules(learningCourseId) {
     const rows = await prisma.classroomModule.findMany({
       // Admin đợt 2: module nháp/lưu trữ/bị gỡ và bài học bị ẩn/gỡ không hiện với thành viên.
-      where: { courseId, publishStatus: 'published', removedAt: null },
+      where: { learningCourseId, ...MODULE_VISIBLE },
       orderBy: [{ index: 'asc' }, { createdAt: 'asc' }],
-      include: { lessons: { where: { hidden: false, removedAt: null }, select: { id: true }, orderBy: [{ index: 'asc' }, { createdAt: 'asc' }] } },
+      include: { lessons: { where: LESSON_VISIBLE, select: { id: true }, orderBy: [{ index: 'asc' }, { createdAt: 'asc' }] } },
     });
     return rows.map((m) => toModule(m, m.lessons.map((l) => l.id)));
   },
 
+  async findModule(communityId, moduleId) {
+    const m = await prisma.classroomModule.findFirst({
+      where: { id: moduleId, communityId, ...MODULE_VISIBLE },
+      include: { course: true, lessons: { where: LESSON_VISIBLE, select: { id: true }, orderBy: [{ index: 'asc' }, { createdAt: 'asc' }] } },
+    });
+    return m ? { ...toModule(m, m.lessons.map((l) => l.id)), course: toCourseRecord(m.course) } : undefined;
+  },
+
   async getLessons(moduleId) {
-    const rows = await prisma.classroomLesson.findMany({ where: { moduleId, hidden: false, removedAt: null }, orderBy: [{ index: 'asc' }, { createdAt: 'asc' }] });
+    const rows = await prisma.classroomLesson.findMany({ where: { moduleId, ...LESSON_VISIBLE }, orderBy: [{ index: 'asc' }, { createdAt: 'asc' }] });
     return rows.map(toLesson);
   },
 
-  async getCourseLessons(courseId) {
-    return (await prisma.classroomLesson.findMany({ where: { courseId, hidden: false, removedAt: null, module: { publishStatus: 'published', removedAt: null } } })).map(toLesson);
+  /** 1 truy vấn JOIN (bài + module + khóa học): điểm nóng "mở bài học" (xem tests/query-count.test.ts). */
+  async findLesson(lessonId, communityId) {
+    const rows = await prisma.$queryRaw<RawLessonRow[]>`
+      SELECT l."id", l."moduleId", l."courseId" AS "communityId", l."index", l."title", l."type"::text AS "type", l."durationMin", l."body",
+        l."videoUrl", l."embedUrl", l."attachments", m."learningCourseId",
+        c."id" AS "c_id", c."communityId" AS "c_communityId", c."title" AS "c_title", c."description" AS "c_description", c."thumbnailUrl" AS "c_thumbnailUrl",
+        c."position" AS "c_position", c."publishStatus"::text AS "c_publishStatus", c."certificatesEnabled" AS "c_certificatesEnabled",
+        c."removedAt" AS "c_removedAt", c."createdAt" AS "c_createdAt", c."updatedAt" AS "c_updatedAt"
+      FROM "ClassroomLesson" l
+      JOIN "ClassroomModule" m ON m."id" = l."moduleId" AND m."publishStatus" = 'published' AND m."removedAt" IS NULL
+      JOIN "LearningCourse" c ON c."id" = m."learningCourseId"
+      WHERE l."id" = ${lessonId} AND NOT l."hidden" AND l."removedAt" IS NULL
+        ${communityId ? Prisma.sql`AND l."courseId" = ${communityId}` : Prisma.empty}
+      LIMIT 1`;
+    const r = rows[0];
+    if (!r) return undefined;
+    return {
+      id: r.id,
+      moduleId: r.moduleId,
+      communityId: r.communityId,
+      courseId: r.communityId,
+      index: r.index,
+      title: r.title,
+      type: r.type,
+      durationMin: r.durationMin,
+      body: r.body,
+      ...(r.videoUrl ? { videoUrl: r.videoUrl } : {}),
+      ...(r.embedUrl ? { embedUrl: r.embedUrl } : {}),
+      attachments: (r.attachments as LessonAttachment[] | null) ?? [],
+      learningCourseId: r.learningCourseId,
+      course: {
+        id: r.c_id,
+        communityId: r.c_communityId,
+        title: r.c_title,
+        description: r.c_description,
+        thumbnailUrl: r.c_thumbnailUrl,
+        position: r.c_position,
+        publishStatus: r.c_publishStatus,
+        certificatesEnabled: r.c_certificatesEnabled,
+        removedAt: r.c_removedAt ? r.c_removedAt.toISOString() : null,
+        createdAt: r.c_createdAt.toISOString(),
+        updatedAt: r.c_updatedAt.toISOString(),
+      },
+    };
   },
 
-  async findLesson(lessonId) {
-    const row = await prisma.classroomLesson.findUnique({ where: { id: lessonId }, include: { module: { select: { publishStatus: true, removedAt: true } } } });
-    if (!row || row.hidden || row.removedAt || row.module.publishStatus !== 'published' || row.module.removedAt) return undefined;
-    return toLesson(row);
+  async findLessonBrief(lessonId) {
+    return (await prisma.classroomLesson.findUnique({ where: { id: lessonId }, select: { id: true, title: true, moduleId: true } })) ?? undefined;
   },
 
-  async createModule(courseId, input) {
+  async progressByCommunity(userId, communityIds) {
+    if (communityIds.length === 0) return new Map();
+    const rows = await prisma.$queryRaw<{ communityId: string; total: number; done: number }[]>`
+      SELECT c."id" AS "communityId",
+        (SELECT COUNT(*)::int FROM "ClassroomLesson" l JOIN "ClassroomModule" m ON m."id" = l."moduleId"
+          JOIN "LearningCourse" lc ON lc."id" = m."learningCourseId" AND lc."publishStatus" = 'published' AND lc."removedAt" IS NULL
+          WHERE l."courseId" = c."id" AND NOT l."hidden" AND l."removedAt" IS NULL AND m."publishStatus" = 'published' AND m."removedAt" IS NULL) AS "total",
+        (SELECT COUNT(*)::int FROM "LessonProgress" p JOIN "ClassroomLesson" l ON l."id" = p."lessonId"
+          WHERE p."userId" = ${userId} AND p."completedAt" IS NOT NULL AND l."courseId" = c."id") AS "done"
+      FROM unnest(${communityIds}::text[]) AS c("id")`;
+    return new Map(rows.map((r) => [r.communityId, { total: r.total, done: r.done }]));
+  },
+
+  async createModule(communityId, learningCourseId, input) {
     return prisma.$transaction(async (tx) => {
-      await lockCourse(tx, courseId);
-      const last = await tx.classroomModule.aggregate({ where: { courseId }, _max: { index: true } });
+      await lockLearningCourse(tx, learningCourseId);
+      const last = await tx.classroomModule.aggregate({ where: { learningCourseId }, _max: { index: true } });
       const row = await tx.classroomModule.create({
         data: {
-          courseId,
+          communityId,
+          learningCourseId,
           index: (last._max.index ?? 0) + 1,
           title: input.title,
           description: input.description,
@@ -171,8 +260,8 @@ export const classroomRepository: ClassroomRepository = {
     });
   },
 
-  async updateModule(courseId, moduleId, patch) {
-    const found = await prisma.classroomModule.findFirst({ where: { id: moduleId, courseId }, select: { id: true } });
+  async updateModule(communityId, moduleId, patch) {
+    const found = await prisma.classroomModule.findFirst({ where: { id: moduleId, communityId }, select: { id: true } });
     if (!found) return undefined;
     const row = await prisma.classroomModule.update({
       where: { id: moduleId },
@@ -187,33 +276,35 @@ export const classroomRepository: ClassroomRepository = {
     return toModule(row, row.lessons.map((l) => l.id));
   },
 
-  async deleteModule(courseId, moduleId) {
+  async deleteModule(communityId, moduleId) {
     return prisma.$transaction(async (tx) => {
-      await lockCourse(tx, courseId);
-      const { count } = await tx.classroomModule.deleteMany({ where: { id: moduleId, courseId } }); // cascade bài học + tiến độ
+      const mod = await tx.classroomModule.findFirst({ where: { id: moduleId, communityId }, select: { learningCourseId: true } });
+      if (!mod) return false;
+      await lockLearningCourse(tx, mod.learningCourseId);
+      const { count } = await tx.classroomModule.deleteMany({ where: { id: moduleId, communityId } }); // cascade bài học + tiến độ
       if (count === 0) return false;
-      await reindexModules(tx, courseId);
+      await reindexModules(tx, mod.learningCourseId);
       return true;
     });
   },
 
-  async reorderModules(courseId, ids) {
+  async reorderModules(learningCourseId, ids) {
     await prisma.$transaction(async (tx) => {
-      await lockCourse(tx, courseId);
+      await lockLearningCourse(tx, learningCourseId);
       await applyOrder(tx, 'ClassroomModule', ids);
     });
   },
 
-  async createLesson(courseId, moduleId, input) {
+  async createLesson(communityId, moduleId, input) {
     return prisma.$transaction(async (tx) => {
-      const mod = await tx.classroomModule.findFirst({ where: { id: moduleId, courseId }, select: { id: true } });
+      const mod = await tx.classroomModule.findFirst({ where: { id: moduleId, communityId }, select: { id: true } });
       if (!mod) return undefined;
       await lockModule(tx, moduleId);
       const last = await tx.classroomLesson.aggregate({ where: { moduleId }, _max: { index: true } });
       const row = await tx.classroomLesson.create({
         data: {
           moduleId,
-          courseId,
+          communityId,
           index: (last._max.index ?? 0) + 1,
           title: input.title,
           type: input.type,
@@ -282,30 +373,30 @@ export const classroomRepository: ClassroomRepository = {
     return { completed: rows[0]?.done ?? false, firstTime: false };
   },
 
-  async completedAtMap(userId, courseId) {
+  async completedAtMap(userId, learningCourseId) {
     const rows = await prisma.lessonProgress.findMany({
-      where: { userId, completedAt: { not: null }, lesson: { courseId } },
+      where: { userId, completedAt: { not: null }, lesson: { module: { learningCourseId } } },
       select: { lessonId: true, completedAt: true },
     });
     return new Map(rows.map((r) => [r.lessonId, r.completedAt!.toISOString()]));
   },
 
-  async getSettings(courseId) {
-    const row = await prisma.classroomSettings.findUnique({ where: { courseId } });
+  async getSettings(communityId) {
+    const row = await prisma.classroomSettings.findUnique({ where: { communityId } });
     return { certificatesEnabled: row?.certificatesEnabled ?? false };
   },
 
-  async setSettings(courseId, patch) {
+  async setSettings(communityId, patch) {
     const row = await prisma.classroomSettings.upsert({
-      where: { courseId },
-      create: { courseId, ...patch },
+      where: { communityId },
+      create: { communityId, ...patch },
       update: patch,
     });
     return { certificatesEnabled: row.certificatesEnabled };
   },
 
-  async findCertificate(userId, courseId) {
-    const row = await prisma.certificate.findUnique({ where: { userId_courseId: { userId, courseId } } });
+  async findCertificate(userId, learningCourseId) {
+    const row = await prisma.certificate.findUnique({ where: { userId_learningCourseId: { userId, learningCourseId } } });
     return row ? toCert(row) : undefined;
   },
 
@@ -321,7 +412,8 @@ export const classroomRepository: ClassroomRepository = {
         {
           code: cert.code,
           userId: cert.userId,
-          courseId: cert.courseId,
+          communityId: cert.communityId,
+          learningCourseId: cert.learningCourseId,
           holderName: cert.holderName,
           courseTitle: cert.courseTitle,
           completedAt: new Date(cert.completedAt),
@@ -331,7 +423,7 @@ export const classroomRepository: ClassroomRepository = {
       skipDuplicates: true,
     });
     const row = await prisma.certificate.findUniqueOrThrow({
-      where: { userId_courseId: { userId: cert.userId, courseId: cert.courseId } },
+      where: { userId_learningCourseId: { userId: cert.userId, learningCourseId: cert.learningCourseId } },
     });
     return { cert: toCert(row), created: inserted.count === 1 };
   },

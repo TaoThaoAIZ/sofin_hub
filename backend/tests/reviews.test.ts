@@ -58,13 +58,13 @@ describe('đánh giá cộng đồng', () => {
     assert.equal(d.rating, 5);
   });
 
-  it('chi tiết khóa học: review thật lên đầu, vẫn còn review minh họa', async () => {
+  it('chi tiết khóa học: chỉ có review thật (không có review minh họa)', async () => {
     const { owner, id } = await setup();
     await c.call('POST', `/courses/${id}/reviews`, { token: owner.token, body: { rating: 5, text: 'Review thật của tôi' } });
     const d = (await c.call('GET', `/courses/${id}`)).body.data;
     assert.equal(d.reviews[0].text, 'Review thật của tôi');
     assert.equal(d.reviews[0].rating, 5);
-    assert.ok(d.reviews.length > 1);
+    assert.equal(d.reviews.length, 1, 'không trộn review giả');
   });
 
   it('mod+ xóa được review người khác, member thường thì không', async () => {

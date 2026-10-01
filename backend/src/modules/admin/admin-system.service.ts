@@ -218,7 +218,7 @@ const audienceSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('all') }),
   z.object({ type: z.literal('creators') }),
   z.object({ type: z.literal('paid_members') }),
-  z.object({ type: z.literal('community'), courseId: z.string().min(1).max(100) }),
+  z.object({ type: z.literal('community'), communityId: z.string().min(1).max(100) }),
   z.object({ type: z.literal('users'), userIds: z.array(z.string().min(1).max(100)).min(1).max(500) }),
 ]);
 export type Audience = z.infer<typeof audienceSchema>;
@@ -240,14 +240,14 @@ async function audienceUserIds(a: Audience): Promise<string[]> {
       where = { ...live, isDemo: false };
       break;
     case 'creators':
-      where = { ...live, ownedCourses: { some: {} } };
+      where = { ...live, ownedCommunities: { some: {} } };
       break;
     case 'paid_members':
       where = { ...live, subscriptions: { some: { status: { in: ['active', 'trialing', 'past_due'] } } } };
       break;
     case 'community':
-      if (!(await prisma.course.findUnique({ where: { id: a.courseId }, select: { id: true } }))) throw HttpError.notFound('Không tìm thấy cộng đồng');
-      where = { ...live, enrollments: { some: { courseId: a.courseId } } };
+      if (!(await prisma.community.findUnique({ where: { id: a.communityId }, select: { id: true } }))) throw HttpError.notFound('Không tìm thấy cộng đồng');
+      where = { ...live, enrollments: { some: { communityId: a.communityId } } };
       break;
     case 'users':
       where = { ...live, id: { in: a.userIds } };

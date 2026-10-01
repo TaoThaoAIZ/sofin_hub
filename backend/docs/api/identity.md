@@ -23,7 +23,7 @@ Tất cả path dưới đây nằm sau tiền tố `/api`. Thành công: `{ dat
 | POST | /newsletter | - (rate limit IP) | `{email}` | 200 `{subscribed:true}` (idempotent) | 400, 429 |
 | POST | /newsletter/unsubscribe | - | `{email}` | 200 `{unsubscribed:true}` | 400, 429 |
 | POST | /contact | - (rate limit IP: 5/15 phút) | `{name, email, subject, message<=5000}` | 202 `{message}` | 400, 429 |
-| GET | /dev/outbox?to= | - | chỉ khi `NODE_ENV !== 'production'` | `[{id,to,subject,text,html,sentAt}]` | - |
+| GET | /dev/outbox?to= | - | chỉ mount khi `ENABLE_DEV_OUTBOX=1` (độc lập NODE_ENV; production cấm bật, app không khởi động) | `[{id,to,subject,text,html,sentAt}]` | - |
 
 ## Quyết định thiết kế
 

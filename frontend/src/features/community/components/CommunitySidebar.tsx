@@ -1,6 +1,6 @@
 import { Link, NavLink, useParams } from 'react-router-dom';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
-import { useCourseDetail } from '../../courses/queries';
+import { useCommunityDetail } from '../../courses/queries';
 import { isModPlus } from './contentUi';
 
 // Tên icon lấy đúng từ file thiết kế gốc SofinHub Community.html (font Material Symbols Rounded).
@@ -33,7 +33,7 @@ export const COMMUNITY_NAV_ITEMS: CommunityNavItem[] = [
 
 export function CommunitySidebar({ courseTitle }: { courseTitle: string }) {
   const { id: courseId = '' } = useParams();
-  const { data: viewerCourse } = useCourseDetail(courseId);
+  const { data: viewerCourse } = useCommunityDetail(courseId);
   return (
     <aside className="glass sticky top-[70px] flex h-[calc(100vh-82px)] flex-col gap-1 overflow-auto rounded-3xl p-3 max-md:hidden">
       <div className="flex items-center gap-3 border-b border-[rgba(120,60,20,.08)] px-2 pt-1 pb-4">

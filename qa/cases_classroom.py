@@ -28,7 +28,7 @@ def load(add):
       BASE + "Đăng nhập member1@sofinhub.test; cộng đồng photo có 2 module x 6 bài (seed): member1 đã xong toàn bộ module 1.",
       ["Đăng nhập member1, lấy token", "GET /api/courses/photo/modules", "Mở UI " + L + " và quan sát 2 thẻ module"],
       "courseId=photo; module id mod-photo-1, mod-photo-2",
-      "200 { data: [m1, m2] }. m1: id mod-photo-1, index 1, title 'Chào mừng & Lộ trình', lessonsCount 6, completedCount 6, pct 100, locked false, lockReason null. m2: id mod-photo-2, index 2, title 'Tư duy & Nền tảng', lessonsCount 6, completedCount 0, pct 0, locked false, lockReason null (vì module trước đã xong). UI: hai thẻ, không có lớp phủ khóa.")
+      "200 { data: [m1, m2] }. m1: id mod-photo-1, index 1, title 'Chào mừng & Lộ trình', lessonsCount 6, completedCount 6, pct 100, locked false, lockReason null. m2: id mod-photo-2, index 2, title 'Tư duy & Nền tảng', lessonsCount 6, completedCount 0, pct 0, locked false, lockReason null (vì module trước đã xong). UI: hai thẻ, không có lớp phủ khóa. Lưu ý sau khi tách Community/Course: GET /courses/photo/modules là khóa MẶC ĐỊNH ('Nhiếp ảnh cơ bản'), 8 bài của khóa thứ hai 'Chỉnh sửa ảnh nâng cao' không lẫn vào; UI photo có thanh chọn khóa (2 khóa), mặc định chọn khóa mặc định (communities-courses.md mục 1.4).")
     C(CO, F, "member2 xem module photo: module 1 xong 33% (2/6), module 2 bị khóa 'previous_module'", "Chức năng", "Cao",
       BASE + "Đăng nhập member2@sofinhub.test; seed: member2 xong 2 bài đầu module 1 photo (les-photo-1-1, les-photo-1-2).",
       ["Đăng nhập member2", "GET /api/courses/photo/modules", "Mở UI " + L],
@@ -41,7 +41,7 @@ def load(add):
       "200. m1: completedCount 0, pct 0, locked false. m2: pct 0, locked true, lockReason 'previous_module'.")
     C(CO, F, "Tiến độ tổng của member1 ở photo: 50%, 6/12 bài, 1 module, nextLesson sang module 2", "Chức năng", "Cao",
       BASE + "Đăng nhập member1.",
-      ["GET /api/courses/photo/progress", "Đối chiếu thanh 'Tiến độ khóa học' trên " + L],
+      ["GET /api/courses/photo/progress", "Đối chiếu thanh tiến độ trên " + L + " (photo có 2 khóa nên nhãn là 'Tiến độ: Nhiếp ảnh cơ bản'; cộng đồng 1 khóa mới ghi 'Tiến độ khóa học')"],
       "courseId=photo",
       "200 { percent: 50, completedLessons: 6, totalLessons: 12, completedModules: 1, lastLessonId: 'les-photo-1-6' (bài hoàn thành gần nhất), nextLesson: { id: 'les-photo-2-1', title: 'Bài 1: Tư duy & Nền tảng (Phần 1/6)', moduleId: 'mod-photo-2' } }. UI hiển thị '6/12 bài · 1 module' và nút 'Tiếp tục học'.")
     C(CO, F, "Tiến độ tổng của member2: 17% (2/12), nextLesson là bài 3 module 1", "Chức năng", "Cao",
@@ -68,7 +68,7 @@ def load(add):
       BASE + "Dùng member1 (thuộc photo, yt, fin). Công thức seed: số module = clamp(round(số bài/5), 2..5), module cuối nhận phần dư.",
       ["GET /api/courses/photo/modules", "GET /api/courses/yt/modules", "GET /api/courses/fin/modules", "So sánh lessonsCount từng module và id (mod-<course>-<n>)"],
       "photo=12 bài, yt=24 bài, fin=16 bài",
-      "photo: 2 module [6,6]. yt: 5 module [5,5,5,5,4]. fin: 3 module [5,5,6]. Tiêu đề module theo mẫu: 'Chào mừng & Lộ trình', 'Tư duy & Nền tảng', 'Kỹ năng thực chiến', 'Nâng cao & Mở rộng', 'Dự án tổng kết'. Bài thứ 4 mỗi module là type 'text', các bài còn lại 'video'.")
+      "photo: 2 module [6,6]. yt: 5 module [5,5,5,5,4]. fin: 3 module [5,5,6]. Tiêu đề module theo mẫu: 'Chào mừng & Lộ trình', 'Tư duy & Nền tảng', 'Kỹ năng thực chiến', 'Nâng cao & Mở rộng', 'Dự án tổng kết'. Bài thứ 4 mỗi module là type 'text', các bài còn lại 'video'. Đây là KHÓA MẶC ĐỊNH của mỗi cộng đồng (route cũ /courses/:id/modules); photo, yt, fin còn có thêm khóa học thứ hai/ba trong seed (xem SPLIT) và không hiện ở các route này.")
     C(CO, F, "Phân trang danh sách module trên UI (10 module/trang)", "Giao diện", "Thấp",
       BASE + "Đăng nhập mod@sofinhub.test (mod photo). Photo đang có 2 module; tạo thêm 9 module (tổng 11). Dọn sau test bằng DELETE.",
       ["Với mod: POST /api/courses/photo/modules 9 lần, body {title:'Trang N', description:'x'}", "Mở " + L, "Kiểm tra trang 1 hiển thị 10 thẻ, bấm 'Tiếp theo ›'", "Xóa 9 module vừa tạo"],
@@ -508,7 +508,7 @@ def load(add):
       BASE + "cadmin@sofinhub.test (admin photo). Bật lại sau test.",
       ["PATCH /api/courses/photo/classroom-settings {certificatesEnabled:false}", "member1: GET classroom-settings", "cadmin: PATCH {certificatesEnabled:true}"],
       "certificatesEnabled false rồi true",
-      "PATCH 200 { certificatesEnabled: false }; member1 đọc thấy false; sau khi bật lại thấy true.")
+      "PATCH 200 { certificatesEnabled: false }; member1 đọc thấy false; sau khi bật lại thấy true. Đây là MẶC ĐỊNH CỦA CỘNG ĐỒNG: khóa học không có override (certificatesEnabled null) kế thừa giá trị này (certificatesEffective), FE hiện không còn ô bật/tắt cấp cộng đồng (chỉ chọn theo từng khóa - xem SPLIT) nên thử bằng API.")
     C(CE, F, "Owner và Platform Admin cũng đổi được cài đặt chứng nhận", "Chức năng", "Trung bình",
       BASE + "owner@sofinhub.test và admin@sofinhub.test (Platform Admin, không ghi danh). Photo đang bật.",
       ["owner: PATCH /api/courses/photo/classroom-settings {certificatesEnabled:false}", "admin: PATCH {certificatesEnabled:true}"],
@@ -555,17 +555,17 @@ def load(add):
       BASE + "Đăng nhập member1: photo (50%, bật), yt (chưa bật).",
       ["Mở " + L + " của photo và tìm 'Nhận chứng nhận'", "Mở /courses/yt/community/lop-hoc và tìm nút + ghi chú"],
       "photo 50%, yt tắt",
-      "photo: không có nút 'Nhận chứng nhận'. yt: không có nút; hiển thị 'Cộng đồng chưa bật chứng nhận hoàn thành.' khi tiến độ đạt 100% (nếu chưa 100% chỉ ẩn nút).")
+      "photo: không có nút 'Nhận chứng nhận'. yt (khóa mặc định, kế thừa cài đặt cộng đồng đang tắt): không có nút; hiển thị 'Khóa học này chưa bật chứng nhận hoàn thành.' khi tiến độ khóa đạt 100% (nếu chưa 100% chỉ ẩn nút; ClassroomTab.tsx). Khóa thứ hai của yt 'Tối ưu kênh & tăng trưởng' có override bật chứng nhận nên khác với khóa mặc định.")
     C(CE, F, "Cấp chứng nhận cố định của member1 ở fin: mã FIN-DEMO-CERT-001", "Chức năng", "Cao",
       BASE + "Đăng nhập member1 (Minh Member1). fin: 16 bài, member1 xong 100% và đã có chứng nhận seed.",
       ["GET /api/courses/fin/certificate", "Gọi lại lần 2", "GET /api/courses/fin/progress"],
       "courseId=fin",
-      "Cả 2 lần 200 { code: 'FIN-DEMO-CERT-001', holderName: 'Minh Member1', courseTitle: 'Đầu tư cho người mới', completedAt (thời điểm bài cuối), issuedAt } giống hệt nhau (cấp 1 lần). progress: percent 100, completedLessons 16, completedModules 3, nextLesson null.")
+      "Cả 2 lần 200 { code: 'FIN-DEMO-CERT-001', holderName: 'Minh Member1', courseTitle: 'Tài chính cá nhân cơ bản' (tên khóa mặc định sau seed: MAIN_COURSE_TITLES trong prisma/seed/classroom.ts; không phải tên cộng đồng 'Đầu tư cho người mới'), completedAt (thời điểm bài cuối), issuedAt } giống hệt nhau (cấp 1 lần). progress: percent 100, completedLessons 16, completedModules 3, nextLesson null.")
     C(CE, F, "Cấp mới lần đầu: sinh mã ngẫu nhiên 16 ký tự, lưu và gửi thông báo hệ thống", "Chức năng", "Cao",
       BASE + "Đăng nhập member3 (photo bật chứng nhận). Hoàn thành đủ 12 bài (module 1 rồi module 2). Thông báo loại 'system'. Dọn: chứng nhận đã cấp không xóa được qua API.",
       ["Lần lượt POST complete 12 bài", "GET /api/courses/photo/certificate", "GET /api/notifications", "Mở chuông thông báo trên UI"],
       "member3, 12 bài photo",
-      "200 { code khớp /^[A-Za-z0-9_-]{16}$/ (12 byte base64url), holderName tên hiển thị của member3, courseTitle tiêu đề khóa photo, completedAt = thời điểm bài cuối được đánh dấu, issuedAt = lúc gọi }. Có thông báo type 'system' 'Bạn đã nhận được chứng nhận hoàn thành' với nội dung 'Chúc mừng! Bạn đã hoàn thành khóa \"<tên khóa>\" và được cấp chứng nhận.'.")
+      "200 { code khớp /^[A-Za-z0-9_-]{16}$/ (12 byte base64url), holderName tên hiển thị của member3, courseTitle = tên khóa mặc định của photo ('Nhiếp ảnh cơ bản'), completedAt = thời điểm bài cuối được đánh dấu, issuedAt = lúc gọi }. Có thông báo type 'system' 'Bạn đã nhận được chứng nhận hoàn thành' với nội dung 'Chúc mừng! Bạn đã hoàn thành khóa \"<tên khóa>\" và được cấp chứng nhận.'.")
     C(CE, F, "Thông báo cấp chứng nhận có link đúng tới lớp học (đã sửa lệch đường dẫn)", "Tích hợp", "Trung bình",
       BASE + "Sau case cấp mới: member3 mở thông báo chứng nhận.",
       ["Đọc trường link của thông báo (GET /api/notifications)", "Bấm thông báo trên chuông"],
@@ -590,7 +590,7 @@ def load(add):
       BASE + "Đăng nhập member1; mở lớp học fin: /courses/fin/community/lop-hoc.",
       ["Kiểm tra thanh tiến độ 100%", "Bấm 'Nhận chứng nhận'", "Đọc thẻ trong hộp thoại 'Chứng nhận của bạn'", "Bấm 'Sao chép link xác minh'", "Đọc đường dẫn hiển thị cuối hộp thoại"],
       "member1, fin",
-      "Thẻ 'Chứng nhận hoàn thành' hiển thị 'Chứng nhận rằng', tên 'Minh Member1', 'đã hoàn thành 100% khóa học', 'Đầu tư cho người mới', 'Cấp ngày <ngày>', 'Mã: FIN-DEMO-CERT-001'. Toast 'Đã sao chép đường dẫn xác minh'. Có câu 'Ai cũng có thể xác minh chứng nhận này (không cần đăng nhập) tại:' kèm URL /certificates/FIN-DEMO-CERT-001.")
+      "Thẻ 'Chứng nhận hoàn thành' hiển thị 'Chứng nhận rằng', tên 'Minh Member1', 'đã hoàn thành 100% khóa học', 'Tài chính cá nhân cơ bản', 'Cấp ngày <ngày>', 'Mã: FIN-DEMO-CERT-001'. Toast 'Đã sao chép đường dẫn xác minh'. Có câu 'Ai cũng có thể xác minh chứng nhận này (không cần đăng nhập) tại:' kèm URL /certificates/FIN-DEMO-CERT-001.")
     C(CE, F, "Nút 'In' gọi chức năng in của trình duyệt", "Giao diện", "Thấp",
       BASE + "Đã mở thẻ chứng nhận như case trước.",
       ["Bấm nút 'In' trong hộp thoại chứng nhận", "Xem trước bản in"],
@@ -602,7 +602,7 @@ def load(add):
       BASE + "Không gửi token (request context mới).",
       ["GET /api/certificates/FIN-DEMO-CERT-001"],
       "code=FIN-DEMO-CERT-001",
-      "200 { data: { valid: true, holderName: 'Minh Member1', courseTitle: 'Đầu tư cho người mới', issuedAt: <ISO> } } — đúng 4 trường.")
+      "200 { data: { valid: true, holderName: 'Minh Member1', courseTitle: 'Tài chính cá nhân cơ bản', issuedAt: <ISO> } } — đúng 4 trường.")
     C(CE, F, "Dữ liệu công khai không lộ email, userId, courseId", "Bảo mật", "Cao",
       BASE + "Không đăng nhập.",
       ["GET /api/certificates/FIN-DEMO-CERT-001", "Tìm trong body chuỗi 'member1@sofinhub.test', '@', 'userId', 'courseId', 'completedAt', 'code'"],
@@ -642,7 +642,7 @@ def load(add):
       BASE + "Phiên trình duyệt mới, chưa đăng nhập.",
       ["Mở /certificates/FIN-DEMO-CERT-001", "Đọc tiêu đề và thẻ", "Bấm 'Về trang chủ SofinHub'"],
       "URL công khai",
-      "Tiêu đề 'Xác minh chứng nhận', huy hiệu 'Chứng nhận hợp lệ', thẻ có 'Minh Member1' và 'Đầu tư cho người mới'. Nút 'Về trang chủ SofinHub' về trang chủ. Không bị chuyển hướng sang đăng nhập.")
+      "Tiêu đề 'Xác minh chứng nhận', huy hiệu 'Chứng nhận hợp lệ', thẻ có 'Minh Member1' và 'Tài chính cá nhân cơ bản'. Nút 'Về trang chủ SofinHub' về trang chủ. Không bị chuyển hướng sang đăng nhập.")
     C(CE, F, "UI mã sai: 'Không tìm thấy chứng nhận', mã được escape", "Giao diện", "Cao",
       BASE + "Không đăng nhập.",
       ["Mở /certificates/SAI-MA-123", "Mở /certificates/%3Cimg%20src%3Dx%20onerror%3Dalert(1)%3E"],

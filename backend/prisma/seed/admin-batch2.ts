@@ -3,6 +3,7 @@ import type { Prisma } from '../../src/generated/prisma/client.js';
 import type { PaymentMethod, PayoutStatus, SubscriptionStatus } from '../../src/generated/prisma/enums.js';
 import { adminSeedUserId as uid } from './admin.js';
 import type { SeedContext } from './context.js';
+import { ensureDefaultCourse } from './courses.js';
 
 /**
  * Dữ liệu cho Admin đợt 2 (Content / Payments / Discovery). Idempotent: id cố định sid(`*`), chỉ create (update: {}),
@@ -45,7 +46,7 @@ export async function seedAdminBatch2(ctx: SeedContext): Promise<void> {
 
   // ------------------------------------------------------------------ cộng đồng mới (có phí) + thành viên
   for (const c of COMS) {
-    await db.course.upsert({
+    await db.community.upsert({
       where: { id: c.id },
       create: {
         id: c.id, title: c.title, description: c.desc ?? c.title, category: c.cat, tag: 'new', thumbnail: c.id === 'spam-hub' ? '' : '/images/courses/biz.webp',
@@ -56,14 +57,14 @@ export async function seedAdminBatch2(ctx: SeedContext): Promise<void> {
       update: {},
     });
     await db.enrollment.upsert({
-      where: { userId_courseId: { userId: uid(c.owner), courseId: c.id } },
-      create: { userId: uid(c.owner), courseId: c.id, role: 'owner', enrolledAt: ago(c.ago) },
+      where: { userId_communityId: { userId: uid(c.owner), communityId: c.id } },
+      create: { userId: uid(c.owner), communityId: c.id, role: 'owner', enrolledAt: ago(c.ago) },
       update: {},
     });
   }
   // Trạng thái Discovery cho cộng đồng seed sẵn có (chỉ áp lần đầu: discoveryUpdatedAt còn null => admin chưa động vào).
-  await db.course.updateMany({ where: { id: 'biz', discoveryUpdatedAt: null }, data: { discoveryStatus: 'hidden', searchVisibility: 'reduced', discoveryReason: 'Under quality review', discoveryUpdatedAt: ago(3), discoveryUpdatedById: adminId } });
-  await db.course.updateMany({ where: { id: 'fit', discoveryUpdatedAt: null }, data: { discoveryStatus: 'unlisted', discoveryReason: 'Owner request', discoveryUpdatedAt: ago(5), discoveryUpdatedById: adminId } });
+  await db.community.updateMany({ where: { id: 'biz', discoveryUpdatedAt: null }, data: { discoveryStatus: 'hidden', searchVisibility: 'reduced', discoveryReason: 'Under quality review', discoveryUpdatedAt: ago(3), discoveryUpdatedById: adminId } });
+  await db.community.updateMany({ where: { id: 'fit', discoveryUpdatedAt: null }, data: { discoveryStatus: 'unlisted', discoveryReason: 'Owner request', discoveryUpdatedAt: ago(5), discoveryUpdatedById: adminId } });
 
   // ------------------------------------------------------------------ gói thành viên + giao dịch
   const STATUS_CYCLE: SubscriptionStatus[] = ['active', 'active', 'active', 'past_due', 'paused', 'canceled', 'expired', 'trialing', 'active'];
@@ -81,7 +82,7 @@ export async function seedAdminBatch2(ctx: SeedContext): Promise<void> {
     await db.payment.upsert({
       where: { id },
       create: {
-        id, courseId: p.com.id, userId: uid(p.userKey), method: p.method ?? METHODS[n % METHODS.length]!, amountCents: amount, status: p.status, kind: p.kind ?? 'initial', subscriptionId: p.sub ?? null,
+        id, communityId: p.com.id, userId: uid(p.userKey), method: p.method ?? METHODS[n % METHODS.length]!, amountCents: amount, status: p.status, kind: p.kind ?? 'initial', subscriptionId: p.sub ?? null,
         invoiceNumber: ok ? `INV-2026-9${String(++invN).padStart(5, '0')}` : null, gatewayChargeId: ok ? `mock_ch_seed_${n}` : null,
         refundedCents: p.status === 'refunded' ? (p.refunded ?? amount) : 0, failureReason: p.status === 'failed' ? p.reason ?? 'card_declined' : null,
         periodStart: ok ? at : null, periodEnd: ok ? new Date(at.getTime() + (p.periodDays ?? 30) * DAY) : null, confirmedAt: ok ? at : null, createdAt: at,
@@ -106,18 +107,18 @@ export async function seedAdminBatch2(ctx: SeedContext): Promise<void> {
       await db.subscription.upsert({
         where: { id: subId },
         create: {
-          id: subId, userId: uid(key), courseId: com.id, status, priceCents: com.price * 100, cancelAtPeriodEnd: cancelEnd,
+          id: subId, userId: uid(key), communityId: com.id, status, priceCents: com.price * 100, cancelAtPeriodEnd: cancelEnd,
           currentPeriodStart: ago(status === 'active' ? lastPaid : 31), currentPeriodEnd: status === 'active' ? ahead(30 - lastPaid) : status === 'trialing' ? ahead(4) : ago(status === 'past_due' ? 2 : 10),
           trialEndsAt: status === 'trialing' ? ahead(4) : null, canceledAt: status === 'canceled' || cancelEnd ? ago(6) : null, createdAt: ago(startDaysAgo),
         },
         update: {},
       });
       if (status === 'trialing') {
-        await db.enrollment.upsert({ where: { userId_courseId: { userId: uid(key), courseId: com.id } }, create: { userId: uid(key), courseId: com.id, role: 'member', enrolledAt: ago(3), lastActiveAt: hoursAgo(5) }, update: {} });
+        await db.enrollment.upsert({ where: { userId_communityId: { userId: uid(key), communityId: com.id } }, create: { userId: uid(key), communityId: com.id, role: 'member', enrolledAt: ago(3), lastActiveAt: hoursAgo(5) }, update: {} });
         continue;
       }
       if (status === 'active' || status === 'past_due') {
-        await db.enrollment.upsert({ where: { userId_courseId: { userId: uid(key), courseId: com.id } }, create: { userId: uid(key), courseId: com.id, role: 'member', enrolledAt: ago(startDaysAgo), lastActiveAt: hoursAgo(3 + ((i * 13 + j) % 400)) }, update: {} });
+        await db.enrollment.upsert({ where: { userId_communityId: { userId: uid(key), communityId: com.id } }, create: { userId: uid(key), communityId: com.id, role: 'member', enrolledAt: ago(startDaysAgo), lastActiveAt: hoursAgo(3 + ((i * 13 + j) % 400)) }, update: {} });
       }
       await addPay({ userKey: key, com, status: 'succeeded', daysAgo: startDaysAgo, sub: subId });
       if (status === 'active') await addPay({ userKey: key, com, status: 'succeeded', kind: 'renewal', daysAgo: lastPaid, sub: subId });
@@ -157,7 +158,7 @@ export async function seedAdminBatch2(ctx: SeedContext): Promise<void> {
     await db.refundRequest.upsert({
       where: { id },
       create: {
-        id, paymentId: pay.id, courseId: pay.comId, userId: uid(pay.userKey), amountCents: extra.amount ?? pay.amount, reason: REASONS[rfN % REASONS.length]!, status, auto: extra.auto ?? false,
+        id, paymentId: pay.id, communityId: pay.comId, userId: uid(pay.userKey), amountCents: extra.amount ?? pay.amount, reason: REASONS[rfN % REASONS.length]!, status, auto: extra.auto ?? false,
         note: extra.note ?? null, resolvedById: status === 'pending' ? null : adminId, resolvedAt: status === 'pending' ? null : ago(daysAgo - 0.5), createdAt: ago(daysAgo),
       },
       update: {},
@@ -192,7 +193,7 @@ export async function seedAdminBatch2(ctx: SeedContext): Promise<void> {
     await db.chargeback.upsert({
       where: { id: sid(`cb-${k + 1}`) },
       create: {
-        id: sid(`cb-${k + 1}`), paymentId: pay.id, courseId: pay.comId, userId: uid(pay.userKey), amountCents: pay.amount, reason: c.reason, status: c.status,
+        id: sid(`cb-${k + 1}`), paymentId: pay.id, communityId: pay.comId, userId: uid(pay.userKey), amountCents: pay.amount, reason: c.reason, status: c.status,
         deadlineAt: ahead(c.deadline), evidenceNote: c.evidence ? 'Access logs, lesson completion history and signed ToS acceptance attached.' : null, evidenceUrls: c.evidence ? ['https://example.com/evidence/logs.pdf'] : [],
         evidenceSubmittedAt: c.evidence ? ago(c.open - 1) : null, gatewayDisputeId: `mock_dp_seed_${k + 1}`, openedAt: ago(c.open),
         resolvedAt: c.status === 'won' || c.status === 'lost' ? ago(c.open - 8) : null, resolvedById: c.status === 'won' || c.status === 'lost' ? adminId : null,
@@ -221,7 +222,7 @@ export async function seedAdminBatch2(ctx: SeedContext): Promise<void> {
     await db.payout.upsert({
       where: { id: sid(`payout-${k + 1}`) },
       create: {
-        id: sid(`payout-${k + 1}`), courseId: com.id, ownerId: uid(com.owner), amountCents: p.amount * 100, bankName: p.bank, accountHolder: `${com.owner} account`, accountLast4: p.last4,
+        id: sid(`payout-${k + 1}`), communityId: com.id, ownerId: uid(com.owner), amountCents: p.amount * 100, bankName: p.bank, accountHolder: `${com.owner} account`, accountLast4: p.last4,
         status: p.status, note: p.note ?? null, failureReason: p.fail ?? null, heldFromStatus: p.heldFrom ?? null, createdAt: ago(p.days), updatedAt: ago(Math.max(0, p.days - 1)),
       },
       update: {},
@@ -250,7 +251,7 @@ export async function seedAdminBatch2(ctx: SeedContext): Promise<void> {
     await db.post.upsert({
       where: { id },
       create: {
-        id, courseId: p.com, authorId: uid(p.author), content: p.text, imageUrl: p.image ?? null, pinned: p.pinned ?? false, likesCount: p.likes, commentsCount: p.comments, createdAt: ago(p.age),
+        id, communityId: p.com, authorId: uid(p.author), content: p.text, imageUrl: p.image ?? null, pinned: p.pinned ?? false, likesCount: p.likes, commentsCount: p.comments, createdAt: ago(p.age),
         hidden: !!p.state, removedAt: p.state === 'removed' ? ago(p.age - 0.5 > 0 ? p.age - 0.5 : 0.1) : null, modReason: p.reason ?? null, modAt: p.state ? ago(Math.max(0.05, p.age - 0.5)) : null, modById: p.state ? adminId : null,
       },
       update: {},
@@ -292,7 +293,7 @@ export async function seedAdminBatch2(ctx: SeedContext): Promise<void> {
     const excerpt = (r.type === 'post' ? POSTS.find((p) => sid(`post-${p.n}`) === r.target)?.text : CMTS.find((c) => sid(`cmt-${c.n}`) === r.target)?.text) ?? '';
     await db.report.upsert({
       where: { id },
-      create: { id, courseId: r.com, targetType: r.type, targetId: r.target, targetUserId: uid(r.targetUser), targetExcerpt: excerpt.slice(0, 120), reporterId: uid(r.reporter), reason: r.reason, status: 'open', risk: 'low', createdAt: ago(r.age) },
+      create: { id, communityId: r.com, targetType: r.type, targetId: r.target, targetUserId: uid(r.targetUser), targetExcerpt: excerpt.slice(0, 120), reporterId: uid(r.reporter), reason: r.reason, status: 'open', risk: 'low', createdAt: ago(r.age) },
       update: {},
     });
   }
@@ -309,13 +310,22 @@ export async function seedAdminBatch2(ctx: SeedContext): Promise<void> {
     { n: 8, com: 'spam-hub', title: 'Get Rich Quick Secrets', status: 'published', removed: true, reason: 'Misleading claims', age: 15 },
   ];
   for (const m of MODS) {
+    // "Khóa học" của admin = entity Course (LearningCourse): mỗi mục MODS là 1 khóa học (ngoài khóa mặc định của cộng đồng) chứa 1 module + 4 bài.
+    await ensureDefaultCourse(db, m.com);
+    const courseId = sid(`course-${m.n}`);
+    const position = ((await db.course.aggregate({ where: { communityId: m.com }, _max: { position: true } }))._max.position ?? 0) + 1;
+    await db.course.upsert({
+      where: { id: courseId },
+      create: {
+        id: courseId, communityId: m.com, title: m.title, description: `${m.title} — bài giảng theo từng bước.`, position, publishStatus: m.status,
+        removedAt: m.removed ? ago(2) : null, modReason: m.reason ?? null, modAt: m.removed ? ago(2) : null, modById: m.removed ? adminId : null, createdAt: ago(m.age),
+      },
+      update: {},
+    });
     const id = sid(`mod-${m.n}`);
     await db.classroomModule.upsert({
       where: { id },
-      create: {
-        id, courseId: m.com, index: MODS.filter((x) => x.com === m.com && x.n <= m.n).length, title: m.title, description: `${m.title} — bài giảng theo từng bước.`, publishStatus: m.status,
-        removedAt: m.removed ? ago(2) : null, modReason: m.reason ?? null, modAt: m.removed ? ago(2) : null, modById: m.removed ? adminId : null, createdAt: ago(m.age),
-      },
+      create: { id, communityId: m.com, learningCourseId: courseId, index: 1, title: m.title, description: `${m.title} — bài giảng theo từng bước.`, createdAt: ago(m.age) },
       update: {},
     });
   }
@@ -330,7 +340,7 @@ export async function seedAdminBatch2(ctx: SeedContext): Promise<void> {
       await db.classroomLesson.upsert({
         where: { id },
         create: {
-          id, moduleId: sid(`mod-${m.n}`), courseId: m.com, index: k + 1, title: ['Welcome & how to use this course', 'Setting up your workspace', 'The core framework', 'Templates & checklists', 'Q&A recording', 'Case study walkthrough'][(n + k) % 6]! + ` ${k + 1}`,
+          id, moduleId: sid(`mod-${m.n}`), communityId: m.com, index: k + 1, title: ['Welcome & how to use this course', 'Setting up your workspace', 'The core framework', 'Templates & checklists', 'Q&A recording', 'Case study walkthrough'][(n + k) % 6]! + ` ${k + 1}`,
           type: LTYPES[(n + k) % LTYPES.length]!, durationMin: 6 + ((n * 7) % 25), body: 'Nội dung bài học minh họa.', hidden: hidden || removed, removedAt: removed ? ago(1) : null,
           modReason: hidden ? 'Outdated content' : removed ? 'Policy violation' : null, modAt: hidden || removed ? ago(1) : null, modById: hidden || removed ? adminId : null, createdAt: ago(m.age - 1),
         },
@@ -361,7 +371,7 @@ export async function seedAdminBatch2(ctx: SeedContext): Promise<void> {
     await db.communityEvent.upsert({
       where: { id },
       create: {
-        id, courseId: e.com, hostId: uid(e.host), title: e.title, description: 'Sự kiện minh họa cho trang admin.', startAt: e.startAt, timezone: 'Asia/Ho_Chi_Minh',
+        id, communityId: e.com, hostId: uid(e.host), title: e.title, description: 'Sự kiện minh họa cho trang admin.', startAt: e.startAt, timezone: 'Asia/Ho_Chi_Minh',
         meetingLink: e.link ? `https://meet.example.com/${id}` : null, capacity: e.cap ?? null, cancelledAt: e.cancelled ? ago(1) : null, cancelReason: e.cancelled ?? null,
         removedAt: e.removed ? ago(1) : null, modReason: e.removed ?? null, modAt: e.removed ? ago(1) : null, modById: e.removed ? adminId : null, createdAt: ago(20),
       },
@@ -392,7 +402,7 @@ export async function seedAdminBatch2(ctx: SeedContext): Promise<void> {
     await db.upload.upsert({
       where: { key },
       create: {
-        key, ownerId: uid(m.owner), filename: m.name, contentType: m.type, size: m.size, purpose: m.purpose, courseId: m.com ?? null, status: 'uploaded', createdAt: ago(m.age),
+        key, ownerId: uid(m.owner), filename: m.name, contentType: m.type, size: m.size, purpose: m.purpose, communityId: m.com ?? null, status: 'uploaded', createdAt: ago(m.age),
         flagged: !!m.flagged, flagReason: m.flagged ?? null, removedAt: m.removed ? ago(1) : null, modReason: m.removed ?? null, modAt: m.removed ? ago(1) : null, modById: m.removed ? adminId : null,
       },
       update: {},
@@ -409,11 +419,11 @@ export async function seedAdminBatch2(ctx: SeedContext): Promise<void> {
   for (const s of FEATURED) {
     for (let i = 0; i < s.items.length; i++) {
       const it = s.items[i]!;
-      if (!(await db.course.findUnique({ where: { id: it.com }, select: { id: true } }))) continue;
+      if (!(await db.community.findUnique({ where: { id: it.com }, select: { id: true } }))) continue;
       const id = sid(`feat-${s.section}-${i + 1}`);
       await db.discoveryFeature.upsert({
         where: { id },
-        create: { id, section: s.section, courseId: it.com, position: i + 1, startsAt: it.start != null ? ago(-it.start) : null, endsAt: it.end != null ? ahead(it.end) : null, createdById: adminId },
+        create: { id, section: s.section, communityId: it.com, position: i + 1, startsAt: it.start != null ? ago(-it.start) : null, endsAt: it.end != null ? ahead(it.end) : null, createdById: adminId },
         update: {},
       });
     }

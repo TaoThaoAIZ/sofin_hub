@@ -73,3 +73,17 @@ export function makeSnippet(text: string, needle: string, radius = 60): Segment[
   if (to < flat.length) segs[segs.length - 1]!.text += '…';
   return segs;
 }
+
+const flatten = (s: string) => s.replace(/\s+/g, ' ').trim();
+
+/** Từ khóa dùng để tô đậm: nguyên cụm nếu có trong văn bản, không thì từ đơn dài nhất có mặt (khớp toàn văn theo từ không cần liền nhau). */
+export function highlightNeedle(text: string, needle: string, tokens: string[]): string | undefined {
+  const flat = flatten(text);
+  if (findMatches(flat, needle).length > 0) return needle;
+  return [...tokens].sort((a, b) => b.length - a.length).find((t) => findMatches(flat, t).length > 0);
+}
+
+/** Như makeSnippet nhưng tô đậm theo cụm hoặc từ đơn khớp (kết quả đã được SQL chọn; đây chỉ là bước trình bày). */
+export function makeSnippetFor(text: string, needle: string, tokens: string[], radius = 60): Segment[] {
+  return makeSnippet(text, highlightNeedle(text, needle, tokens) ?? needle, radius);
+}

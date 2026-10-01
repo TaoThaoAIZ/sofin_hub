@@ -1,8 +1,8 @@
 import { HttpError } from '../../utils/http-error.js';
 import { userRepository } from '../auth/auth.repository.js';
 import { classroomRepository } from '../classroom/classroom.repository.js';
-import type { Course } from '../courses/course.types.js';
-import { courseService } from '../courses/courses.service.js';
+import type { CommunityBriefRow } from '../catalog/catalog.repository.js';
+import { catalogService } from '../catalog/catalog.service.js';
 import { enrollmentService } from '../enrollments/enrollments.service.js';
 import { pointsService } from '../points/points.service.js';
 
@@ -14,7 +14,7 @@ export interface CourseBrief {
   visibility: string;
 }
 
-const toBrief = (c: Course): CourseBrief => ({
+const toBrief = (c: CommunityBriefRow): CourseBrief => ({
   id: c.id,
   title: c.title,
   thumbnail: c.thumbnail,
@@ -22,23 +22,16 @@ const toBrief = (c: Course): CourseBrief => ({
   visibility: c.visibility,
 });
 
-async function findCourse(id: string): Promise<Course | undefined> {
-  try {
-    return await courseService.getById(id);
-  } catch {
-    return undefined;
-  }
-}
-
 export const usersService = {
   /** Hồ sơ công khai: KHÔNG có email; chỉ liệt kê cộng đồng công khai. */
   async publicProfile(userId: string) {
     const user = await userRepository.findById(userId);
     if (!user || user.deletedAt) throw HttpError.notFound('Không tìm thấy người dùng');
     const memberships = await enrollmentService.listByUser(userId);
+    const briefs = await catalogService.briefsByIds(memberships.map((m) => m.communityId));
     const communities = [];
     for (const m of memberships) {
-      const course = await findCourse(m.courseId);
+      const course = briefs.get(m.communityId);
       if (!course || course.visibility !== 'public') continue;
       communities.push({ course: toBrief(course), role: m.role, joinedAt: m.enrolledAt });
     }
@@ -56,16 +49,16 @@ export const usersService = {
     };
   },
 
+  /** 4 truy vấn cố định bất kể số cộng đồng: ghi danh (2) + thông tin khóa (1) + tiến độ gộp (1). */
   async myEnrollments(userId: string) {
     const memberships = await enrollmentService.listByUser(userId);
+    const ids = memberships.map((m) => m.communityId);
+    const [briefs, progress] = await Promise.all([catalogService.briefsByIds(ids), classroomRepository.progressByCommunity(userId, ids)]);
     const items = [];
     for (const m of memberships) {
-      const course = await findCourse(m.courseId);
+      const course = briefs.get(m.communityId);
       if (!course) continue;
-      // Tiến độ = bài đã hoàn thành / tổng bài trong lớp học (mỗi khóa 2 truy vấn).
-      const modules = await classroomRepository.getModules(course.id);
-      const total = modules.reduce((sum, mod) => sum + mod.lessonIds.length, 0);
-      const done = (await classroomRepository.completedAtMap(userId, course.id)).size;
+      const { total = 0, done = 0 } = progress.get(m.communityId) ?? {};
       items.push({
         course: toBrief(course),
         role: m.role,
@@ -78,10 +71,11 @@ export const usersService = {
 
   async myPoints(userId: string) {
     const summary = await pointsService.summaryForUser(userId, 20);
+    const briefs = await catalogService.briefsByIds(summary.byCourse.map((r) => r.communityId));
     const byCourse = [];
     for (const row of summary.byCourse) {
-      const course = await findCourse(row.courseId);
-      byCourse.push({ course: course ? toBrief(course) : { id: row.courseId }, points: row.points });
+      const course = briefs.get(row.communityId);
+      byCourse.push({ course: course ? toBrief(course) : { id: row.communityId }, points: row.points });
     }
     return { total: summary.total, byCourse, recent: summary.recent };
   },

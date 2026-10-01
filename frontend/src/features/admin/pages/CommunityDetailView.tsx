@@ -191,7 +191,7 @@ export function CommunityDetailView() {
         actions={
           <>
             {c.status !== 'deleted' && (
-              <AdminButton icon="open_in_new" onClick={() => window.open(`/courses/${c.id}/community`, '_blank', 'noopener')}>
+              <AdminButton icon="open_in_new" onClick={() => window.open(`/communities/${c.id}/community`, '_blank', 'noopener')}>
                 Xem cộng đồng
               </AdminButton>
             )}
@@ -275,7 +275,7 @@ export function CommunityDetailView() {
               { k: 'Chủ sở hữu', v: `${c.owner.name} · ${c.owner.email}` },
             ]}
             link="Mở trang cài đặt của cộng đồng"
-            onLink={() => window.open(`/courses/${c.id}/community/cai-dat`, '_blank', 'noopener')}
+            onLink={() => window.open(`/communities/${c.id}/community/cai-dat`, '_blank', 'noopener')}
           />
           <DangerCard
             title="Vùng nguy hiểm"

@@ -9,6 +9,11 @@ import type { Prisma } from '../../generated/prisma/client.js';
  * mỗi 10s (nhiều instance: lệch tối đa bằng TTL). Ghi trong chính tiến trình thì cập nhật cache NGAY.
  */
 export const SETTINGS_KEY = 'global.settings';
+/** Đọc số từ env tại thời điểm gọi (không đi qua config/env.ts); sai/thiếu → mặc định. */
+function envNum(name: string, fallback: number): number {
+  const v = Number(process.env[name]);
+  return process.env[name] !== undefined && process.env[name] !== '' && Number.isFinite(v) ? v : fallback;
+}
 const TTL_MS = 10_000;
 
 export const SETTING_DEFS = {
@@ -20,6 +25,10 @@ export const SETTING_DEFS = {
   'payments.gatewayFeePct': { schema: z.number().min(0).max(100), default: () => env.GATEWAY_FEE_PCT },
   'payments.gatewayFeeFixedCents': { schema: z.number().int().min(0).max(100_000), default: () => env.GATEWAY_FEE_FIXED_CENTS },
   'payments.refundWindowDays': { schema: z.number().int().min(0).max(365), default: () => env.REFUND_WINDOW_DAYS },
+  /** Cửa sổ tranh chấp/chargeback cộng thêm vào cửa sổ hoàn tiền: tiền chỉ được rút sau (refundWindowDays + disputeWindowDays). GIÁ TRỊ TẠM chờ chủ sở hữu chốt. */
+  'payments.disputeWindowDays': { schema: z.number().int().min(0).max(365), default: () => envNum('PAYOUT_DISPUTE_WINDOW_DAYS', 7) },
+  /** Rolling reserve: % doanh thu ròng đã đủ điều kiện luôn bị giữ lại làm bảo hiểm cho hoàn tiền/chargeback muộn. GIÁ TRỊ TẠM (mặc định 10%). */
+  'payments.payoutReservePct': { schema: z.number().min(0).max(100), default: () => envNum('PAYOUT_RESERVE_PCT', 10) },
   'payments.payoutMinUsd': { schema: z.number().min(0).max(1_000_000), default: () => env.PAYOUT_MIN_USD },
   'payments.trialDays': { schema: z.number().int().min(1).max(365), default: () => env.TRIAL_DAYS },
   'payments.subscriptionPeriodDays': { schema: z.number().int().min(1).max(366), default: () => env.SUBSCRIPTION_PERIOD_DAYS },
@@ -39,6 +48,8 @@ export interface PlatformConfig {
     gatewayFeePct: number;
     gatewayFeeFixedCents: number;
     refundWindowDays: number;
+    disputeWindowDays: number;
+    payoutReservePct: number;
     payoutMinUsd: number;
     trialDays: number;
     subscriptionPeriodDays: number;

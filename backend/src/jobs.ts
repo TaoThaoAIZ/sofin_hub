@@ -1,0 +1,18 @@
+import type { Job } from './infra/scheduler.js';
+import { runEventRemindersOnce } from './modules/events/events.reminders.js';
+import { paymentsService } from './modules/payments/payments.service.js';
+
+/**
+ * Mọi job nền của hệ thống. Chạy dưới leader election (infra/scheduler.ts): nhiều instance cùng bật scheduler thì mỗi job vẫn chỉ
+ * chạy ở 1 instance mỗi lượt. Thêm job mới ở ĐÂY (không tự `setInterval` rải rác).
+ */
+export function allJobs(): Job[] {
+  return [
+    // Gia hạn / hết dùng thử / hết kỳ đã hủy.
+    { name: 'payments.subscriptions', intervalMs: 5 * 60_000, run: () => paymentsService.processDueSubscriptions(new Date()) },
+    // Đối soát tiền: hoàn tiền kẹt `refunding`, charge đã trừ nhưng chưa settle, khoản trừ trùng chưa hoàn, webhook kẹt/failed (reapStaleWebhooks).
+    { name: 'payments.reconcile', intervalMs: 5 * 60_000, run: () => paymentsService.reconcileMoney() },
+    // Nhắc lịch sự kiện cho người đã RSVP (còn <= 1 giờ).
+    { name: 'events.reminders', intervalMs: 60_000, run: () => runEventRemindersOnce() },
+  ];
+}

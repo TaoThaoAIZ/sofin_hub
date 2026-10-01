@@ -75,7 +75,7 @@ function StatusFilter<T extends string>({ value, options, onChange }: { value: T
 }
 
 const REFUND_STATUS: Record<RefundStatus, string> = { pending: 'Chờ duyệt', approved: 'Đã duyệt', rejected: 'Từ chối' };
-const PAYOUT_STATUS: Record<PayoutStatus, string> = { requested: 'Đã yêu cầu', approved: 'Đã duyệt', paid: 'Đã chi trả', rejected: 'Từ chối' };
+const PAYOUT_STATUS: Record<PayoutStatus, string> = { requested: 'Đã yêu cầu', approved: 'Đã duyệt', paid: 'Đã chi trả', rejected: 'Từ chối', failed: 'Thất bại', on_hold: 'Tạm giữ' };
 
 export function RefundsTab() {
   const [status, setStatus] = useState<RefundStatus | ''>('pending');
@@ -260,7 +260,7 @@ export function LockTab() {
     <form onSubmit={(e) => run(e, true)} className="glass grid max-w-[560px] gap-3 rounded-3xl p-5">
       <p className="flex items-start gap-2 text-[13px] text-stone-600">
         <MaterialIcon name="info" size={17} />
-        Cộng đồng bị khóa: thành viên không tham gia/đăng bài mới được. Nhập id hoặc slug của cộng đồng (ví dụ phần cuối của đường dẫn /courses/…).
+        Cộng đồng bị khóa: thành viên không tham gia/đăng bài mới được. Nhập id hoặc slug của cộng đồng (ví dụ phần cuối của đường dẫn /communities/…).
       </p>
       <label className="text-[12.5px] font-semibold">
         Id / slug cộng đồng

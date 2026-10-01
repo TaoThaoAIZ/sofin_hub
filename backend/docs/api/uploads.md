@@ -8,7 +8,8 @@ Module: `src/modules/uploads/`. Tất cả đường dẫn nằm dưới tiền 
 |---|---|---|---|---|---|
 | POST | `/uploads/presign` | Bearer | `{filename, contentType, size, purpose, courseId?}` | 201 `{data:{uploadUrl, method:'PUT', headers, fileUrl, key, expiresAt}}` | 400 (loại file/dung lượng/purpose), 401, 403 (lesson_attachment + courseId mà không phải mod+), 404 (courseId), 413 (vượt hạn mức) |
 | PUT | `/uploads/:key?token=...` | Vé HMAC trong query (không cần Bearer) | Body thô, header `Content-Type` = loại đã presign | `{data:{key,fileUrl,size,contentType}}` | 400 (Content-Type lệch, magic bytes sai, rỗng), 401 (vé sai/hết hạn/đã dùng), 403 (vé không khớp key), 404, 413 |
-| GET | `/files/:key` | Công khai | - | Stream file | 404 |
+| GET | `/files/:key` | Ảnh công khai (`avatar/cover/post_image`): không cần. File riêng tư: Bearer HOẶC `?u=&exp=&sig=` (URL ký) | - | Stream file | 401 (riêng tư, thiếu/sai/hết hạn chữ ký), 403 (không có quyền), 404 (không có bản ghi Upload, `status != uploaded`, đã gỡ/thu hồi) |
+| POST | `/files/:key/url` | Bearer | - | 200 `{data:{url, expiresAt}}`: ảnh công khai -> URL thường, `expiresAt:null`; file riêng tư -> URL ký, hạn 300s | 401, 403, 404 |
 | GET | `/me/uploads` | Bearer | - | `{data:[{key,url,filename,contentType,size,purpose,createdAt}]}` | 401 |
 | DELETE | `/uploads/:key` | Bearer, chủ sở hữu hoặc Platform Admin | - | `{data:{deleted:true}}` | 401, 403, 404 |
 
@@ -39,7 +40,12 @@ Hạn mức mỗi người: `UPLOAD_USER_QUOTA_MB` = 200MB (tính file đã uplo
 - **Đọc body**: `express.raw` riêng cho route PUT với `limit = maxSize` của vé, vượt -> 413 trước khi ghi. Ghi ra `*.part` rồi đổi tên để không phục vụ file dở.
 - **Magic bytes**: kiểm tra chữ ký đầu file cho ảnh, pdf, zip/office, mp4; txt không được chứa byte NUL. Lỗi thì hủy yêu cầu upload (không lưu).
 - **Phục vụ file**: Content-Type suy từ đuôi (không tin metadata), `X-Content-Type-Options: nosniff`, `Content-Security-Policy: default-src 'none'; sandbox`, `Cross-Origin-Resource-Policy: cross-origin` (helmet mặc định là same-origin sẽ chặn FE khác origin). Ảnh: inline + `Cache-Control: public, max-age=31536000, immutable`; file khác: `Content-Disposition: attachment` + `private, max-age=3600`.
-- **Công khai theo URL**: `/files/:key` không cần đăng nhập để `<img>` dùng được; bảo mật dựa vào khóa 128-bit không đoán được (kiểu "unlisted link").
+- **Hai lớp phục vụ file (audit 4.3)**:
+  - *Công khai*: `avatar`, `cover`, `post_image` - ai có URL cũng xem được (cho `<img>`), cache dài như trên.
+  - *Riêng tư*: `message_attachment`, `lesson_attachment`, `post_file` - luôn `Cache-Control: private, no-store`. Quyền (`uploads.access.ts#canReadPrivateFile`): chủ file và Platform Admin; `message_attachment` = 2 người của cuộc trò chuyện chứa tin nhắn CÒN SỐNG; `lesson_attachment` = thành viên khóa học gắn với file (`Upload.courseId`; không có courseId thì chỉ chủ file); `post_file` = thành viên của ít nhất một cộng đồng chung với chủ file.
+  - *Cách xem*: gọi `GET /files/:key` kèm Bearer, hoặc xin `POST /files/:key/url` rồi dùng URL ký (`?u=<userId>&exp=<epoch giây>&sig=HMAC-SHA256(UPLOAD_SIGNING_SECRET, "file|key|userId|exp")`, hạn 300s) cho `<img>`/`<a href>`. Quyền được kiểm lại ở MỖI lần GET (không chỉ lúc cấp URL) nên bị kick/thu hồi tin nhắn là hết xem được ngay.
+  - File không có bản ghi `Upload`, hoặc `status != uploaded`, hoặc đã bị admin gỡ -> 404 (kể cả khi file còn trên đĩa).
+  - **Thu hồi tin nhắn** (`DELETE /messages/:id`) xóa luôn file đính kèm (đĩa + bản ghi) nếu không còn tin nhắn sống nào khác dùng lại; mọi URL (kể cả URL ký còn hạn) trả 404.
 - **lesson_attachment**: nếu gửi `courseId` thì phải là mod trở lên (`requireRole`); nếu không gửi `courseId` thì không kiểm tra vai trò (theo yêu cầu "courseId tùy chọn").
 
 ## Nối S3/MinIO (chưa làm, đã chừa chỗ)
@@ -55,9 +61,9 @@ Hạn mức mỗi người: `UPLOAD_USER_QUOTA_MB` = 200MB (tính file đã uplo
 ## Giới hạn hiện tại / Chưa làm
 
 - Metadata (bảng `Upload`: chủ sở hữu, key, size, contentType, purpose, status) bền vững; hạn mức mỗi user = một truy vấn `SUM(size)` (file `uploaded` + `pending` còn trong TTL vé). File vẫn trên ổ đĩa qua `StorageProvider` (khi sang S3 chỉ đổi provider; metadata giữ nguyên). Chỉ `lesson_attachment` lưu `courseId` (đã kiểm tra khóa học tồn tại).
-- Nonce vé PUT (dùng 1 lần) giữ trong bộ nhớ tiến trình: vé đã HMAC, sống ≤10 phút, và sau PUT thành công dòng `Upload` không còn `pending` nên phát lại vé bị 404; chỉ hai PUT SONG SONG cùng vé có thể lọt trên nhiều instance (cần Redis/bảng nếu muốn chặn tuyệt đối). Presign song song có thể vượt hạn mức chút ít (không khóa).
+- Nonce vé PUT (dùng 1 lần) được đánh dấu bằng `SET NX PX` (atomic, TTL tới hạn vé) ở state chia sẻ: hai PUT đua nhau cùng vé chỉ một bên qua, kể cả giữa các instance và sau restart khi có Redis (`REDIS_URL`); không Redis thì in-memory (mất khi restart nhưng dòng `Upload` hết `pending` vẫn chặn phát lại). Lỗi store => từ chối (fail-closed). Presign song song có thể vượt hạn mức chút ít (không khóa).
 - Chưa dọn file "mồ côi" (presign nhưng không PUT chỉ chiếm chỗ hạn mức đến hết TTL; file không còn được tham chiếu chưa bị xóa).
 - Chưa hỗ trợ HTTP Range (xem video mp4 tua được), chưa quét virus, chưa tạo thumbnail/resize, chưa kiểm tra sâu nội dung ảnh (chỉ magic bytes).
 - Chưa rate-limit riêng cho presign.
 - `data/uploads/` nằm trong `.gitignore`; trên ECS/EC2 cần gắn volume bền vững hoặc chuyển sang S3.
-- Cần quyết định: `/files` có nên yêu cầu đăng nhập cho `message_attachment` (hiện công khai theo khóa).
+- FE: `frontend/src/lib/files.ts` (`useFileUrl`, `openFile`) xin URL ký cho file tin nhắn / tài liệu bài học / xem trước trong Admin. Link `post_file` nằm dạng văn bản trong nội dung bài viết nên người đọc chưa bấm trực tiếp được (cần trường tệp đính kèm cho bài viết, xem API.md).

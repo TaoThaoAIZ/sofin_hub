@@ -85,13 +85,13 @@ export const adminDashboardService = {
       prisma.user.count({ where: { ...realUsers, createdAt: { lt: since } } }),
       prisma.session.findMany({ where: { lastUsedAt: { gte: since }, user: realUsers }, distinct: ['userId'], select: { userId: true } }),
       prisma.session.findMany({ where: { lastUsedAt: { gte: prevSince, lt: since }, user: realUsers }, distinct: ['userId'], select: { userId: true } }),
-      prisma.course.count({ where: { deletedAt: null, moderationStatus: 'active', locked: false } }),
-      prisma.course.count({ where: { deletedAt: null, moderationStatus: 'active', locked: false, createdAt: { lt: since } } }),
+      prisma.community.count({ where: { deletedAt: null, moderationStatus: 'active', locked: false } }),
+      prisma.community.count({ where: { deletedAt: null, moderationStatus: 'active', locked: false, createdAt: { lt: since } } }),
       prisma.subscription.findMany({ select: { priceCents: true, status: true, createdAt: true, canceledAt: true, currentPeriodEnd: true } }),
       prisma.report.count({ where: { status: { in: ['open', 'under_review'] } } }),
       prisma.report.count({ where: { status: { in: ['open', 'under_review'] }, risk: 'critical' } }),
-      prisma.course.count({ where: { deletedAt: null, moderationStatus: 'pending_review' } }),
-      prisma.course.findFirst({ where: { deletedAt: null, moderationStatus: 'pending_review' }, orderBy: { createdAt: 'asc' }, select: { createdAt: true } }),
+      prisma.community.count({ where: { deletedAt: null, moderationStatus: 'pending_review' } }),
+      prisma.community.findFirst({ where: { deletedAt: null, moderationStatus: 'pending_review' }, orderBy: { createdAt: 'asc' }, select: { createdAt: true } }),
       prisma.$queryRaw<{ n: number }[]>(Prisma.sql`
         SELECT COUNT(*)::int AS n FROM (
           SELECT r."targetUserId" FROM "Report" r JOIN "User" u ON u."id" = r."targetUserId"
@@ -111,11 +111,11 @@ export const adminDashboardService = {
       daily('PostComment', 'createdAt', since),
       daily('LessonProgress', 'completedAt', since),
       daily('EventRsvp', 'createdAt', since),
-      prisma.course.count({ where: { deletedAt: null, moderationStatus: 'active', locked: false, createdAt: { lt: since } } }),
-      prisma.course.count({ where: { deletedAt: null, moderationStatus: 'active', locked: false, createdAt: { lt: since }, pricing: { not: 'free' } } }),
+      prisma.community.count({ where: { deletedAt: null, moderationStatus: 'active', locked: false, createdAt: { lt: since } } }),
+      prisma.community.count({ where: { deletedAt: null, moderationStatus: 'active', locked: false, createdAt: { lt: since }, pricing: { not: 'free' } } }),
       prisma.adminAuditLog.findMany({ orderBy: { createdAt: 'desc' }, take: 6 }),
       prisma.user.findMany({ where: realUsers, orderBy: { createdAt: 'desc' }, take: 6, select: { id: true, firstName: true, lastName: true, createdAt: true } }),
-      prisma.course.findMany({ where: { deletedAt: null }, orderBy: { createdAt: 'desc' }, take: 6, select: { id: true, title: true, createdAt: true, owner: { select: { id: true, firstName: true, lastName: true } } } }),
+      prisma.community.findMany({ where: { deletedAt: null }, orderBy: { createdAt: 'desc' }, take: 6, select: { id: true, title: true, createdAt: true, owner: { select: { id: true, firstName: true, lastName: true } } } }),
     ]);
 
     // ---- chuỗi theo ngày (đủ `range` điểm, ngày trống = 0)

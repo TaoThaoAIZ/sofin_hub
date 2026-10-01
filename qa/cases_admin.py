@@ -8,7 +8,7 @@ PLAN = "Kế hoạch"
 PW = "Passw0rd!x"
 SEED = ("Seed đã chạy (npm run db:seed) trên DB sạch, gồm seed/admin.ts: 12 người dùng sarah, alex, daniel, maya (restricted: không đăng bài/bình luận, +7 ngày, lý do Spam), "
         "liam, olivia (suspended +14 ngày, Harassment), ethan (restricted: không nhắn tin/tạo cộng đồng, +3 ngày, Scam), sophia (banned, Scam), noah, emma, "
-        "lucas (suspended vô thời hạn, Spam), ava - email <tên>@sofinhub.test, mật khẩu chung Passw0rd!x; 2 nhân sự john.carter@ / mia.lopez@sofinhub.test (người phụ trách case, KHÔNG phải Platform Admin).")
+        "lucas (suspended vô thời hạn, Spam), ava - email <tên>@sofinhub.test, mật khẩu chung Passw0rd!x; 2 nhân sự john.carter@ / mia.lopez@sofinhub.test (người phụ trách case; từ đợt 3 là nhân viên admin vai trò Moderator - có quyền report.resolve nên giao được case, nhưng KHÔNG phải Super Admin/PLATFORM_ADMIN_EMAILS).")
 SEED_COM = ("Cộng đồng seed admin: design-circle (Design Circle, chủ noah, pending_review, ~6 giờ trước), creator-academy (chủ emma, pending_review ~15 giờ), no-code-nation (chủ ava, pending_review ~27 giờ), "
             "startup-grind (chủ daniel, changes_requested, ghi chú 'Vui lòng làm rõ mô tả và bổ sung ảnh bìa.'), quick-rich-club (chủ lucas, rejected, 'Misleading claims'), "
             "crypto-signals-pro (chủ ethan, suspended/locked, 'Payment risk'), thùng rác: side-hustle-squad (chủ tự xóa 3 ngày trước), photo-walks (admin xóa 7 ngày trước, Fraud), "
@@ -289,10 +289,10 @@ def load(add):
     A(F, "Từ chối cộng đồng changes_requested", "Chức năng", "Thấp", BASE_API + " " + MUTATE,
       ["POST /api/admin/communities/startup-grind/reject {\"reason\":\"Khác\"}"], "startup-grind", "200 status=rejected.")
     A(F, "Cộng đồng chưa duyệt không hiện ở /courses, tìm kiếm và danh mục", "Chức năng", "Cao", BASE_UI + " Không cần đăng nhập để kiểm tra trang công khai.",
-      ["Mở /courses (khám phá) và tìm 'Design Circle', 'Creator Academy', 'Quick Rich Club', 'Crypto Signals Pro'", "GET /api/courses?limit=100 và /api/search?q=Design", "Mở /courses/design-circle"], "-",
+      ["Mở trang chủ http://localhost:5173/ (khối khám phá cộng đồng) và tìm 'Design Circle', 'Creator Academy', 'Quick Rich Club', 'Crypto Signals Pro'", "GET /api/communities?limit=100 (bí danh của /api/courses) và /api/search?q=Design", "Mở /communities/design-circle (URL cũ /courses/design-circle chỉ chuyển hướng sang đây)"], "-",
       "Cả 4 KHÔNG xuất hiện trong danh sách/tìm kiếm/đếm danh mục (chỉ active, chưa khóa, chưa xóa mới hiện); cộng đồng photo vẫn hiện bình thường.", pw="Một phần")
     A(F, "Cộng đồng vừa duyệt xuất hiện ở /courses", "Chức năng", "Cao", BASE_UI + " " + MUTATE,
-      ["Duyệt design-circle (UI hoặc API)", "Mở /courses, tìm 'Design Circle'"], "design-circle", "Cộng đồng hiển thị ở danh sách và tìm kiếm công khai sau khi duyệt, không cần reset cache.", pw="Một phần")
+      ["Duyệt design-circle (UI hoặc API)", "Mở trang chủ / hoặc GET /api/communities, tìm 'Design Circle'"], "design-circle", "Cộng đồng hiển thị ở danh sách và tìm kiếm công khai sau khi duyệt, không cần reset cache.", pw="Một phần")
     A(F, "Hàng đợi xét duyệt rỗng hiển thị thông báo", "Giao diện", "Thấp", BASE_UI + " Đã xử lý (duyệt/từ chối) hết 4 cộng đồng chờ. " + MUTATE,
       ["Mở /admin/communities/review"], "-", "Bảng hiện 'Không có cộng đồng nào đang chờ xét duyệt.'; cột phải không lỗi.")
     A(F, "Quyết định xét duyệt ghi ghi chú tối đa 500 ký tự", "Chức năng", "Thấp", BASE_API,
@@ -358,8 +358,8 @@ def load(add):
       "Lệnh 1: 200, status trở về active, ghi audit community.undelete; lệnh 2: 409 'Cộng đồng chưa bị xóa'.")
     A(F, "Undelete quá 30 ngày trả 409", "Chức năng", "Trung bình", "Cần sửa DB: đặt deletedAt của pixel-traders lùi về 31 ngày trước. " + MUTATE,
       ["POST /api/admin/communities/pixel-traders/undelete {}"], "pixel-traders", "409 CONFLICT (quá hạn lưu 30 ngày); daysLeft trên UI hiển thị 'Sắp xóa vĩnh viễn'.", pw="Một phần")
-    A(F, "Cộng đồng do chủ tự xóa (DELETE /courses/:id) cũng vào thùng rác với deletedByOwner=true", "Tích hợp", "Trung bình", BASE_API + " Đăng nhập chủ một cộng đồng test (tạo mới bằng POST /api/courses). " + MUTATE,
-      ["Chủ cộng đồng tạo cộng đồng và DELETE /api/courses/<id>", "Admin GET /api/admin/communities/trash"], "cộng đồng tự tạo", "Dòng mới xuất hiện ở thùng rác với deletedByOwner=true, deletedBy=null, daysLeft=30.", pw="Một phần")
+    A(F, "Cộng đồng do chủ tự xóa (DELETE /courses/:id) cũng vào thùng rác với deletedByOwner=true", "Tích hợp", "Trung bình", BASE_API + " Đăng nhập chủ một cộng đồng test (tạo mới bằng POST /api/communities). " + MUTATE,
+      ["Chủ cộng đồng tạo cộng đồng (POST /api/communities) và DELETE /api/communities/<id> (bí danh của DELETE /api/courses/<id>)", "Admin GET /api/admin/communities/trash"], "cộng đồng tự tạo", "Dòng mới xuất hiện ở thùng rác với deletedByOwner=true, deletedBy=null, daysLeft=30.", pw="Một phần")
     A(F, "Xóa cộng đồng CHƯA tự hủy gói đăng ký đang chạy - hành vi hiện tại", "Chức năng", "Trung bình", "Có cộng đồng trả phí có gói active (paid-demo seed). " + MUTATE,
       ["Admin xóa hoặc tạm ngưng paid-demo", "Kiểm tra bảng Subscription của member1 (status, cancelAtPeriodEnd)"], "paid-demo",
       "Hiện tại Subscription VẪN active (BE chưa hủy gói khi xóa/đình chỉ - chờ chốt chính sách tiền). Case hồi quy, ghi rõ chưa chốt; cập nhật khi có quyết định hoàn tiền/hủy gói.", pw="Không", st=PLAN)
@@ -465,13 +465,13 @@ def load(add):
       ["POST bình luận vào một bài ở yt (POST /api/posts/<postId>/comments {\"content\":\"hi\"})", "GET bảng tin yt", "Like một bài"], "maya",
       "Bình luận: 403 ACCOUNT_RESTRICTED 'không thể bình luận'; đọc bảng tin 200; like vẫn 200 (chỉ chặn đúng quyền bị hạn chế).")
     A(F, "Người bị hạn chế 'create_community' và 'dm' bị chặn đúng quyền", "Bảo mật", "Cao", SEED + " Đăng nhập ethan@sofinhub.test (restricted: dm, create_community).",
-      ["POST /api/courses (tạo cộng đồng mới, body hợp lệ)", "Gửi tin nhắn tới member bất kỳ chung cộng đồng (POST /api/conversations/<id>/messages hoặc từ UI chat)", "Đăng bài ở cộng đồng ethan là thành viên (không bị chặn)"], "ethan",
+      ["POST /api/communities (tạo cộng đồng mới, body hợp lệ; POST /api/courses không còn là route tạo)", "Gửi tin nhắn tới member bất kỳ chung cộng đồng (POST /api/conversations/<id>/messages hoặc từ UI chat)", "Đăng bài ở cộng đồng ethan là thành viên (không bị chặn)"], "ethan",
       "Tạo cộng đồng: 403 ACCOUNT_RESTRICTED 'không thể tạo cộng đồng'; nhắn tin: 403 ACCOUNT_RESTRICTED 'không thể nhắn tin'; đăng bài vẫn 201 (ethan không bị hạn chế post).")
     A(F, "Người bị hạn chế 'purchase' không checkout được", "Bảo mật", "Cao", BASE_API + " " + MUTATE,
       ["Admin POST /api/admin/users/<newbie>/restrict {\"reason\":\"Lừa đảo\",\"restrictions\":[\"purchase\"]}", "Đăng nhập newbie@sofinhub.test, POST /api/courses/paid-demo/checkout {\"method\":\"stripe\"}"], "newbie",
       "403 ACCOUNT_RESTRICTED 'Tài khoản của bạn đang bị hạn chế, không thể mua hàng.'; không tạo giao dịch pending.")
     A(F, "Hạn chế hết hạn (statusUntil) tự gỡ khi được kiểm tra", "Chức năng", "Cao", "Cần sửa DB: đặt statusUntil của ethan = 1 phút trước (status vẫn restricted). " + MUTATE,
-      ["Đăng nhập ethan@sofinhub.test và POST /api/courses (tạo cộng đồng)", "Mở /admin/users?q=ethan"], "ethan",
+      ["Đăng nhập ethan@sofinhub.test và POST /api/communities (tạo cộng đồng)", "Mở /admin/users?q=ethan"], "ethan",
       "Lệnh tạo cộng đồng KHÔNG còn bị chặn (hệ thống tự gỡ về active khi đọc), trạng thái hiển thị 'Hoạt động', statusReason/restrictions xóa; ethan biến khỏi trang Hạn chế / Tạm ngưng.", pw="Một phần")
     A(F, "Tạm ngưng người dùng (UI): thời hạn + lý do + ghi chú", "Chức năng", "Cao", BASE_UI + " " + MUTATE,
       ["Menu … của Alex Rivera > 'Tạm ngưng'", "Hộp thoại 'Tạm ngưng Alex Rivera?': thời hạn '24 giờ', lý do 'Quấy rối', ghi chú 'Bằng chứng ở vụ việc #4'", "Xác nhận"], "alex",
@@ -560,7 +560,7 @@ def load(add):
       ["Ở tab 'Mở' menu … của #6 > 'Nhận xử lý'"], "#6",
       "Toast 'Đã nhận xử lý · CASE-0000x'; dòng có Phụ trách = Platform Admin, trạng thái 'Đang xem xét'; chuyển sang tab 'Đang xem xét'; audit case.assign.")
     A(F, "GET /admin/moderation/assignees chỉ gồm Platform Admin và người đang được giao", "Chức năng", "Trung bình", BASE_API,
-      ["GET /api/admin/moderation/assignees"], "-", "200 danh sách {id,name,email,canBeAssigned}: gồm Platform Admin, John Carter, Mia Lopez (đang có case được giao); canBeAssigned=true chỉ với Platform Admin (john/mia không có quyền admin).")
+      ["GET /api/admin/moderation/assignees"], "-", "200 danh sách {id,name,email,canBeAssigned}: gồm Platform Admin, John Carter, Mia Lopez (đang có case được giao) và mọi nhân viên admin đang hoạt động có quyền report.resolve (Moderator, Support); canBeAssigned=true với Platform Admin (env) và với nhân viên có report.resolve (john/mia là Moderator nên được giao; admin-moderation.service.ts assignees()).")
     A(F, "Trạng thái rỗng khi không còn báo cáo mở", "Giao diện", "Thấp", BASE_UI + " Đã xử lý hết mọi vụ việc mở. " + MUTATE,
       ["Mở /admin/moderation tab 'Mở'"], "-", "Hiện 'Không có báo cáo nào đang chờ xử lý.'; KPI 'Báo cáo mở' = 0.", pw="Một phần")
     A(F, "Bấm dòng mở trang chi tiết vụ việc", "Chức năng", "Trung bình", BASE_UI,
@@ -713,8 +713,8 @@ def load(add):
     # ============================================================ 18. ĐIỂM CHƯA LÀM / CHƯA CHỐT (KẾ HOẠCH)
     F = "Điểm chưa làm / chưa chốt"
     A(F, "Cộng đồng do người dùng tạo mới phải chờ duyệt (pending_review)", "Chức năng", "Cao", "Chính sách chưa chốt (PLAN câu hỏi #7). Hiện BE tạo cộng đồng mới ở trạng thái active ngay.",
-      ["Đăng nhập newbie@sofinhub.test, tạo cộng đồng mới (POST /api/courses)", "Admin mở /admin/communities/review", "Tìm cộng đồng mới ở /courses"], "-",
-      "KỲ VỌNG SAU KHI CHỐT: cộng đồng mới ở trạng thái pending_review, xuất hiện ở hàng đợi xét duyệt, chưa hiện ở /courses cho tới khi admin duyệt. HIỆN TẠI: active ngay (muốn bật chỉ cần đặt moderationStatus='pending_review' ở communitiesService.create).", pw="Không", st=PLAN)
+      ["Đăng nhập newbie@sofinhub.test, tạo cộng đồng mới (POST /api/communities)", "Admin mở /admin/communities/review", "Tìm cộng đồng mới ở trang chủ / GET /api/communities"], "-",
+      "KỲ VỌNG SAU KHI CHỐT: cộng đồng mới ở trạng thái pending_review, xuất hiện ở hàng đợi xét duyệt, chưa hiện ở danh sách công khai (GET /api/communities) cho tới khi admin duyệt. HIỆN TẠI: active ngay (muốn bật chỉ cần đặt moderationStatus='pending_review' ở communitiesService.create).", pw="Không", st=PLAN)
     A(F, "Suspend/xóa cộng đồng tự hủy hoặc đóng băng gói đăng ký và hoàn tiền theo chính sách", "Chức năng", "Cao", "Chưa chốt chính sách tiền khi cộng đồng bị đình chỉ/xóa.",
       ["Tạm ngưng paid-demo", "Kiểm tra Subscription, scheduler thu phí kỳ tiếp theo"], "paid-demo", "KỲ VỌNG SAU KHI CHỐT: dừng thu phí/hủy gói/hoàn tiền theo quy định. HIỆN TẠI: gói vẫn active.", pw="Không", st=PLAN)
     A(F, "Phân quyền admin chi tiết: vai trò Moderator / Finance / Support", "Bảo mật", "Cao", "Hiện mọi Platform Admin (email trong PLATFORM_ADMIN_EMAILS) có quyền như nhau; 'Tài khoản quản trị', 'Vai trò & Quyền' đang là trang 'Sắp có'.",

@@ -12,7 +12,9 @@ export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
 export interface PaymentIntent {
   id: string;
-  courseId: string;
+  communityId: string;
+  /** @deprecated alias của communityId (tương thích JSON cũ) — repository luôn điền. */
+  courseId?: string;
   userId: string;
   method: PaymentMethod;
   amountUsd: number;
@@ -42,7 +44,9 @@ export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUSES)[number];
 export interface Subscription {
   id: string;
   userId: string;
-  courseId: string;
+  communityId: string;
+  /** @deprecated alias của communityId (tương thích JSON cũ) — repository luôn điền. */
+  courseId?: string;
   status: SubscriptionStatus;
   priceCents: number;
   currentPeriodStart: string;
@@ -54,13 +58,16 @@ export interface Subscription {
   createdAt: string;
 }
 
-export const REFUND_STATUSES = ['pending', 'approved', 'rejected'] as const;
+/** refunding = đã khóa yêu cầu + đang/đã gọi cổng, chờ chốt (kẹt quá lâu => reconcileStuckRefunds). */
+export const REFUND_STATUSES = ['pending', 'refunding', 'approved', 'rejected'] as const;
 export type RefundStatus = (typeof REFUND_STATUSES)[number];
 
 export interface RefundRequest {
   id: string;
   paymentId: string;
-  courseId: string;
+  communityId: string;
+  /** @deprecated alias của communityId (tương thích JSON cũ) — repository luôn điền. */
+  courseId?: string;
   userId: string;
   amountCents: number;
   reason: string;
@@ -71,6 +78,9 @@ export interface RefundRequest {
   resolvedBy?: string;
   createdAt: string;
   resolvedAt?: string;
+  /** Mã khoản hoàn của cổng (khóa idempotency gửi cổng chính là `id` của yêu cầu này). */
+  gatewayRefundId?: string;
+  refundingAt?: string;
 }
 
 export const PAYOUT_STATUSES = ['requested', 'approved', 'paid', 'rejected', 'failed', 'on_hold'] as const;
@@ -79,7 +89,9 @@ export type PayoutStatus = (typeof PAYOUT_STATUSES)[number];
 /** Chỉ lưu 4 số cuối tài khoản — không giữ số tài khoản đầy đủ trong hệ thống. */
 export interface Payout {
   id: string;
-  courseId: string;
+  communityId: string;
+  /** @deprecated alias của communityId (tương thích JSON cũ) — repository luôn điền. */
+  courseId?: string;
   ownerId: string;
   amountCents: number;
   method: { type: 'bank'; bankName: string; accountHolder: string; accountLast4: string };

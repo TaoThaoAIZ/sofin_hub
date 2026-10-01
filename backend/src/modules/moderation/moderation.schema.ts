@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { MAX_PAGE } from '../../utils/pagination.js';
 import { MOD_REPORT_ACTIONS, REPORT_REASONS, REPORT_STATUSES } from './moderation.types.js';
 
 export const createReportBody = z.object({
@@ -15,7 +16,7 @@ export type ResolveReportBody = z.infer<typeof resolveReportBody>;
 
 export const listReportsQuery = z.object({
   status: z.enum(REPORT_STATUSES).optional(),
-  page: z.coerce.number().int().min(1).default(1),
+  page: z.coerce.number().int().min(1).max(MAX_PAGE).default(1),
   limit: z.coerce.number().int().min(1).max(50).default(20),
 });
 export type ListReportsQuery = z.infer<typeof listReportsQuery>;

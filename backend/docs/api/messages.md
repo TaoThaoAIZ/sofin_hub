@@ -7,7 +7,7 @@ Module: `src/modules/messages/`. Đường dẫn dưới tiền tố `/api`. T�
 | Method | Path | Body / Query | Response | Lỗi |
 |---|---|---|---|---|
 | POST | `/conversations` | `{userId}` | 201 (mới) hoặc 200 (đã có): `{data:{id, other:{id,name}, lastMessage, unreadCount, lastMessageAt, blockedByMe}}` | 400 (nhắn chính mình), 401, 403 (bị chặn / không chung cộng đồng), 404 (user) |
-| GET | `/conversations` | - | `{data:[...cùng dạng trên]}` sắp theo `lastMessageAt` giảm dần | 401 |
+| GET | `/conversations` | `?limit=1..100 (mặc định 50)&cursor=` | `{data:[...cùng dạng trên], meta:{hasMore, nextCursor}}` sắp theo `lastMessageAt` giảm dần; phân trang keyset (`cursor` = `meta.nextCursor` trang trước). Dữ liệu (người kia, tin cuối, chưa đọc, chặn) lấy bằng **1 truy vấn** — không N+1 | 400 (cursor/limit sai), 401 |
 | GET | `/conversations/:id/messages` | `?before=<messageId>&limit=1..100 (mặc định 30)` | `{data:[MessageView cũ->mới], meta:{hasMore, nextBefore}}` | 400 (before sai), 401, 404 (không phải người tham gia) |
 | POST | `/conversations/:id/messages` | `{content 1..2000, attachments?: [{url,name,contentType,size}] (tối đa 5)}` | 201 `{data: MessageView}` | 400, 401, 403 (chặn), 404, 429 |
 | POST | `/conversations/:id/read` | - | `{data:{unreadCount:0}}` | 401, 404 |
@@ -33,15 +33,15 @@ Module: `src/modules/messages/`. Đường dẫn dưới tiền tố `/api`. T�
 - **Chặn**: hai chiều. Bị chặn thì cả mở cuộc trò chuyện lẫn gửi tin đều 403. Người chặn vẫn đọc được lịch sử. Không cho người bị chặn biết mình bị chặn ngoài lỗi 403 chung.
 - **Người thứ ba**: mọi endpoint theo `:id` trả 404 (không phải 403) để không lộ sự tồn tại.
 - **Văn bản thuần**: từ chối (400) nội dung có thẻ HTML (`<tag ...>`); dấu `<` `>` bình thường vẫn được. FE vẫn phải escape khi hiển thị.
-- **Đính kèm**: chỉ nhận URL dạng `/api/files/<key>` và key phải là file đã upload xong của CHÍNH người gửi; `contentType` và `size` lấy từ server, không tin client. Nên upload với `purpose: 'message_attachment'`.
+- **Đính kèm**: chỉ nhận URL dạng `/api/files/<key>` và key phải là file đã upload xong của CHÍNH người gửi; `contentType` và `size` lấy từ server, không tin client. Nên upload với `purpose: 'message_attachment'`. File này là RIÊNG TƯ: chỉ 2 người trong cuộc trò chuyện xem được (xin URL ký bằng `POST /files/:key/url`); thu hồi tin nhắn xóa luôn file.
 - **Thu hồi**: xóa mềm, xóa nội dung + file đính kèm khỏi DB (`content=''`, `attachments=[]`, `deletedAt`); tin thu hồi không tính chưa đọc.
 - **Chưa đọc**: theo `readSeq` từng người trong cuộc trò chuyện; gửi tin cũng coi là đã đọc tới tin đó.
-- **Thông báo**: nếu người nhận không có kết nối SSE thì gọi `notify({type:'message_received', link:'/messages/<conversationId>'})`, gộp tối đa 1 thông báo / cuộc trò chuyện / người nhận / 5 phút (bộ nhớ). Người online chỉ nhận realtime, không tạo thông báo.
+- **Thông báo**: **luôn lưu** `notify({type:'message_received', link:'/messages/<conversationId>'})` cho người nhận, TRỪ khi họ đang chủ động xem cuộc trò chuyện (chính họ vừa gọi `GET /conversations/:id/messages`, `POST /conversations/:id/read` hoặc gửi tin ở cuộc đó trong 30s — một ack qua HTTP). SSE chỉ là kênh best-effort, KHÔNG dùng làm tín hiệu online (kết nối SSE xác sống từng làm tin nhắn biến mất khỏi mọi kênh). Gộp tối đa 1 thông báo / cuộc trò chuyện / người nhận / 5 phút (khóa `SET NX PX` ở state chia sẻ; người nhận đọc cuộc trò chuyện thì khóa được xóa). Số chưa đọc luôn ở DB.
 - **Chống spam**: tối đa `MESSAGE_RATE_LIMIT_PER_MIN` (mặc định 20) tin / user / phút -> 429; `0` là tắt; khi `NODE_ENV=test` mặc định tắt (test gán `messageRateLimit.max`).
 
 ## Giới hạn hiện tại / Chưa làm
 
-- Cuộc trò chuyện, tin, chặn nằm trong Postgres (`Conversation` cặp userAId < userBId, `Message.seq` autoincrement toàn cục nên gửi song song không trùng seq, `UserBlock`); chưa đọc = truy vấn đếm theo `readSeqA/B`; phân trang cursor theo seq. Cố ý còn trong bộ nhớ: throttle thông báo `message_received` (5 phút), rate limit gửi, vé SSE và kết nối SSE => nhiều instance cần Redis pub/sub.
+- Cuộc trò chuyện, tin, chặn nằm trong Postgres (`Conversation` cặp userAId < userBId, `Message.seq` autoincrement toàn cục nên gửi song song không trùng seq, `UserBlock`); chưa đọc = truy vấn đếm theo `readSeqA/B`; phân trang cursor theo seq. Throttle thông báo, tín hiệu đang-xem, rate limit gửi, vé SSE và fan-out SSE nằm ở state chia sẻ (`src/infra/shared*.ts`): Redis khi đặt `REDIS_URL` (nhiều instance chạy đúng — event gửi ở A tới được người nhận cắm SSE ở B), nếu không thì in-memory (1 instance). Chỉ socket SSE là cục bộ theo instance.
 - Chưa có: sửa tin, trạng thái đang gõ, "đã xem" hiển thị cho người gửi, tìm kiếm tin nhắn, xóa cuộc trò chuyện, báo cáo tin nhắn vi phạm, nhóm chat.
 - Chưa có endpoint tìm người dùng để bắt đầu trò chuyện (FE lấy `userId` từ danh sách thành viên cộng đồng).
 - Đường dẫn FE trong thông báo (`/messages/<id>`) là giả định, cần thống nhất với FE.

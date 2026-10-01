@@ -44,30 +44,30 @@ async function nextInvoiceNumber(db: Db, year: number): Promise<string> {
 
 export async function seedPayments(ctx: SeedContext): Promise<void> {
   const { db, userIds } = ctx;
-  const course = (await db.course.findUnique({ where: { id: 'paid-demo' } })) ?? (await db.course.findUnique({ where: { id: 'yt' } }));
+  const course = (await db.community.findUnique({ where: { id: 'paid-demo' } })) ?? (await db.community.findUnique({ where: { id: 'yt' } }));
   if (!course || course.priceCents <= 0) return;
-  const courseId = course.id;
+  const communityId = course.id;
   const price = course.priceCents;
   const now = Date.now();
   const ago = (days: number) => new Date(now - days * DAY);
   const ahead = (days: number) => new Date(now + days * DAY);
 
   // Demo user có thật trong DB (do seed communities tạo); thiếu thì bỏ qua kịch bản của họ.
-  const demoIds = Array.from({ length: 11 }, (_, i) => demoUserId(courseId, i));
+  const demoIds = Array.from({ length: 11 }, (_, i) => demoUserId(communityId, i));
   const existing = new Set((await db.user.findMany({ where: { id: { in: demoIds } }, select: { id: true } })).map((u) => u.id));
   const demo = (i: number) => (existing.has(demoIds[i]!) ? demoIds[i]! : undefined);
 
   // ------------------------------------------------------------------ ghi danh cho tài khoản test
   for (const key of ['member1', 'member2', 'member3'] as const) {
     await db.enrollment.upsert({
-      where: { userId_courseId: { userId: userIds[key], courseId } },
-      create: { userId: userIds[key], courseId, role: 'member' },
+      where: { userId_communityId: { userId: userIds[key], communityId: communityId } },
+      create: { userId: userIds[key], communityId: communityId, role: 'member' },
       update: {},
     });
   }
   await db.enrollment.upsert({
-    where: { userId_courseId: { userId: userIds.owner, courseId } },
-    create: { userId: userIds.owner, courseId, role: 'owner' },
+    where: { userId_communityId: { userId: userIds.owner, communityId: communityId } },
+    create: { userId: userIds.owner, communityId: communityId, role: 'owner' },
     update: {},
   });
 
@@ -134,7 +134,7 @@ export async function seedPayments(ctx: SeedContext): Promise<void> {
       create: {
         id: s.id,
         userId: s.userId,
-        courseId,
+        communityId: communityId,
         status: s.status,
         priceCents: price,
         currentPeriodStart: s.start,
@@ -157,7 +157,7 @@ export async function seedPayments(ctx: SeedContext): Promise<void> {
     await db.payment.create({
       data: {
         id: p.id,
-        courseId,
+        communityId: communityId,
         userId: p.userId,
         method: 'stripe',
         amountCents: price,
@@ -183,7 +183,7 @@ export async function seedPayments(ctx: SeedContext): Promise<void> {
       create: {
         id: 'seed-refund-approved',
         paymentId: 'seed-pay-refunded',
-        courseId,
+        communityId: communityId,
         userId: refundedUser,
         amountCents: price,
         reason: 'Không phù hợp nhu cầu (seed)',
@@ -201,7 +201,7 @@ export async function seedPayments(ctx: SeedContext): Promise<void> {
       create: {
         id: 'seed-refund-pending',
         paymentId: 'seed-pay-pendref',
-        courseId,
+        communityId: communityId,
         userId: pendingUser,
         amountCents: price,
         reason: 'Xin hoàn tiền sau 12 ngày — ngoài cửa sổ 7 ngày (seed)',
@@ -217,12 +217,12 @@ export async function seedPayments(ctx: SeedContext): Promise<void> {
   const bank = { bankName: 'Vietcombank', accountHolder: 'OLIVIA OWNER', accountLast4: '6789' };
   await db.payout.upsert({
     where: { id: 'seed-payout-paid' },
-    create: { id: 'seed-payout-paid', courseId, ownerId: userIds.owner, amountCents: 5000, ...bank, status: 'paid', note: 'Đã chuyển khoản (seed)', createdAt: ago(20), updatedAt: ago(15) },
+    create: { id: 'seed-payout-paid', communityId: communityId, ownerId: userIds.owner, amountCents: 5000, ...bank, status: 'paid', note: 'Đã chuyển khoản (seed)', createdAt: ago(20), updatedAt: ago(15) },
     update: {},
   });
   await db.payout.upsert({
     where: { id: 'seed-payout-pending' },
-    create: { id: 'seed-payout-pending', courseId, ownerId: userIds.owner, amountCents: 5000, ...bank, status: 'requested', createdAt: ago(1), updatedAt: ago(1) },
+    create: { id: 'seed-payout-pending', communityId: communityId, ownerId: userIds.owner, amountCents: 5000, ...bank, status: 'requested', createdAt: ago(1), updatedAt: ago(1) },
     update: {},
   });
 }

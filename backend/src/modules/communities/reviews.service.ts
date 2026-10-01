@@ -1,7 +1,7 @@
 import { HttpError } from '../../utils/http-error.js';
 import { userBriefView } from '../auth/user-view.js';
-import type { CourseReview } from '../courses/course-detail.js';
-import { courseService } from '../courses/courses.service.js';
+import type { CourseReview } from '../catalog/community-detail.js';
+import { catalogService } from '../catalog/catalog.service.js';
 import { enrollmentService } from '../enrollments/enrollments.service.js';
 import { canManageContent } from '../permissions/policy.js';
 import { communitiesRepository, type CommunitiesRepository } from './communities.repository.js';
@@ -39,11 +39,11 @@ export function createReviewsService(repo: CommunitiesRepository = communitiesRe
   });
 
   return {
-    async list(courseId: string, page: number, limit: number) {
-      const course = await courseService.getById(courseId);
+    async list(communityId: string, page: number, limit: number) {
+      const course = await catalogService.getById(communityId);
       const [rows, total] = await Promise.all([
-        repo.listReviews(courseId, { skip: (page - 1) * limit, take: limit }),
-        repo.countReviews(courseId),
+        repo.listReviews(communityId, { skip: (page - 1) * limit, take: limit }),
+        repo.countReviews(communityId),
       ]);
       return {
         data: await Promise.all(rows.map(view)),
@@ -53,8 +53,8 @@ export function createReviewsService(repo: CommunitiesRepository = communitiesRe
     },
 
     /** Đánh giá thật (mới nhất trước) ở định dạng của trang chi tiết khóa học. */
-    async forDetail(courseId: string, max = 5): Promise<CourseReview[]> {
-      const rows = await repo.listReviews(courseId, { take: max });
+    async forDetail(communityId: string, max = 5): Promise<CourseReview[]> {
+      const rows = await repo.listReviews(communityId, { take: max });
       return Promise.all(
         rows.map(async (r) => ({
           name: (await userBriefView(r.userId)).name,
@@ -67,16 +67,16 @@ export function createReviewsService(repo: CommunitiesRepository = communitiesRe
     },
 
     /** 1 review / user / cộng đồng: gọi lại thì cập nhật. */
-    async upsert(userId: string, courseId: string, input: { rating: number; text: string }) {
-      await courseService.getById(courseId);
-      await enrollmentService.requireMembership(userId, courseId);
-      const { review, created } = await repo.upsertReview(courseId, userId, input.rating, input.text);
+    async upsert(userId: string, communityId: string, input: { rating: number; text: string }) {
+      await catalogService.getById(communityId);
+      await enrollmentService.requireMembership(userId, communityId);
+      const { review, created } = await repo.upsertReview(communityId, userId, input.rating, input.text);
       return { review: await view(review), created };
     },
 
-    async removeMine(userId: string, courseId: string) {
-      await courseService.getById(courseId);
-      const existing = await repo.findReview(courseId, userId);
+    async removeMine(userId: string, communityId: string) {
+      await catalogService.getById(communityId);
+      const existing = await repo.findReview(communityId, userId);
       if (!existing) throw HttpError.notFound('Bạn chưa đánh giá cộng đồng này');
       await repo.deleteReview(existing.id);
     },
@@ -85,7 +85,7 @@ export function createReviewsService(repo: CommunitiesRepository = communitiesRe
     async removeById(userId: string, reviewId: string) {
       const review = await repo.findReviewById(reviewId);
       if (!review) throw HttpError.notFound('Không tìm thấy đánh giá');
-      if (!(await canManageContent(userId, review.courseId, review.userId, 'mod'))) throw HttpError.forbidden();
+      if (!(await canManageContent(userId, review.communityId, review.userId, 'mod'))) throw HttpError.forbidden();
       await repo.deleteReview(reviewId);
     },
   };

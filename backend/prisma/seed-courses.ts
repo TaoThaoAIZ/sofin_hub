@@ -3,7 +3,7 @@
  * lẫn tests/helpers.ts (nạp dữ liệu nền cho schema test bằng createMany) dùng chung.
  */
 import { usdToCents } from '../src/db/enums.js';
-import { courses, trendingRank } from '../src/modules/courses/courses.seed.js';
+import { seedCommunities as courses, trendingRank } from '../src/modules/catalog/catalog.seed.js';
 
 /** `ownerIds`: map slug -> userId của owner (tài khoản test); bỏ trống = cộng đồng seed chưa có chủ. */
 export function courseSeedRows(ownerIds: Partial<Record<string, string>> = {}) {

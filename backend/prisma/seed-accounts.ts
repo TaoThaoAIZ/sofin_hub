@@ -8,7 +8,7 @@ export const TEST_PASSWORD = 'Passw0rd!x';
 export const TEST_EMAIL_DOMAIN = 'sofinhub.test';
 
 export interface SeedMembership {
-  courseId: string;
+  communityId: string;
   role: MemberRole;
   /** true = có bản ghi CommunityBan (bị cấm) dù vẫn còn dòng Enrollment. */
   banned?: boolean;
@@ -46,9 +46,9 @@ export const SEED_ACCOUNTS = {
     lastName: 'Owner',
     description: 'Chủ (owner) của cộng đồng photo, yt và fin.',
     memberships: [
-      { courseId: 'photo', role: 'owner' },
-      { courseId: 'yt', role: 'owner' },
-      { courseId: 'fin', role: 'owner' },
+      { communityId: 'photo', role: 'owner' },
+      { communityId: 'yt', role: 'owner' },
+      { communityId: 'fin', role: 'owner' },
     ],
   },
   cadmin: {
@@ -57,7 +57,7 @@ export const SEED_ACCOUNTS = {
     firstName: 'Adam',
     lastName: 'CommunityAdmin',
     description: 'Admin cộng đồng photo (dưới owner, trên mod).',
-    memberships: [{ courseId: 'photo', role: 'admin' }],
+    memberships: [{ communityId: 'photo', role: 'admin' }],
   },
   mod: {
     key: 'mod',
@@ -65,7 +65,7 @@ export const SEED_ACCOUNTS = {
     firstName: 'Mia',
     lastName: 'Moderator',
     description: 'Mod của cộng đồng photo.',
-    memberships: [{ courseId: 'photo', role: 'mod' }],
+    memberships: [{ communityId: 'photo', role: 'mod' }],
   },
   member1: {
     key: 'member1',
@@ -74,9 +74,9 @@ export const SEED_ACCOUNTS = {
     lastName: 'Member1',
     description: 'Thành viên photo, yt và fin.',
     memberships: [
-      { courseId: 'photo', role: 'member' },
-      { courseId: 'yt', role: 'member' },
-      { courseId: 'fin', role: 'member' },
+      { communityId: 'photo', role: 'member' },
+      { communityId: 'yt', role: 'member' },
+      { communityId: 'fin', role: 'member' },
     ],
   },
   member2: {
@@ -85,7 +85,7 @@ export const SEED_ACCOUNTS = {
     firstName: 'Mai',
     lastName: 'Member2',
     description: 'Thành viên photo.',
-    memberships: [{ courseId: 'photo', role: 'member' }],
+    memberships: [{ communityId: 'photo', role: 'member' }],
   },
   member3: {
     key: 'member3',
@@ -93,7 +93,7 @@ export const SEED_ACCOUNTS = {
     firstName: 'Manh',
     lastName: 'Member3',
     description: 'Thành viên photo.',
-    memberships: [{ courseId: 'photo', role: 'member' }],
+    memberships: [{ communityId: 'photo', role: 'member' }],
   },
   newbie: {
     key: 'newbie',
@@ -109,7 +109,7 @@ export const SEED_ACCOUNTS = {
     firstName: 'Bao',
     lastName: 'Banned',
     description: 'Bị cấm khỏi cộng đồng photo (có CommunityBan) — không được coi là thành viên.',
-    memberships: [{ courseId: 'photo', role: 'member', banned: true }],
+    memberships: [{ communityId: 'photo', role: 'member', banned: true }],
   },
 } as const satisfies Record<string, SeedAccount>;
 

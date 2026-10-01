@@ -94,12 +94,12 @@ export function InvitePage() {
       return;
     }
     accept.mutate(undefined, {
-      onSuccess: ({ courseId }) => navigate(`/courses/${courseId}/community`),
+      onSuccess: ({ courseId }) => navigate(`/communities/${courseId}/community`),
       onError: (e) => {
         const apiErr = e instanceof ApiError ? e : null;
         if (apiErr?.status === 409) {
           // Đã là thành viên: vào thẳng cộng đồng.
-          navigate(`/courses/${course.id}/community`);
+          navigate(`/communities/${course.id}/community`);
           return;
         }
         if (apiErr?.status === 402) {
@@ -161,11 +161,11 @@ export function InvitePage() {
             </p>
           )}
           {needsPayment && (
-            <Link to={`/courses/${course.id}/checkout`} className="mt-2 block text-center text-sm font-semibold text-brand hover:underline">
+            <Link to={`/communities/${course.id}/checkout`} className="mt-2 block text-center text-sm font-semibold text-brand hover:underline">
               Đi tới thanh toán
             </Link>
           )}
-          <Link to={`/courses/${course.id}`} className="mt-4 block text-center text-sm text-stone-600 hover:text-brand">
+          <Link to={`/communities/${course.id}`} className="mt-4 block text-center text-sm text-stone-600 hover:text-brand">
             Xem trang giới thiệu cộng đồng
           </Link>
         </div>

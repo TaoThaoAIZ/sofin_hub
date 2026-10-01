@@ -1,27 +1,77 @@
 import { HttpError } from '../../utils/http-error.js';
 import { assertUserCan } from '../auth/user-status.js';
 import { fileUserRepository } from '../auth/auth.repository.js';
-import { courseService } from '../courses/courses.service.js';
+import { catalogService } from '../catalog/catalog.service.js';
 import { enrollmentService } from '../enrollments/enrollments.service.js';
 import { notify } from '../notifications/notifications.service.js';
-import { getRole, atLeast, isCourseOwner, requirePlatformAdmin, requireRole, requireStaff } from '../permissions/policy.js';
+import { getRole, atLeast, isCommunityOwner, requireRole, requireStaff } from '../permissions/policy.js';
 import { paymentGateway, type PaymentGateway } from './payments.gateway.js';
-import { isUniqueViolation, paymentsRepository, type PaymentsOps, type PaymentsRepository, type RevenueRates } from './payments.repository.js';
+import {
+  isUniqueViolation,
+  paymentsRepository,
+  type BalanceFigures,
+  type LedgerEntryInput,
+  type PaymentsOps,
+  type PaymentsRepository,
+  type RevenueRates,
+} from './payments.repository.js';
 import { cfg } from '../settings/settings.service.js';
 import { webhookEventBody } from './payments.schema.js';
 import type { PaymentIntent, PaymentMethod, Payout, RefundRequest, Subscription } from './payments.types.js';
 
 const DAY_MS = 86_400_000;
+const MIN_MS = 60_000;
 const addDays = (d: Date, n: number) => new Date(d.getTime() + n * DAY_MS);
 const toCents = (usd: number) => Math.round(usd * 100);
 /** Phần trăm (có thể lẻ, vd. 2.9) → basis point nguyên để tính bằng số nguyên (cả trong SQL). */
 const bp = (pct: number) => Math.round(pct * 100);
+
+/** Intent `pending` được checkout tái dùng trong khoảng này (quá hạn thì tạo intent mới). */
+export const PENDING_INTENT_TTL_MS = 30 * MIN_MS;
+/** Webhook ở `processing` quá lâu coi như process đã chết → được nhận lại. */
+export const WEBHOOK_PROCESSING_STALE_MS = 2 * MIN_MS;
+const WEBHOOK_MAX_ATTEMPTS = 8;
+/** Mặc định: yêu cầu hoàn tiền kẹt `refunding` / charge chưa settle quá lâu mới đối soát (tránh giẫm chân request đang chạy). */
+const RECONCILE_AFTER_MS = 5 * MIN_MS;
 
 const revenueRates = (): RevenueRates => ({
   commissionBp: bp(cfg().payments.commissionPct),
   gatewayFeeBp: bp(cfg().payments.gatewayFeePct),
   gatewayFeeFixedCents: cfg().payments.gatewayFeeFixedCents,
 });
+
+/** Chính sách rút tiền hiện hành (đọc từ Global Settings; giá trị tạm chờ chủ sở hữu chốt). */
+export function payoutPolicy(now = new Date()) {
+  const p = cfg().payments;
+  const holdDays = p.refundWindowDays + p.disputeWindowDays;
+  return {
+    refundWindowDays: p.refundWindowDays,
+    disputeWindowDays: p.disputeWindowDays,
+    holdDays,
+    reservePct: p.payoutReservePct,
+    eligibleBefore: new Date(now.getTime() - holdDays * DAY_MS),
+  };
+}
+
+/**
+ * Số dư của Owner từ số liệu SQL:
+ *  - total: net toàn thời gian − payout đã yêu cầu (có thể ÂM = còn nợ);
+ *  - held: phần net chưa qua holding period (refundWindowDays + disputeWindowDays) — chưa được rút;
+ *  - reserve: rolling reserve = reservePct% phần đã đủ điều kiện, luôn giữ lại;
+ *  - withdrawable: số có thể rút ngay = max(0, min(eligible − reserve − requested, total)); 0 khi còn nợ;
+ *  - debt: nợ (total < 0) — chặn payout cho tới khi doanh thu mới bù.
+ */
+export function balanceView(b: BalanceFigures, reservePct: number) {
+  const total = b.net - b.requested;
+  const reserve = Math.floor((Math.max(0, b.eligible) * bp(reservePct)) / 10_000);
+  return {
+    total,
+    held: Math.max(0, b.net - b.eligible),
+    reserve,
+    withdrawable: Math.max(0, Math.min(b.eligible - reserve - b.requested, total)),
+    debt: Math.max(0, -total),
+  };
+}
 
 function pageMeta(total: number, page: number, limit: number) {
   return { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) };
@@ -39,6 +89,8 @@ const later = (after: After, input: NotifyInput) =>
     }
   });
 
+const locked = () => HttpError.coded(403, 'COMMUNITY_LOCKED', 'Cộng đồng này đang bị khóa');
+
 export function createPaymentsService(repo: PaymentsRepository = paymentsRepository, gateway: PaymentGateway = paymentGateway) {
   /** Chạy trong 1 transaction DB; thông báo gom lại và phát sau commit. */
   async function inTx<T>(fn: (ops: PaymentsOps, after: After) => Promise<T>, timeoutMs?: number): Promise<T> {
@@ -48,11 +100,11 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
     return result;
   }
 
-  async function courseTitle(courseId: string) {
+  async function courseTitle(communityId: string) {
     try {
-      return (await courseService.getById(courseId)).title;
+      return (await catalogService.getById(communityId)).title;
     } catch {
-      return courseId;
+      return communityId;
     }
   }
 
@@ -64,27 +116,44 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
   // transition có điều kiện trong DB đảm bảo chỉ 1 bên ghi nhận (hóa đơn, gói, quyền truy cập).
   const inflightConfirm = new Map<string, Promise<PaymentIntent>>();
 
+  /** Cộng đồng riêng tư: chỉ người đã được duyệt (join request approved / lời mời đã chấp nhận) hoặc đang là thành viên mới được mua/dùng thử. */
+  async function assertMayPurchase(userId: string, communityId: string, visibility: 'public' | 'private') {
+    if (visibility !== 'private') return;
+    if (await enrollmentService.isEnrolled(userId, communityId)) return; // dùng thử → trả phí
+    if (await repo.hasApprovedJoinRequest(userId, communityId)) return;
+    throw HttpError.coded(403, 'JOIN_REQUEST_REQUIRED', 'Cộng đồng riêng tư: hãy gửi yêu cầu tham gia (được duyệt) hoặc dùng lời mời trước khi thanh toán');
+  }
+
   /**
    * Đánh dấu thanh toán thành công + số hóa đơn + tạo/gia hạn gói + cấp quyền — MỘT transaction.
+   *
+   * THỨ TỰ KHÓA (thống nhất với scheduler để không deadlock): advisory(user,course) → hàng Subscription → hàng Payment →
+   * (tạo/sửa Subscription, Enrollment) → số hóa đơn (InvoiceSequence) CUỐI CÙNG. Scheduler: Subscription → Payment mới → số hóa đơn.
+   *
    * Nguyên tử theo trạng thái 'pending': bên thua cuộc (double-confirm / webhook trùng) nhận lại bản ghi đã xử lý.
+   * Nếu user ĐÃ có gói active (hoặc đã là thành viên mà không phải đang dùng thử) thì khoản vừa trừ là TRÙNG: giao dịch bị đánh dấu
+   * `failed`/`duplicate_charge` và trả `voided=true` để caller hoàn tiền qua cổng (ngoài transaction).
    */
-  async function settle(intent: PaymentIntent, chargeId: string): Promise<PaymentIntent> {
+  async function settle(intent: PaymentIntent, chargeId: string): Promise<{ payment: PaymentIntent; voided: boolean }> {
     return inTx(async (ops, after) => {
       const at = new Date();
-      // Tuần tự hóa theo (user, khóa học) để 2 giao dịch khác nhau của cùng người không tạo 2 gói active.
-      await ops.advisoryLock(`sub:${intent.userId}:${intent.courseId}`);
-      const done = await ops.transition(intent.id, ['pending'], {
-        status: 'succeeded',
-        confirmedAt: at.toISOString(),
-        gatewayChargeId: chargeId,
-      });
-      if (!done) return (await ops.findById(intent.id))!; // đã xử lý trước đó
+      await ops.advisoryLock(`sub:${intent.userId}:${intent.communityId}`);
+      let sub = await ops.lockLiveSubscription(intent.userId, intent.communityId); // (1) Subscription trước
+      const current = await ops.findById(intent.id);
+      if (!current || current.status !== 'pending') return { payment: current ?? intent, voided: false }; // đã xử lý trước đó
 
-      const invoiceNumber = await ops.nextInvoiceNumber(at.getUTCFullYear());
+      const enrolled = await ops.isEnrolled(intent.userId, intent.communityId);
+      if ((sub && sub.status === 'active') || (enrolled && sub?.status !== 'trialing')) {
+        const voided = await ops.transition(intent.id, ['pending'], { status: 'failed', gatewayChargeId: chargeId, failureReason: 'duplicate_charge' });
+        return { payment: voided ?? current, voided: true };
+      }
+
+      const done = await ops.transition(intent.id, ['pending'], { status: 'succeeded', confirmedAt: at.toISOString(), gatewayChargeId: chargeId });
+      if (!done) return { payment: (await ops.findById(intent.id))!, voided: false };
+
       const periodEnd = addDays(at, cfg().payments.subscriptionPeriodDays);
-      let sub = await ops.findSubscriptionFor(intent.userId, intent.courseId);
-      if (sub && (sub.status === 'trialing' || sub.status === 'active')) {
-        // Chuyển từ dùng thử sang trả phí (hoặc gia hạn thủ công): bắt đầu kỳ mới từ bây giờ.
+      if (sub) {
+        // Chuyển từ dùng thử sang trả phí: bắt đầu kỳ mới từ bây giờ.
         sub = await ops.updateSubscription(sub.id, {
           status: 'active',
           priceCents: intent.amountCents,
@@ -95,7 +164,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
       } else {
         sub = await ops.createSubscription({
           userId: intent.userId,
-          courseId: intent.courseId,
+          communityId: intent.communityId,
           status: 'active',
           priceCents: intent.amountCents,
           currentPeriodStart: at.toISOString(),
@@ -103,24 +172,52 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
           cancelAtPeriodEnd: false,
         });
       }
+      // Bị cấm sau khi tạo giao dịch: vẫn ghi nhận thanh toán (có thể hoàn tiền) nhưng không cấp quyền.
+      if (!(await ops.isBanned(intent.userId, intent.communityId))) await ops.grantAccess(intent.userId, intent.communityId);
+      // Số hóa đơn LUÔN cấp cuối cùng (giữ khóa InvoiceSequence ngắn nhất, cùng thứ tự với recordRenewal).
+      const invoiceNumber = await ops.nextInvoiceNumber(at.getUTCFullYear());
       const final = await ops.transition(intent.id, ['succeeded'], {
         invoiceNumber,
         subscriptionId: sub!.id,
         periodStart: at.toISOString(),
         periodEnd: periodEnd.toISOString(),
       });
-      // Bị cấm sau khi tạo giao dịch: vẫn ghi nhận thanh toán (có thể hoàn tiền) nhưng không cấp quyền.
-      if (!(await ops.isBanned(intent.userId, intent.courseId))) await ops.grantAccess(intent.userId, intent.courseId);
       later(after, {
         userId: intent.userId,
         type: 'payment_succeeded',
         title: 'Thanh toán thành công',
         body: `Bạn đã thanh toán ${(intent.amountCents / 100).toFixed(2)} USD. Hóa đơn ${invoiceNumber}.`,
-        link: `/courses/${intent.courseId}/community`,
-        courseId: intent.courseId,
+        link: `/courses/${intent.communityId}/community`,
+        communityId: intent.communityId,
       });
-      return final!;
+      return { payment: final!, voided: false };
     });
+  }
+
+  /** Hoàn khoản trừ trùng (đã void trong DB) qua cổng — NGOÀI transaction, idempotency key cố định theo giao dịch ⇒ gọi lại an toàn. */
+  async function refundVoidedCharge(payment: PaymentIntent) {
+    if (!payment.gatewayChargeId || payment.refundedCents > 0) return;
+    const r = await gateway.refund(payment.gatewayChargeId, payment.amountCents, `void:${payment.id}`);
+    if (!r.ok) return; // job đối soát (reconcileVoidedCharges) thử lại
+    await repo.transition(payment.id, ['failed'], { refundedCents: payment.amountCents });
+    notify({
+      userId: payment.userId,
+      type: 'system',
+      title: 'Đã hoàn khoản thanh toán trùng',
+      body: `Bạn đã có gói thành viên nên khoản thanh toán ${(payment.amountCents / 100).toFixed(2)} USD bị trùng đã được hoàn lại.`,
+      link: `/courses/${payment.communityId}`,
+      communityId: payment.communityId,
+    });
+  }
+
+  /** settle + (nếu trùng) hoàn tiền. `throwOnVoid`: confirm trả 409 cho bên thua; webhook/job chỉ ghi nhận. */
+  async function settleAndVoid(intent: PaymentIntent, chargeId: string, throwOnVoid = true): Promise<PaymentIntent> {
+    const r = await settle(intent, chargeId);
+    if (r.voided) {
+      await refundVoidedCharge(r.payment);
+      if (throwOnVoid) throw HttpError.conflict('Bạn đã có gói thành viên ở cộng đồng này; khoản thanh toán trùng đã được hoàn lại');
+    }
+    return r.payment;
   }
 
   async function failPayment(intent: PaymentIntent, reason: string) {
@@ -131,20 +228,19 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
         type: 'payment_failed',
         title: 'Thanh toán thất bại',
         body: `Giao dịch không thành công (${reason}). Vui lòng thử lại hoặc dùng phương thức khác.`,
-        link: `/courses/${intent.courseId}`,
-        courseId: intent.courseId,
+        link: `/courses/${intent.communityId}`,
+        communityId: intent.communityId,
       });
     }
     return failed;
   }
 
-  /** Tạo giao dịch gia hạn đã thành công (scheduler sau khi cổng trừ tiền OK, hoặc webhook subscription.renewed). Chạy trong transaction của caller. */
+  /** Tạo giao dịch gia hạn đã thành công (scheduler sau khi cổng trừ tiền OK, hoặc webhook subscription.renewed). Chạy trong transaction của caller (đã khóa Subscription). */
   async function recordRenewal(ops: PaymentsOps, after: After, sub: Subscription, chargeId: string, at: Date) {
     const start = new Date(sub.currentPeriodEnd);
     const end = addDays(start, cfg().payments.subscriptionPeriodDays);
-    const invoiceNumber = await ops.nextInvoiceNumber(at.getUTCFullYear());
-    const payment = await ops.create({
-      courseId: sub.courseId,
+    let payment = await ops.create({
+      communityId: sub.communityId,
       userId: sub.userId,
       method: 'stripe',
       amountUsd: sub.priceCents / 100,
@@ -155,7 +251,6 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
       confirmedAt: at.toISOString(),
       subscriptionId: sub.id,
       gatewayChargeId: chargeId,
-      invoiceNumber,
       periodStart: start.toISOString(),
       periodEnd: end.toISOString(),
     });
@@ -164,13 +259,18 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
       currentPeriodStart: start.toISOString(),
       currentPeriodEnd: end.toISOString(),
     });
+    // Nhất quán với settle: gia hạn xong thì đảm bảo quyền truy cập (người bị cấm thì không cấp lại).
+    if (!(await ops.isBanned(sub.userId, sub.communityId))) await ops.grantAccess(sub.userId, sub.communityId);
+    // Số hóa đơn cấp CUỐI CÙNG (cùng thứ tự khóa với settle).
+    const invoiceNumber = await ops.nextInvoiceNumber(at.getUTCFullYear());
+    payment = (await ops.transition(payment.id, ['succeeded'], { invoiceNumber })) ?? payment;
     later(after, {
       userId: sub.userId,
       type: 'payment_succeeded',
       title: 'Gia hạn gói thành công',
       body: `Gói của bạn được gia hạn đến ${end.toISOString().slice(0, 10)}. Hóa đơn ${invoiceNumber}.`,
-      link: `/courses/${sub.courseId}/community`,
-      courseId: sub.courseId,
+      link: `/courses/${sub.communityId}/community`,
+      communityId: sub.communityId,
     });
     return payment;
   }
@@ -178,36 +278,74 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
   /** Kết thúc gói + thu hồi quyền (cùng transaction của caller). */
   async function endSubscription(ops: PaymentsOps, after: After, sub: Subscription, status: 'canceled' | 'expired', at: Date, why?: string) {
     await ops.updateSubscription(sub.id, { status, canceledAt: at.toISOString(), cancelAtPeriodEnd: false });
-    await ops.revokeAccess(sub.userId, sub.courseId);
+    await ops.revokeAccess(sub.userId, sub.communityId);
     if (why) {
       later(after, {
         userId: sub.userId,
         type: 'system',
         title: 'Gói thành viên đã kết thúc',
         body: why,
-        link: `/courses/${sub.courseId}`,
-        courseId: sub.courseId,
+        link: `/courses/${sub.communityId}`,
+        communityId: sub.communityId,
       });
     }
   }
 
+  // ================================================================================================ hoàn tiền (2 pha)
   /**
-   * Hoàn tiền thật, MỘT transaction: chuyển giao dịch succeeded→refunded có điều kiện (bên thua nhận 409, cổng không bị gọi 2 lần),
-   * gọi cổng (trừ khi cổng đã hoàn rồi — webhook; cổng từ chối ⇒ rollback toàn bộ), duyệt yêu cầu, thu hồi quyền nếu là kỳ hiện tại.
+   * Hoàn tiền KHÔNG giữ transaction trong lúc gọi cổng:
+   *   tx1 (claim): yêu cầu pending → `refunding` (khóa độc quyền; bên thua nhận 409 và cổng không bị gọi 2 lần)
+   *   gọi cổng NGOÀI transaction với idempotencyKey = refund.id (retry/đối soát gọi lại an toàn)
+   *   tx2 (commit): Payment succeeded → refunded, yêu cầu → approved (+ mã hoàn của cổng), thu hồi quyền, ghi nợ owner nếu cần
+   * Cổng từ chối ⇒ hoàn lại trạng thái (xóa yêu cầu tự tạo / về `pending`). Lỗi giữa chừng (timeout...) ⇒ yêu cầu nằm ở `refunding`
+   * cho tới khi `reconcileStuckRefunds` chốt (gọi lại cổng cùng key — không hoàn thêm).
    */
-  async function executeRefund(ops: PaymentsOps, after: After, refund: RefundRequest, resolvedBy: string | undefined, opts: { callGateway: boolean }) {
+  async function claimRefund(ops: PaymentsOps, refund: RefundRequest, patch: { note?: string; amountCents?: number } = {}) {
     const payment = await ops.findById(refund.paymentId);
     if (!payment || payment.status !== 'succeeded') throw HttpError.conflict('Giao dịch không còn ở trạng thái có thể hoàn tiền');
-    const done = await ops.transition(payment.id, ['succeeded'], { status: 'refunded', refundedCents: refund.amountCents });
+    const moved = await ops.transitionRefund(refund.id, ['pending'], {
+      status: 'refunding',
+      refundingAt: new Date().toISOString(),
+      note: patch.note ?? refund.note,
+      amountCents: patch.amountCents ?? refund.amountCents,
+    });
+    if (!moved) throw HttpError.conflict('Yêu cầu này đã được xử lý');
+    return moved;
+  }
+
+  async function recordDebt(ops: PaymentsOps, communityId: string, before: BalanceFigures, entry: Omit<LedgerEntryInput, 'communityId' | 'amountCents'>) {
+    const after = await ops.balance(communityId, revenueRates());
+    const debt = (b: BalanceFigures) => Math.max(0, -(b.net - b.requested));
+    const delta = debt(after) - debt(before);
+    if (delta > 0) await ops.addLedgerEntry({ ...entry, communityId, amountCents: -delta });
+  }
+
+  /** Chốt hoàn tiền trong transaction của caller (đã giữ advisory `refund:<paymentId>`). `from` = trạng thái yêu cầu hiện tại. */
+  async function applyRefund(
+    ops: PaymentsOps,
+    after: After,
+    refund: RefundRequest,
+    resolvedBy: string | undefined,
+    from: RefundRequest['status'][],
+    gatewayRefundId?: string,
+    ledgerKind: 'refund_after_payout' | 'chargeback_after_payout' = 'refund_after_payout',
+  ) {
+    const payment = await ops.findById(refund.paymentId);
+    if (!payment || payment.status !== 'succeeded') throw HttpError.conflict('Giao dịch không còn ở trạng thái có thể hoàn tiền');
+    const balanceBefore = await ops.balance(payment.communityId, revenueRates());
     // Hoàn một phần (admin) thì giữ quyền truy cập; hoàn toàn bộ mới thu hồi.
     const full = refund.amountCents >= payment.amountCents - payment.refundedCents;
+    const done = await ops.transition(payment.id, ['succeeded'], { status: 'refunded', refundedCents: refund.amountCents });
     if (!done) throw HttpError.conflict('Giao dịch đã được xử lý');
-    if (opts.callGateway) {
-      const r = await gateway.refund(payment.gatewayChargeId ?? '', refund.amountCents);
-      if (!r.ok) throw new HttpError(502, 'GATEWAY_ERROR', 'Cổng thanh toán từ chối hoàn tiền, vui lòng thử lại sau');
-    }
     const at = new Date();
-    const updated = await ops.transitionRefund(refund.id, ['pending'], { status: 'approved', resolvedBy, resolvedAt: at.toISOString(), note: refund.note, amountCents: refund.amountCents });
+    const updated = await ops.transitionRefund(refund.id, from, {
+      status: 'approved',
+      resolvedBy,
+      resolvedAt: at.toISOString(),
+      note: refund.note,
+      amountCents: refund.amountCents,
+      gatewayRefundId,
+    });
     if (!updated) throw HttpError.conflict('Yêu cầu này đã được xử lý');
 
     // Thu hồi quyền nếu giao dịch này là kỳ đang hiệu lực của gói.
@@ -217,15 +355,43 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
         await endSubscription(ops, after, sub, 'canceled', at);
       }
     }
+    // Hoàn tiền SAU khi owner đã rút (số dư ròng < 0) ⇒ ghi sổ nợ.
+    await recordDebt(ops, payment.communityId, balanceBefore, { kind: ledgerKind, paymentId: payment.id, refundId: refund.id, note: refund.reason });
     later(after, {
       userId: refund.userId,
       type: 'system',
       title: 'Hoàn tiền thành công',
       body: `Đã hoàn ${(refund.amountCents / 100).toFixed(2)} USD cho giao dịch của bạn.`,
-      link: `/courses/${refund.courseId}`,
-      courseId: refund.courseId,
+      link: `/courses/${refund.communityId}`,
+      communityId: refund.communityId,
     });
     return updated;
+  }
+
+  async function abortRefund(refund: RefundRequest, createdHere: boolean) {
+    if (createdHere) await repo.deleteRefund(refund.id);
+    else await repo.transitionRefund(refund.id, ['refunding'], { status: 'pending', refundingAt: null });
+  }
+
+  /** Pha 2 + 3 của hoàn tiền: gọi cổng (ngoài transaction) rồi chốt. `refund` phải đang ở `refunding`. */
+  async function finishRefund(refund: RefundRequest, resolvedBy: string | undefined, createdHere: boolean) {
+    const payment = await repo.findById(refund.paymentId);
+    if (!payment) throw HttpError.notFound('Không tìm thấy giao dịch');
+    let result;
+    try {
+      result = await gateway.refund(payment.gatewayChargeId ?? '', refund.amountCents, refund.id);
+    } catch {
+      // Không biết cổng đã hoàn hay chưa: GIỮ `refunding` để job đối soát gọi lại với cùng key.
+      throw new HttpError(502, 'GATEWAY_ERROR', 'Chưa xác nhận được kết quả hoàn tiền, hệ thống sẽ tự đối soát. Vui lòng không gửi lại yêu cầu.');
+    }
+    if (!result.ok) {
+      await abortRefund(refund, createdHere);
+      throw new HttpError(502, 'GATEWAY_ERROR', 'Cổng thanh toán từ chối hoàn tiền, vui lòng thử lại sau');
+    }
+    return inTx(async (ops, after) => {
+      await ops.advisoryLock(`refund:${refund.paymentId}`);
+      return applyRefund(ops, after, refund, resolvedBy, ['refunding'], result.refundId);
+    });
   }
 
   /** Lần thanh toán đầu của gói chứa giao dịch này — mốc tính cửa sổ hoàn tiền. */
@@ -240,52 +406,151 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
   }
 
   function notifyPayout(p: Payout, title: string, body: string) {
-    notify({ userId: p.ownerId, type: 'system', title, body, link: `/courses/${p.courseId}/revenue`, courseId: p.courseId });
+    notify({ userId: p.ownerId, type: 'system', title, body, link: `/courses/${p.communityId}/revenue`, communityId: p.communityId });
   }
 
-  async function idempotentReplay(userId: string, courseId: string, key: string) {
+  async function idempotentReplay(userId: string, communityId: string, key: string) {
     const existingId = await repo.findIdempotent(userId, key);
     if (!existingId) return undefined;
     const existing = await repo.findById(existingId);
-    if (existing && existing.courseId !== courseId) throw HttpError.conflict('Idempotency-Key này đã được dùng cho giao dịch khác');
+    if (existing && existing.communityId !== communityId) throw HttpError.conflict('Idempotency-Key này đã được dùng cho giao dịch khác');
     return existing;
+  }
+
+  // ================================================================================================ webhook
+  async function processWebhookEvent(event: { id: string; type: string; data: Record<string, unknown> }) {
+    const str = (k: string) => (typeof event.data[k] === 'string' ? (event.data[k] as string) : undefined);
+    switch (event.type) {
+      case 'payment.succeeded': {
+        const p = str('paymentId') ? await repo.findById(str('paymentId')!) : undefined;
+        if (!p) return { received: true, ignored: true };
+        if (p.status === 'pending') await settleAndVoid(p, str('chargeId') ?? `webhook_${event.id}`, false);
+        break;
+      }
+      case 'payment.failed': {
+        const p = str('paymentId') ? await repo.findById(str('paymentId')!) : undefined;
+        if (!p) return { received: true, ignored: true };
+        await failPayment(p, str('reason') ?? 'declined');
+        break;
+      }
+      case 'payment.refunded': {
+        const p = str('paymentId') ? await repo.findById(str('paymentId')!) : undefined;
+        if (!p) return { received: true, ignored: true };
+        await inTx(async (ops, after) => {
+          await ops.advisoryLock(`refund:${p.id}`);
+          const cur = await ops.findById(p.id);
+          if (cur && cur.status === 'succeeded' && !(await ops.findOpenRefundForPayment(cur.id))) {
+            const refund = await ops.createRefund({
+              paymentId: cur.id,
+              communityId: cur.communityId,
+              userId: cur.userId,
+              amountCents: cur.amountCents - cur.refundedCents,
+              reason: 'Hoàn tiền từ cổng thanh toán',
+              status: 'pending',
+              auto: true,
+            });
+            await applyRefund(ops, after, refund, undefined, ['pending']); // cổng đã hoàn rồi, không gọi lại
+          }
+        });
+        break;
+      }
+      case 'subscription.renewed': {
+        const sub = str('subscriptionId') ? await repo.findSubscription(str('subscriptionId')!) : undefined;
+        if (!sub) return { received: true, ignored: true };
+        if (sub.status === 'active' || sub.status === 'expired') {
+          await inTx(async (ops, after) => {
+            await ops.advisoryLock(`sub:${sub.userId}:${sub.communityId}`);
+            await recordRenewal(ops, after, sub, str('chargeId') ?? `webhook_${event.id}`, new Date());
+          });
+        }
+        break;
+      }
+      case 'subscription.canceled': {
+        const sub = str('subscriptionId') ? await repo.findSubscription(str('subscriptionId')!) : undefined;
+        if (!sub) return { received: true, ignored: true };
+        if (sub.status === 'active' || sub.status === 'trialing') {
+          await inTx((ops, after) => endSubscription(ops, after, sub, 'canceled', new Date(), 'Gói thành viên của bạn đã bị hủy bởi cổng thanh toán.'));
+        }
+        break;
+      }
+      default:
+        return { received: true, ignored: true };
+    }
+    return { received: true };
+  }
+
+  async function runClaimedWebhook(event: { id: string; type: string; data: Record<string, unknown> }) {
+    try {
+      const result = await processWebhookEvent(event);
+      await repo.finishWebhookEvent(event.id, { ok: true });
+      return result;
+    } catch (err) {
+      await repo.finishWebhookEvent(event.id, { ok: false, error: err instanceof Error ? err.message : String(err) });
+      throw err;
+    }
+  }
+
+  /** Thay đổi trạng thái gói của 1 user ở 1 cộng đồng (kick/ban/leave/xóa/khóa cộng đồng). Mọi thay đổi trong 1 transaction có khóa. */
+  async function changeLiveSubscription(userId: string, communityId: string, mode: 'end_now' | 'cancel_at_period_end', why: string, at = new Date()) {
+    return inTx(async (ops, after) => {
+      await ops.advisoryLock(`sub:${userId}:${communityId}`);
+      const sub = await ops.lockLiveSubscription(userId, communityId);
+      if (!sub) return false;
+      if (mode === 'end_now') {
+        await endSubscription(ops, after, sub, 'canceled', at, why);
+      } else if (!sub.cancelAtPeriodEnd) {
+        await ops.updateSubscription(sub.id, { cancelAtPeriodEnd: true, canceledAt: at.toISOString() });
+        later(after, { userId, type: 'system', title: 'Gói thành viên sẽ không gia hạn', body: why, link: `/courses/${communityId}`, communityId });
+      }
+      return true;
+    });
   }
 
   const service = {
     // ----------------------------------------------------------------- checkout (giữ tương thích FE cũ)
-    async checkout(courseId: string, userId: string, method: PaymentMethod, idempotencyKey?: string) {
+    async checkout(communityId: string, userId: string, method: PaymentMethod, idempotencyKey?: string) {
       await assertUserCan(userId, 'purchase');
-      const course = await courseService.getById(courseId);
+      const course = await catalogService.getById(communityId);
+      if (course.locked) throw locked();
       if (course.priceUsd <= 0) throw HttpError.badRequest('Khóa học này miễn phí, không cần thanh toán');
 
       // Cùng Idempotency-Key → trả lại đúng giao dịch cũ, không tạo giao dịch thứ hai.
       if (idempotencyKey) {
-        const replay = await idempotentReplay(userId, courseId, idempotencyKey);
+        const replay = await idempotentReplay(userId, communityId, idempotencyKey);
         if (replay) return replay;
       }
 
-      const sub = await repo.findSubscriptionFor(userId, courseId);
-      const trialing = sub?.status === 'trialing';
-      if ((await enrollmentService.isEnrolled(userId, courseId)) && !trialing) throw HttpError.conflict('Bạn đã tham gia khóa học này rồi');
+      const live = await repo.lockLiveSubscription(userId, communityId);
+      const trialing = live?.status === 'trialing';
+      if (live?.status === 'active') {
+        throw HttpError.conflict('Bạn đang có gói thành viên còn hiệu lực ở cộng đồng này — hãy vào lại cộng đồng, không cần thanh toán lại');
+      }
+      if ((await enrollmentService.isEnrolled(userId, communityId)) && !trialing) throw HttpError.conflict('Bạn đã tham gia khóa học này rồi');
+      await assertMayPurchase(userId, communityId, course.visibility);
 
       try {
         // Giá luôn lấy từ server, không nhận số tiền từ client. Giao dịch + khóa idempotency cùng commit: 2 request song song
         // cùng key ⇒ một bên vi phạm unique (userId,key) ⇒ rollback ⇒ trả giao dịch của bên thắng.
+        // Khóa cố vấn (user, course): 2 checkout song song của cùng người tái dùng CÙNG 1 intent pending thay vì tạo 2 intent.
         return await repo.transaction(async (ops) => {
-          const intent = await ops.create({
-            courseId,
-            userId,
-            method,
-            amountUsd: course.priceUsd,
-            amountCents: toCents(course.priceUsd),
-            trialDays: cfg().payments.trialDays,
-          });
+          await ops.advisoryLock(`checkout:${userId}:${communityId}`);
+          const reusable = await ops.findReusablePending(userId, communityId, new Date(Date.now() - PENDING_INTENT_TTL_MS));
+          const intent =
+            reusable ??
+            (await ops.create({
+              communityId,
+              userId,
+              method,
+              amountUsd: course.priceUsd,
+              amountCents: toCents(course.priceUsd),
+              trialDays: cfg().payments.trialDays,
+            }));
           if (idempotencyKey) await ops.saveIdempotent(userId, idempotencyKey, intent.id);
           return intent;
         });
       } catch (e) {
         if (idempotencyKey && isUniqueViolation(e)) {
-          const replay = await idempotentReplay(userId, courseId, idempotencyKey);
+          const replay = await idempotentReplay(userId, communityId, idempotencyKey);
           if (replay) return replay;
         }
         throw e;
@@ -300,6 +565,8 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
 
     /**
      * Xác nhận thanh toán: gọi cổng trừ tiền rồi cấp quyền. Idempotent và chống double-confirm (xem `settle`).
+     * Ghi `gatewayChargeId` vào Payment NGAY sau khi cổng trừ tiền (trước settle): nếu settle lỗi thì tiền đã trừ vẫn truy vết được và
+     * `reconcileUnsettledCharges` hoàn tất giao dịch.
      */
     async confirm(paymentIntentId: string, userId: string): Promise<PaymentIntent> {
       const intent = await service.getOrThrow(paymentIntentId);
@@ -311,12 +578,13 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
       if (running) return running;
 
       const job = (async () => {
-        if (await enrollmentService.isBanned(userId, intent.courseId)) throw HttpError.forbidden('Bạn đã bị cấm khỏi cộng đồng này');
-        const sub = await repo.findSubscriptionFor(userId, intent.courseId);
-        if ((await enrollmentService.isEnrolled(userId, intent.courseId)) && sub?.status !== 'trialing') {
+        const course = await catalogService.getById(intent.communityId);
+        if (course.locked) throw locked();
+        if (await enrollmentService.isBanned(userId, intent.communityId)) throw HttpError.forbidden('Bạn đã bị cấm khỏi cộng đồng này');
+        const live = await repo.lockLiveSubscription(userId, intent.communityId);
+        if (live?.status === 'active' || ((await enrollmentService.isEnrolled(userId, intent.communityId)) && live?.status !== 'trialing')) {
           throw HttpError.conflict('Bạn đã tham gia khóa học này rồi');
         }
-        const course = await courseService.getById(intent.courseId);
         const charge = await gateway.createCharge({
           amountCents: intent.amountCents,
           currency: 'usd',
@@ -328,37 +596,41 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
           await failPayment(intent, charge.failureReason ?? 'declined');
           throw new HttpError(402, 'PAYMENT_FAILED', 'Thanh toán không thành công, vui lòng thử lại hoặc dùng phương thức khác');
         }
-        return settle(intent, charge.chargeId);
+        await repo.transition(intent.id, ['pending'], { gatewayChargeId: charge.chargeId }); // lưu vết trước khi settle
+        return settleAndVoid(intent, charge.chargeId);
       })().finally(() => inflightConfirm.delete(intent.id));
       inflightConfirm.set(intent.id, job);
       return job;
     },
 
-    async statusFor(courseId: string, userId: string) {
-      const enrolled = await enrollmentService.isEnrolled(userId, courseId);
-      const latest = await repo.findLatestForUser(courseId, userId);
-      const sub = await repo.findSubscriptionFor(userId, courseId);
+    async statusFor(communityId: string, userId: string) {
+      const enrolled = await enrollmentService.isEnrolled(userId, communityId);
+      const latest = await repo.findLatestForUser(communityId, userId);
+      const sub = await repo.findSubscriptionFor(userId, communityId);
       return { enrolled, latestPayment: latest, subscription: sub ? subscriptionView(sub) : null };
     },
 
     // ----------------------------------------------------------------- gói thành viên
     async mySubscriptions(userId: string) {
       const subs = await repo.listSubscriptionsByUser(userId);
-      return Promise.all(subs.map(async (s) => subscriptionView(s, await courseTitle(s.courseId))));
+      return Promise.all(subs.map(async (s) => subscriptionView(s, await courseTitle(s.communityId))));
     },
 
-    async startTrial(courseId: string, userId: string, at = new Date()) {
-      const course = await courseService.getById(courseId);
+    async startTrial(communityId: string, userId: string, at = new Date()) {
+      const course = await catalogService.getById(communityId);
+      if (course.locked) throw locked();
       if (course.priceUsd <= 0) throw HttpError.badRequest('Cộng đồng miễn phí không có dùng thử');
-      if (await enrollmentService.isEnrolled(userId, courseId)) throw HttpError.conflict('Bạn đã tham gia cộng đồng này rồi');
-      if (await repo.hasHadTrial(userId, courseId)) throw HttpError.conflict('Bạn đã dùng thử cộng đồng này rồi');
+      if (await enrollmentService.isEnrolled(userId, communityId)) throw HttpError.conflict('Bạn đã tham gia cộng đồng này rồi');
+      if (await repo.hasHadTrial(userId, communityId)) throw HttpError.conflict('Bạn đã dùng thử cộng đồng này rồi');
+      await assertMayPurchase(userId, communityId, course.visibility);
       const end = addDays(at, cfg().payments.trialDays);
       const sub = await inTx(async (ops, after) => {
-        await ops.advisoryLock(`sub:${userId}:${courseId}`);
-        if (await ops.hasHadTrial(userId, courseId)) throw HttpError.conflict('Bạn đã dùng thử cộng đồng này rồi'); // đua với request song song
+        await ops.advisoryLock(`sub:${userId}:${communityId}`);
+        if (await ops.lockLiveSubscription(userId, communityId)) throw HttpError.conflict('Bạn đang có gói thành viên còn hiệu lực ở cộng đồng này');
+        if (await ops.hasHadTrial(userId, communityId)) throw HttpError.conflict('Bạn đã dùng thử cộng đồng này rồi'); // đua với request song song
         const created = await ops.createSubscription({
           userId,
-          courseId,
+          communityId,
           status: 'trialing',
           priceCents: toCents(course.priceUsd),
           currentPeriodStart: at.toISOString(),
@@ -366,22 +638,22 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
           cancelAtPeriodEnd: false,
           trialEndsAt: end.toISOString(),
         });
-        await ops.grantAccess(userId, courseId); // 403 nếu đang bị cấm ⇒ rollback cả gói dùng thử
+        await ops.grantAccess(userId, communityId); // 403 nếu đang bị cấm ⇒ rollback cả gói dùng thử
         later(after, {
           userId,
           type: 'system',
           title: 'Bắt đầu dùng thử',
           body: `Bạn được dùng thử "${course.title}" đến ${end.toISOString().slice(0, 10)}.`,
-          link: `/courses/${courseId}/community`,
-          courseId,
+          link: `/courses/${communityId}/community`,
+          communityId,
         });
         return created;
       });
       return subscriptionView(sub, course.title);
     },
 
-    async cancelSubscription(courseId: string, userId: string, atPeriodEnd: boolean, at = new Date()) {
-      const sub = await repo.findSubscriptionFor(userId, courseId);
+    async cancelSubscription(communityId: string, userId: string, atPeriodEnd: boolean, at = new Date()) {
+      const sub = await repo.findSubscriptionFor(userId, communityId);
       if (!sub || (sub.status !== 'active' && sub.status !== 'trialing')) throw HttpError.notFound('Bạn không có gói thành viên đang hoạt động ở cộng đồng này');
       if (atPeriodEnd) {
         const updated = await repo.updateSubscription(sub.id, { cancelAtPeriodEnd: true, canceledAt: at.toISOString() });
@@ -391,8 +663,8 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
       return subscriptionView((await repo.findSubscription(sub.id))!);
     },
 
-    async resumeSubscription(courseId: string, userId: string, at = new Date()) {
-      const sub = await repo.findSubscriptionFor(userId, courseId);
+    async resumeSubscription(communityId: string, userId: string, at = new Date()) {
+      const sub = await repo.findSubscriptionFor(userId, communityId);
       if (!sub || (sub.status !== 'active' && sub.status !== 'trialing')) throw HttpError.notFound('Bạn không có gói thành viên đang hoạt động ở cộng đồng này');
       if (!sub.cancelAtPeriodEnd) throw HttpError.conflict('Gói này không ở trạng thái hủy cuối kỳ');
       if (new Date(sub.currentPeriodEnd) <= at) throw HttpError.conflict('Gói đã hết kỳ, không thể tiếp tục');
@@ -400,9 +672,47 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
       return subscriptionView(updated!);
     },
 
+    // ----------------------------------------------------------------- vòng đời thành viên ↔ gói (communities/enrollments/moderation gọi)
+    /** Gói còn hiệu lực (active|trialing, chưa hết kỳ) của user ở cộng đồng — dùng để vào lại cộng đồng mà không phải trả tiền lần nữa. */
+    async hasLiveSubscription(userId: string, communityId: string, at = new Date()): Promise<boolean> {
+      const sub = await repo.findSubscriptionFor(userId, communityId);
+      return !!sub && (sub.status === 'active' || sub.status === 'trialing') && new Date(sub.currentPeriodEnd) > at;
+    },
+
+    /** Thành viên tự rời: hủy gói CUỐI KỲ (không trừ tiền tiếp; vẫn có thể vào lại tới hết kỳ đã trả). */
+    onMemberLeft: (userId: string, communityId: string) =>
+      changeLiveSubscription(userId, communityId, 'cancel_at_period_end', 'Bạn đã rời cộng đồng nên gói sẽ không gia hạn. Bạn vẫn có thể vào lại đến hết kỳ đã thanh toán.'),
+
+    /** Bị kick / cộng đồng bị xóa: kết thúc gói NGAY (thu hồi quyền). */
+    endMembership: (userId: string, communityId: string, why: string) => changeLiveSubscription(userId, communityId, 'end_now', why),
+
+    /** Bị cấm / cộng đồng bị khóa-đình chỉ: dừng gia hạn (hủy cuối kỳ); gỡ cấm trong kỳ thì khôi phục quyền (không trừ tiền, không đổi kỳ). */
+    stopRenewals: (userId: string, communityId: string, why: string) => changeLiveSubscription(userId, communityId, 'cancel_at_period_end', why),
+
+    /** Mọi gói đang sống của 1 cộng đồng (xóa → kết thúc ngay; khóa/đình chỉ → dừng gia hạn). Lỗi từng gói không chặn các gói khác. */
+    async endAllForCommunity(communityId: string, mode: 'end_now' | 'cancel_at_period_end', why: string): Promise<number> {
+      let n = 0;
+      for (const sub of await repo.listLiveSubscriptionsForCourse(communityId)) {
+        try {
+          if (await changeLiveSubscription(sub.userId, communityId, mode, why)) n++;
+        } catch (err) {
+          console.error('endAllForCommunity: bỏ qua 1 gói do lỗi:', err);
+        }
+      }
+      return n;
+    },
+
+    /** Gỡ cấm: nếu gói còn hiệu lực thì cấp lại quyền (không trừ tiền, không reset kỳ). */
+    async restoreAccessIfSubscribed(userId: string, communityId: string): Promise<boolean> {
+      if (!(await service.hasLiveSubscription(userId, communityId))) return false;
+      await repo.grantAccess(userId, communityId);
+      return true;
+    },
+
     /**
-     * Xử lý gói đến hạn (scheduler gọi mỗi 5 phút): hết dùng thử → expired; đã hủy-cuối-kỳ → canceled; còn lại gia hạn
-     * (tạo giao dịch mới mỗi kỳ, mỗi lần chạy tiến 1 kỳ). Thẻ bị từ chối → expired + thu hồi quyền.
+     * Xử lý gói đến hạn (scheduler gọi mỗi 5 phút): cộng đồng đã xóa / người dùng đã bị cấm hoặc không còn là thành viên → kết thúc (không trừ tiền);
+     * hết dùng thử → expired; đã hủy-cuối-kỳ → canceled; còn lại gia hạn (mỗi lần chạy tiến 1 kỳ). Cộng đồng đang khóa/đình chỉ bị bỏ qua.
+     * Thẻ bị từ chối → expired + thu hồi quyền.
      *
      * Mỗi gói được xử lý trong MỘT transaction riêng, chọn bằng `FOR UPDATE SKIP LOCKED`: nhiều instance/lượt chạy song song
      * không bao giờ xử lý cùng một gói (bên chậm hơn bỏ qua gói đang bị khóa, hoặc thấy nó đã hết hạn-xử-lý sau khi bên kia commit).
@@ -421,17 +731,25 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
               return;
             }
             seen.push(sub.id);
-            if (sub.status === 'trialing') {
+            const state = await ops.courseState(sub.communityId);
+            if (state.deleted) {
+              await endSubscription(ops, after, sub, 'canceled', now, 'Cộng đồng đã bị xóa nên gói thành viên của bạn đã được hủy và sẽ không bị tính phí thêm.');
+              st.outcome = 'ended';
+            } else if (sub.status === 'trialing') {
               await endSubscription(ops, after, sub, 'expired', now, 'Thời gian dùng thử đã kết thúc. Hãy đăng ký gói để tiếp tục truy cập.');
               st.outcome = 'trialsExpired';
             } else if (sub.cancelAtPeriodEnd) {
               await endSubscription(ops, after, sub, 'canceled', now, 'Gói thành viên của bạn đã hết hạn theo yêu cầu hủy.');
               st.outcome = 'ended';
+            } else if ((await ops.isBanned(sub.userId, sub.communityId)) || !(await ops.isEnrolled(sub.userId, sub.communityId))) {
+              // Bị kick/cấm hoặc không còn là thành viên: không có quyền thì không trừ tiền.
+              await endSubscription(ops, after, sub, 'canceled', now, 'Bạn không còn là thành viên của cộng đồng nên gói đã được hủy và sẽ không bị tính phí thêm.');
+              st.outcome = 'ended';
             } else {
               const charge = await gateway.createCharge({
                 amountCents: sub.priceCents,
                 currency: 'usd',
-                description: `Gia hạn gói ${sub.courseId}`,
+                description: `Gia hạn gói ${sub.communityId}`,
                 customerId: sub.userId,
                 idempotencyKey: `${sub.id}:${sub.currentPeriodEnd}`,
               });
@@ -440,7 +758,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
                 st.outcome = 'renewed';
               } else {
                 await ops.create({
-                  courseId: sub.courseId,
+                  communityId: sub.communityId,
                   userId: sub.userId,
                   method: 'stripe',
                   amountUsd: sub.priceCents / 100,
@@ -456,8 +774,8 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
                   type: 'payment_failed',
                   title: 'Gia hạn thất bại',
                   body: 'Không thể trừ tiền gia hạn nên gói đã hết hiệu lực. Vui lòng đăng ký lại.',
-                  link: `/courses/${sub.courseId}`,
-                  courseId: sub.courseId,
+                  link: `/courses/${sub.communityId}`,
+                  communityId: sub.communityId,
                 });
                 st.outcome = 'renewalFailed';
               }
@@ -473,21 +791,113 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
       return result;
     },
 
+    // ----------------------------------------------------------------- đối soát (scheduler gọi; test gọi trực tiếp)
+    /** Yêu cầu hoàn tiền kẹt ở `refunding`: gọi lại cổng với CÙNG idempotencyKey (không hoàn thêm) rồi chốt; cổng từ chối ⇒ về `pending`. */
+    async reconcileStuckRefunds(opts: { olderThanMs?: number; limit?: number } = {}) {
+      const out = { finalized: 0, reverted: 0, failed: 0 };
+      const stuck = await repo.listStuckRefunds(new Date(Date.now() - (opts.olderThanMs ?? RECONCILE_AFTER_MS)), opts.limit ?? 50);
+      for (const refund of stuck) {
+        try {
+          const payment = await repo.findById(refund.paymentId);
+          if (!payment || payment.status !== 'succeeded') {
+            // Giao dịch đã được chốt bằng đường khác: không để yêu cầu kẹt mãi.
+            await repo.transitionRefund(refund.id, ['refunding'], { status: payment?.status === 'refunded' ? 'approved' : 'pending', refundingAt: null });
+            out.reverted++;
+            continue;
+          }
+          const r = await gateway.refund(payment.gatewayChargeId ?? '', refund.amountCents, refund.id);
+          if (!r.ok) {
+            await abortRefund(refund, false);
+            out.reverted++;
+            continue;
+          }
+          await inTx(async (ops, after) => {
+            await ops.advisoryLock(`refund:${refund.paymentId}`);
+            await applyRefund(ops, after, refund, refund.resolvedBy, ['refunding'], r.refundId);
+          });
+          out.finalized++;
+        } catch (err) {
+          console.error('reconcileStuckRefunds: bỏ qua 1 yêu cầu do lỗi:', err);
+          out.failed++;
+        }
+      }
+      return out;
+    },
+
+    /** Cổng đã trừ tiền (có gatewayChargeId) nhưng giao dịch vẫn `pending` (settle lỗi/process chết): hoàn tất settle (hoặc void nếu trùng). */
+    async reconcileUnsettledCharges(opts: { olderThanMs?: number; limit?: number } = {}) {
+      const out = { settled: 0, failed: 0 };
+      for (const p of await repo.listUnsettledCharges(new Date(Date.now() - (opts.olderThanMs ?? RECONCILE_AFTER_MS)), opts.limit ?? 50)) {
+        try {
+          await settleAndVoid(p, p.gatewayChargeId!, false);
+          out.settled++;
+        } catch (err) {
+          console.error('reconcileUnsettledCharges: bỏ qua 1 giao dịch do lỗi:', err);
+          out.failed++;
+        }
+      }
+      return out;
+    },
+
+    /** Khoản trừ trùng đã void trong DB nhưng cổng chưa hoàn xong: gọi lại (idempotent). */
+    async reconcileVoidedCharges(opts: { olderThanMs?: number; limit?: number } = {}) {
+      let refunded = 0;
+      for (const p of await repo.listUnrefundedVoids(new Date(Date.now() - (opts.olderThanMs ?? RECONCILE_AFTER_MS)), opts.limit ?? 50)) {
+        try {
+          await refundVoidedCharge(p);
+          refunded++;
+        } catch (err) {
+          console.error('reconcileVoidedCharges: bỏ qua 1 giao dịch do lỗi:', err);
+        }
+      }
+      return { refunded };
+    },
+
+    /** Webhook kẹt (processing quá hạn / failed / received): xử lý lại từ payload đã lưu. */
+    async reapStaleWebhooks(opts: { staleMs?: number; limit?: number } = {}) {
+      const out = { replayed: 0, failed: 0 };
+      const staleBefore = new Date(Date.now() - (opts.staleMs ?? WEBHOOK_PROCESSING_STALE_MS));
+      for (const w of await repo.listReclaimableWebhooks(staleBefore, WEBHOOK_MAX_ATTEMPTS, opts.limit ?? 50)) {
+        const parsed = webhookEventBody.safeParse(w.payload);
+        if (!parsed.success) continue;
+        try {
+          const claim = await repo.claimWebhookEvent({ id: w.eventId }, staleBefore);
+          if (!claim.claimed) continue; // bên khác đã nhận
+          await runClaimedWebhook(parsed.data);
+          out.replayed++;
+        } catch {
+          out.failed++;
+        }
+      }
+      return out;
+    },
+
+    /** Gom mọi job đối soát tiền (scheduler gọi mỗi 5 phút). */
+    async reconcileMoney() {
+      const [refunds, charges, voids, webhooks] = [
+        await service.reconcileStuckRefunds(),
+        await service.reconcileUnsettledCharges(),
+        await service.reconcileVoidedCharges(),
+        await service.reapStaleWebhooks(),
+      ];
+      return { refunds, charges, voids, webhooks };
+    },
+
     // ----------------------------------------------------------------- lịch sử & hóa đơn
     async myPayments(userId: string, page: number, limit: number) {
       const { items, total } = await repo.listByUser(userId, page, limit);
       const titles = new Map<string, string>();
-      for (const id of new Set(items.map((p) => p.courseId))) titles.set(id, await courseTitle(id));
-      return { data: items.map((p) => ({ ...p, courseTitle: titles.get(p.courseId) })), meta: pageMeta(total, page, limit) };
+      for (const id of new Set(items.map((p) => p.communityId))) titles.set(id, await courseTitle(id));
+      return { data: items.map((p) => ({ ...p, courseTitle: titles.get(p.communityId) })), meta: pageMeta(total, page, limit) };
     },
 
     async invoice(paymentId: string, userId: string) {
       const p = await service.getOrThrow(paymentId);
       // Chủ giao dịch, Owner cộng đồng đó hoặc Platform Admin.
-      if (p.userId !== userId && !atLeast(await getRole(userId, p.courseId), 'owner')) throw HttpError.forbidden();
+      if (p.userId !== userId && !atLeast(await getRole(userId, p.communityId), 'owner')) throw HttpError.forbidden();
       if (!p.invoiceNumber) throw HttpError.conflict('Giao dịch này chưa có hóa đơn');
       const buyer = await fileUserRepository.findById(p.userId);
-      const title = await courseTitle(p.courseId);
+      const title = await courseTitle(p.communityId);
       const period = p.periodStart && p.periodEnd ? ` (${p.periodStart.slice(0, 10)} – ${p.periodEnd.slice(0, 10)})` : '';
       return {
         invoiceNumber: p.invoiceNumber,
@@ -495,7 +905,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
         status: p.status,
         currency: p.currency,
         buyer: { id: p.userId, name: buyer ? `${buyer.firstName} ${buyer.lastName}` : 'Thành viên SofinHub', email: buyer?.email },
-        community: { id: p.courseId, title },
+        community: { id: p.communityId, title },
         items: [{ description: `Gói thành viên "${title}"${period}`, quantity: 1, unitCents: p.amountCents, amountCents: p.amountCents }],
         subtotalCents: p.amountCents,
         refundedCents: p.refundedCents,
@@ -508,7 +918,8 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
     async requestRefund(paymentId: string, userId: string, reason: string, at = new Date()) {
       const pre = await service.getOrThrow(paymentId);
       if (pre.userId !== userId) throw HttpError.forbidden();
-      return inTx(async (ops, after) => {
+      // tx1: tạo yêu cầu; trong cửa sổ hoàn tiền thì khóa luôn sang `refunding` (cổng chưa bị gọi).
+      const { refund, run } = await inTx(async (ops) => {
         await ops.advisoryLock(`refund:${paymentId}`); // 2 yêu cầu song song cho cùng giao dịch: chỉ 1 yêu cầu được tạo
         const p = await ops.findById(paymentId);
         if (!p) throw HttpError.notFound('Không tìm thấy giao dịch');
@@ -516,18 +927,19 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
         if (await ops.findOpenRefundForPayment(p.id)) throw HttpError.conflict('Giao dịch này đã có yêu cầu hoàn tiền');
 
         const inWindow = at.getTime() - (await firstPaymentAt(ops, p)).getTime() <= cfg().payments.refundWindowDays * DAY_MS;
-        const refund = await ops.createRefund({
+        const created = await ops.createRefund({
           paymentId: p.id,
-          courseId: p.courseId,
+          communityId: p.communityId,
           userId,
           amountCents: p.amountCents - p.refundedCents,
           reason,
           status: 'pending',
           auto: inWindow,
         });
-        if (inWindow) return executeRefund(ops, after, refund, undefined, { callGateway: true });
-        return refund;
+        return inWindow ? { refund: await claimRefund(ops, created), run: true } : { refund: created, run: false };
       });
+      if (!run) return refund;
+      return finishRefund(refund, undefined, true);
     },
 
     async listRefunds(adminId: string, status: RefundRequest['status'] | undefined, page: number, limit: number) {
@@ -542,7 +954,11 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
       if (!refund) throw HttpError.notFound('Không tìm thấy yêu cầu hoàn tiền');
       if (refund.status !== 'pending') throw HttpError.conflict('Yêu cầu này đã được xử lý');
       if (action === 'approve') {
-        return inTx((ops, after) => executeRefund(ops, after, { ...refund, note }, adminId, { callGateway: true }));
+        const claimed = await inTx(async (ops) => {
+          await ops.advisoryLock(`refund:${refund.paymentId}`);
+          return claimRefund(ops, refund, { note });
+        });
+        return finishRefund(claimed, adminId, false);
       }
       const rejected = await repo.transitionRefund(refund.id, ['pending'], { status: 'rejected', note, resolvedBy: adminId, resolvedAt: new Date().toISOString() });
       if (!rejected) throw HttpError.conflict('Yêu cầu này đã được xử lý');
@@ -551,7 +967,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
         type: 'system',
         title: 'Yêu cầu hoàn tiền bị từ chối',
         body: note ? `Lý do: ${note}` : 'Yêu cầu hoàn tiền của bạn không được chấp nhận.',
-        courseId: refund.courseId,
+        communityId: refund.communityId,
       });
       return rejected;
     },
@@ -564,12 +980,16 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
       if (refund.status !== 'pending') throw HttpError.conflict('Yêu cầu này đã được xử lý');
       const amount = opts.amountCents ?? refund.amountCents;
       if (amount < 1 || amount > refund.amountCents) throw HttpError.badRequest('Số tiền hoàn phải từ 1 cent tới số tiền yêu cầu');
-      return inTx((ops, after) => executeRefund(ops, after, { ...refund, note: opts.note, amountCents: amount }, adminId, { callGateway: true }));
+      const claimed = await inTx(async (ops) => {
+        await ops.advisoryLock(`refund:${refund.paymentId}`);
+        return claimRefund(ops, refund, { note: opts.note, amountCents: amount });
+      });
+      return finishRefund(claimed, adminId, false);
     },
 
     /** Admin hoàn tiền trực tiếp 1 giao dịch (không cần khách yêu cầu, bỏ qua cửa sổ hoàn tiền). */
     async adminRefundPayment(adminId: string, paymentId: string, opts: { reason: string; amountCents?: number; note?: string }) {
-      return inTx(async (ops, after) => {
+      const claimed = await inTx(async (ops) => {
         await ops.advisoryLock(`refund:${paymentId}`);
         const p = await ops.findById(paymentId);
         if (!p) throw HttpError.notFound('Không tìm thấy giao dịch');
@@ -579,10 +999,11 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
         const amount = opts.amountCents ?? remaining;
         if (amount < 1 || amount > remaining) throw HttpError.badRequest('Số tiền hoàn phải từ 1 cent tới phần còn lại của giao dịch');
         const refund = await ops.createRefund({
-          paymentId: p.id, courseId: p.courseId, userId: p.userId, amountCents: amount, reason: opts.reason, status: 'pending', auto: false, note: opts.note,
+          paymentId: p.id, communityId: p.communityId, userId: p.userId, amountCents: amount, reason: opts.reason, status: 'pending', auto: false, note: opts.note,
         });
-        return executeRefund(ops, after, refund, adminId, { callGateway: true });
+        return claimRefund(ops, refund);
       });
+      return finishRefund(claimed, adminId, true);
     },
 
     /** Chargeback thua: coi như tiền đã bị lấy lại — đánh dấu hoàn tiền + thu hồi quyền, KHÔNG gọi cổng. Giao dịch đã hoàn rồi thì bỏ qua. */
@@ -592,11 +1013,11 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
         const p = await ops.findById(paymentId);
         if (!p || p.status !== 'succeeded') return false;
         const open = await ops.findOpenRefundForPayment(p.id);
-        if (open) await ops.transitionRefund(open.id, ['pending'], { status: 'rejected', note: 'Thay bằng chargeback', resolvedBy: adminId, resolvedAt: new Date().toISOString() });
+        if (open) await ops.transitionRefund(open.id, ['pending', 'refunding'], { status: 'rejected', note: 'Thay bằng chargeback', resolvedBy: adminId, resolvedAt: new Date().toISOString() });
         const refund = await ops.createRefund({
-          paymentId: p.id, courseId: p.courseId, userId: p.userId, amountCents: p.amountCents - p.refundedCents, reason: 'Chargeback', status: 'pending', auto: false, note,
+          paymentId: p.id, communityId: p.communityId, userId: p.userId, amountCents: p.amountCents - p.refundedCents, reason: 'Chargeback', status: 'pending', auto: false, note,
         });
-        await executeRefund(ops, after, refund, adminId, { callGateway: false });
+        await applyRefund(ops, after, refund, adminId, ['pending'], undefined, 'chargeback_after_payout');
         return true;
       });
     },
@@ -606,7 +1027,8 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
       const p = await service.getOrThrow(paymentId);
       if (p.status !== 'failed') throw HttpError.conflict('Chỉ giao dịch thất bại mới thử lại được');
       if (p.kind !== 'initial') throw HttpError.conflict('Chỉ thử lại được giao dịch thanh toán lần đầu; gia hạn do hệ thống tự chạy');
-      const course = await courseService.getById(p.courseId);
+      const course = await catalogService.getById(p.communityId);
+      if (course.locked) throw locked();
       const moved = await repo.transition(p.id, ['failed'], { status: 'pending' });
       if (!moved) throw HttpError.conflict('Giao dịch đã được xử lý');
       const charge = await gateway.createCharge({
@@ -620,48 +1042,59 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
         await failPayment(moved, charge.failureReason ?? 'declined');
         return (await repo.findById(p.id))!;
       }
-      return settle(moved, charge.chargeId);
+      await repo.transition(p.id, ['pending'], { gatewayChargeId: charge.chargeId });
+      return settleAndVoid(moved, charge.chargeId, false);
     },
 
     /** Admin đổi trạng thái gói: pause / resume / cancel (tức thì hoặc cuối kỳ). Thông báo cho người dùng. */
     async adminSubscriptionAction(subId: string, action: 'pause' | 'resume' | 'cancel', opts: { atPeriodEnd?: boolean; reason?: string }) {
       const now = new Date();
-      const title = await courseTitle((await repo.findSubscription(subId))?.courseId ?? '');
-      return inTx(async (ops, after) => {
-        const sub = await ops.findSubscription(subId);
-        if (!sub) throw HttpError.notFound('Không tìm thấy gói thành viên');
-        const tell = (t: string, body: string) => later(after, { userId: sub.userId, type: 'system', title: t, body, link: `/courses/${sub.courseId}`, courseId: sub.courseId });
-        if (action === 'pause') {
-          if (!['trialing', 'active', 'past_due'].includes(sub.status)) throw HttpError.conflict('Chỉ tạm dừng được gói đang hoạt động');
-          await ops.updateSubscription(sub.id, { status: 'paused' });
-          await ops.revokeAccess(sub.userId, sub.courseId);
-          tell('Gói thành viên bị tạm dừng', `Gói của bạn ở ${title} đã bị tạm dừng${opts.reason ? ` (${opts.reason})` : ''}.`);
-        } else if (action === 'resume') {
-          if (!['paused', 'past_due'].includes(sub.status)) throw HttpError.conflict('Chỉ tiếp tục được gói đang tạm dừng hoặc quá hạn');
-          if (await ops.isBanned(sub.userId, sub.courseId)) throw HttpError.conflict('Người dùng đang bị cấm khỏi cộng đồng này');
-          const expired = new Date(sub.currentPeriodEnd) <= now;
-          await ops.updateSubscription(sub.id, {
-            status: 'active',
-            cancelAtPeriodEnd: false,
-            ...(expired ? { currentPeriodStart: now.toISOString(), currentPeriodEnd: addDays(now, cfg().payments.subscriptionPeriodDays).toISOString() } : {}),
-          });
-          await ops.grantAccess(sub.userId, sub.courseId);
-          tell('Gói thành viên đã hoạt động lại', `Gói của bạn ở ${title} đã được kích hoạt lại.`);
-        } else if (opts.atPeriodEnd) {
-          if (!['trialing', 'active'].includes(sub.status)) throw HttpError.conflict('Chỉ hủy cuối kỳ được gói đang hoạt động');
-          if (sub.cancelAtPeriodEnd) throw HttpError.conflict('Gói đã được đặt hủy cuối kỳ');
-          await ops.updateSubscription(sub.id, { cancelAtPeriodEnd: true, canceledAt: now.toISOString() });
-          tell('Gói thành viên sẽ kết thúc cuối kỳ', `Gói của bạn ở ${title} sẽ không gia hạn.`);
-        } else {
-          if (!['trialing', 'active', 'past_due', 'paused'].includes(sub.status)) throw HttpError.conflict('Gói đã kết thúc');
-          await endSubscription(ops, after, sub, 'canceled', now, `Gói thành viên của bạn ở ${title} đã bị hủy bởi quản trị viên.`);
-        }
-        return (await ops.findSubscription(sub.id))!;
-      });
+      const title = await courseTitle((await repo.findSubscription(subId))?.communityId ?? '');
+      try {
+        return await inTx(async (ops, after) => {
+          const sub = await ops.findSubscription(subId);
+          if (!sub) throw HttpError.notFound('Không tìm thấy gói thành viên');
+          const tell = (t: string, body: string) => later(after, { userId: sub.userId, type: 'system', title: t, body, link: `/courses/${sub.communityId}`, communityId: sub.communityId });
+          if (action === 'pause') {
+            if (!['trialing', 'active', 'past_due'].includes(sub.status)) throw HttpError.conflict('Chỉ tạm dừng được gói đang hoạt động');
+            await ops.updateSubscription(sub.id, { status: 'paused' });
+            await ops.revokeAccess(sub.userId, sub.communityId);
+            tell('Gói thành viên bị tạm dừng', `Gói của bạn ở ${title} đã bị tạm dừng${opts.reason ? ` (${opts.reason})` : ''}.`);
+          } else if (action === 'resume') {
+            if (!['paused', 'past_due'].includes(sub.status)) throw HttpError.conflict('Chỉ tiếp tục được gói đang tạm dừng hoặc quá hạn');
+            if (await ops.isBanned(sub.userId, sub.communityId)) throw HttpError.conflict('Người dùng đang bị cấm khỏi cộng đồng này');
+            const expired = new Date(sub.currentPeriodEnd) <= now;
+            await ops.updateSubscription(sub.id, {
+              status: 'active',
+              cancelAtPeriodEnd: false,
+              ...(expired ? { currentPeriodStart: now.toISOString(), currentPeriodEnd: addDays(now, cfg().payments.subscriptionPeriodDays).toISOString() } : {}),
+            });
+            await ops.grantAccess(sub.userId, sub.communityId);
+            tell('Gói thành viên đã hoạt động lại', `Gói của bạn ở ${title} đã được kích hoạt lại.`);
+          } else if (opts.atPeriodEnd) {
+            if (!['trialing', 'active'].includes(sub.status)) throw HttpError.conflict('Chỉ hủy cuối kỳ được gói đang hoạt động');
+            if (sub.cancelAtPeriodEnd) throw HttpError.conflict('Gói đã được đặt hủy cuối kỳ');
+            await ops.updateSubscription(sub.id, { cancelAtPeriodEnd: true, canceledAt: now.toISOString() });
+            tell('Gói thành viên sẽ kết thúc cuối kỳ', `Gói của bạn ở ${title} sẽ không gia hạn.`);
+          } else {
+            if (!['trialing', 'active', 'past_due', 'paused'].includes(sub.status)) throw HttpError.conflict('Gói đã kết thúc');
+            await endSubscription(ops, after, sub, 'canceled', now, `Gói thành viên của bạn ở ${title} đã bị hủy bởi quản trị viên.`);
+          }
+          return (await ops.findSubscription(sub.id))!;
+        });
+      } catch (e) {
+        // Tiếp tục gói khi user đã có gói active/trialing khác (unique index một gói sống / user / cộng đồng).
+        if (isUniqueViolation(e)) throw HttpError.conflict('Người dùng đã có một gói khác đang hoạt động ở cộng đồng này');
+        throw e;
+      }
     },
 
     // ----------------------------------------------------------------- webhook
-    /** Xác thực chữ ký trên RAW body rồi xử lý. Sai chữ ký/replay → 400 chung chung (không lộ chi tiết). */
+    /**
+     * Xác thực chữ ký trên RAW body rồi xử lý. Sai chữ ký/replay → 400 chung chung (không lộ chi tiết).
+     * Mỗi event có trạng thái received → processing → done|failed (kèm type + payload + attempts). `duplicate` chỉ khi đã `done` hoặc
+     * đang `processing` còn mới; failed / processing quá hạn (process chết) được nhận xử lý lại — ngay lúc cổng gửi lại hoặc bởi `reapStaleWebhooks`.
+     */
     async handleWebhook(rawBody: Buffer | undefined, signature: string | undefined) {
       if (!rawBody || !gateway.verifyWebhookSignature(rawBody, signature)) throw HttpError.badRequest('Yêu cầu không hợp lệ');
       let json: unknown;
@@ -672,88 +1105,33 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
       }
       const event = webhookEventBody.parse(json);
 
-      // Idempotent theo event id (unique trong DB): cổng hay gửi lại, kể cả song song → chỉ một bên xử lý, còn lại trả 200 không làm gì.
-      if (!(await repo.claimWebhookEvent(event.id))) return { received: true, duplicate: true };
-      try {
-        const str = (k: string) => (typeof event.data[k] === 'string' ? (event.data[k] as string) : undefined);
-        switch (event.type) {
-          case 'payment.succeeded': {
-            const p = str('paymentId') ? await repo.findById(str('paymentId')!) : undefined;
-            if (!p) return { received: true, ignored: true };
-            if (p.status === 'pending') await settle(p, str('chargeId') ?? `webhook_${event.id}`);
-            break;
-          }
-          case 'payment.failed': {
-            const p = str('paymentId') ? await repo.findById(str('paymentId')!) : undefined;
-            if (!p) return { received: true, ignored: true };
-            await failPayment(p, str('reason') ?? 'declined');
-            break;
-          }
-          case 'payment.refunded': {
-            const p = str('paymentId') ? await repo.findById(str('paymentId')!) : undefined;
-            if (!p) return { received: true, ignored: true };
-            await inTx(async (ops, after) => {
-              await ops.advisoryLock(`refund:${p.id}`);
-              const cur = await ops.findById(p.id);
-              if (cur && cur.status === 'succeeded' && !(await ops.findOpenRefundForPayment(cur.id))) {
-                const refund = await ops.createRefund({
-                  paymentId: cur.id,
-                  courseId: cur.courseId,
-                  userId: cur.userId,
-                  amountCents: cur.amountCents - cur.refundedCents,
-                  reason: 'Hoàn tiền từ cổng thanh toán',
-                  status: 'pending',
-                  auto: true,
-                });
-                await executeRefund(ops, after, refund, undefined, { callGateway: false }); // cổng đã hoàn rồi, không gọi lại
-              }
-            });
-            break;
-          }
-          case 'subscription.renewed': {
-            const sub = str('subscriptionId') ? await repo.findSubscription(str('subscriptionId')!) : undefined;
-            if (!sub) return { received: true, ignored: true };
-            if (sub.status === 'active' || sub.status === 'expired') {
-              await inTx(async (ops, after) => {
-                await recordRenewal(ops, after, sub, str('chargeId') ?? `webhook_${event.id}`, new Date());
-                await ops.grantAccess(sub.userId, sub.courseId);
-              });
-            }
-            break;
-          }
-          case 'subscription.canceled': {
-            const sub = str('subscriptionId') ? await repo.findSubscription(str('subscriptionId')!) : undefined;
-            if (!sub) return { received: true, ignored: true };
-            if (sub.status === 'active' || sub.status === 'trialing') {
-              await inTx((ops, after) => endSubscription(ops, after, sub, 'canceled', new Date(), 'Gói thành viên của bạn đã bị hủy bởi cổng thanh toán.'));
-            }
-            break;
-          }
-          default:
-            return { received: true, ignored: true };
-        }
-      } catch (err) {
-        await repo.releaseWebhookEvent(event.id); // để cổng gửi lại được
-        throw err;
-      }
-      return { received: true };
+      const claim = await repo.claimWebhookEvent({ id: event.id, type: event.type, payload: json }, new Date(Date.now() - WEBHOOK_PROCESSING_STALE_MS));
+      if (!claim.claimed) return { received: true, duplicate: true };
+      return runClaimedWebhook(event);
     },
 
     // ----------------------------------------------------------------- doanh thu & payout
-    async revenue(courseId: string, userId: string, q: { from?: string; to?: string }) {
-      await courseService.getById(courseId);
-      await requireRole(userId, courseId, 'owner'); // Admin/Mod cộng đồng mặc định KHÔNG xem được doanh thu
+    /** Số dư của 1 cộng đồng theo chính sách rút tiền hiện hành (dùng cho owner revenue + admin). */
+    async balanceFor(communityId: string, now = new Date()) {
+      const policy = payoutPolicy(now);
+      const figures = await repo.balance(communityId, revenueRates(), { eligibleBefore: policy.eligibleBefore });
+      return { ...balanceView(figures, policy.reservePct), requested: figures.requested, net: figures.net, eligible: figures.eligible, policy };
+    },
+
+    async revenue(communityId: string, userId: string, q: { from?: string; to?: string }) {
+      await catalogService.getById(communityId);
+      await requireRole(userId, communityId, 'owner'); // Admin/Mod cộng đồng mặc định KHÔNG xem được doanh thu (và cộng đồng bị khóa thì không ai ngoài Platform Admin)
 
       const from = q.from ? new Date(q.from) : undefined;
       // `to` dạng ngày (YYYY-MM-DD) tính hết ngày đó.
       const to = q.to ? new Date(new Date(q.to).getTime() + (q.to.length === 10 ? DAY_MS - 1 : 0)) : undefined;
       const rates = revenueRates();
       // Toàn bộ là aggregate SQL (SUM/COUNT/FILTER) — không load giao dịch vào bộ nhớ (trừ 20 dòng gần nhất).
-      const [sum, balance, subs, recent] = await Promise.all([
-        repo.revenueTotals(courseId, { from, to }, rates),
-        repo.balance(courseId, rates),
-        repo.subscriptionStats(courseId),
-        repo.recentPaid(courseId, 20),
+      const [sum, bal, subs, recent] = await Promise.all([
+        repo.revenueTotals(communityId, { from, to }, rates),
+        service.balanceFor(communityId),
+        repo.subscriptionStats(communityId),
+        repo.recentPaid(communityId, 20),
       ]);
       return {
         currency: 'usd',
@@ -763,9 +1141,21 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
         platformCommissionCents: sum.platformCommissionCents,
         gatewayFeeCents: sum.gatewayFeeCents,
         netCents: sum.netCents,
-        // Số dư khả dụng tính trên toàn thời gian (không phụ thuộc from/to): net - các payout đã yêu cầu/duyệt/đã chi.
-        availableBalanceCents: balance.net - balance.requested,
-        payoutRequestedCents: balance.requested,
+        // Số dư KHẢ DỤNG ĐỂ RÚT (toàn thời gian, không phụ thuộc from/to): phần đã qua cửa sổ hoàn tiền + tranh chấp, trừ reserve và payout đã yêu cầu; 0 nếu còn nợ.
+        availableBalanceCents: bal.withdrawable,
+        payoutRequestedCents: bal.requested,
+        // --- thêm mới (chỉ thêm): phân rã số dư ---
+        totalBalanceCents: bal.total, // net − payout đã yêu cầu (có thể âm = còn nợ)
+        heldCents: bal.held, // còn trong holding period
+        reserveCents: bal.reserve, // rolling reserve
+        debtCents: bal.debt, // nợ do hoàn tiền/chargeback sau khi đã rút
+        payoutPolicy: {
+          holdDays: bal.policy.holdDays,
+          refundWindowDays: bal.policy.refundWindowDays,
+          disputeWindowDays: bal.policy.disputeWindowDays,
+          reservePct: bal.policy.reservePct,
+          note: 'Giá trị tạm chờ chủ sở hữu chốt (cấu hình ở Global Settings)',
+        },
         activePaidMembers: subs.active,
         trialingMembers: subs.trialing,
         mrrCents: subs.mrrCents,
@@ -788,21 +1178,32 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
       };
     },
 
-    async requestPayout(courseId: string, userId: string, body: { amountCents: number; method: { type: 'bank'; bankName: string; accountNumber: string; accountHolder: string } }) {
-      await courseService.getById(courseId);
+    async requestPayout(communityId: string, userId: string, body: { amountCents: number; method: { type: 'bank'; bankName: string; accountNumber: string; accountHolder: string } }) {
+      await catalogService.getById(communityId);
       // Chỉ chính Owner mới đặt lệnh rút (Platform Admin không tạo lệnh rút thay Owner).
-      if (!(await isCourseOwner(userId, courseId))) throw HttpError.forbidden('Chỉ chủ cộng đồng mới được yêu cầu rút tiền');
+      if (!(await isCommunityOwner(userId, communityId))) throw HttpError.forbidden('Chỉ chủ cộng đồng mới được yêu cầu rút tiền');
+      if ((await repo.courseState(communityId)).locked) throw locked(); // cộng đồng bị khóa: owner không được rút tiền
       const minCents = toCents(cfg().payments.payoutMinUsd);
       if (body.amountCents < minCents) throw HttpError.badRequest(`Số tiền rút tối thiểu là ${(minCents / 100).toFixed(2)} USD`);
 
       // Khóa hàng Course (FOR UPDATE) rồi tính số dư + tạo payout trong cùng transaction ⇒ các lệnh rút song song của cùng
       // cộng đồng chạy tuần tự, lệnh sau thấy số dư đã trừ lệnh trước.
       const payout = await repo.transaction(async (ops) => {
-        await ops.lockCourse(courseId);
-        const { net, requested } = await ops.balance(courseId, revenueRates());
-        if (body.amountCents > net - requested) throw HttpError.badRequest('Số tiền rút vượt quá số dư khả dụng');
+        await ops.lockCourse(communityId);
+        const policy = payoutPolicy();
+        const view = balanceView(await ops.balance(communityId, revenueRates(), { eligibleBefore: policy.eligibleBefore }), policy.reservePct);
+        if (view.debt > 0) {
+          throw HttpError.coded(400, 'PAYOUT_BLOCKED', `Số dư ròng đang âm (còn nợ ${(view.debt / 100).toFixed(2)} USD do hoàn tiền sau khi đã rút) — chưa thể rút thêm`);
+        }
+        if (body.amountCents > view.withdrawable) {
+          throw HttpError.coded(
+            400,
+            'PAYOUT_EXCEEDS_AVAILABLE',
+            `Số tiền rút vượt quá số dư có thể rút (${(view.withdrawable / 100).toFixed(2)} USD). Tiền mới chỉ rút được sau ${policy.holdDays} ngày và luôn giữ lại ${policy.reservePct}% làm dự phòng.`,
+          );
+        }
         return ops.createPayout({
-          courseId,
+          communityId,
           ownerId: userId,
           amountCents: body.amountCents,
           method: {
@@ -817,10 +1218,10 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
       return payoutView(payout);
     },
 
-    async listPayouts(courseId: string, userId: string, page: number, limit: number) {
-      await courseService.getById(courseId);
-      await requireRole(userId, courseId, 'owner');
-      const { items, total } = await repo.listPayouts({ courseId }, page, limit);
+    async listPayouts(communityId: string, userId: string, page: number, limit: number) {
+      await catalogService.getById(communityId);
+      await requireRole(userId, communityId, 'owner');
+      const { items, total } = await repo.listPayouts({ communityId }, page, limit);
       return { data: items.map(payoutView), meta: pageMeta(total, page, limit) };
     },
 

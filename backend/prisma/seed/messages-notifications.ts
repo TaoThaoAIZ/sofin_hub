@@ -21,13 +21,13 @@ export async function seedMessagesNotifications(ctx: SeedContext): Promise<void>
 
   // ---- 1) Thông báo của member1: 7 cái, 4 chưa đọc / 3 đã đọc, nhiều loại + link vào các trang FE ----
   const notifications = [
-    { id: 'seed-notif-member1-1', type: 'post_liked', title: 'Linh Trần đã thích bài viết của bạn', body: 'Bài "Chia sẻ bộ ảnh chân dung ánh sáng tự nhiên"', link: '/courses/photo/community', courseId: 'photo', createdAt: ago(10 * MIN), read: false },
-    { id: 'seed-notif-member1-2', type: 'post_commented', title: 'Thành viên mới bình luận bài viết của bạn', body: 'Ảnh đẹp quá, bạn dùng ống kính nào vậy?', link: '/courses/photo/community', courseId: 'photo', createdAt: ago(45 * MIN), read: false },
-    { id: 'seed-notif-member1-3', type: 'event_reminder', title: 'Sự kiện sắp diễn ra', body: 'Buổi photowalk cuối tuần bắt đầu sau 1 giờ nữa', link: '/courses/photo/community/lich', courseId: 'photo', createdAt: ago(2 * HOUR), read: false },
-    { id: 'seed-notif-member1-4', type: 'message_received', title: 'Mai Member2 đã gửi tin nhắn cho bạn', body: 'Cuối tuần này bạn có tham gia buổi photowalk không?', link: `/messages/${SEED_CONVERSATION_ID}`, courseId: null, createdAt: ago(3 * HOUR), read: false },
-    { id: 'seed-notif-member1-5', type: 'event_created', title: 'Sự kiện mới trong cộng đồng', body: 'Workshop hậu kỳ Lightroom đã được tạo', link: '/courses/photo/community/lich', courseId: 'photo', createdAt: ago(26 * HOUR), read: true },
-    { id: 'seed-notif-member1-6', type: 'payment_succeeded', title: 'Thanh toán thành công', body: 'Bạn đã tham gia cộng đồng YouTube thành công', link: '/courses/yt', courseId: 'yt', createdAt: ago(3 * 24 * HOUR), read: true },
-    { id: 'seed-notif-member1-7', type: 'system', title: 'Chào mừng đến SofinHub', body: 'Hãy hoàn thiện hồ sơ và khám phá các khóa học.', link: '/', courseId: null, createdAt: ago(5 * 24 * HOUR), read: true },
+    { id: 'seed-notif-member1-1', type: 'post_liked', title: 'Linh Trần đã thích bài viết của bạn', body: 'Bài "Chia sẻ bộ ảnh chân dung ánh sáng tự nhiên"', link: '/courses/photo/community', communityId: 'photo', createdAt: ago(10 * MIN), read: false },
+    { id: 'seed-notif-member1-2', type: 'post_commented', title: 'Thành viên mới bình luận bài viết của bạn', body: 'Ảnh đẹp quá, bạn dùng ống kính nào vậy?', link: '/courses/photo/community', communityId: 'photo', createdAt: ago(45 * MIN), read: false },
+    { id: 'seed-notif-member1-3', type: 'event_reminder', title: 'Sự kiện sắp diễn ra', body: 'Buổi photowalk cuối tuần bắt đầu sau 1 giờ nữa', link: '/courses/photo/community/lich', communityId: 'photo', createdAt: ago(2 * HOUR), read: false },
+    { id: 'seed-notif-member1-4', type: 'message_received', title: 'Mai Member2 đã gửi tin nhắn cho bạn', body: 'Cuối tuần này bạn có tham gia buổi photowalk không?', link: `/messages/${SEED_CONVERSATION_ID}`, communityId: null, createdAt: ago(3 * HOUR), read: false },
+    { id: 'seed-notif-member1-5', type: 'event_created', title: 'Sự kiện mới trong cộng đồng', body: 'Workshop hậu kỳ Lightroom đã được tạo', link: '/courses/photo/community/lich', communityId: 'photo', createdAt: ago(26 * HOUR), read: true },
+    { id: 'seed-notif-member1-6', type: 'payment_succeeded', title: 'Thanh toán thành công', body: 'Bạn đã tham gia cộng đồng YouTube thành công', link: '/courses/yt', communityId: 'yt', createdAt: ago(3 * 24 * HOUR), read: true },
+    { id: 'seed-notif-member1-7', type: 'system', title: 'Chào mừng đến SofinHub', body: 'Hãy hoàn thiện hồ sơ và khám phá các khóa học.', link: '/', communityId: null, createdAt: ago(5 * 24 * HOUR), read: true },
   ] as const;
   await db.notification.createMany({
     skipDuplicates: true,
@@ -38,7 +38,7 @@ export async function seedMessagesNotifications(ctx: SeedContext): Promise<void>
       title: n.title,
       body: n.body,
       link: n.link,
-      courseId: n.courseId,
+      communityId: n.communityId,
       createdAt: n.createdAt,
       readAt: n.read ? new Date(n.createdAt.getTime() + 5 * MIN) : null,
     })),

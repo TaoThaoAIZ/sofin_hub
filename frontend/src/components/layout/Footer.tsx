@@ -3,32 +3,23 @@ import { Link } from 'react-router-dom';
 import { ApiError } from '../../lib/api';
 import { subscribeNewsletter } from '../../features/support/api';
 import { Button } from '../ui/Button';
-import { PathIcon } from '../ui/icons';
 
-const COLUMNS: { title: string; links: { label: string; to?: string }[] }[] = [
+const COLUMNS: { title: string; links: { label: string; to: string }[] }[] = [
   {
     title: 'Khám phá',
-    links: [{ label: 'Khóa học' }, { label: 'Cộng đồng' }, { label: 'Sự kiện' }, { label: 'Chuyên gia' }],
+    links: [
+      { label: 'Khóa học', to: '/#courses' },
+      { label: 'Cộng đồng', to: '/search' },
+      { label: 'Tạo cộng đồng', to: '/communities/new' },
+    ],
   },
   {
     title: 'Hỗ trợ',
     links: [
-      { label: 'Trung tâm trợ giúp' },
       { label: 'Liên hệ', to: '/contact' },
       { label: 'Câu hỏi thường gặp', to: '/faq' },
-      { label: 'Về chúng tôi' },
     ],
   },
-];
-
-const SOCIALS = [
-  { name: 'Facebook', d: 'M14 8h3V4h-3a4 4 0 0 0-4 4v2H8v4h2v6h4v-6h3l1-4h-4V8z' },
-  {
-    name: 'YouTube',
-    d: 'M3 8.5A3.5 3.5 0 0 1 6.5 5h11A3.5 3.5 0 0 1 21 8.5v7a3.5 3.5 0 0 1-3.5 3.5h-11A3.5 3.5 0 0 1 3 15.5zM10 9.5v5l4.5-2.5z',
-  },
-  { name: 'TikTok', d: 'M14 3v11a3.5 3.5 0 1 1-3.5-3.5M14 3c.5 2.5 2.5 4.5 5 4.5' },
-  { name: 'LinkedIn', d: 'M4 4h16v16H4zM8 10v6M8 7.5v.01M12 16v-6M12 13a2.5 2.5 0 0 1 5 0v3' },
 ];
 
 const LEGAL = [
@@ -74,36 +65,17 @@ export function Footer() {
             <p className="m-0 max-w-[300px] text-sm leading-[1.65] text-stone-600 text-pretty">
               Nền tảng học tập và xây dựng cộng đồng cho chuyên gia, creator và doanh nghiệp.
             </p>
-            <div className="flex gap-2.5">
-              {SOCIALS.map((s) => (
-                <a
-                  key={s.name}
-                  href="#"
-                  title={s.name}
-                  aria-label={s.name}
-                  className="grid size-10 place-items-center rounded-full border border-white/95 bg-white/70 shadow-[0_4px_12px_rgba(120,60,20,.08)] hover:bg-[#fff1e7]"
-                >
-                  <PathIcon d={s.d} size={18} stroke="#1c1917" strokeWidth={1.8} />
-                </a>
-              ))}
-            </div>
           </div>
 
           {COLUMNS.map((col) => (
             <div key={col.title}>
               <div className="mb-4 text-[15px] font-bold">{col.title}</div>
               <div className="flex flex-col gap-3">
-                {col.links.map((l) =>
-                  l.to ? (
-                    <Link key={l.label} to={l.to} className="text-sm text-stone-600 hover:text-brand">
-                      {l.label}
-                    </Link>
-                  ) : (
-                    <a key={l.label} href="#" className="text-sm text-stone-600 hover:text-brand">
-                      {l.label}
-                    </a>
-                  ),
-                )}
+                {col.links.map((l) => (
+                  <Link key={l.label} to={l.to} className="text-sm text-stone-600 hover:text-brand">
+                    {l.label}
+                  </Link>
+                ))}
               </div>
             </div>
           ))}

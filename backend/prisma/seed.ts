@@ -5,7 +5,7 @@ import { TEST_PASSWORD } from './seed-accounts.js';
 
 try {
   await runSeed(prisma);
-  const [users, courses, enrollments] = await Promise.all([prisma.user.count(), prisma.course.count(), prisma.enrollment.count()]);
+  const [users, courses, enrollments] = await Promise.all([prisma.user.count(), prisma.community.count(), prisma.enrollment.count()]);
   console.log(`Seed xong: ${users} user, ${courses} cộng đồng, ${enrollments} ghi danh. Mật khẩu test: ${TEST_PASSWORD}`);
 } catch (e) {
   console.error(e);

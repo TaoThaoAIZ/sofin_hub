@@ -24,7 +24,7 @@ function daysFromNow(days: number): Date {
 
 interface EventRow {
   id: string;
-  courseId: string;
+  communityId: string;
   hostId: string;
   title: string;
   description: string;
@@ -38,13 +38,13 @@ interface EventRow {
 
 const TZ = 'Asia/Ho_Chi_Minh';
 
-function demoEvents(courseId: string, instructor: string): EventRow[] {
-  const demo = (i: number) => demoUserId(courseId, i % N);
+function demoEvents(communityId: string, instructor: string): EventRow[] {
+  const demo = (i: number) => demoUserId(communityId, i % N);
   const range = (from: number, count: number) => Array.from({ length: count }, (_, k) => demo(from + k));
   return [
     {
-      id: `seed-event-${courseId}-qa`,
-      courseId,
+      id: `seed-event-${communityId}-qa`,
+      communityId,
       hostId: demo(0),
       title: `Zoom Q&A cùng ${instructor}`,
       description: 'Buổi hỏi đáp trực tiếp hàng tháng, giải đáp mọi thắc mắc về khóa học.',
@@ -55,8 +55,8 @@ function demoEvents(courseId: string, instructor: string): EventRow[] {
       rsvps: range(1, 12),
     },
     {
-      id: `seed-event-${courseId}-practice`,
-      courseId,
+      id: `seed-event-${communityId}-practice`,
+      communityId,
       hostId: demo(0),
       title: 'Buổi thực hành nhóm nhỏ',
       description: 'Cùng thực hành trực tiếp các bài tập của module hiện tại.',
@@ -69,13 +69,13 @@ function demoEvents(courseId: string, instructor: string): EventRow[] {
 }
 
 function photoEvents(u: SeedContext['userIds']): EventRow[] {
-  const courseId = 'photo';
-  const demo = (i: number) => demoUserId(courseId, i);
+  const communityId = 'photo';
+  const demo = (i: number) => demoUserId(communityId, i);
   return [
     {
       // Sắp tới, giới hạn 3 chỗ, member2 (+1 thành viên minh họa) đã RSVP -> còn đúng 1 chỗ cuối.
       id: 'seed-event-photo-limited',
-      courseId,
+      communityId,
       hostId: u.mod,
       title: 'Workshop chụp chân dung ngoài trời',
       description: 'Thực hành ánh sáng tự nhiên và tạo dáng. Chỉ 3 chỗ để được hướng dẫn kèm 1-1.',
@@ -88,7 +88,7 @@ function photoEvents(u: SeedContext['userIds']): EventRow[] {
     {
       // Sắp tới nhưng ĐẦY chỗ (2/2) — member1/member2/member3 đều chưa RSVP.
       id: 'seed-event-photo-full',
-      courseId,
+      communityId,
       hostId: u.owner,
       title: 'Photowalk phố cổ (đã đủ người)',
       description: 'Buổi đi chụp nhóm nhỏ; đã đủ số lượng đăng ký.',
@@ -101,7 +101,7 @@ function photoEvents(u: SeedContext['userIds']): EventRow[] {
     {
       // Đã qua: không RSVP được nữa; member1 và member2 từng tham gia.
       id: 'seed-event-photo-past',
-      courseId,
+      communityId,
       hostId: u.owner,
       title: 'Livestream chấm ảnh tháng trước',
       description: 'Buổi chấm ảnh và góp ý trực tiếp.',
@@ -115,7 +115,7 @@ function photoEvents(u: SeedContext['userIds']): EventRow[] {
 
 export async function seedEvents(ctx: SeedContext): Promise<void> {
   const { db } = ctx;
-  const courses = await db.course.findMany({ where: { deletedAt: null }, select: { id: true, instructorName: true } });
+  const courses = await db.community.findMany({ where: { deletedAt: null }, select: { id: true, instructorName: true } });
   const events: EventRow[] = [];
   for (const c of courses) events.push(...demoEvents(c.id, c.instructorName));
   if (courses.some((c) => c.id === 'photo')) events.push(...photoEvents(ctx.userIds));

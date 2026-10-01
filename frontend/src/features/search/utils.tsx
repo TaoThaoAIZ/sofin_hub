@@ -23,12 +23,12 @@ export const segmentsToText = (segs: Segment[]) => segs.map((s) => s.text).join(
 export function resultHref(r: SearchResult): string {
   switch (r.type) {
     case 'course':
-      return `/courses/${r.id}`;
+      return `/communities/${r.id}`;
     case 'post':
-      return `/courses/${r.courseId}/community?post=${encodeURIComponent(r.id)}`;
+      return `/communities/${r.courseId}/community?post=${encodeURIComponent(r.id)}`;
     case 'member':
       return r.id.startsWith('seed:')
-        ? `/courses/${r.courseId}/community/thanh-vien?q=${encodeURIComponent(r.handle)}`
+        ? `/communities/${r.courseId}/community/thanh-vien?q=${encodeURIComponent(r.handle)}`
         : `/users/${encodeURIComponent(r.id)}`;
   }
 }

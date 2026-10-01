@@ -31,7 +31,7 @@ export type Language = (typeof LANGUAGES)[number];
 export const COURSE_SORTS = ['trending', 'top', 'newest', 'ranked'] as const;
 export type CourseSort = (typeof COURSE_SORTS)[number];
 
-export interface Course {
+export interface Community {
   id: string;
   title: string;
   description: string;
@@ -61,8 +61,8 @@ export interface Course {
   deletedAt?: string;
 }
 
-/** Patch cho courseService.update: mọi trường của Course + `lockReason` (không nằm trong Course để không lộ ra API). */
-export type CoursePatch = Partial<Course> & { lockReason?: string | null };
+/** Patch cho catalogService.update: mọi trường của Community + `lockReason` (không nằm trong Community để không lộ ra API). */
+export type CommunityPatch = Partial<Community> & { lockReason?: string | null };
 
 export interface Category {
   id: CategoryId;

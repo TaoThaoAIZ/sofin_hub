@@ -4,7 +4,7 @@ import { Header } from '../components/layout/Header';
 import { Button } from '../components/ui/Button';
 import { MaterialIcon } from '../components/ui/MaterialIcon';
 import { ApiError } from '../lib/api';
-import { useCourseDetail } from '../features/courses/queries';
+import { useCommunityDetail } from '../features/courses/queries';
 import { useCheckout, useConfirmPayment, useStartTrial } from '../features/payments/queries';
 import type { PaymentMethod } from '../features/payments/types';
 
@@ -17,7 +17,7 @@ const METHODS: { key: PaymentMethod; label: string; desc: string }[] = [
 export function CheckoutPage() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
-  const { data: course, isPending } = useCourseDetail(id);
+  const { data: course, isPending } = useCommunityDetail(id);
   const checkout = useCheckout(id);
   const confirm = useConfirmPayment();
   const trial = useStartTrial(id);
@@ -39,7 +39,7 @@ export function CheckoutPage() {
     setError(null);
     try {
       await trial.mutateAsync();
-      navigate(`/courses/${id}/community`, { replace: true });
+      navigate(`/communities/${id}/community`, { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Không bắt đầu dùng thử được, vui lòng thử lại');
     }
@@ -52,7 +52,7 @@ export function CheckoutPage() {
       const intent = await checkout.mutateAsync(method);
       await new Promise((r) => setTimeout(r, 900)); // mô phỏng thời gian xử lý ở cổng thanh toán
       await confirm.mutateAsync(intent.id);
-      navigate(`/courses/${id}/community`, { replace: true });
+      navigate(`/communities/${id}/community`, { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Thanh toán thất bại, vui lòng thử lại');
     } finally {

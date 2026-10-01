@@ -14,7 +14,9 @@ export type ReportAction = (typeof REPORT_ACTIONS)[number];
 
 export interface Report {
   id: string;
-  courseId: string;
+  communityId: string;
+  /** @deprecated alias của communityId (tương thích JSON cũ) — repository luôn điền. */
+  courseId?: string;
   targetType: ReportTargetType;
   /** postId | commentId | userId tùy targetType. */
   targetId: string;

@@ -1,13 +1,14 @@
 import { randomBytes } from 'node:crypto';
 import { env } from '../../config/env.js';
 import { HttpError } from '../../utils/http-error.js';
-import { courseService } from '../courses/courses.service.js';
+import { catalogService } from '../catalog/catalog.service.js';
 import { isPlatformAdmin, requireRole } from '../permissions/policy.js';
 import { prismaUploadRepository, type UploadRepository } from './uploads.repository.js';
 import type { PresignInput } from './uploads.schema.js';
 import { storage as defaultStorage, type StorageProvider } from './uploads.storage.js';
-import { consumeTicket, verifyUploadTicket, type UploadTicket } from './uploads.ticket.js';
-import { EXT_TO_TYPE, IMAGE_TYPES, KEY_PATTERN, purposeRule, type UploadRecord } from './uploads.types.js';
+import { consumeTicket, isTicketUsed, verifyUploadTicket, type UploadTicket } from './uploads.ticket.js';
+import { isReferencedByLiveMessage } from './uploads.access.js';
+import { EXT_TO_TYPE, FILE_URL_PREFIX, IMAGE_TYPES, KEY_PATTERN, purposeRule, type UploadRecord } from './uploads.types.js';
 
 const MB = 1024 * 1024;
 const baseType = (ct: string) => ct.split(';')[0]!.trim().toLowerCase();
@@ -52,9 +53,9 @@ export function createUploadService(repo: UploadRepository = prismaUploadReposit
       if (input.size > rule.maxBytes) {
         throw HttpError.badRequest(`File quá lớn, tối đa ${Math.round((rule.maxBytes / MB) * 10) / 10}MB cho mục đích này`);
       }
-      if (input.purpose === 'lesson_attachment' && input.courseId) {
-        await courseService.getById(input.courseId); // 404 nếu khóa học không tồn tại
-        await requireRole(userId, input.courseId, 'mod');
+      if (input.purpose === 'lesson_attachment' && input.communityId) {
+        await catalogService.getById(input.communityId); // 404 nếu khóa học không tồn tại
+        await requireRole(userId, input.communityId, 'mod');
       }
       if ((await usedBytes(userId)) + input.size > env.UPLOAD_USER_QUOTA_MB * MB) {
         throw new HttpError(413, 'QUOTA_EXCEEDED', `Bạn đã vượt hạn mức lưu trữ ${env.UPLOAD_USER_QUOTA_MB}MB, hãy xóa bớt file cũ`);
@@ -69,8 +70,8 @@ export function createUploadService(repo: UploadRepository = prismaUploadReposit
         contentType,
         size: input.size,
         purpose: input.purpose,
-        // Chỉ lesson_attachment được kiểm tra khóa học tồn tại; mục đích khác không lưu courseId (tránh vi phạm FK).
-        courseId: input.purpose === 'lesson_attachment' ? input.courseId : undefined,
+        // Chỉ lesson_attachment được kiểm tra khóa học tồn tại; mục đích khác không lưu communityId (tránh vi phạm FK).
+        communityId: input.purpose === 'lesson_attachment' ? input.communityId : undefined,
         status: 'pending',
         createdAt: new Date().toISOString(),
       };
@@ -87,12 +88,14 @@ export function createUploadService(repo: UploadRepository = prismaUploadReposit
         throw HttpError.unauthorized(msg);
       }
       const t = check.ticket;
+      if (await isTicketUsed(t)) throw HttpError.unauthorized('Vé upload đã được sử dụng');
       if (t.k !== key || !KEY_PATTERN.test(key)) throw HttpError.forbidden('Vé upload không khớp với file');
       const rec = await repo.get(key);
       if (!rec || rec.status !== 'pending' || rec.ownerId !== t.u) throw HttpError.notFound('Không tìm thấy yêu cầu upload');
       if (!contentTypeHeader || baseType(contentTypeHeader) !== t.ct) throw HttpError.badRequest('Content-Type không khớp với vé upload');
       if (contentLength !== undefined && contentLength > t.ms) throw new HttpError(413, 'PAYLOAD_TOO_LARGE', 'File vượt quá dung lượng đã khai báo');
-      consumeTicket(t);
+      // Atomic cuối cùng: hai PUT đua nhau cùng vé chỉ một bên qua được (replay bị chặn kể cả giữa các instance).
+      if (!(await consumeTicket(t))) throw HttpError.unauthorized('Vé upload đã được sử dụng');
       return { ticket: t, record: rec };
     },
 
@@ -117,10 +120,32 @@ export function createUploadService(repo: UploadRepository = prismaUploadReposit
       const contentType = EXT_TO_TYPE[key.split('.')[1]!];
       if (!contentType) return null;
       const rec = await repo.get(key);
-      if (rec?.removed && !opts.includeRemoved) return null; // file bị admin gỡ: chỉ admin tải được
+      // Không có bản ghi Upload (hoặc chưa PUT xong) thì KHÔNG phục vụ, dù file có tồn tại trên đĩa.
+      if (!rec || rec.status !== 'uploaded') return null;
+      if (rec.removed && !opts.includeRemoved) return null; // file bị admin gỡ: chỉ admin tải được
       const f = await storage.getStream(key);
       if (!f) return null;
-      return { ...f, contentType, isImage: contentType in IMAGE_TYPES, filename: rec?.filename ?? key };
+      return { ...f, contentType, isImage: contentType in IMAGE_TYPES, filename: rec.filename, record: rec };
+    },
+
+    /** Bản ghi của file đã upload xong và chưa bị gỡ; undefined nếu không phục vụ được. */
+    async getServable(key: string): Promise<UploadRecord | undefined> {
+      if (!KEY_PATTERN.test(key)) return undefined;
+      const rec = await repo.get(key);
+      return rec?.status === 'uploaded' && !rec.removed ? rec : undefined;
+    },
+
+    /** Tin nhắn bị thu hồi: xóa file đính kèm (đĩa + bản ghi) nếu không còn tin nhắn sống nào dùng lại nó. */
+    async discardMessageFiles(urls: string[]) {
+      for (const url of urls) {
+        if (!url.startsWith(FILE_URL_PREFIX)) continue;
+        const key = url.slice(FILE_URL_PREFIX.length);
+        const rec = KEY_PATTERN.test(key) ? await repo.get(key) : undefined;
+        if (!rec || rec.purpose !== 'message_attachment') continue;
+        if (await isReferencedByLiveMessage(key)) continue;
+        await storage.delete(key);
+        await repo.delete(key);
+      }
     },
 
     async listMine(userId: string) {

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { useAuth } from '../../auth/AuthContext';
-import { useCourseDetail } from '../../courses/queries';
+import { useCommunityDetail } from '../../courses/queries';
 import { usePost, usePostsFeed } from '../queries';
 import { POST_CATEGORIES, type PostCategory } from '../types';
 import { CommunityRightSidebar } from './CommunityRightSidebar';
@@ -26,7 +26,7 @@ const WELCOME_ACTIONS = [
 export function FeedTab() {
   const { id: courseId = '' } = useParams();
   const { user } = useAuth();
-  const { data: course } = useCourseDetail(courseId);
+  const { data: course } = useCommunityDetail(courseId);
   const [params, setParams] = useSearchParams();
   const tag = params.get('tag') ?? undefined;
   const sharedPostId = params.get('post');

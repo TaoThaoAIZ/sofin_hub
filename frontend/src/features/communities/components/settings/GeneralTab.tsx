@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { Button } from '../../../../components/ui/Button';
 import { useCategories } from '../../../courses/queries';
-import type { CategoryId, CourseDetail, Language, Visibility } from '../../../courses/types';
+import type { CategoryId, CommunityDetail, Language, Visibility } from '../../../courses/types';
 import { useUpdateCommunity } from '../../queries';
 import { ROLE_RANK, type UpdateCommunityInput, type ViewerRole } from '../../types';
 import { ErrorLine, errorText, INPUT_CLASS } from '../Modal';
@@ -17,7 +17,7 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 }
 
 /** Thông tin chung (admin+). Giá & chế độ riêng tư chỉ Owner/Platform Admin sửa được (BE cũng chặn). */
-export function GeneralTab({ course, viewerRole }: { course: CourseDetail; viewerRole: ViewerRole }) {
+export function GeneralTab({ course, viewerRole }: { course: CommunityDetail; viewerRole: ViewerRole }) {
   const { data: categories = [] } = useCategories();
   const update = useUpdateCommunity(course.id);
   const isOwner = ROLE_RANK[viewerRole] >= ROLE_RANK.owner;

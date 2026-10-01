@@ -1,17 +1,19 @@
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { lessonPath } from '../../../lib/paths';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
-import { useCourseDetail } from '../../courses/queries';
+import { useCommunityDetail } from '../../courses/queries';
 import { formatCompact } from '../../../lib/format';
-import { useClaimCertificate, useClassroomSettings, useLessons, useModules, useProgress, useToggleLessonComplete } from '../queries';
+import { useClaimCertificate, useCourseList, useLessons, useModules, useProgress, useToggleLessonComplete } from '../queries';
 import type { Certificate, ClassroomModule } from '../types';
 import { CertificateDialog } from './CertificateCard';
 import { ClassroomEditor } from './ClassroomEditor';
+import { CourseManager, PUBLISH_LABEL, publishBadgeCls } from './CourseManager';
 import { errText, ErrorNote, ghostBtn, isAdminPlus, isModPlus, primaryBtn, safeUrl, toast, ToastHost } from './contentUi';
 
-function LessonList({ courseId, moduleId }: { courseId: string; moduleId: string }) {
-  const lessons = useLessons(courseId, moduleId);
-  const toggle = useToggleLessonComplete(courseId, moduleId);
+function LessonList({ communityId, courseId, moduleId }: { communityId: string; courseId: string; moduleId: string }) {
+  const lessons = useLessons(communityId, courseId, moduleId);
+  const toggle = useToggleLessonComplete(communityId);
 
   if (lessons.isPending) return <p className="px-4 py-3 text-sm text-stone-400">Đang tải bài học…</p>;
   if (lessons.isError) return <div className="p-3"><ErrorNote message={errText(lessons.error, 'Không tải được bài học')} /></div>;
@@ -30,13 +32,13 @@ function LessonList({ courseId, moduleId }: { courseId: string; moduleId: string
           >
             <MaterialIcon name="check" size={16} color={l.completed ? '#fff' : '#a8a29e'} />
           </button>
-          <Link to={`/courses/${courseId}/community/lop-hoc/${l.id}`} className="min-w-0 flex-1">
+          <Link to={lessonPath(communityId, l.id)} className="min-w-0 flex-1">
             <div className={`truncate text-[13.5px] font-medium hover:text-brand ${l.completed ? 'text-stone-400 line-through' : 'text-stone-900'}`}>{l.title}</div>
             <div className="text-[11.5px] text-stone-400">
               {l.durationMin} phút · {l.type === 'video' ? 'Video' : l.type === 'file' ? 'Tệp' : 'Bài đọc'}
             </div>
           </Link>
-          <Link to={`/courses/${courseId}/community/lop-hoc/${l.id}`} aria-label={`Học bài ${l.title}`} className="grid size-8 flex-none place-items-center rounded-full bg-brand/10 hover:bg-brand/20">
+          <Link to={lessonPath(communityId, l.id)} aria-label={`Học bài ${l.title}`} className="grid size-8 flex-none place-items-center rounded-full bg-brand/10 hover:bg-brand/20">
             <MaterialIcon name="play_arrow" size={18} filled color="#f26a1b" />
           </Link>
         </div>
@@ -53,21 +55,62 @@ function lockText(m: ClassroomModule) {
 // Ảnh bìa module lấy từ file thiết kế gốc (slot module-img-0..8), ảnh đã có sẵn tiêu đề trong hình.
 const MODULE_IMAGE_COUNT = 9;
 const PAGE_SIZE = 10;
-
 export function ClassroomTab() {
-  const { id: courseId = '' } = useParams();
-  const modules = useModules(courseId);
-  const { data: course } = useCourseDetail(courseId);
-  const progress = useProgress(courseId);
-  const settings = useClassroomSettings(courseId);
-  const claim = useClaimCertificate(courseId);
+  const { id: communityId = '' } = useParams();
+  const [sp, setSp] = useSearchParams();
+  const { data: community } = useCommunityDetail(communityId);
+  const courseList = useCourseList(communityId);
+  const courses = courseList.data ?? [];
+  const wanted = sp.get('khoa');
+  // Khóa đang xem: theo ?khoa=, mặc định là khóa mặc định/khóa đã xuất bản đầu tiên.
+  const selected =
+    courses.find((c) => c.id === wanted) ??
+    courses.find((c) => c.isDefault && c.publishStatus === 'published') ??
+    courses.find((c) => c.publishStatus === 'published') ??
+    courses[0];
+  const courseId = selected?.id ?? null;
+  const modules = useModules(communityId, courseId);
+  const progress = useProgress(communityId, courseId);
+  const claim = useClaimCertificate(communityId, courseId ?? '');
   const [openId, setOpenId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [editMode, setEditMode] = useState(false);
   const [cert, setCert] = useState<Certificate | null>(null);
 
-  const role = course?.viewerRole;
+  const role = community?.viewerRole;
   const canEdit = isModPlus(role);
+
+  const pickCourse = (id: string) => {
+    setOpenId(null);
+    setPage(1);
+    setSp(id ? { khoa: id } : {}, { replace: true });
+  };
+
+  if (courseList.isPending) return <p className="py-10 text-center text-stone-400">Đang tải lớp học…</p>;
+  if (courseList.isError) return <ErrorNote message={errText(courseList.error, 'Không tải được danh sách khóa học')} />;
+
+  // Cộng đồng chưa có khóa học nào hiển thị được với người xem.
+  if (!selected || !courseId) {
+    return (
+      <div className="flex flex-col gap-4">
+        <ToastHost />
+        <div className="glass flex flex-col items-center gap-2 rounded-3xl px-6 py-12 text-center">
+          <span className="grid size-14 place-items-center rounded-full bg-brand/10">
+            <MaterialIcon name="school" size={30} filled color="#f26a1b" />
+          </span>
+          <h1 className="m-0 text-[22px] font-extrabold">Chưa có khóa học nào</h1>
+          <p className="m-0 max-w-md text-sm text-stone-600">
+            {canEdit ? 'Hãy tạo khóa học đầu tiên để bắt đầu thêm module và bài học.' : 'Cộng đồng này chưa xuất bản khóa học nào. Hãy quay lại sau nhé.'}
+          </p>
+        </div>
+        {canEdit && (
+          <div className="glass rounded-3xl p-4">
+            <CourseManager communityId={communityId} isAdmin={isAdminPlus(role)} />
+          </div>
+        )}
+      </div>
+    );
+  }
 
   if (modules.isPending) return <p className="py-10 text-center text-stone-400">Đang tải lớp học…</p>;
   if (modules.isError) return <ErrorNote message={errText(modules.error, 'Không tải được lớp học')} />;
@@ -80,7 +123,7 @@ export function ClassroomTab() {
   const openModule = list.find((m) => m.id === openId);
   const prog = progress.data;
   const complete = !!prog && prog.totalLessons > 0 && prog.percent >= 100;
-  const canClaim = complete && !!settings.data?.certificatesEnabled;
+  const canClaim = complete && selected.certificatesEffective;
 
   return (
     <div className="flex flex-col gap-4">
@@ -100,7 +143,7 @@ export function ClassroomTab() {
           {[
             { icon: 'school', value: list.length, label: 'Module' },
             { icon: 'article', value: totalLessons, label: 'Bài học' },
-            { icon: 'group', value: formatCompact(course?.stats.members ?? 0), label: 'Học viên' },
+            { icon: 'group', value: formatCompact(community?.stats.members ?? 0), label: 'Học viên' },
           ].map((s) => (
             <div key={s.label} className="flex items-center gap-2.5 px-5">
               <MaterialIcon name={s.icon} size={22} color="#f26a1b" />
@@ -113,11 +156,49 @@ export function ClassroomTab() {
         </div>
       </div>
 
+      {/* Chọn khóa học: chỉ hiện khi cộng đồng có nhiều hơn 1 khóa */}
+      {courses.length > 1 && (
+        <nav aria-label="Chọn khóa học" className="flex gap-3 overflow-x-auto pb-1">
+          {courses.map((c) => {
+            const active = c.id === selected.id;
+            const thumb = safeUrl(c.thumbnailUrl ?? undefined);
+            return (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => pickCourse(c.id)}
+                aria-current={active ? 'true' : undefined}
+                className={`glass flex w-[250px] flex-none items-center gap-3 rounded-2xl p-2.5 text-left transition-transform hover:-translate-y-0.5 ${active ? 'ring-2 ring-brand' : ''}`}
+              >
+                <span className="grid size-[52px] flex-none place-items-center overflow-hidden rounded-xl bg-brand/10">
+                  {thumb ? <img src={thumb} alt="" className="size-full object-cover" /> : <MaterialIcon name="school" size={26} filled color="#f26a1b" />}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[13.5px] font-bold">{c.title}</span>
+                  <span className="block truncate text-[11.5px] text-stone-500">
+                    {c.modulesCount} module · {c.lessonsCount} bài
+                  </span>
+                  <span className="mt-1 flex items-center gap-1.5">
+                    <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-[rgba(120,60,20,.08)]">
+                      <span className="block h-full rounded-full bg-brand" style={{ width: `${c.progress.percent}%` }} />
+                    </span>
+                    <span className="text-[11px] font-bold">{c.progress.percent}%</span>
+                  </span>
+                  {c.publishStatus !== 'published' && (
+                    <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${publishBadgeCls(c.publishStatus)}`}>{PUBLISH_LABEL[c.publishStatus]}</span>
+                  )}
+                </span>
+              </button>
+            );
+          })}
+        </nav>
+      )}
+
       {/* Tiến độ khóa học + Tiếp tục học + Chứng nhận + Chế độ chỉnh sửa */}
       <div className="glass flex flex-wrap items-center gap-4 rounded-2xl p-4">
         <div className="min-w-[220px] flex-1">
           <div className="flex items-center justify-between text-[13px]">
-            <span className="font-semibold">Tiến độ khóa học</span>
+            <span className="truncate font-semibold">Tiến độ{courses.length > 1 ? `: ${selected.title}` : ' khóa học'}</span>
             <span className="text-stone-500">
               {prog ? `${prog.completedLessons}/${prog.totalLessons} bài · ${prog.completedModules} module` : progress.isPending ? 'Đang tải…' : '—'}
             </span>
@@ -130,7 +211,7 @@ export function ClassroomTab() {
           </div>
         </div>
         {prog?.nextLesson && (
-          <Link to={`/courses/${courseId}/community/lop-hoc/${prog.nextLesson.id}`} className={primaryBtn} title={prog.nextLesson.title}>
+          <Link to={lessonPath(communityId, prog.nextLesson.id)} className={primaryBtn} title={prog.nextLesson.title}>
             <MaterialIcon name="play_arrow" size={19} filled color="#fff" />
             Tiếp tục học
           </Link>
@@ -146,8 +227,8 @@ export function ClassroomTab() {
             {claim.isPending ? 'Đang cấp…' : 'Nhận chứng nhận'}
           </button>
         )}
-        {complete && settings.data && !settings.data.certificatesEnabled && (
-          <span className="text-[12.5px] text-stone-500">Cộng đồng chưa bật chứng nhận hoàn thành.</span>
+        {complete && !selected.certificatesEffective && (
+          <span className="text-[12.5px] text-stone-500">Khóa học này chưa bật chứng nhận hoàn thành.</span>
         )}
         {canEdit && (
           <button type="button" onClick={() => setEditMode((e) => !e)} className={editMode ? primaryBtn : ghostBtn} aria-pressed={editMode}>
@@ -157,7 +238,10 @@ export function ClassroomTab() {
         )}
       </div>
 
-      {canEdit && editMode && <ClassroomEditor courseId={courseId} modules={list} isAdmin={isAdminPlus(role)} />}
+      {canEdit && editMode && <>
+          <div className="glass rounded-3xl p-4"><CourseManager communityId={communityId} isAdmin={isAdminPlus(role)} /></div>
+          <ClassroomEditor communityId={communityId} course={selected} modules={list} isAdmin={isAdminPlus(role)} />
+        </>}
 
       {list.length === 0 && !editMode && <p className="glass rounded-2xl py-10 text-center text-stone-500">Lớp học chưa có nội dung.</p>}
 
@@ -208,7 +292,7 @@ export function ClassroomTab() {
       {openModule && (
         <div className="glass overflow-hidden rounded-2xl">
           <div className="px-4 py-3 text-[15px] font-bold">#{openModule.index}: {openModule.title}</div>
-          <LessonList courseId={courseId} moduleId={openModule.id} />
+          <LessonList communityId={communityId} courseId={courseId} moduleId={openModule.id} />
         </div>
       )}
 

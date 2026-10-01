@@ -31,6 +31,8 @@ export interface Notification {
   body: string;
   /** Đường dẫn FE để mở khi bấm vào thông báo, vd. `/courses/photo/community`. */
   link?: string;
+  communityId?: string;
+  /** @deprecated alias của communityId. */
   courseId?: string;
   readAt: string | null;
   createdAt: string;

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { Pager } from '../../../components/ui/Pager';
-import { useCourseDetail } from '../../courses/queries';
+import { useCommunityDetail } from '../../courses/queries';
 import { useReports, useResolveReport } from '../queries';
 import { REPORT_REASONS, type Report, type ReportAction, type ReportStatus } from '../types';
 import { areaCls, ConfirmDialog, errText, ErrorNote, fmtDateTime, ghostBtn, isModPlus, toast, ToastHost } from './contentUi';
@@ -68,7 +68,7 @@ function ReportCard({ report, courseId }: { report: Report; courseId: string | n
           </span>
         )}
         {report.targetType === 'post' && cid && (
-          <Link to={`/courses/${cid}/community?post=${report.targetId}`} className="font-semibold text-brand hover:underline">
+          <Link to={`/communities/${cid}/community?post=${report.targetId}`} className="font-semibold text-brand hover:underline">
             Xem bài viết
           </Link>
         )}
@@ -157,10 +157,10 @@ export function ReportQueue({ courseId }: { courseId: string | null }) {
   );
 }
 
-/** Route /courses/:id/community/kiem-duyet — chỉ mod trở lên. */
+/** Route /communities/:id/community/kiem-duyet — chỉ mod trở lên. */
 export function ModerationPage() {
   const { id: courseId = '' } = useParams();
-  const { data: course } = useCourseDetail(courseId);
+  const { data: course } = useCommunityDetail(courseId);
   if (!course) return null;
   if (!isModPlus(course.viewerRole)) {
     return (

@@ -1,5 +1,5 @@
 import { apiDelete, apiGet, apiPatch, apiPost } from '../../lib/api';
-import type { CourseDetail } from '../courses/types';
+import type { CommunityDetail } from '../courses/types';
 import type {
   AssignableRole,
   BanRow,
@@ -19,12 +19,12 @@ import type {
 
 // ---- Tạo & quản trị cộng đồng ----
 export const createCommunity = (input: CreateCommunityInput) =>
-  apiPost<{ data: CourseDetail }>('/communities', input).then((r) => r.data);
+  apiPost<{ data: CommunityDetail }>('/communities', input).then((r) => r.data);
 
 export const updateCommunity = (courseId: string, input: UpdateCommunityInput) =>
-  apiPatch<{ data: CourseDetail }>(`/courses/${courseId}`, input).then((r) => r.data);
+  apiPatch<{ data: CommunityDetail }>(`/communities/${courseId}`, input).then((r) => r.data);
 
-export const deleteCommunity = (courseId: string) => apiDelete<{ data: { deleted: boolean } }>(`/courses/${courseId}`);
+export const deleteCommunity = (courseId: string) => apiDelete<{ data: { deleted: boolean } }>(`/communities/${courseId}`);
 
 export const lockCommunity = (courseId: string, reason: string) =>
   apiPost<{ data: { id: string; locked: boolean; reason: string } }>(`/admin/courses/${courseId}/lock`, { reason });
@@ -33,26 +33,26 @@ export const unlockCommunity = (courseId: string) =>
   apiPost<{ data: { id: string; locked: boolean } }>(`/admin/courses/${courseId}/unlock`);
 
 export const transferOwnership = (courseId: string, userId: string) =>
-  apiPost<{ data: { ownerId: string } }>(`/courses/${courseId}/transfer-ownership`, { userId });
+  apiPost<{ data: { ownerId: string } }>(`/communities/${courseId}/transfer-ownership`, { userId });
 
 // ---- Yêu cầu tham gia ----
 export const createJoinRequest = (courseId: string, message: string) =>
-  apiPost<{ data: JoinRequest }>(`/courses/${courseId}/join-requests`, { message }).then((r) => r.data);
+  apiPost<{ data: JoinRequest }>(`/communities/${courseId}/join-requests`, { message }).then((r) => r.data);
 
 export const cancelJoinRequest = (requestId: string) => apiDelete<{ data: { cancelled: boolean } }>(`/join-requests/${requestId}`);
 
 export const fetchJoinRequests = (courseId: string, status?: JoinRequestStatus, signal?: AbortSignal) =>
-  apiGet<{ data: JoinRequestWithUser[] }>(`/courses/${courseId}/join-requests`, { status }, signal).then((r) => r.data);
+  apiGet<{ data: JoinRequestWithUser[] }>(`/communities/${courseId}/join-requests`, { status }, signal).then((r) => r.data);
 
 export const decideJoinRequest = (requestId: string, action: 'approve' | 'reject') =>
   apiPost<{ data: JoinRequest }>(`/join-requests/${requestId}/${action}`).then((r) => r.data);
 
 // ---- Lời mời ----
 export const fetchInvites = (courseId: string, signal?: AbortSignal) =>
-  apiGet<{ data: Invite[] }>(`/courses/${courseId}/invites`, undefined, signal).then((r) => r.data);
+  apiGet<{ data: Invite[] }>(`/communities/${courseId}/invites`, undefined, signal).then((r) => r.data);
 
 export const createInvite = (courseId: string, input: { maxUses?: number; expiresAt?: string }) =>
-  apiPost<{ data: Invite }>(`/courses/${courseId}/invites`, input).then((r) => r.data);
+  apiPost<{ data: Invite }>(`/communities/${courseId}/invites`, input).then((r) => r.data);
 
 export const revokeInvite = (code: string) => apiDelete<{ data: { revoked: boolean } }>(`/invites/${code}`);
 
@@ -64,30 +64,30 @@ export const acceptInvite = (code: string) =>
 
 // ---- Thành viên ----
 export const changeMemberRole = (courseId: string, userId: string, role: AssignableRole) =>
-  apiPatch<{ data: { userId: string; role: AssignableRole } }>(`/courses/${courseId}/members/${userId}/role`, { role });
+  apiPatch<{ data: { userId: string; role: AssignableRole } }>(`/communities/${courseId}/members/${userId}/role`, { role });
 
 export const kickMember = (courseId: string, userId: string) =>
-  apiDelete<{ data: { removed: boolean } }>(`/courses/${courseId}/members/${userId}`);
+  apiDelete<{ data: { removed: boolean } }>(`/communities/${courseId}/members/${userId}`);
 
 export const banMember = (courseId: string, userId: string, reason: string) =>
-  apiPost<{ data: { banned: boolean } }>(`/courses/${courseId}/members/${userId}/ban`, { reason });
+  apiPost<{ data: { banned: boolean } }>(`/communities/${courseId}/members/${userId}/ban`, { reason });
 
 export const unbanMember = (courseId: string, userId: string) =>
-  apiDelete<{ data: { banned: boolean } }>(`/courses/${courseId}/members/${userId}/ban`);
+  apiDelete<{ data: { banned: boolean } }>(`/communities/${courseId}/members/${userId}/ban`);
 
 export const fetchBans = (courseId: string, signal?: AbortSignal) =>
-  apiGet<{ data: BanRow[] }>(`/courses/${courseId}/bans`, undefined, signal).then((r) => r.data);
+  apiGet<{ data: BanRow[] }>(`/communities/${courseId}/bans`, undefined, signal).then((r) => r.data);
 
 export const reportMember = (courseId: string, userId: string, body: { reason: ReportReason; detail?: string }) =>
-  apiPost<unknown>(`/courses/${courseId}/members/${userId}/report`, body);
+  apiPost<unknown>(`/communities/${courseId}/members/${userId}/report`, body);
 
 // ---- Đánh giá ----
 export const fetchReviews = (courseId: string, page: number, limit: number, signal?: AbortSignal) =>
-  apiGet<ReviewList>(`/courses/${courseId}/reviews`, { page, limit }, signal);
+  apiGet<ReviewList>(`/communities/${courseId}/reviews`, { page, limit }, signal);
 
 export const saveReview = (courseId: string, body: { rating: number; text: string }) =>
-  apiPost<{ data: Review }>(`/courses/${courseId}/reviews`, body).then((r) => r.data);
+  apiPost<{ data: Review }>(`/communities/${courseId}/reviews`, body).then((r) => r.data);
 
-export const deleteMyReview = (courseId: string) => apiDelete<{ data: { deleted: boolean } }>(`/courses/${courseId}/reviews/mine`);
+export const deleteMyReview = (courseId: string) => apiDelete<{ data: { deleted: boolean } }>(`/communities/${courseId}/reviews/mine`);
 
 export const deleteReview = (reviewId: string) => apiDelete<{ data: { deleted: boolean } }>(`/reviews/${reviewId}`);

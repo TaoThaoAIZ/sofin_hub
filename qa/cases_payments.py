@@ -341,8 +341,8 @@ def load(add):
       ["GET /api/admin/refunds?status=abc", "GET /api/admin/refunds?limit=101", "GET /api/admin/refunds?page=0", "GET /api/admin/refunds?page=1&limit=1"], "-",
       "3 lần đầu 400 VALIDATION_ERROR; lần 4 200 với meta {page:1,limit:1,total>=2,totalPages>=2}.")
     A("Hoàn tiền", "Hoàn tiền một phần (partial refund)",
-      "Chức năng", "Trung bình", "Chưa làm: chỉ hoàn 100% (docs/api/payments.md 'Giới hạn hiện tại').", ["Yêu cầu hoàn một phần số tiền"], "-",
-      "Khi làm xong: cho nhập số tiền hoàn <= số đã trả; hiện tại luôn hoàn đủ 1900.", pw="Không", st=PLAN)
+      "Chức năng", "Trung bình", "HIỆN TẠI: Platform Admin duyệt được hoàn MỘT PHẦN qua console admin (approveRefund có amountCents, admin-payments.service.ts; xem ADM2); phía người mua (POST /payments/:id/refund-request) vẫn chỉ xin hoàn đủ, chưa có ô nhập số tiền (docs/api/payments.md 'Giới hạn hiện tại').", ["Người mua yêu cầu hoàn một phần số tiền"], "-",
+      "Khi làm xong: người mua nhập được số tiền hoàn <= số đã trả; hiện tại người mua luôn xin hoàn đủ 1900 (hoàn một phần chỉ do Admin quyết ở console).", pw="Không", st=PLAN)
     A("Hoàn tiền", "Trang Quản trị -> tab Hoàn tiền: lọc, duyệt, từ chối trên UI",
       "Giao diện", "Trung bình", SEED_NOTE + " Đăng nhập admin. " + MUTATE,
       ["Mở /admin, tab Hoàn tiền", "Lọc 'Chờ duyệt'", "Bấm 'Duyệt hoàn tiền' trên yêu cầu của demo #2 (nhập ghi chú tùy chọn)", "Bấm lần nữa/tải lại và thử xử lý lại"], "-",
@@ -491,7 +491,7 @@ def load(add):
       "netCents = 45415 (= $454.15). Kiểm tra đẳng thức net = gross - refunds - commission - fee trên chính response.")
     A("Doanh thu Owner", "Số dư khả dụng và số tiền đã yêu cầu rút",
       "Chức năng", "Cao", SEED_NOTE + " " + REV, ["Đăng nhập owner, GET /api/courses/paid-demo/revenue"], "-",
-      "payoutRequestedCents = 10000 (payout paid 5000 + requested 5000; rejected không tính); availableBalanceCents = 45415 - 10000 = 35415 (= $354.15).")
+      "payoutRequestedCents = 10000 (payout paid 5000 + requested 5000; rejected không tính); totalBalanceCents = 45415 - 10000 = 35415 (= $354.15, net trừ đã yêu cầu). availableBalanceCents (SỐ CÓ THỂ RÚT) = max(0, min(eligible - reserve - 10000, 35415)) <= 35415, trong đó eligible = net giao dịch đã qua holding 14 ngày (7 hoàn tiền + 7 tranh chấp), reserve = floor(10% x eligible); heldCents = net giao dịch < 14 ngày. Đối chiếu bằng SQL; thêm payoutPolicy {holdDays:14,...} (backend/docs/api/payments.md 'Số dư owner').")
     A("Doanh thu Owner", "MRR, thành viên trả phí và dùng thử",
       "Chức năng", "Cao", SEED_NOTE + " " + REV + " Gói active: member1, member2, demo#2, demo#3..#10 (11 gói); gói cancelAtPeriodEnd: member2 và demo#10; member3 trialing; demo#1 canceled.", ["GET /api/courses/paid-demo/revenue bằng owner"], "-",
       "activePaidMembers = 11; trialingMembers = 1; mrrCents = 17100 (9 gói active không hủy-cuối-kỳ x 1900 = $171.00).")
@@ -500,7 +500,7 @@ def load(add):
       "recentTransactions.length = 20 (tổng 29 giao dịch); sắp xếp mới nhất trước; mỗi dòng có id, userId, kind, status, amountCents, refundedCents, invoiceNumber, confirmedAt.")
     A("Doanh thu Owner", "Lọc from/to: khoảng tương lai cho số 0 nhưng số dư vẫn toàn thời gian",
       "Chức năng", "Trung bình", SEED_NOTE + " " + REV, ["GET /api/courses/paid-demo/revenue?from=2099-01-01&to=2099-12-31 bằng owner"], "from/to tương lai",
-      "grossCents=0, refundsCents=0, commission=0, fee=0, netCents=0; availableBalanceCents vẫn = 35415 và mrrCents vẫn = 17100 (không phụ thuộc bộ lọc); range.from/to phản ánh giá trị truyền vào.")
+      "grossCents=0, refundsCents=0, commission=0, fee=0, netCents=0; availableBalanceCents/heldCents/reserveCents/totalBalanceCents (=35415) và mrrCents (=17100) vẫn giống lần GET không lọc (toàn thời gian, không phụ thuộc bộ lọc); range.from/to phản ánh giá trị truyền vào.")
     A("Doanh thu Owner", "Lọc from/to theo ngày: to tính hết ngày (YYYY-MM-DD)",
       "Chức năng", "Trung bình", SEED_NOTE + " Giao dịch seed-pay-member1-b confirmedAt = 10 ngày trước.", ["Tính ngày D = ngày của 10 ngày trước (UTC)", "GET /api/courses/paid-demo/revenue?from=D&to=D bằng owner"], "from=to=D",
       "grossCents chỉ gồm các giao dịch trong ngày D (ít nhất seed-pay-member1-b: >= 1900); to=D bao gồm cả các giao dịch cuối ngày (23:59:59.999) nhờ cộng hết ngày.", pw="Một phần")
@@ -515,10 +515,10 @@ def load(add):
       "grossCents 55100 -> 57000; commission +190; fee +85; net +1625 (1900-190-85); mrrCents +1900; activePaidMembers +1; recentTransactions[0] là giao dịch mới.")
     A("Doanh thu Owner", "Dashboard /courses/paid-demo/revenue-dashboard hiển thị thẻ số liệu khớp API",
       "Giao diện", "Cao", SEED_NOTE + " " + REV + " Đăng nhập owner.", ["Mở /courses/paid-demo/revenue-dashboard (hoặc menu avatar trong cộng đồng -> 'Doanh thu & rút tiền')"], "-",
-      "Thẻ: Tổng thu (gross) $551.00, hoàn tiền $19.00, Hoa hồng nền tảng* $53.20 (tạm tính 10%), Phí cổng thanh toán* $24.65 (2.9% + $0.30), Net $454.15, Số dư khả dụng $354.15 (toàn thời gian), MRR $171.00 (11 thành viên trả phí · 1 dùng thử); ghi chú giá trị tạm; bảng 20 giao dịch.")
+      "Thẻ: Tổng thu (gross) $551.00, hoàn tiền $19.00, Hoa hồng nền tảng* $53.20 (tạm tính 10%), Phí cổng thanh toán* $24.65 (2.9% + $0.30), Net $454.15, 'Có thể rút ngay' (= availableBalanceCents, toàn thời gian, <= $354.15), 'Đang giữ (chờ hoàn tiền/tranh chấp)' kèm 'rút được sau 14 ngày', 'Quỹ dự phòng' kèm 'giữ lại 10%', MRR $171.00 (11 thành viên trả phí · 1 dùng thử); ghi chú giá trị tạm; bảng 20 giao dịch.")
     A("Doanh thu Owner", "Bộ lọc Từ ngày/Đến ngày trên dashboard",
       "Giao diện", "Thấp", SEED_NOTE + " Đăng nhập owner.", ["Mở dashboard, chọn Từ ngày = ngày mai, Đến ngày = 1 năm sau"], "-",
-      "Các thẻ gross/net về $0.00, thẻ 'Số dư khả dụng' và 'MRR' không đổi; bảng giao dịch vẫn hiển thị 20 dòng gần nhất (không phụ thuộc bộ lọc) - hành vi thực tế của code, kiểm tra kỹ.", pw="Một phần")
+      "Các thẻ gross/net về $0.00, thẻ 'Có thể rút ngay', 'Đang giữ', 'Quỹ dự phòng' và 'MRR' không đổi; bảng giao dịch vẫn hiển thị 20 dòng gần nhất (không phụ thuộc bộ lọc) - hành vi thực tế của code, kiểm tra kỹ.", pw="Một phần")
     A("Doanh thu Owner", "Cộng đồng chưa có doanh thu: tất cả số liệu 0, bảng rỗng",
       "Giao diện", "Trung bình", SEED_NOTE + " Owner mở dashboard của photo (miễn phí, không giao dịch).", ["GET /api/courses/photo/revenue bằng owner", "Mở /courses/photo/revenue-dashboard"], "-",
       "API 200: mọi *Cents=0, activePaidMembers=0, recentTransactions=[]. UI: 'Chưa có giao dịch.' và 'Chưa có lệnh rút tiền nào.'.")
@@ -535,20 +535,20 @@ def load(add):
     # ============================================================ 11. RÚT TIỀN
     BANK = "{\"type\":\"bank\",\"bankName\":\"Vietcombank\",\"accountNumber\":\"0123456789\",\"accountHolder\":\"OLIVIA OWNER\"}"
     A("Rút tiền", "Owner yêu cầu rút tiền hợp lệ: số TK bị che ****6789",
-      "Chức năng", "Cao", SEED_NOTE + " " + REV + " Số dư khả dụng 35415. " + MUTATE,
+      "Chức năng", "Cao", SEED_NOTE + " " + REV + " Số có thể rút W >= 10000 (xem GET revenue; total = 35415). " + MUTATE,
       ["Đăng nhập owner", "POST /api/courses/paid-demo/payouts với body {amountCents:10000, method:<BANK>}"], "amountCents=10000 ($100); method=" + BANK,
-      "201 Payout status=requested, amountCents=10000, method {type:'bank',bankName:'Vietcombank',accountHolder:'OLIVIA OWNER',accountMasked:'****6789'} (không lộ số đầy đủ); revenue: availableBalanceCents 35415 -> 25415, payoutRequestedCents 10000 -> 20000.")
+      "201 Payout status=requested, amountCents=10000, method {type:'bank',bankName:'Vietcombank',accountHolder:'OLIVIA OWNER',accountMasked:'****6789'} (không lộ số đầy đủ); revenue: availableBalanceCents W -> W - 10000 (không lệch so với công thức có thể rút), totalBalanceCents 35415 -> 25415, payoutRequestedCents 10000 -> 20000.")
     A("Rút tiền", "Biên tối thiểu: đúng $50 (5000 cent) được chấp nhận",
       "Chức năng", "Cao", SEED_NOTE + " " + MUTATE, ["Owner POST payouts amountCents=5000"], "amountCents=5000; PAYOUT_MIN_USD=50 (tạm)", "201 status=requested (điều kiện chặn là amountCents < 5000 nên 5000 hợp lệ).")
     A("Rút tiền", "Dưới ngưỡng tối thiểu: 4999 cent bị 400",
       "Chức năng", "Cao", SEED_NOTE, ["Owner POST payouts amountCents=4999"], "amountCents=4999",
       "400 BAD_REQUEST, message 'Số tiền rút tối thiểu là 50.00 USD'; không tạo payout, số dư không đổi.")
     A("Rút tiền", "Vượt số dư khả dụng bị 400",
-      "Chức năng", "Cao", SEED_NOTE + " " + REV + " Số dư khả dụng 35415.", ["Owner POST payouts amountCents=35416"], "35416 > 35415",
-      "400 BAD_REQUEST, message 'Số tiền rút vượt quá số dư khả dụng'. Cùng request với amountCents=35415 (rút hết) thì 201 và số dư về 0.")
+      "Chức năng", "Cao", SEED_NOTE + " " + REV + " Số có thể rút W lấy từ GET revenue (availableBalanceCents, <= total 35415).", ["GET revenue ghi W", "Owner POST payouts amountCents=W+1"], "W+1",
+      "400, error.code=PAYOUT_EXCEEDS_AVAILABLE, message 'Số tiền rút vượt quá số dư có thể rút (<W/100> USD). Tiền mới chỉ rút được sau 14 ngày và luôn giữ lại 10% làm dự phòng.' (payments.service.ts requestPayout). Cùng request với amountCents=W (rút hết) thì 201 và availableBalanceCents về 0. Lưu ý: total 35415 KHÔNG phải số rút được.")
     A("Rút tiền", "Rút hết số dư khả dụng đúng bằng số dư",
-      "Chức năng", "Trung bình", SEED_NOTE + " " + REV + " " + MUTATE, ["Owner POST payouts amountCents=35415", "GET revenue"], "35415",
-      "201; availableBalanceCents = 0. Lệnh rút tiếp theo (5000) bị 400 'Số tiền rút vượt quá số dư khả dụng'.")
+      "Chức năng", "Trung bình", SEED_NOTE + " " + REV + " " + MUTATE, ["GET revenue ghi W (availableBalanceCents)", "Owner POST payouts amountCents=W", "GET revenue"], "W (>= 5000)",
+      "201; availableBalanceCents = 0 (totalBalanceCents giảm W). Lệnh rút tiếp theo (5000) bị 400 PAYOUT_EXCEEDS_AVAILABLE 'Số tiền rút vượt quá số dư có thể rút (0.00 USD)...'.")
     for amt, why in ((0, "bằng 0"), (-5000, "số âm"), (5000.5, "không phải số nguyên"), ("5000", "kiểu chuỗi")):
         A("Rút tiền", f"Validate amountCents: {why}",
           "Chức năng", "Trung bình", SEED_NOTE, [f"Owner POST payouts với amountCents={amt!r}"], f"amountCents={amt!r}",
@@ -580,13 +580,13 @@ def load(add):
     A("Rút tiền", "Form rút tiền trên dashboard: rút thành công hiện trong 'Lệnh rút tiền'",
       "Giao diện", "Cao", SEED_NOTE + " Đăng nhập owner. " + MUTATE,
       ["Mở /courses/paid-demo/revenue-dashboard", "Nhập số tiền 60 (USD), ngân hàng Vietcombank, số TK 0123456789, chủ TK OLIVIA OWNER", "Gửi"], "60 USD",
-      "Lệnh mới xuất hiện với trạng thái 'Đã yêu cầu' và số TK ****6789; Số dư khả dụng giảm $60.00.")
+      "Lệnh mới xuất hiện với trạng thái 'Đã yêu cầu' và số TK ****6789; thẻ 'Có thể rút ngay' giảm $60.00 (cần số có thể rút >= $60).")
     A("Rút tiền", "Form rút tiền hiển thị lỗi BE khi dưới $50 hoặc vượt số dư",
       "Giao diện", "Trung bình", SEED_NOTE + " Đăng nhập owner.", ["Nhập số tiền 10 rồi gửi", "Nhập số tiền 99999 rồi gửi"], "10 USD; 99999 USD",
-      "Khung lỗi (role=alert) hiển thị 'Số tiền rút tối thiểu là 50.00 USD' và 'Số tiền rút vượt quá số dư khả dụng'; không có lệnh mới.")
+      "Khung lỗi (role=alert) hiển thị 'Số tiền rút tối thiểu là 50.00 USD' và 'Số tiền rút vượt quá số dư có thể rút (<W> USD). Tiền mới chỉ rút được sau 14 ngày và luôn giữ lại 10% làm dự phòng.'; không có lệnh mới.")
     A("Rút tiền", "Hai lệnh rút song song không vượt tổng số dư",
-      "Chức năng", "Cao", SEED_NOTE + " " + REV + " Số dư 35415. " + MUTATE, ["Owner gửi đồng thời 2 POST payouts amountCents=20000"], "2 x 20000 > 35415",
-      "Đúng một request 201, request còn lại 400 'Số tiền rút vượt quá số dư khả dụng' (khóa Course FOR UPDATE).", pw="Một phần")
+      "Chức năng", "Cao", SEED_NOTE + " " + REV + " Số có thể rút W (GET revenue) >= 10000. " + MUTATE, ["GET revenue ghi W", "Owner gửi đồng thời 2 POST payouts amountCents = floor(0.6 x W) (mỗi lệnh hợp lệ riêng lẻ, tổng > W)"], "2 x floor(0.6W) > W",
+      "Đúng một request 201, request còn lại 400 PAYOUT_EXCEEDS_AVAILABLE (khóa Course FOR UPDATE); payoutRequestedCents chỉ tăng một lần.", pw="Một phần")
     A("Rút tiền", "Admin: danh sách /admin/payouts?status=requested có payout seed",
       "Chức năng", "Cao", SEED_NOTE + " Đăng nhập admin.", ["GET /api/admin/payouts?status=requested"], "-",
       "200 có seed-payout-pending (courseId=paid-demo, ownerId=id owner, amountCents=5000, accountMasked '****6789'); không có seed-payout-paid.")
@@ -597,8 +597,8 @@ def load(add):
       "Chức năng", "Cao", SEED_NOTE + " seed-payout-pending đã approved. " + MUTATE, ["PATCH /api/admin/payouts/seed-payout-pending body {\"action\":\"mark_paid\",\"note\":\"CK xong\"}"], "note='CK xong'",
       "200 status=paid, note='CK xong'; thông báo 'Đã chuyển tiền' body '50.00 USD đã được chuyển vào tài khoản ****6789.'.")
     A("Rút tiền", "Admin từ chối payout: số dư được hoàn lại",
-      "Chức năng", "Cao", SEED_NOTE + " " + REV + " " + MUTATE, ["Owner GET revenue (ghi availableBalance 35415)", "Admin PATCH seed-payout-pending {\"action\":\"reject\",\"note\":\"Sai thông tin\"}", "Owner GET revenue"], "note='Sai thông tin'",
-      "Payout status=rejected; payoutRequestedCents 10000 -> 5000; availableBalanceCents 35415 -> 40415; thông báo 'Yêu cầu rút tiền bị từ chối' body 'Lý do: Sai thông tin'.")
+      "Chức năng", "Cao", SEED_NOTE + " " + REV + " " + MUTATE, ["Owner GET revenue (ghi total 35415 và W = availableBalanceCents)", "Admin PATCH seed-payout-pending {\"action\":\"reject\",\"note\":\"Sai thông tin\"}", "Owner GET revenue"], "note='Sai thông tin'",
+      "Payout status=rejected; payoutRequestedCents 10000 -> 5000; totalBalanceCents 35415 -> 40415, availableBalanceCents tăng thêm tối đa 5000 (bị chặn bởi tổng nếu eligible nhỏ); thông báo 'Yêu cầu rút tiền bị từ chối' body 'Lý do: Sai thông tin'.")
     A("Rút tiền", "Chuyển trạng thái payout không hợp lệ trả 409",
       "Chức năng", "Trung bình", SEED_NOTE + " Đăng nhập admin.",
       ["PATCH seed-payout-paid {\"action\":\"approve\"}", "PATCH seed-payout-paid {\"action\":\"mark_paid\"}", "PATCH seed-payout-paid {\"action\":\"reject\"}"], "-",

@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { prisma } from '../../db/prisma.js';
 import { Prisma } from '../../generated/prisma/client.js';
 import { HttpError } from '../../utils/http-error.js';
-import { CATEGORY_IDS } from '../courses/course.types.js';
+import { CATEGORY_IDS } from '../catalog/community.types.js';
 import { DEFAULT_WEIGHTS, WEIGHT_KEYS, getPublishedWeights, loadSignals, savePublishedWeights, scoreOf, type CommunitySignals, type RankingWeights } from '../discovery/ranking.js';
 import { FEATURE_SECTIONS, SECTION_LABELS, activeWindow, publiclyListable, type FeatureSection } from '../discovery/featured.js';
 import { notify } from '../notifications/notifications.service.js';
@@ -12,8 +12,8 @@ import { enumList, iso, noteField, pageMeta, pageQuery } from './admin.common.js
 
 /** Admin đợt 2 — Discovery. Contract: docs/api/admin-batch2.md (mục C). */
 
-const tell = (userId: string | null | undefined, title: string, body: string, courseId?: string) => {
-  if (userId) notify({ userId, type: 'system', title, body, ...(courseId ? { courseId } : {}) });
+const tell = (userId: string | null | undefined, title: string, body: string, communityId?: string) => {
+  if (userId) notify({ userId, type: 'system', title, body, ...(communityId ? { communityId } : {}) });
 };
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
 
@@ -30,7 +30,7 @@ export const setStatusBody = z.object({ status: z.enum(['listed', 'hidden', 'unl
 const dateField = z.string().datetime({ offset: true });
 export const featureBody = z.object({ section: z.enum(FEATURE_SECTIONS).default('featured'), startsAt: dateField.nullable().optional(), endsAt: dateField.nullable().optional() });
 export const unfeatureBody = z.object({ section: z.enum(FEATURE_SECTIONS).optional() });
-export const addFeaturedBody = z.object({ section: z.enum(FEATURE_SECTIONS), courseId: z.string().min(1).max(100), startsAt: dateField.nullable().optional(), endsAt: dateField.nullable().optional() });
+export const addFeaturedBody = z.object({ section: z.enum(FEATURE_SECTIONS), communityId: z.string().min(1).max(100), startsAt: dateField.nullable().optional(), endsAt: dateField.nullable().optional() });
 export const patchFeaturedBody = z.object({ startsAt: dateField.nullable().optional(), endsAt: dateField.nullable().optional() });
 export const reorderFeaturedBody = z.object({ entryIds: z.array(z.string().min(1)).max(100) });
 export const createCategoryBody = z.object({ key: z.enum(CATEGORY_IDS), name: z.string().trim().min(1).max(60), description: z.string().trim().max(300).optional() });
@@ -55,8 +55,8 @@ const courseSelect = {
   id: true, title: true, description: true, thumbnail: true, category: true, rating: true, ratingCount: true, visibility: true, moderationStatus: true,
   locked: true, deletedAt: true, discoveryStatus: true, searchVisibility: true, discoveryReason: true, createdAt: true,
   owner: { select: personSelect },
-} satisfies Prisma.CourseSelect;
-type CourseRow = Prisma.CourseGetPayload<{ select: typeof courseSelect }>;
+} satisfies Prisma.CommunitySelect;
+type CourseRow = Prisma.CommunityGetPayload<{ select: typeof courseSelect }>;
 
 /** Trạng thái hiển thị Discovery (xem docs): không `active`/đã khóa/xóa => unlisted; private => hidden; còn lại theo cột + featured. */
 export function effectiveDiscovery(c: Pick<CourseRow, 'deletedAt' | 'moderationStatus' | 'locked' | 'visibility' | 'discoveryStatus'>, featured: boolean): Eff {
@@ -70,16 +70,16 @@ async function categoryNames(): Promise<Map<string, string>> {
   return new Map(rows.map((r) => [r.key, r.name]));
 }
 
-/** Mục ghim đang hiệu lực -> courseId -> các section. */
+/** Mục ghim đang hiệu lực -> communityId -> các section. */
 async function activeSections(): Promise<Map<string, FeatureSection[]>> {
-  const rows = await prisma.discoveryFeature.findMany({ where: activeWindow(), select: { courseId: true, section: true } });
+  const rows = await prisma.discoveryFeature.findMany({ where: activeWindow(), select: { communityId: true, section: true } });
   const m = new Map<string, FeatureSection[]>();
-  for (const r of rows) m.set(r.courseId, [...(m.get(r.courseId) ?? []), r.section as FeatureSection]);
+  for (const r of rows) m.set(r.communityId, [...(m.get(r.communityId) ?? []), r.section as FeatureSection]);
   return m;
 }
 
-async function loadCourses(where: Prisma.CourseWhereInput = {}) {
-  return prisma.course.findMany({ where: { deletedAt: null, ...where }, select: courseSelect });
+async function loadCourses(where: Prisma.CommunityWhereInput = {}) {
+  return prisma.community.findMany({ where: { deletedAt: null, ...where }, select: courseSelect });
 }
 
 const ZERO: CommunitySignals = { members: 0, new30d: 0, active30d: 0, growthPct: 0, engagementPct: 0, retentionPct: 0, rating: 0, ratingCount: 0, mrrCents: 0, reports30d: 0, violations: 0, posts30d: 0 };
@@ -152,7 +152,7 @@ export const adminDiscoveryService = {
 
   async listListed(q: z.infer<typeof listedQuery>) {
     const statuses = enumList(q.status, EFF, 'status');
-    const where: Prisma.CourseWhereInput = {
+    const where: Prisma.CommunityWhereInput = {
       ...(q.category ? { category: q.category } : {}),
       ...(q.q ? { OR: [{ title: { contains: q.q, mode: 'insensitive' } }, { id: { contains: q.q, mode: 'insensitive' } }, { owner: { OR: [{ firstName: { contains: q.q, mode: 'insensitive' } }, { lastName: { contains: q.q, mode: 'insensitive' } }] } }] } : {}),
     };
@@ -175,10 +175,10 @@ export const adminDiscoveryService = {
   },
 
   async setStatus(adminId: string, id: string, body: z.infer<typeof setStatusBody>) {
-    const c = await prisma.course.findFirst({ where: { id, deletedAt: null }, select: { id: true, title: true, discoveryStatus: true, ownerId: true } });
+    const c = await prisma.community.findFirst({ where: { id, deletedAt: null }, select: { id: true, title: true, discoveryStatus: true, ownerId: true } });
     if (!c) throw HttpError.notFound('Không tìm thấy cộng đồng');
     if (c.discoveryStatus === body.status) throw HttpError.conflict(`Cộng đồng đã ở trạng thái ${body.status}`);
-    await prisma.course.update({
+    await prisma.community.update({
       where: { id },
       data: { discoveryStatus: body.status, discoveryReason: body.status === 'listed' ? null : body.reason ?? null, discoveryUpdatedAt: new Date(), discoveryUpdatedById: adminId },
     });
@@ -192,14 +192,14 @@ export const adminDiscoveryService = {
   },
 
   async feature(adminId: string, id: string, body: z.infer<typeof featureBody>) {
-    await this.addFeatured(adminId, { section: body.section, courseId: id, startsAt: body.startsAt, endsAt: body.endsAt });
+    await this.addFeatured(adminId, { section: body.section, communityId: id, startsAt: body.startsAt, endsAt: body.endsAt });
     return itemFor(id);
   },
 
   async unfeature(adminId: string, id: string, body: z.infer<typeof unfeatureBody>) {
-    const c = await prisma.course.findFirst({ where: { id, deletedAt: null }, select: { id: true, title: true } });
+    const c = await prisma.community.findFirst({ where: { id, deletedAt: null }, select: { id: true, title: true } });
     if (!c) throw HttpError.notFound('Không tìm thấy cộng đồng');
-    const entries = await prisma.discoveryFeature.findMany({ where: { courseId: id, ...(body.section ? { section: body.section } : {}) } });
+    const entries = await prisma.discoveryFeature.findMany({ where: { communityId: id, ...(body.section ? { section: body.section } : {}) } });
     if (!entries.length) throw HttpError.conflict('Cộng đồng này không nằm trong mục ghim nào');
     await prisma.discoveryFeature.deleteMany({ where: { id: { in: entries.map((e) => e.id) } } });
     for (const s of new Set(entries.map((e) => e.section))) await repack(s);
@@ -211,7 +211,7 @@ export const adminDiscoveryService = {
   async listCategories() {
     const [rows, groups] = await Promise.all([
       prisma.discoveryCategory.findMany({ orderBy: [{ position: 'asc' }, { key: 'asc' }] }),
-      prisma.course.groupBy({ by: ['category'], where: publiclyListable, _count: { _all: true } }),
+      prisma.community.groupBy({ by: ['category'], where: publiclyListable, _count: { _all: true } }),
     ]);
     const cnt = new Map(groups.map((g) => [g.category as string, g._count._all]));
     return rows.map((r) => ({
@@ -262,8 +262,8 @@ export const adminDiscoveryService = {
 
   /* ---------------------------------------------------------------- featured */
   async listFeatured() {
-    const entries = await prisma.discoveryFeature.findMany({ orderBy: [{ position: 'asc' }, { createdAt: 'asc' }], include: { course: { select: { id: true, title: true, thumbnail: true, category: true } } } });
-    const [signals, names] = await Promise.all([loadSignals([...new Set(entries.map((e) => e.courseId))]), categoryNames()]);
+    const entries = await prisma.discoveryFeature.findMany({ orderBy: [{ position: 'asc' }, { createdAt: 'asc' }], include: { community: { select: { id: true, title: true, thumbnail: true, category: true } } } });
+    const [signals, names] = await Promise.all([loadSignals([...new Set(entries.map((e) => e.communityId))]), categoryNames()]);
     const now = Date.now();
     return {
       sections: FEATURE_SECTIONS.map((key) => ({
@@ -275,7 +275,7 @@ export const adminDiscoveryService = {
           startsAt: iso(e.startsAt),
           endsAt: iso(e.endsAt),
           active: (!e.startsAt || e.startsAt.getTime() <= now) && (!e.endsAt || e.endsAt.getTime() >= now),
-          community: { id: e.course.id, name: e.course.title, thumbnail: e.course.thumbnail, category: e.course.category, categoryLabel: names.get(e.course.category) ?? e.course.category, members: signals.get(e.courseId)?.members ?? 0 },
+          community: { id: e.community.id, name: e.community.title, thumbnail: e.community.thumbnail, category: e.community.category, categoryLabel: names.get(e.community.category) ?? e.community.category, members: signals.get(e.communityId)?.members ?? 0 },
         })),
       })),
     };
@@ -283,37 +283,37 @@ export const adminDiscoveryService = {
 
   async addFeatured(adminId: string, body: z.infer<typeof addFeaturedBody>) {
     checkWindow(body.startsAt, body.endsAt);
-    const c = await prisma.course.findFirst({ where: { id: body.courseId, deletedAt: null }, select: { id: true, title: true, visibility: true, moderationStatus: true, locked: true, discoveryStatus: true } });
+    const c = await prisma.community.findFirst({ where: { id: body.communityId, deletedAt: null }, select: { id: true, title: true, visibility: true, moderationStatus: true, locked: true, discoveryStatus: true } });
     if (!c) throw HttpError.notFound('Không tìm thấy cộng đồng');
     if (c.moderationStatus !== 'active' || c.locked || c.visibility !== 'public' || c.discoveryStatus !== 'listed') {
       throw HttpError.badRequest('Chỉ ghim được cộng đồng đang hoạt động, công khai và ở trạng thái listed');
     }
-    if (await prisma.discoveryFeature.findUnique({ where: { section_courseId: { section: body.section, courseId: body.courseId } } })) throw HttpError.conflict('Cộng đồng đã có trong mục này');
+    if (await prisma.discoveryFeature.findUnique({ where: { section_communityId: { section: body.section, communityId: body.communityId } } })) throw HttpError.conflict('Cộng đồng đã có trong mục này');
     const max = await prisma.discoveryFeature.aggregate({ where: { section: body.section }, _max: { position: true } });
     const e = await prisma.discoveryFeature.create({
-      data: { section: body.section, courseId: body.courseId, position: (max._max.position ?? 0) + 1, startsAt: body.startsAt ? new Date(body.startsAt) : null, endsAt: body.endsAt ? new Date(body.endsAt) : null, createdById: adminId },
+      data: { section: body.section, communityId: body.communityId, position: (max._max.position ?? 0) + 1, startsAt: body.startsAt ? new Date(body.startsAt) : null, endsAt: body.endsAt ? new Date(body.endsAt) : null, createdById: adminId },
     });
     await auditService.record(adminId, { action: 'discovery.feature', targetType: 'community', targetId: c.id, targetLabel: c.title, metadata: { section: body.section, entryId: e.id, startsAt: body.startsAt ?? null, endsAt: body.endsAt ?? null } });
     return e;
   },
 
   async patchFeatured(adminId: string, entryId: string, body: z.infer<typeof patchFeaturedBody>) {
-    const e = await prisma.discoveryFeature.findUnique({ where: { id: entryId }, include: { course: { select: { title: true } } } });
+    const e = await prisma.discoveryFeature.findUnique({ where: { id: entryId }, include: { community: { select: { title: true } } } });
     if (!e) throw HttpError.notFound('Không tìm thấy mục ghim');
     const startsAt = body.startsAt === undefined ? e.startsAt : body.startsAt ? new Date(body.startsAt) : null;
     const endsAt = body.endsAt === undefined ? e.endsAt : body.endsAt ? new Date(body.endsAt) : null;
     if (startsAt && endsAt && startsAt >= endsAt) throw HttpError.badRequest('`startsAt` phải trước `endsAt`');
     await prisma.discoveryFeature.update({ where: { id: entryId }, data: { startsAt, endsAt } });
-    await auditService.record(adminId, { action: 'discovery.feature_update', targetType: 'community', targetId: e.courseId, targetLabel: e.course.title, metadata: { section: e.section, startsAt: iso(startsAt), endsAt: iso(endsAt) } });
+    await auditService.record(adminId, { action: 'discovery.feature_update', targetType: 'community', targetId: e.communityId, targetLabel: e.community.title, metadata: { section: e.section, startsAt: iso(startsAt), endsAt: iso(endsAt) } });
     return (await this.listFeatured()).sections.flatMap((s) => s.items).find((i) => i.id === entryId)!;
   },
 
   async removeFeatured(adminId: string, entryId: string) {
-    const e = await prisma.discoveryFeature.findUnique({ where: { id: entryId }, include: { course: { select: { title: true } } } });
+    const e = await prisma.discoveryFeature.findUnique({ where: { id: entryId }, include: { community: { select: { title: true } } } });
     if (!e) throw HttpError.notFound('Không tìm thấy mục ghim');
     await prisma.discoveryFeature.delete({ where: { id: entryId } });
     await repack(e.section);
-    await auditService.record(adminId, { action: 'discovery.unfeature', targetType: 'community', targetId: e.courseId, targetLabel: e.course.title, metadata: { section: e.section } });
+    await auditService.record(adminId, { action: 'discovery.unfeature', targetType: 'community', targetId: e.communityId, targetLabel: e.community.title, metadata: { section: e.section } });
     return { removed: true };
   },
 
@@ -357,7 +357,7 @@ export const adminDiscoveryService = {
 
   /* ---------------------------------------------------------------- search visibility */
   async searchSummary() {
-    const g = await prisma.course.groupBy({ by: ['searchVisibility'], where: { deletedAt: null }, _count: { _all: true } });
+    const g = await prisma.community.groupBy({ by: ['searchVisibility'], where: { deletedAt: null }, _count: { _all: true } });
     const n = (s: string) => g.find((x) => x.searchVisibility === s)?._count._all ?? 0;
     return { total: g.reduce((a, x) => a + x._count._all, 0), searchable: n('searchable'), reduced: n('reduced'), hidden: n('hidden') };
   },
@@ -365,7 +365,7 @@ export const adminDiscoveryService = {
   async listSearch(q: z.infer<typeof searchListQuery>) {
     const sv = enumList(q.searchStatus, ['searchable', 'reduced', 'hidden'] as const, 'searchStatus');
     const ds = enumList(q.discoveryStatus, EFF, 'discoveryStatus');
-    const where: Prisma.CourseWhereInput = {
+    const where: Prisma.CommunityWhereInput = {
       ...(sv.length ? { searchVisibility: { in: sv } } : {}),
       ...(q.q ? { OR: [{ title: { contains: q.q, mode: 'insensitive' } }, { id: { contains: q.q, mode: 'insensitive' } }] } : {}),
     };
@@ -378,10 +378,10 @@ export const adminDiscoveryService = {
   },
 
   async setSearchVisibility(adminId: string, id: string, body: z.infer<typeof searchVisibilityBody>) {
-    const c = await prisma.course.findFirst({ where: { id, deletedAt: null }, select: { id: true, title: true, searchVisibility: true } });
+    const c = await prisma.community.findFirst({ where: { id, deletedAt: null }, select: { id: true, title: true, searchVisibility: true } });
     if (!c) throw HttpError.notFound('Không tìm thấy cộng đồng');
     if (c.searchVisibility === body.visibility) throw HttpError.conflict(`Cộng đồng đã ở trạng thái ${body.visibility}`);
-    await prisma.course.update({ where: { id }, data: { searchVisibility: body.visibility, discoveryUpdatedAt: new Date(), discoveryUpdatedById: adminId } });
+    await prisma.community.update({ where: { id }, data: { searchVisibility: body.visibility, discoveryUpdatedAt: new Date(), discoveryUpdatedById: adminId } });
     await auditService.record(adminId, {
       action: 'discovery.search_visibility', targetType: 'community', targetId: id, targetLabel: c.title, reason: body.reason, metadata: { from: c.searchVisibility, to: body.visibility },
     });

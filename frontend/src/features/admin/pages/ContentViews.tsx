@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { apiDownload, resolveApiPath } from '../../../lib/api';
+import { openFile } from '../../../lib/files';
 import { formatDateTime, formatRelative } from '../../../lib/datetime';
 import { USER_REASONS } from '../components/ActionModals';
 import { ActionDialog, BarCell, HistoryList, MediaGrid, PreviewDialog, PreviewKv, PreviewSection, opts, useDialogSlot, useTableState, type MediaCardItem } from '../components/Batch2Parts';
@@ -196,7 +197,7 @@ export function PostsView() {
   const t = useTableState({ sort: '' }, '');
   const [selected, setSelected] = useState<string[]>([]);
   const summary = useAdminData<PostSummary>('content', '/content/posts/summary');
-  const list = useAdminList<AdminPost>('content-posts', '/content/posts', { q: t.q || undefined, status: t.tab || undefined, sort: t.f.sort || undefined, courseId: params.get('courseId') ?? undefined, page: t.page, limit: LIMIT });
+  const list = useAdminList<AdminPost>('content-posts', '/content/posts', { q: t.q || undefined, status: t.tab || undefined, sort: t.f.sort || undefined, communityId: params.get('communityId') ?? params.get('courseId') ?? undefined, page: t.page, limit: LIMIT });
   const { slot, hide, remove, restore } = useModerateActions('posts');
   const bulk = useAdminAction();
   const s = summary.data;
@@ -312,7 +313,7 @@ export function CommentsView() {
   const [params] = useSearchParams();
   const t = useTableState({ sort: '' }, '');
   const summary = useAdminData<ContentSummary>('content', '/content/comments/summary');
-  const list = useAdminList<AdminComment>('content-comments', '/content/comments', { q: t.q || undefined, status: t.tab || undefined, sort: t.f.sort || undefined, courseId: params.get('courseId') ?? undefined, page: t.page, limit: LIMIT });
+  const list = useAdminList<AdminComment>('content-comments', '/content/comments', { q: t.q || undefined, status: t.tab || undefined, sort: t.f.sort || undefined, communityId: params.get('communityId') ?? params.get('courseId') ?? undefined, page: t.page, limit: LIMIT });
   const { slot, hide, remove, restore } = useModerateActions('comments');
   const s = summary.data;
 
@@ -389,6 +390,7 @@ function CoursePreview({ id, onClose }: { id: string; onClose: () => void }) {
               items={[
                 ['Giảng viên', d.creator?.name],
                 ['Học viên', fmtNum(d.students)],
+                ['Số module', fmtNum(d.modules ?? d.moduleList?.length ?? 0)],
                 ['Số bài học', fmtNum(d.lessons)],
                 ['Tỷ lệ hoàn thành', `${d.completionPct}%`],
                 ['Trạng thái', statusBadge(d.status)],
@@ -399,6 +401,19 @@ function CoursePreview({ id, onClose }: { id: string; onClose: () => void }) {
             {d.description && (
               <PreviewSection title="Mô tả">
                 <TextBlock>{d.description}</TextBlock>
+              </PreviewSection>
+            )}
+            {d.moduleList && d.moduleList.length > 0 && (
+              <PreviewSection title={`Module (${d.moduleList.length})`}>
+                <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
+                  {d.moduleList.map((m) => (
+                    <li key={m.id} className="flex items-center gap-2 rounded-xl bg-[#faf7f4] px-3 py-2 text-[13px]">
+                      <MaterialIcon name="folder" size={17} color="#a8a29e" />
+                      <span className="min-w-0 flex-1 truncate font-semibold">{m.title}</span>
+                      <span className="text-stone-500">{m.lessons} bài</span>
+                    </li>
+                  ))}
+                </ul>
               </PreviewSection>
             )}
             <PreviewSection title={`Bài học (${d.lessonList.length})`}>
@@ -432,7 +447,7 @@ export function CoursesView() {
   const [params] = useSearchParams();
   const t = useTableState({ sort: '' }, '');
   const summary = useAdminData<ContentSummary>('content', '/content/courses/summary');
-  const list = useAdminList<AdminCourse>('content-courses', '/content/courses', { q: t.q || undefined, status: t.tab || undefined, sort: t.f.sort || undefined, courseId: params.get('courseId') ?? undefined, page: t.page, limit: LIMIT });
+  const list = useAdminList<AdminCourse>('content-courses', '/content/courses', { q: t.q || undefined, status: t.tab || undefined, sort: t.f.sort || undefined, communityId: params.get('communityId') ?? params.get('courseId') ?? undefined, page: t.page, limit: LIMIT });
   const slot = useDialogSlot();
   const act = useAdminAction();
   const s = summary.data;
@@ -483,6 +498,7 @@ export function CoursesView() {
     { key: 'creator', label: 'Giảng viên', render: (c) => personName(c.creator) },
     { key: 'community', label: 'Cộng đồng', w: 1.4, render: (c) => <TextCell>{c.community.name}</TextCell> },
     { key: 'students', label: 'Học viên', render: (c) => <NumCell>{fmtNum(c.students)}</NumCell> },
+    { key: 'modules', label: 'Module', w: 0.7, render: (c) => <NumCell>{fmtNum(c.modules ?? 0)}</NumCell> },
     { key: 'lessons', label: 'Bài học', w: 0.7, render: (c) => <NumCell>{fmtNum(c.lessons)}</NumCell> },
     { key: 'completion', label: 'Hoàn thành', w: 1.2, render: (c) => <BarCell pct={c.completionPct} /> },
     { key: 'reports', label: 'Báo cáo', w: 0.6, render: (c) => reportsCell(c.reports) },
@@ -501,7 +517,7 @@ export function CoursesView() {
 
   return (
     <>
-      <PageHeader title="Khóa học" subtitle="Khóa học do creator xuất bản trên nền tảng." />
+      <PageHeader title="Khóa học" subtitle="Khóa học nằm trong các cộng đồng (một cộng đồng có thể có nhiều khóa học)." />
       <DataTable<AdminCourse>
         columns={columns}
         rows={list.data?.data ?? []}
@@ -525,6 +541,7 @@ export function CoursesView() {
               { value: 'oldest', label: 'Cũ nhất' },
               { value: 'students', label: 'Nhiều học viên' },
               { value: 'lessons', label: 'Nhiều bài học' },
+              { value: 'newest', label: 'Mới nhất' },
               { value: 'title', label: 'Tên A–Z' },
             ],
             onChange: t.setFilter('sort'),
@@ -592,7 +609,7 @@ export function LessonsView() {
   const [params] = useSearchParams();
   const t = useTableState({ sort: '', status: '' }, '');
   const summary = useAdminData<ContentSummary>('content', '/content/lessons/summary');
-  const list = useAdminList<AdminLesson>('content-lessons', '/content/lessons', { q: t.q || undefined, type: t.tab || undefined, status: t.f.status || undefined, sort: t.f.sort || undefined, courseId: params.get('courseId') ?? undefined, page: t.page, limit: LIMIT });
+  const list = useAdminList<AdminLesson>('content-lessons', '/content/lessons', { q: t.q || undefined, type: t.tab || undefined, status: t.f.status || undefined, sort: t.f.sort || undefined, communityId: params.get('communityId') ?? params.get('courseId') ?? undefined, page: t.page, limit: LIMIT });
   const { slot, hide, remove, restore } = useModerateActions('lessons');
   const s = summary.data;
 
@@ -746,7 +763,7 @@ export function EventsView() {
   const t = useTableState({ sort: '' }, '');
   const summary = useAdminData<ContentSummary>('content', '/content/events/summary');
   const [params] = useSearchParams();
-  const list = useAdminList<AdminEvent>('content-events', '/content/events', { q: t.q || undefined, status: t.tab || undefined, sort: t.f.sort || undefined, courseId: params.get('courseId') ?? undefined, page: t.page, limit: LIMIT });
+  const list = useAdminList<AdminEvent>('content-events', '/content/events', { q: t.q || undefined, status: t.tab || undefined, sort: t.f.sort || undefined, communityId: params.get('communityId') ?? params.get('courseId') ?? undefined, page: t.page, limit: LIMIT });
   const slot = useDialogSlot();
   const act = useAdminAction();
   const s = summary.data;
@@ -878,7 +895,7 @@ export function MediaView() {
 
   const post = (key: string, action: string, body: object) => act.mutateAsync({ path: `/content/media/${encodeURIComponent(key)}/${action}`, body });
   const preview = (m: AdminMedia) => {
-    if (m.url) window.open(resolveApiPath(m.url), '_blank', 'noopener');
+    if (m.url) openFile(m.url).catch((e) => toast.error(errMessage(e, 'Không mở được tệp')));
   };
   const download = async (m: AdminMedia) => {
     try {
@@ -914,7 +931,8 @@ export function MediaView() {
     kind: m.kind,
     name: m.filename,
     meta: `${fmtBytes(m.size)} · ${m.owner.name} · ${formatRelative(m.uploadedAt)}`,
-    thumbUrl: m.url ? resolveApiPath(m.url) : null,
+    // Chỉ ảnh công khai có thumbnail trực tiếp; file riêng tư cần URL ký nên xem qua nút Xem trước.
+    thumbUrl: m.url && ['avatar', 'cover', 'post_image'].includes(m.purpose) ? resolveApiPath(m.url) : null,
     reports: m.reports,
     buttons: [
       ...(m.status !== 'removed' ? [{ icon: 'visibility', label: 'Xem trước', onClick: () => preview(m) }] : []),

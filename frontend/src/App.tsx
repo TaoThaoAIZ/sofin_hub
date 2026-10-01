@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
+import { LegacyCourseRedirect } from './components/LegacyCourseRedirect';
 import { ScrollToTop } from './components/ScrollToTop';
 import { MessagesProvider } from './features/messages/MessagesProvider';
 import { NotificationsProvider } from './features/notifications/NotificationsProvider';
@@ -50,12 +51,15 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
-        <Route path="/courses/:id" element={<CourseDetailPage />} />
-        <Route path="/courses/:id/checkout" element={<CheckoutPage />} />
+        <Route path="/communities/:id" element={<CourseDetailPage />} />
+        <Route path="/communities/:id/checkout" element={<CheckoutPage />} />
+        {/* URL cũ vẫn dùng được: chuyển sang đường dẫn chuẩn /communities/:id/... */}
+        <Route path="/courses/:id" element={<LegacyCourseRedirect />} />
+        <Route path="/courses/:id/*" element={<LegacyCourseRedirect />} />
         <Route path="/communities/new" element={<CreateCommunityPage />} />
         <Route path="/invite/:code" element={<InvitePage />} />
-        <Route path="/courses/:id/community/cai-dat" element={<CommunitySettingsPage />} />
-        <Route path="/courses/:id/community" element={<CommunityPage />}>
+        <Route path="/communities/:id/community/cai-dat" element={<CommunitySettingsPage />} />
+        <Route path="/communities/:id/community" element={<CommunityPage />}>
           <Route index element={<FeedTab />} />
           <Route path="lop-hoc" element={<ClassroomTab />} />
           <Route path="lop-hoc/:lessonId" element={<LessonPage />} />
@@ -78,7 +82,7 @@ export default function App() {
         <Route path="/messages/:id" element={<MessagesPage />} />
         <Route path="/search" element={<SearchPage />} />
         <Route path="/billing" element={<BillingPage />} />
-        <Route path="/courses/:id/revenue-dashboard" element={<RevenuePage />} />
+        <Route path="/communities/:id/revenue-dashboard" element={<RevenuePage />} />
         <Route path="/admin/reports" element={<Navigate to="/admin/moderation" replace />} />
         <Route
           path="/admin/*"

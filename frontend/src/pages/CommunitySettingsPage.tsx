@@ -10,12 +10,15 @@ import { GeneralTab } from '../features/communities/components/settings/GeneralT
 import { InvitesTab } from '../features/communities/components/settings/InvitesTab';
 import { JoinRequestsTab } from '../features/communities/components/settings/JoinRequestsTab';
 import { isAtLeast, ROLE_LABEL } from '../features/communities/types';
-import { useCourseDetail } from '../features/courses/queries';
+import { CourseManager } from '../features/community/components/CourseManager';
+import { ToastHost } from '../features/community/components/contentUi';
+import { useCommunityDetail } from '../features/courses/queries';
 
-type TabKey = 'general' | 'requests' | 'invites' | 'bans' | 'danger';
+type TabKey = 'general' | 'courses' | 'requests' | 'invites' | 'bans' | 'danger';
 
 const TABS: { key: TabKey; label: string; icon: string }[] = [
   { key: 'general', label: 'Thông tin chung', icon: 'tune' },
+  { key: 'courses', label: 'Khóa học', icon: 'school' },
   { key: 'requests', label: 'Yêu cầu tham gia', icon: 'how_to_reg' },
   { key: 'invites', label: 'Lời mời', icon: 'link' },
   { key: 'bans', label: 'Thành viên bị cấm', icon: 'block' },
@@ -36,11 +39,11 @@ function Notice({ title, message, to }: { title: string; message: string; to: st
   );
 }
 
-/** Khu quản trị cộng đồng: /courses/:id/community/cai-dat — chỉ admin trở lên (BE vẫn chốt quyền ở từng API). */
+/** Khu quản trị cộng đồng: /communities/:id/community/cai-dat — chỉ admin trở lên (BE vẫn chốt quyền ở từng API). */
 export function CommunitySettingsPage() {
   const { id = '' } = useParams();
   const { status } = useAuth();
-  const { data: course, isPending, error } = useCourseDetail(id);
+  const { data: course, isPending, error } = useCommunityDetail(id);
   const [tab, setTab] = useState<TabKey>('general');
 
   if (isPending || status === 'loading') {
@@ -68,7 +71,7 @@ export function CommunitySettingsPage() {
         <Notice
           title="Bạn không có quyền truy cập"
           message="Khu cài đặt chỉ dành cho quản trị viên, chủ cộng đồng hoặc quản trị nền tảng."
-          to={`/courses/${id}`}
+          to={`/communities/${id}`}
         />
       </div>
     );
@@ -87,7 +90,7 @@ export function CommunitySettingsPage() {
     >
       <Header active="Cộng đồng" />
       <div className="mx-auto max-w-[1000px] px-4 pt-6">
-        <Link to={course.viewerEnrolled ? `/courses/${id}/community` : `/courses/${id}`} className="inline-flex items-center gap-1 text-sm font-medium text-stone-600 hover:text-brand">
+        <Link to={course.viewerEnrolled ? `/communities/${id}/community` : `/communities/${id}`} className="inline-flex items-center gap-1 text-sm font-medium text-stone-600 hover:text-brand">
           <MaterialIcon name="arrow_back" size={18} color="currentColor" />
           Về cộng đồng
         </Link>
@@ -117,6 +120,12 @@ export function CommunitySettingsPage() {
 
           <div className="min-w-0">
             {activeTab === 'general' && <GeneralTab course={course} viewerRole={role} />}
+            {activeTab === 'courses' && (
+              <div className="glass rounded-3xl p-5">
+                <ToastHost />
+                <CourseManager communityId={id} isAdmin={isAtLeast(role, 'admin')} />
+              </div>
+            )}
             {activeTab === 'requests' && <JoinRequestsTab courseId={id} isPrivate={course.visibility === 'private'} />}
             {activeTab === 'invites' && <InvitesTab courseId={id} />}
             {activeTab === 'bans' && <BansTab courseId={id} />}

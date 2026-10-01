@@ -1,8 +1,10 @@
 import { Link, useParams } from 'react-router-dom';
 import { MaterialIcon } from '../components/ui/MaterialIcon';
 import { ApiError } from '../lib/api';
+import { classroomPath, lessonPath } from '../lib/paths';
+import { fileKeyOf, useFileUrl } from '../lib/files';
 import { errText, ErrorNote, ghostBtn, primaryBtn, safeUrl, toast, ToastHost } from '../features/community/components/contentUi';
-import { useLesson, useLessons, useProgress, useToggleLessonComplete } from '../features/community/queries';
+import { useCourseList, useLesson, useLessons, useProgress, useToggleLessonComplete } from '../features/community/queries';
 
 // Chỉ nhúng iframe từ các host video đã biết (BE đã dựng lại embedUrl từ ID hợp lệ; FE kiểm tra thêm lần nữa).
 const EMBED_PREFIXES = ['https://www.youtube.com/embed/', 'https://www.youtube-nocookie.com/embed/', 'https://player.vimeo.com/video/'];
@@ -10,14 +12,37 @@ const isSafeEmbed = (u?: string) => !!u && EMBED_PREFIXES.some((p) => u.startsWi
 
 const fmtSize = (n?: number) => (n === undefined ? '' : n > 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 
+function LessonAttachmentLink({ a }: { a: { name: string; url: string; size?: number } }) {
+  // Tệp do hệ thống lưu là riêng tư theo khóa học: dùng URL ký hạn ngắn; link ngoài giữ nguyên (đã lọc safeUrl).
+  const signed = useFileUrl(a.url);
+  const href = fileKeyOf(a.url) ? signed : safeUrl(a.url);
+  if (href === undefined) return <span className="text-sm text-stone-400">{a.name} (đang tải…)</span>;
+  if (!href) return <span className="text-sm text-stone-400">{a.name} (liên kết không hợp lệ)</span>;
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer noopener"
+      download
+      className="flex items-center gap-3 rounded-xl border border-[rgba(120,60,20,.1)] bg-white px-3.5 py-2.5 text-[13.5px] hover:border-brand"
+    >
+      <MaterialIcon name="download" size={20} color="#f26a1b" />
+      <span className="min-w-0 flex-1 truncate font-medium">{a.name}</span>
+      <span className="text-xs text-stone-400">{fmtSize(a.size)}</span>
+    </a>
+  );
+}
+
 export function LessonPage() {
-  const { id: courseId = '', lessonId = '' } = useParams();
-  const lesson = useLesson(courseId, lessonId);
-  const progress = useProgress(courseId);
+  const { id: communityId = '', lessonId = '' } = useParams();
+  const lesson = useLesson(communityId, lessonId);
+  const courseId = lesson.data?.learningCourseId ?? null;
+  const progress = useProgress(communityId, courseId);
+  const courseTitle = useCourseList(communityId).data?.find((c) => c.id === courseId)?.title;
   const data = lesson.data;
-  const siblings = useLessons(courseId, data?.moduleId ?? null);
-  const toggle = useToggleLessonComplete(courseId, data?.moduleId ?? null);
-  const back = `/courses/${courseId}/community/lop-hoc`;
+  const siblings = useLessons(communityId, courseId, data?.moduleId ?? null);
+  const toggle = useToggleLessonComplete(communityId);
+  const back = classroomPath(communityId, courseId);
 
   if (lesson.isPending) return <p className="py-10 text-center text-stone-400">Đang tải bài học…</p>;
 
@@ -61,6 +86,12 @@ export function LessonPage() {
             Lớp học
           </Link>
           <MaterialIcon name="chevron_right" size={16} />
+          {courseTitle && (
+            <>
+              <span className="max-w-[200px] truncate">{courseTitle}</span>
+              <MaterialIcon name="chevron_right" size={16} />
+            </>
+          )}
           <span className="truncate">
             #{l.moduleIndex - 1}: {l.moduleTitle}
           </span>
@@ -125,28 +156,11 @@ export function LessonPage() {
               <div className="mt-5">
                 <div className="mb-2 text-[13.5px] font-bold">Tệp đính kèm</div>
                 <ul className="m-0 flex list-none flex-col gap-2 p-0">
-                  {l.attachments.map((a) => {
-                    const href = safeUrl(a.url);
-                    return (
-                      <li key={a.url}>
-                        {href ? (
-                          <a
-                            href={href}
-                            target="_blank"
-                            rel="noreferrer noopener"
-                            download
-                            className="flex items-center gap-3 rounded-xl border border-[rgba(120,60,20,.1)] bg-white px-3.5 py-2.5 text-[13.5px] hover:border-brand"
-                          >
-                            <MaterialIcon name="download" size={20} color="#f26a1b" />
-                            <span className="min-w-0 flex-1 truncate font-medium">{a.name}</span>
-                            <span className="text-xs text-stone-400">{fmtSize(a.size)}</span>
-                          </a>
-                        ) : (
-                          <span className="text-sm text-stone-400">{a.name} (liên kết không hợp lệ)</span>
-                        )}
-                      </li>
-                    );
-                  })}
+                  {l.attachments.map((a) => (
+                    <li key={a.url}>
+                      <LessonAttachmentLink a={a} />
+                    </li>
+                  ))}
                 </ul>
               </div>
             )}
@@ -158,14 +172,14 @@ export function LessonPage() {
 
         <div className="flex items-center justify-between gap-3">
           {l.prevLessonId ? (
-            <Link to={`${back}/${l.prevLessonId}`} className={ghostBtn}>
+            <Link to={lessonPath(communityId, l.prevLessonId)} className={ghostBtn}>
               <MaterialIcon name="arrow_back" size={19} /> Bài trước
             </Link>
           ) : (
             <span />
           )}
           {l.nextLessonId ? (
-            <Link to={`${back}/${l.nextLessonId}`} className={primaryBtn}>
+            <Link to={lessonPath(communityId, l.nextLessonId)} className={primaryBtn}>
               Bài sau <MaterialIcon name="arrow_forward" size={19} color="#fff" />
             </Link>
           ) : (
@@ -185,7 +199,7 @@ export function LessonPage() {
           {siblings.data?.map((s) => (
             <Link
               key={s.id}
-              to={`${back}/${s.id}`}
+              to={lessonPath(communityId, s.id)}
               aria-current={s.id === l.id ? 'page' : undefined}
               className={`flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] ${s.id === l.id ? 'bg-brand-soft font-semibold text-brand' : 'hover:bg-white'}`}
             >

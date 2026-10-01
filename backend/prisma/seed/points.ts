@@ -13,11 +13,11 @@ const CHUNK = 1000;
 export async function seedPoints(ctx: SeedContext): Promise<void> {
   const { db, userIds } = ctx;
   const now = Date.now();
-  const courseIds = (await db.course.findMany({ select: { id: true } })).map((c) => c.id);
+  const courseIds = (await db.community.findMany({ select: { id: true } })).map((c) => c.id);
 
-  const data: { id: string; userId: string; courseId: string; points: number; reason: 'post' | 'like_received' | 'lesson_complete'; createdAt: Date }[] = [];
-  for (const courseId of courseIds) {
-    for (const p of demoProfiles(courseId, now)) {
+  const data: { id: string; userId: string; communityId: string; points: number; reason: 'post' | 'like_received' | 'lesson_complete'; createdAt: Date }[] = [];
+  for (const communityId of courseIds) {
+    for (const p of demoProfiles(communityId, now)) {
       const i = p.index;
       const buckets = [
         { key: '7d', points: p.points['7d'], reason: 'post' as const, ago: (1 + (i % 5)) * DAY },
@@ -26,7 +26,7 @@ export async function seedPoints(ctx: SeedContext): Promise<void> {
       ];
       for (const b of buckets) {
         if (b.points <= 0) continue;
-        data.push({ id: `demo-pt-${courseId}-${i}-${b.key}`, userId: p.userId, courseId, points: b.points, reason: b.reason, createdAt: new Date(now - b.ago) });
+        data.push({ id: `demo-pt-${communityId}-${i}-${b.key}`, userId: p.userId, communityId, points: b.points, reason: b.reason, createdAt: new Date(now - b.ago) });
       }
     }
   }
@@ -39,7 +39,7 @@ export async function seedPoints(ctx: SeedContext): Promise<void> {
   ];
   for (const [key, list] of testPoints) {
     for (const e of list) {
-      data.push({ id: `seed-pt-photo-${key}-${e.n}`, userId: userIds[key], courseId: 'photo', points: e.points, reason: e.reason, createdAt: new Date(now - e.ago * DAY) });
+      data.push({ id: `seed-pt-photo-${key}-${e.n}`, userId: userIds[key], communityId: 'photo', points: e.points, reason: e.reason, createdAt: new Date(now - e.ago * DAY) });
     }
   }
 

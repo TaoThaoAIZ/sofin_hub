@@ -1,7 +1,7 @@
 import { prisma } from '../../db/prisma.js';
 import type { Prisma } from '../../generated/prisma/client.js';
-import type { Course } from '../courses/course.types.js';
-import { courseRepository } from '../courses/courses.repository.js';
+import type { Community } from '../catalog/community.types.js';
+import { catalogRepository } from '../catalog/catalog.repository.js';
 
 export const FEATURE_SECTIONS = ['featured', 'trending', 'editors_picks', 'new_noteworthy'] as const;
 export type FeatureSection = (typeof FEATURE_SECTIONS)[number];
@@ -18,21 +18,21 @@ export const activeWindow = (now = new Date()): Prisma.DiscoveryFeatureWhereInpu
 });
 
 /** Cộng đồng đủ điều kiện hiện ở Discovery công khai. */
-export const publiclyListable: Prisma.CourseWhereInput = {
+export const publiclyListable: Prisma.CommunityWhereInput = {
   deletedAt: null, locked: false, moderationStatus: 'active', visibility: 'public', discoveryStatus: 'listed',
 };
 
 /** `GET /courses/featured`: theo thứ tự `position`; bỏ mục hết hạn hoặc cộng đồng không còn đủ điều kiện hiển thị. */
-export async function listFeaturedCourses(section: FeatureSection, limit: number): Promise<Course[]> {
+export async function listFeaturedCourses(section: FeatureSection, limit: number): Promise<Community[]> {
   const entries = await prisma.discoveryFeature.findMany({
-    where: { section, ...activeWindow(), course: publiclyListable },
+    where: { section, ...activeWindow(), community: publiclyListable },
     orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
     take: limit,
-    select: { courseId: true },
+    select: { communityId: true },
   });
-  const out: Course[] = [];
+  const out: Community[] = [];
   for (const e of entries) {
-    const c = await courseRepository.findById(e.courseId);
+    const c = await catalogRepository.findById(e.communityId);
     if (c) out.push(c);
   }
   return out;

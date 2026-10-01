@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (typecheck, lint, test)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Giống docker-compose.yml: Postgres 16, user/password/db = sofinhub. Test dùng DB `sofinhub_test` (schema tạm ngẫu nhiên mỗi file test).
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: sofinhub
+          POSTGRES_PASSWORD: sofinhub
+          POSTGRES_DB: sofinhub
+        ports:
+          - 5435:5432
+        options: >-
+          --health-cmd "pg_isready -U sofinhub -d sofinhub"
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 20
+      # Redis cho adapter state chia sẻ (SSE pub/sub, vé, rate limit). Test mặc định chạy in-memory; bước riêng bên dưới chạy adapter với Redis thật.
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6380:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      # Khớp mặc định của tests/helpers.ts (cổng 5435 như docker-compose).
+      TEST_DATABASE_URL: postgresql://sofinhub:sofinhub@localhost:5435/sofinhub_test
+      DATABASE_URL: postgresql://sofinhub:sofinhub@localhost:5435/sofinhub?schema=public
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+      - name: Cài toolchain lint (gốc repo)
+        run: npm ci
+      - name: Cài backend
+        working-directory: backend
+        run: npm ci
+      - name: Tạo DB test
+        run: PGPASSWORD=sofinhub psql -h localhost -p 5435 -U sofinhub -d sofinhub -c "CREATE DATABASE sofinhub_test OWNER sofinhub"
+      - name: Typecheck
+        working-directory: backend
+        run: npm run typecheck
+      - name: Lint
+        working-directory: backend
+        run: npm run lint
+      - name: Test
+        working-directory: backend
+        run: npm test
+      - name: Test adapter state chia sẻ với Redis thật
+        working-directory: backend
+        env:
+          REDIS_URL: redis://localhost:6380
+        run: npx cross-env NODE_ENV=test node --import tsx --test tests/shared-state.test.ts tests/messages.test.ts tests/notifications.test.ts tests/uploads.test.ts
+      - name: Build
+        working-directory: backend
+        run: npm run build
+
+  frontend:
+    name: Frontend (typecheck, lint, build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            frontend/package-lock.json
+      - name: Cài toolchain lint (gốc repo)
+        run: npm ci
+      - name: Cài frontend
+        working-directory: frontend
+        run: npm ci
+      - name: Typecheck (tsc -b)
+        working-directory: frontend
+        run: npx tsc -b
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
+      - name: Build
+        working-directory: frontend
+        run: npm run build

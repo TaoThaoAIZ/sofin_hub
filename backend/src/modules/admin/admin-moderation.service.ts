@@ -25,7 +25,7 @@ export const listCasesQuery = pageQuery.extend({
   reason: z.string().optional(),
   assignee: z.string().optional(),
   targetType: z.enum(TARGET_TYPES).optional(),
-  courseId: z.string().optional(),
+  communityId: z.string().optional(),
   q: z.string().trim().max(100).optional(),
   sort: z.enum(['newest', 'risk']).default('newest'),
   /** Mặc định ẩn các báo cáo đang mở trùng đối tượng với báo cáo cũ hơn (chỉ hiện báo cáo đầu tiên, `reportCount` cho biết số báo cáo). */
@@ -106,10 +106,10 @@ async function settle(
         where: { id: { in: dups.map((d) => d.id) } },
         data: { status: o.status, action: o.action, note: `Đóng cùng ${caseCode(c.caseNo)}`, resolvedAt: now },
       });
-      for (const d of dups) notify({ userId: d.reporterId, type: 'report_resolved', title: 'Báo cáo của bạn đã được xử lý', body: 'Nội dung bạn báo cáo đã được xem xét.', courseId: c.courseId });
+      for (const d of dups) notify({ userId: d.reporterId, type: 'report_resolved', title: 'Báo cáo của bạn đã được xử lý', body: 'Nội dung bạn báo cáo đã được xem xét.', communityId: c.communityId });
     }
     const outcome = o.status === 'dismissed' ? 'không vi phạm và đã được bỏ qua' : 'đã được xem xét và xử lý';
-    notify({ userId: c.reporterId, type: 'report_resolved', title: 'Báo cáo của bạn đã được xử lý', body: `Báo cáo của bạn ${outcome}.`, courseId: c.courseId });
+    notify({ userId: c.reporterId, type: 'report_resolved', title: 'Báo cáo của bạn đã được xử lý', body: `Báo cáo của bạn ${outcome}.`, communityId: c.communityId });
   }
 }
 
@@ -165,7 +165,7 @@ export const adminModerationService = {
       if (dups.length) and.push({ id: { notIn: dups.map((d) => d.id) } });
     }
     if (q.targetType) and.push({ targetType: q.targetType });
-    if (q.courseId) and.push({ courseId: q.courseId });
+    if (q.communityId) and.push({ communityId: q.communityId });
     if (q.q) {
       const m = /^case-?0*(\d+)$/i.exec(q.q);
       const nameLike = (rel: 'targetUser' | 'reporter'): Prisma.ReportWhereInput => ({
@@ -287,7 +287,7 @@ export const adminModerationService = {
     else await postsService.setCommentHidden(c.targetId, true);
     if (body.notifyAuthor) {
       notify({
-        userId: c.targetUserId, type: 'system', title: 'Nội dung của bạn đã bị gỡ', courseId: c.courseId,
+        userId: c.targetUserId, type: 'system', title: 'Nội dung của bạn đã bị gỡ', communityId: c.communityId,
         body: `Nội dung của bạn đã bị gỡ vì vi phạm quy định. Lý do: ${body.reason}${body.allowAppeal ? '. Bạn có thể gửi khiếu nại tới đội hỗ trợ.' : ''}`,
       });
     }

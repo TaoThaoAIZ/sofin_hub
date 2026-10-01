@@ -3,7 +3,7 @@ import { DEMO_NAMES, demoEmail, demoUserId } from './demo-ids.js';
 import { seedCommunityScenarios } from './communities-scenarios.js';
 
 /**
- * Thành viên minh họa (User.isDemo=true) thay cho các id "seed:<courseId>:<i>" của community.seed.ts cũ.
+ * Thành viên minh họa (User.isDemo=true) thay cho các id "seed:<communityId>:<i>" của community.seed.ts cũ.
  * Với MỖI Course trong DB tạo DEMO_NAMES.length người + Enrollment (i=0 admin, còn lại member).
  * Bulk createMany + skipDuplicates nên chạy lại không nhân đôi (và không ghi đè dữ liệu đã có).
  */
@@ -40,9 +40,9 @@ export interface DemoProfile {
   points: { '7d': number; '30d': number; all: number };
 }
 
-/** Hồ sơ xác định (cùng courseId luôn ra cùng số) — dùng chung với seed điểm. Thời gian tương đối với `now`. */
-export function demoProfiles(courseId: string, now = Date.now()): DemoProfile[] {
-  const rnd = mulberry32(hash(courseId));
+/** Hồ sơ xác định (cùng communityId luôn ra cùng số) — dùng chung với seed điểm. Thời gian tương đối với `now`. */
+export function demoProfiles(communityId: string, now = Date.now()): DemoProfile[] {
+  const rnd = mulberry32(hash(communityId));
   return DEMO_NAMES.map((name, i): DemoProfile => {
     const online = i < 7;
     const minutesAgo = online ? (20 + i * 25) / 60 : 45 + Math.floor(rnd() * 60 * 24 * 6); // 7 người đầu: 20s..~3 phút (trong cửa sổ online 5 phút)
@@ -53,8 +53,8 @@ export function demoProfiles(courseId: string, now = Date.now()): DemoProfile[] 
     const sp = name.indexOf(' ');
     return {
       index: i,
-      userId: demoUserId(courseId, i),
-      email: demoEmail(courseId, i),
+      userId: demoUserId(communityId, i),
+      email: demoEmail(communityId, i),
       name,
       firstName: sp < 0 ? name : name.slice(0, sp),
       lastName: sp < 0 ? '' : name.slice(sp + 1),
@@ -73,7 +73,7 @@ export async function seedDemoMembers(ctx: SeedContext): Promise<void> {
   // Kịch bản cộng đồng riêng tư / có phí phải có trước để cũng được gắn thành viên minh họa.
   await seedCommunityScenarios(ctx, 'courses');
 
-  const courseIds = (await db.course.findMany({ select: { id: true } })).map((c) => c.id);
+  const courseIds = (await db.community.findMany({ select: { id: true } })).map((c) => c.id);
   const now = Date.now();
   const users: {
     id: string;
@@ -84,9 +84,9 @@ export async function seedDemoMembers(ctx: SeedContext): Promise<void> {
     emailVerified: boolean;
     isDemo: boolean;
   }[] = [];
-  const enrollments: { userId: string; courseId: string; role: 'admin' | 'member'; enrolledAt: Date; lastActiveAt: Date }[] = [];
-  for (const courseId of courseIds) {
-    for (const p of demoProfiles(courseId, now)) {
+  const enrollments: { userId: string; communityId: string; role: 'admin' | 'member'; enrolledAt: Date; lastActiveAt: Date }[] = [];
+  for (const communityId of courseIds) {
+    for (const p of demoProfiles(communityId, now)) {
       users.push({
         id: p.userId,
         email: p.email,
@@ -96,7 +96,7 @@ export async function seedDemoMembers(ctx: SeedContext): Promise<void> {
         emailVerified: true,
         isDemo: true,
       });
-      enrollments.push({ userId: p.userId, courseId, role: p.role, enrolledAt: p.enrolledAt, lastActiveAt: p.lastActiveAt });
+      enrollments.push({ userId: p.userId, communityId, role: p.role, enrolledAt: p.enrolledAt, lastActiveAt: p.lastActiveAt });
     }
   }
   for (let i = 0; i < users.length; i += CHUNK) await db.user.createMany({ data: users.slice(i, i + CHUNK), skipDuplicates: true });

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Footer } from '../components/layout/Footer';
 import { Header } from '../components/layout/Header';
 import { CategoryTabs } from '../features/courses/components/CategoryTabs';
@@ -11,7 +11,6 @@ import { useCategories, useCourses } from '../features/courses/queries';
 import { useCourseFilters } from '../features/courses/useCourseFilters';
 import { CommunityCta } from '../features/home/CommunityCta';
 import { Hero } from '../features/home/Hero';
-import { Stories } from '../features/home/Stories';
 
 export function HomePage() {
   const { filters, page, setFilter, setPage, reset } = useCourseFilters();
@@ -56,9 +55,9 @@ export function HomePage() {
         className="mx-auto flex max-w-[1400px] scroll-mt-24 items-end justify-between gap-4 px-4 pt-8 md:px-10"
       >
         <h2 className="m-0 flex items-center gap-2.5 text-[26px] font-bold">Khóa học nổi bật</h2>
-        <a href="#" className="text-[15px] font-medium whitespace-nowrap text-brand hover:text-brand-dark">
+        <Link to="/search" className="text-[15px] font-medium whitespace-nowrap text-brand hover:text-brand-dark">
           Xem tất cả →
-        </a>
+        </Link>
       </div>
 
       <CategoryTabs
@@ -90,7 +89,6 @@ export function HomePage() {
       <Pagination page={page} totalPages={courses.data?.meta.totalPages ?? 1} onChange={setPage} />
 
       <CommunityCta />
-      <Stories />
       <Footer />
     </div>
   );

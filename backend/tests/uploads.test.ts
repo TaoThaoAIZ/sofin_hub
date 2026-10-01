@@ -75,7 +75,10 @@ describe('uploads', () => {
     const p = await presign(u.token, { filename: 'tai lieu.pdf', contentType: 'application/pdf', size: body.length, purpose: 'post_file' });
     assert.equal(p.status, 201);
     assert.equal((await put(p.body.data.uploadUrl, body, 'application/pdf')).status, 200);
-    const f = await fetch(origin + p.body.data.fileUrl);
+    // post_file là file riêng tư: ẩn danh bị chặn, chủ file (Bearer) tải được
+    assert.equal((await fetch(origin + p.body.data.fileUrl)).status, 401);
+    const f = await fetch(origin + p.body.data.fileUrl, { headers: { Authorization: `Bearer ${u.token}` } });
+    assert.equal(f.status, 200);
     assert.equal(f.headers.get('content-type'), 'application/pdf');
     assert.match(f.headers.get('content-disposition') ?? '', /^attachment/);
   });

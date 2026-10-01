@@ -46,7 +46,8 @@ export interface PlatformStats {
   learners: number;
   courses: number;
   instructors: number;
-  rating: number;
+  /** Trung bình đánh giá thật; null nếu chưa có đánh giá nào. */
+  rating: number | null;
 }
 
 export interface Paginated<T> {
@@ -72,12 +73,6 @@ export interface CourseHighlight {
   icon: string;
 }
 
-export interface CourseModule {
-  index: number;
-  title: string;
-  meta: string;
-}
-
 export interface CourseFaq {
   question: string;
   answer: string;
@@ -88,6 +83,7 @@ export interface CourseReview {
   time: string;
   color: string;
   text: string;
+  rating?: number;
 }
 
 export interface CourseFact {
@@ -103,7 +99,6 @@ export interface CourseDetail extends Course {
   highlights: CourseHighlight[];
   gains: CourseHighlight[];
   priceNotes: string[];
-  modules: CourseModule[];
   faqs: CourseFaq[];
   reviews: CourseReview[];
   facts: CourseFact[];
@@ -116,3 +111,8 @@ export interface CourseDetail extends Course {
   /** Có ở cộng đồng do người dùng tạo; cộng đồng seed không có. */
   ownerId?: string;
 }
+
+// Khóa học marketplace trước đây thực chất là cộng đồng. Tên chuẩn mới: Community*. (`Course*` giữ lại làm alias tương thích;
+// "Khóa học" đúng nghĩa — nằm trong cộng đồng — là `LearningCourse` ở features/community/types.ts.)
+export type Community = Course;
+export type CommunityDetail = CourseDetail;

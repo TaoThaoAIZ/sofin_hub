@@ -8,13 +8,11 @@ import { useClickOutside } from '../../lib/useClickOutside';
 import { ButtonLink } from '../ui/Button';
 import { GlobeIcon, SearchIcon } from '../ui/icons';
 
-// `to` = có route thật đã dựng; thiếu `to` = mục chưa có màn hình riêng (xem PLAN.md các phase sau).
-const NAV_ITEMS: { label: string; to?: string }[] = [
+// Chỉ giữ các mục có route thật.
+const NAV_ITEMS: { label: string; to: string }[] = [
   { label: 'Khám phá', to: '/' },
   { label: 'Khóa học', to: '/#courses' },
-  { label: 'Cộng đồng' },
-  { label: 'Sự kiện' },
-  { label: 'Thành viên' },
+  { label: 'Cộng đồng', to: '/search' },
 ];
 
 export function Header({ active = 'Khám phá' }: { active?: string }) {
@@ -41,14 +39,10 @@ export function Header({ active = 'Khám phá' }: { active?: string }) {
       <nav className="hidden h-[22px] min-w-0 flex-1 flex-wrap items-center justify-center gap-x-[clamp(16px,2.5vw,40px)] gap-y-10 overflow-hidden text-[15px] leading-[22px] font-medium whitespace-nowrap md:flex">
         {NAV_ITEMS.map((item) => {
           const className = item.label === active ? 'font-semibold text-brand' : 'text-stone-900 hover:text-brand';
-          return item.to ? (
+          return (
             <Link key={item.label} to={item.to} className={className}>
               {item.label}
             </Link>
-          ) : (
-            <a key={item.label} href="#" className={className}>
-              {item.label}
-            </a>
           );
         })}
       </nav>

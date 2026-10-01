@@ -6,8 +6,7 @@ import { Prisma } from '../../generated/prisma/client.js';
 import type { PayoutStatus } from '../../generated/prisma/client.js';
 import { HttpError } from '../../utils/http-error.js';
 import { notify } from '../notifications/notifications.service.js';
-import { paymentsRepository } from '../payments/payments.repository.js';
-import { paymentsService } from '../payments/payments.service.js';
+import { balanceView, paymentsService, payoutPolicy } from '../payments/payments.service.js';
 import { auditService } from './admin-audit.service.js';
 import { DAY, code, codePrefix, dateRangeFields, nameMap, pctRound, person, personSelect, ref, resolveRange } from './admin-b2.common.js';
 import { enumList, iso, noteField, pageMeta, pageQuery, reasonField } from './admin.common.js';
@@ -21,8 +20,8 @@ const bp = (pct: number) => Math.round(pct * 100);
 const rates = () => ({ commissionBp: bp(cfg().payments.commissionPct), gatewayFeeBp: bp(cfg().payments.gatewayFeePct), gatewayFeeFixedCents: cfg().payments.gatewayFeeFixedCents });
 const METHOD_LABEL = { stripe: 'Stripe', vnpay: 'VNPay', momo: 'MoMo' } as const;
 
-const tell = (userId: string | null | undefined, title: string, body: string, courseId?: string) => {
-  if (userId) notify({ userId, type: 'system', title, body, ...(courseId ? { courseId } : {}) });
+const tell = (userId: string | null | undefined, title: string, body: string, communityId?: string) => {
+  if (userId) notify({ userId, type: 'system', title, body, ...(communityId ? { communityId } : {}) });
 };
 const usd = (cents: number) => `${(cents / 100).toFixed(2)} USD`;
 
@@ -40,7 +39,7 @@ export const txQuery = pageQuery.extend({
   q: z.string().trim().max(100).optional(),
   status: z.string().optional(),
   method: z.enum(['stripe', 'vnpay', 'momo']).optional(),
-  courseId: z.string().max(100).optional(),
+  communityId: z.string().max(100).optional(),
   userId: z.string().max(100).optional(),
   ownerId: z.string().max(100).optional(),
   kind: z.enum(['initial', 'renewal']).optional(),
@@ -53,7 +52,7 @@ export const noteOnly = z.object({ note: noteField });
 export const subsQuery = pageQuery.extend({
   q: z.string().trim().max(100).optional(),
   status: z.string().optional(),
-  courseId: z.string().max(100).optional(),
+  communityId: z.string().max(100).optional(),
   userId: z.string().max(100).optional(),
   sort: z.enum(['newest', 'amount', 'nextBilling']).default('newest'),
 });
@@ -62,7 +61,7 @@ export const cancelSubBody = z.object({ reason: reasonField, atPeriodEnd: z.bool
 export const refundsQuery = pageQuery.extend({
   q: z.string().trim().max(100).optional(),
   status: z.string().optional(),
-  courseId: z.string().max(100).optional(),
+  communityId: z.string().max(100).optional(),
   sort: z.enum(['newest', 'amount']).default('newest'),
 });
 export const approveRefundBody = z.object({ note: noteField, amountCents: z.number().int().min(1).optional() });
@@ -72,7 +71,7 @@ export const cbQuery = pageQuery.extend({
   q: z.string().trim().max(100).optional(),
   status: z.string().optional(),
   reason: z.enum(CB_REASONS).optional(),
-  courseId: z.string().max(100).optional(),
+  communityId: z.string().max(100).optional(),
   sort: z.enum(['deadline', 'newest', 'amount']).default('deadline'),
 });
 export const createCbBody = z.object({
@@ -91,7 +90,7 @@ const PAYOUT_STATUSES = ['requested', 'approved', 'paid', 'failed', 'on_hold', '
 export const payoutsQuery = pageQuery.extend({
   q: z.string().trim().max(100).optional(),
   status: z.string().optional(),
-  courseId: z.string().max(100).optional(),
+  communityId: z.string().max(100).optional(),
   ownerId: z.string().max(100).optional(),
   sort: z.enum(['newest', 'amount', 'scheduled']).default('newest'),
 });
@@ -100,7 +99,7 @@ export const payoutReasonBody = z.object({ reason: reasonField, note: noteField 
 /* -------------------------------------------------------------------------------- transactions */
 const txInclude = {
   user: { select: personSelect },
-  course: { select: { id: true, title: true, owner: { select: personSelect } } },
+  community: { select: { id: true, title: true, owner: { select: personSelect } } },
 } satisfies Prisma.PaymentInclude;
 type TxRow = Prisma.PaymentGetPayload<{ include: typeof txInclude }>;
 
@@ -109,7 +108,7 @@ const toTx = (p: TxRow) => ({
   code: code('TXN', p.id),
   invoiceNumber: p.invoiceNumber,
   customer: person(p.user),
-  community: { id: p.course.id, name: p.course.title, ownerName: p.course.owner ? person(p.course.owner)!.name : null },
+  community: { id: p.community.id, name: p.community.title, ownerName: p.community.owner ? person(p.community.owner)!.name : null },
   product: { type: 'membership' as const, label: p.kind === 'renewal' ? 'Membership · Renewal' : 'Membership · Monthly' },
   kind: p.kind,
   method: p.method,
@@ -132,14 +131,14 @@ function txWhere(q: z.infer<typeof txQuery>): Prisma.PaymentWhereInput {
   const and: Prisma.PaymentWhereInput[] = [];
   if (q.q) {
     const t = codePrefix(q.q, 'TXN');
-    and.push({ OR: [{ invoiceNumber: likeAny(q.q) }, { gatewayChargeId: likeAny(q.q) }, { user: userMatch(q.q) }, { course: { title: likeAny(q.q) } }, ...(t ? [{ id: { startsWith: t } }] : [])] });
+    and.push({ OR: [{ invoiceNumber: likeAny(q.q) }, { gatewayChargeId: likeAny(q.q) }, { user: userMatch(q.q) }, { community: { title: likeAny(q.q) } }, ...(t ? [{ id: { startsWith: t } }] : [])] });
   }
   return {
     ...(statuses.length ? { status: { in: statuses } } : {}),
     ...(q.method ? { method: q.method } : {}),
-    ...(q.courseId ? { courseId: q.courseId } : {}),
+    ...(q.communityId ? { communityId: q.communityId } : {}),
     ...(q.userId ? { userId: q.userId } : {}),
-    ...(q.ownerId ? { course: { ownerId: q.ownerId } } : {}),
+    ...(q.ownerId ? { community: { ownerId: q.ownerId } } : {}),
     ...(q.kind ? { kind: q.kind } : {}),
     ...(from || to ? { createdAt: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } } : {}),
     ...(and.length ? { AND: and } : {}),
@@ -153,13 +152,13 @@ async function loadTx(id: string): Promise<TxRow> {
 }
 
 /* -------------------------------------------------------------------------------- subscriptions */
-const subInclude = { user: { select: personSelect }, course: { select: { id: true, title: true } } } satisfies Prisma.SubscriptionInclude;
+const subInclude = { user: { select: personSelect }, community: { select: { id: true, title: true } } } satisfies Prisma.SubscriptionInclude;
 type SubRow = Prisma.SubscriptionGetPayload<{ include: typeof subInclude }>;
 const toSub = (s: SubRow) => ({
   id: s.id,
   code: code('SUB', s.id),
   user: person(s.user),
-  community: ref(s.course),
+  community: ref(s.community),
   plan: s.trialEndsAt ? ('trial' as const) : ('paid' as const),
   amountCents: s.priceCents,
   billingCycle: 'monthly' as const,
@@ -176,7 +175,7 @@ const toSub = (s: SubRow) => ({
 /* -------------------------------------------------------------------------------- refunds */
 const refundInclude = {
   user: { select: personSelect },
-  course: { select: { id: true, title: true, owner: { select: personSelect } } },
+  community: { select: { id: true, title: true, owner: { select: personSelect } } },
   payment: { select: { id: true, amountCents: true } },
   resolvedBy: { select: personSelect },
 } satisfies Prisma.RefundRequestInclude;
@@ -187,8 +186,8 @@ const toRefund = (r: RefundRow) => ({
   paymentId: r.paymentId,
   transactionCode: code('TXN', r.paymentId),
   customer: person(r.user),
-  creator: person(r.course.owner),
-  community: ref(r.course),
+  creator: person(r.community.owner),
+  community: ref(r.community),
   amountCents: r.amountCents,
   paymentAmountCents: r.payment.amountCents,
   reason: r.reason,
@@ -204,7 +203,7 @@ export type AdminRefund = ReturnType<typeof toRefund>;
 /* -------------------------------------------------------------------------------- chargebacks */
 const cbInclude = {
   user: { select: personSelect },
-  course: { select: { id: true, title: true, owner: { select: personSelect } } },
+  community: { select: { id: true, title: true, owner: { select: personSelect } } },
 } satisfies Prisma.ChargebackInclude;
 type CbRow = Prisma.ChargebackGetPayload<{ include: typeof cbInclude }>;
 const toCb = (c: CbRow) => ({
@@ -213,8 +212,8 @@ const toCb = (c: CbRow) => ({
   paymentId: c.paymentId,
   transactionCode: code('TXN', c.paymentId),
   customer: person(c.user),
-  creator: person(c.course.owner),
-  community: ref(c.course),
+  creator: person(c.community.owner),
+  community: ref(c.community),
   amountCents: c.amountCents,
   reason: c.reason,
   status: c.status,
@@ -233,7 +232,7 @@ const CB_STATUSES = ['open', 'under_review', 'won', 'lost'] as const;
 /* -------------------------------------------------------------------------------- payouts */
 const payoutInclude = {
   owner: { select: personSelect },
-  course: { select: { id: true, title: true } },
+  community: { select: { id: true, title: true } },
 } satisfies Prisma.PayoutInclude;
 type PayoutRow = Prisma.PayoutGetPayload<{ include: typeof payoutInclude }>;
 
@@ -249,7 +248,7 @@ const toPayout = (p: PayoutRow) => ({
   id: p.id,
   code: code('PO', p.id),
   creator: person(p.owner),
-  community: ref(p.course),
+  community: ref(p.community),
   amountCents: p.amountCents,
   method: { type: 'bank' as const, bankName: p.bankName, accountMasked: `****${p.accountLast4}`, label: `Bank · ${p.bankName} •• ${p.accountLast4}` },
   status: p.status,
@@ -324,7 +323,7 @@ export const adminPaymentsService = {
       gatewayChargeId: p.gatewayChargeId,
       gateway: `${METHOD_LABEL[p.method]} (mock)`,
       customerInfo: { ...person(p.user)!, joinedAt: u.createdAt.toISOString(), status: u.status },
-      creator: person(p.course.owner),
+      creator: person(p.community.owner),
       subscription: sub ? { id: sub.id, status: sub.status, currentPeriodEnd: sub.currentPeriodEnd.toISOString() } : null,
       refunds: refunds.map(toRefund),
       chargebacks: cbs.map(toCb),
@@ -371,9 +370,9 @@ export const adminPaymentsService = {
     const t = q.q ? codePrefix(q.q, 'SUB') : undefined;
     const where: Prisma.SubscriptionWhereInput = {
       ...(statuses.length ? { status: { in: statuses } } : {}),
-      ...(q.courseId ? { courseId: q.courseId } : {}),
+      ...(q.communityId ? { communityId: q.communityId } : {}),
       ...(q.userId ? { userId: q.userId } : {}),
-      ...(q.q ? { AND: [{ OR: [{ user: userMatch(q.q) }, { course: { title: likeAny(q.q) } }, ...(t ? [{ id: { startsWith: t } }] : [])] }] } : {}),
+      ...(q.q ? { AND: [{ OR: [{ user: userMatch(q.q) }, { community: { title: likeAny(q.q) } }, ...(t ? [{ id: { startsWith: t } }] : [])] }] } : {}),
     };
     const orderBy: Prisma.SubscriptionOrderByWithRelationInput[] =
       q.sort === 'amount' ? [{ priceCents: 'desc' }, { id: 'asc' }] : q.sort === 'nextBilling' ? [{ currentPeriodEnd: 'asc' }, { id: 'asc' }] : [{ createdAt: 'desc' }, { id: 'asc' }];
@@ -402,7 +401,7 @@ export const adminPaymentsService = {
     await auditService.record(adminId, {
       action: action === 'cancel' && body.atPeriodEnd ? 'subscription.cancel_at_period_end' : `subscription.${action}`,
       targetType: 'subscription', targetId: id, targetLabel: `${code('SUB', id)} · ${person(s.user)?.name ?? ''}`, reason: body.reason, note: body.note,
-      metadata: { from: prev.status, to: s.status, community: s.courseId },
+      metadata: { from: prev.status, to: s.status, community: s.communityId },
     });
     return toSub(s);
   },
@@ -413,6 +412,7 @@ export const adminPaymentsService = {
     const g = (s: string) => groups.find((x) => x.status === s);
     return {
       pending: g('pending')?._count._all ?? 0,
+      refunding: g('refunding')?._count._all ?? 0, // đang hoàn tiền / chờ đối soát
       approved: g('approved')?._count._all ?? 0,
       rejected: g('rejected')?._count._all ?? 0,
       pendingAmountCents: g('pending')?._sum.amountCents ?? 0,
@@ -421,14 +421,14 @@ export const adminPaymentsService = {
   },
 
   async listRefunds(q: z.infer<typeof refundsQuery>) {
-    const statuses = enumList(q.status, ['pending', 'approved', 'rejected'] as const, 'status');
+    const statuses = enumList(q.status, ['pending', 'refunding', 'approved', 'rejected'] as const, 'status');
     const rf = q.q ? codePrefix(q.q, 'RF') : undefined;
     const tx = q.q ? codePrefix(q.q, 'TXN') : undefined;
     const where: Prisma.RefundRequestWhereInput = {
       ...(statuses.length ? { status: { in: statuses } } : {}),
-      ...(q.courseId ? { courseId: q.courseId } : {}),
+      ...(q.communityId ? { communityId: q.communityId } : {}),
       ...(q.q
-        ? { AND: [{ OR: [{ user: userMatch(q.q) }, { course: { title: likeAny(q.q) } }, { course: { owner: userMatch(q.q) } }, { reason: likeAny(q.q) }, ...(rf ? [{ id: { startsWith: rf } }] : []), ...(tx ? [{ paymentId: { startsWith: tx } }] : [])] }] }
+        ? { AND: [{ OR: [{ user: userMatch(q.q) }, { community: { title: likeAny(q.q) } }, { community: { owner: userMatch(q.q) } }, { reason: likeAny(q.q) }, ...(rf ? [{ id: { startsWith: rf } }] : []), ...(tx ? [{ paymentId: { startsWith: tx } }] : [])] }] }
         : {}),
     };
     const orderBy: Prisma.RefundRequestOrderByWithRelationInput[] = q.sort === 'amount' ? [{ amountCents: 'desc' }, { id: 'asc' }] : [{ createdAt: 'desc' }, { id: 'asc' }];
@@ -444,7 +444,7 @@ export const adminPaymentsService = {
     if (!r) throw HttpError.notFound('Không tìm thấy yêu cầu hoàn tiền');
     const [payment, hist, prev, reports, user, history] = await Promise.all([
       loadTx(r.paymentId),
-      prisma.payment.findMany({ where: { userId: r.userId, courseId: r.courseId }, orderBy: { createdAt: 'desc' }, take: 10 }),
+      prisma.payment.findMany({ where: { userId: r.userId, communityId: r.communityId }, orderBy: { createdAt: 'desc' }, take: 10 }),
       prisma.refundRequest.findMany({ where: { userId: r.userId, id: { not: id } }, orderBy: { createdAt: 'desc' }, take: 5 }),
       prisma.report.count({ where: { targetUserId: r.userId } }),
       prisma.user.findUniqueOrThrow({ where: { id: r.userId }, select: { createdAt: true } }),
@@ -495,8 +495,8 @@ export const adminPaymentsService = {
     const where: Prisma.ChargebackWhereInput = {
       ...(statuses.length ? { status: { in: statuses } } : {}),
       ...(q.reason ? { reason: q.reason } : {}),
-      ...(q.courseId ? { courseId: q.courseId } : {}),
-      ...(q.q ? { AND: [{ OR: [{ user: userMatch(q.q) }, { course: { title: likeAny(q.q) } }, ...(t ? [{ paymentId: { startsWith: t } }] : []), ...(no ? [{ caseNo: Number(no) }] : [])] }] } : {}),
+      ...(q.communityId ? { communityId: q.communityId } : {}),
+      ...(q.q ? { AND: [{ OR: [{ user: userMatch(q.q) }, { community: { title: likeAny(q.q) } }, ...(t ? [{ paymentId: { startsWith: t } }] : []), ...(no ? [{ caseNo: Number(no) }] : [])] }] } : {}),
     };
     const orderBy: Prisma.ChargebackOrderByWithRelationInput[] =
       q.sort === 'amount' ? [{ amountCents: 'desc' }, { id: 'asc' }] : q.sort === 'newest' ? [{ openedAt: 'desc' }, { id: 'asc' }] : [{ status: 'asc' }, { deadlineAt: 'asc' }, { id: 'asc' }];
@@ -524,7 +524,7 @@ export const adminPaymentsService = {
     if (amount > remaining) throw HttpError.badRequest('Số tiền tranh chấp vượt quá phần còn lại của giao dịch');
     const c = await prisma.chargeback.create({
       data: {
-        paymentId: p.id, courseId: p.courseId, userId: p.userId, amountCents: amount, reason: body.reason,
+        paymentId: p.id, communityId: p.communityId, userId: p.userId, amountCents: amount, reason: body.reason,
         deadlineAt: new Date(Date.now() + body.deadlineDays * DAY), gatewayDisputeId: `mock_dp_${randomUUID().slice(0, 12)}`,
       },
       include: cbInclude,
@@ -533,7 +533,7 @@ export const adminPaymentsService = {
       action: 'chargeback.create', targetType: 'chargeback', targetId: c.id, targetLabel: toCb(c).code, reason: body.reason,
       metadata: { paymentId: p.id, amountCents: amount, simulated: true },
     });
-    tell(c.course.owner?.id, 'Có tranh chấp thanh toán mới', `Giao dịch ${code('TXN', p.id)} (${usd(amount)}) bị mở chargeback.`, p.courseId);
+    tell(c.community.owner?.id, 'Có tranh chấp thanh toán mới', `Giao dịch ${code('TXN', p.id)} (${usd(amount)}) bị mở chargeback.`, p.communityId);
     return toCb(c);
   },
 
@@ -565,7 +565,7 @@ export const adminPaymentsService = {
       action: `chargeback.${action.replace('-', '_')}`, targetType: 'chargeback', targetId: id, targetLabel: toCb(c).code, note: body.note,
       metadata: { from: c0.status, to, paymentId: c0.paymentId, simulated: true },
     });
-    if (to !== 'under_review') tell(c.course.owner?.id, `Chargeback ${to === 'won' ? 'thắng' : 'thua'}`, `${toCb(c).code} (${usd(c.amountCents)}) đã được chốt: ${to === 'won' ? 'thắng' : 'thua'}.`, c.courseId);
+    if (to !== 'under_review') tell(c.community.owner?.id, `Chargeback ${to === 'won' ? 'thắng' : 'thua'}`, `${toCb(c).code} (${usd(c.amountCents)}) đã được chốt: ${to === 'won' ? 'thắng' : 'thua'}.`, c.communityId);
     return toCb(c);
   },
 
@@ -589,8 +589,29 @@ export const adminPaymentsService = {
         SELECT c."ownerId" AS id, COALESCE(SUM(po."amountCents") FILTER (WHERE po."status" <> 'rejected'), 0)::bigint AS requested,
                COALESCE(SUM(po."amountCents") FILTER (WHERE po."status" = 'paid'), 0)::bigint AS paid
         FROM "Payout" po JOIN "Course" c ON c."id" = po."courseId" WHERE c."ownerId" IS NOT NULL GROUP BY c."ownerId"`),
-      prisma.course.groupBy({ by: ['ownerId'], where: { deletedAt: null, ownerId: { not: null } }, _count: { _all: true } }),
+      prisma.community.groupBy({ by: ['ownerId'], where: { deletedAt: null, ownerId: { not: null } }, _count: { _all: true } }),
     ]);
+    // Số dư theo chính sách rút tiền (holding period + reserve + nợ) — tính từng cộng đồng rồi cộng theo chủ. Chỉ THÊM trường mới.
+    const policy = payoutPolicy();
+    const perCourse = await prisma.$queryRaw<{ owner: string; net: bigint; eligible: bigint; requested: bigint }[]>(Prisma.sql`
+      SELECT c."ownerId" AS owner,
+             COALESCE(SUM(t."n"), 0)::bigint AS net,
+             COALESCE(SUM(t."n") FILTER (WHERE t."n" < 0 OR t."at" <= ${policy.eligibleBefore.toISOString()}::timestamp), 0)::bigint AS eligible,
+             COALESCE((SELECT SUM(po."amountCents") FROM "Payout" po WHERE po."courseId" = c."id" AND po."status" <> 'rejected'), 0)::bigint AS requested
+      FROM "Course" c
+      JOIN LATERAL (
+        SELECT COALESCE(p."confirmedAt", p."createdAt") AS "at",
+               (p."amountCents" - p."refundedCents" - (${comm}) - (${gate}))::bigint AS "n"
+        FROM "Payment" p WHERE p."courseId" = c."id" AND p."status" IN ('succeeded', 'refunded')
+      ) t ON true
+      WHERE c."ownerId" IS NOT NULL
+      GROUP BY c."ownerId", c."id"`);
+    const bal = new Map<string, { withdrawableCents: number; heldCents: number; reserveCents: number; debtCents: number }>();
+    for (const x of perCourse) {
+      const v = balanceView({ net: Number(x.net), eligible: Number(x.eligible), requested: Number(x.requested) }, policy.reservePct);
+      const cur = bal.get(x.owner) ?? { withdrawableCents: 0, heldCents: 0, reserveCents: 0, debtCents: 0 };
+      bal.set(x.owner, { withdrawableCents: cur.withdrawableCents + v.withdrawable, heldCents: cur.heldCents + v.held, reserveCents: cur.reserveCents + v.reserve, debtCents: cur.debtCents + v.debt });
+    }
     const rg = new Map(inRange.map((x) => [x.id, x]));
     const po = new Map(payouts.map((x) => [x.id, x]));
     const own = new Map(owned.map((x) => [x.ownerId!, x._count._all]));
@@ -607,6 +628,7 @@ export const adminPaymentsService = {
         netCents: gross - refunds - platform - gateway,
         pendingBalanceCents: Number(a.net) - Number(po.get(a.id)?.requested ?? 0),
         paidOutCents: Number(po.get(a.id)?.paid ?? 0),
+        ...(bal.get(a.id) ?? { withdrawableCents: 0, heldCents: 0, reserveCents: 0, debtCents: 0 }),
       };
     });
   },
@@ -622,6 +644,9 @@ export const adminPaymentsService = {
       gatewayFeeCents: sum((r) => r.gatewayFeeCents),
       netCents: sum((r) => r.netCents),
       pendingBalanceCents: sum((r) => r.pendingBalanceCents),
+      withdrawableCents: sum((r) => r.withdrawableCents),
+      heldCents: sum((r) => r.heldCents),
+      debtCents: sum((r) => r.debtCents),
     };
   },
 
@@ -631,7 +656,7 @@ export const adminPaymentsService = {
     const byUser = new Map(users.map((u) => [u.id, u]));
     if (q.q) {
       const needle = q.q.toLowerCase();
-      const courses = await prisma.course.findMany({ where: { title: likeAny(q.q), ownerId: { not: null } }, select: { ownerId: true } });
+      const courses = await prisma.community.findMany({ where: { title: likeAny(q.q), ownerId: { not: null } }, select: { ownerId: true } });
       const viaCourse = new Set(courses.map((c) => c.ownerId));
       rows = rows.filter((r) => {
         const u = byUser.get(r.ownerId);
@@ -656,8 +681,8 @@ export const adminPaymentsService = {
     const range = resolveRange(q);
     const all = await this.creatorRows(range);
     const mine = all.find((r) => r.ownerId === userId);
-    if (!mine && !(await prisma.course.count({ where: { ownerId: userId } }))) throw HttpError.notFound('Người dùng này không sở hữu cộng đồng nào');
-    const { ownerId: _o, communities: _c, ...kpis } = mine ?? { ownerId: userId, communities: 0, grossCents: 0, refundsCents: 0, platformFeeCents: 0, gatewayFeeCents: 0, netCents: 0, pendingBalanceCents: 0, paidOutCents: 0 };
+    if (!mine && !(await prisma.community.count({ where: { ownerId: userId } }))) throw HttpError.notFound('Người dùng này không sở hữu cộng đồng nào');
+    const { ownerId: _o, communities: _c, ...kpis } = mine ?? { ownerId: userId, communities: 0, grossCents: 0, refundsCents: 0, platformFeeCents: 0, gatewayFeeCents: 0, netCents: 0, pendingBalanceCents: 0, paidOutCents: 0, withdrawableCents: 0, heldCents: 0, reserveCents: 0, debtCents: 0 };
     const from = range.from ?? new Date(Date.now() - 29 * DAY);
     const to = range.to ?? new Date();
     const r = rates();
@@ -678,8 +703,8 @@ export const adminPaymentsService = {
                    FROM "Payment" p WHERE p."courseId" = c."id" AND p."status" IN ('succeeded','refunded')), 0)::bigint AS net,
           COALESCE((SELECT SUM(po."amountCents") FROM "Payout" po WHERE po."courseId" = c."id" AND po."status" <> 'rejected'), 0)::bigint AS requested
         FROM "Course" c WHERE c."ownerId" = ${userId} AND c."deletedAt" IS NULL ORDER BY c."title"`),
-      prisma.payment.findMany({ where: { course: { ownerId: userId } }, orderBy: { createdAt: 'desc' }, take: 20, include: txInclude }),
-      prisma.payout.findMany({ where: { course: { ownerId: userId } }, orderBy: { createdAt: 'desc' }, take: 10, include: payoutInclude }),
+      prisma.payment.findMany({ where: { community: { ownerId: userId } }, orderBy: { createdAt: 'desc' }, take: 20, include: txInclude }),
+      prisma.payout.findMany({ where: { community: { ownerId: userId } }, orderBy: { createdAt: 'desc' }, take: 10, include: payoutInclude }),
     ]);
     const byDay = new Map(series.map((s) => [s.d.toISOString().slice(0, 10), s]));
     const days: Array<{ date: string; grossCents: number; netCents: number; refundsCents: number }> = [];
@@ -692,7 +717,12 @@ export const adminPaymentsService = {
       creator: person(user),
       kpis,
       series: days,
-      communities: perCourse.map((c) => ({ id: c.id, name: c.title, grossCents: Number(c.gross), netCents: Number(c.net), pendingBalanceCents: Number(c.net) - Number(c.requested) })),
+      communities: await Promise.all(
+        perCourse.map(async (c) => {
+          const b = await paymentsService.balanceFor(c.id);
+          return { id: c.id, name: c.title, grossCents: Number(c.gross), netCents: Number(c.net), pendingBalanceCents: Number(c.net) - Number(c.requested), withdrawableCents: b.withdrawable, heldCents: b.held, reserveCents: b.reserve, debtCents: b.debt };
+        }),
+      ),
       transactions: txs.map(toTx),
       payouts: payouts.map(toPayout),
     };
@@ -714,9 +744,9 @@ export const adminPaymentsService = {
     const t = q.q ? codePrefix(q.q, 'PO') : undefined;
     const where: Prisma.PayoutWhereInput = {
       ...(statuses.length ? { status: { in: statuses } } : {}),
-      ...(q.courseId ? { courseId: q.courseId } : {}),
+      ...(q.communityId ? { communityId: q.communityId } : {}),
       ...(q.ownerId ? { ownerId: q.ownerId } : {}),
-      ...(q.q ? { AND: [{ OR: [{ owner: userMatch(q.q) }, { course: { title: likeAny(q.q) } }, { bankName: likeAny(q.q) }, ...(t ? [{ id: { startsWith: t } }] : [])] }] } : {}),
+      ...(q.q ? { AND: [{ OR: [{ owner: userMatch(q.q) }, { community: { title: likeAny(q.q) } }, { bankName: likeAny(q.q) }, ...(t ? [{ id: { startsWith: t } }] : [])] }] } : {}),
     };
     const orderBy: Prisma.PayoutOrderByWithRelationInput[] =
       q.sort === 'amount' ? [{ amountCents: 'desc' }, { id: 'asc' }] : q.sort === 'scheduled' ? [{ createdAt: 'asc' }, { id: 'asc' }] : [{ createdAt: 'desc' }, { id: 'asc' }];
@@ -730,8 +760,16 @@ export const adminPaymentsService = {
   async payoutDetail(id: string) {
     const p = await prisma.payout.findUnique({ where: { id }, include: payoutInclude });
     if (!p) throw HttpError.notFound('Không tìm thấy yêu cầu rút tiền');
-    const [bal, history] = await Promise.all([paymentsRepository.balance(p.courseId, rates()), auditService.forTarget('payout', id)]);
-    return { ...toPayout(p), creatorBalance: { netCents: bal.net, requestedCents: bal.requested, availableCents: bal.net - bal.requested }, history };
+    const [bal, history] = await Promise.all([paymentsService.balanceFor(p.communityId), auditService.forTarget('payout', id)]);
+    return {
+      ...toPayout(p),
+      // availableCents giữ nghĩa cũ (net − đã yêu cầu); các trường sau là THÊM MỚI theo chính sách holding period/reserve/nợ.
+      creatorBalance: {
+        netCents: bal.net, requestedCents: bal.requested, availableCents: bal.net - bal.requested,
+        withdrawableCents: bal.withdrawable, heldCents: bal.held, reserveCents: bal.reserve, debtCents: bal.debt, holdDays: bal.policy.holdDays,
+      },
+      history,
+    };
   },
 
   async payoutAction(adminId: string, id: string, action: 'approve' | 'mark-paid' | 'mark-failed' | 'retry' | 'hold' | 'release' | 'reject', body: { reason?: string; note?: string }) {
@@ -764,7 +802,7 @@ export const adminPaymentsService = {
       release: ['Yêu cầu rút tiền đã được tiếp tục', `Lệnh rút ${usd(p.amountCents)} đã được tiếp tục xử lý.`],
       reject: ['Yêu cầu rút tiền bị từ chối', `Lệnh rút ${usd(p.amountCents)} không được chấp nhận${body.reason ? `: ${body.reason}` : ''}.`],
     };
-    tell(p.ownerId, msgs[action][0], msgs[action][1], p.courseId);
+    tell(p.ownerId, msgs[action][0], msgs[action][1], p.communityId);
     return toPayout(after);
   },
 };

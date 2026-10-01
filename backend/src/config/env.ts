@@ -1,8 +1,13 @@
 import 'dotenv/config';
 import { z } from 'zod';
+import { productionEnvProblems, productionEnvWarnings } from './env-guard.js';
 
 const schema = z.object({
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  // BẮT BUỘC khai báo (không có default): quên đặt biến thì app từ chối khởi động thay vì lặng lẽ chạy như dev
+  // (outbox thư, secret dev-*, cookie không Secure, lộ err.message). Script dev/test đặt sẵn qua cross-env.
+  NODE_ENV: z.enum(['development', 'test', 'production'], {
+    error: 'NODE_ENV bắt buộc là development | test | production (không có giá trị mặc định)',
+  }),
   PORT: z.coerce.number().int().positive().default(4000),
   CORS_ORIGIN: z
     .string()
@@ -16,7 +21,13 @@ const schema = z.object({
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(30),
 
   // Postgres (Prisma). Mặc định trỏ tới DB docker local (`npm run db:up`). Test DB dùng schema riêng, xem tests/helpers.ts.
-  DATABASE_URL: z.string().default('postgresql://sofinhub:sofinhub@localhost:5435/sofinhub?schema=public'),
+  // Production BẮT BUỘC đặt DATABASE_URL (không có default); ngoài production mặc định trỏ DB docker local.
+  DATABASE_URL: z.string().min(1).optional(),
+  // Opt-in tường minh (=1) cho hộp thư dev GET /api/dev/outbox, độc lập với NODE_ENV. KHÔNG được đặt khi production.
+  ENABLE_DEV_OUTBOX: z
+    .string()
+    .optional()
+    .transform((v) => v === '1'),
 
   // Email của Platform Admin (đội SofinHub), ngăn cách bằng dấu phẩy. Họ có quyền ghi đè Owner ở mọi cộng đồng.
   PLATFORM_ADMIN_EMAILS: z
@@ -40,6 +51,15 @@ const schema = z.object({
   UPLOAD_MAX_COVER_MB: z.coerce.number().positive().default(8),
   UPLOAD_USER_QUOTA_MB: z.coerce.number().positive().default(200),
 
+  // --- State chia sẻ giữa các instance (SSE fan-out, vé, rate limit...). Bỏ trống = in-memory (đúng cho 1 instance). ---
+  REDIS_URL: z.string().optional().transform((v) => v?.trim() || undefined),
+  REDIS_KEY_PREFIX: z.string().default('sofinhub:'),
+  // 0 = KHÔNG chạy scheduler trong process này (web-only; dùng `npm run start:worker` cho job nền). Mặc định 1.
+  RUN_SCHEDULERS: z
+    .string()
+    .optional()
+    .transform((v) => v !== '0'),
+
   // --- Tin nhắn: số tin tối đa mỗi user / phút (0 = tắt). Khi NODE_ENV=test mặc định tắt. ---
   MESSAGE_RATE_LIMIT_PER_MIN: z.coerce.number().int().min(0).default(20),
 
@@ -60,10 +80,17 @@ if (!parsed.success) {
   process.exit(1);
 }
 
-export const env = parsed.data;
-export const isProd = env.NODE_ENV === 'production';
+const LOCAL_DATABASE_URL = 'postgresql://sofinhub:sofinhub@localhost:5435/sofinhub?schema=public';
 
-if (isProd && (env.JWT_ACCESS_SECRET.startsWith('dev-') || env.JWT_REFRESH_SECRET.startsWith('dev-'))) {
-  console.error('JWT_ACCESS_SECRET/JWT_REFRESH_SECRET phải được đặt riêng khi NODE_ENV=production');
+export const env = { ...parsed.data, DATABASE_URL: parsed.data.DATABASE_URL ?? LOCAL_DATABASE_URL };
+export const isProd = env.NODE_ENV === 'production';
+/** Chỉ môi trường dev thật mới được lộ chi tiết lỗi / bỏ cờ Secure của cookie. */
+export const isDev = env.NODE_ENV === 'development';
+
+const problems = productionEnvProblems({ ...parsed.data, NODE_ENV: env.NODE_ENV });
+if (problems.length > 0) {
+  console.error(['Cấu hình production không an toàn:', ...problems.map((p) => `- ${p}`)].join('\n'));
   process.exit(1);
 }
+
+for (const w of productionEnvWarnings({ ...parsed.data, NODE_ENV: env.NODE_ENV }, process.env)) console.warn(`[config] CẢNH BÁO: ${w}`);

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { MAX_PAGE } from '../../utils/pagination.js';
 import { PAYMENT_METHODS, PAYOUT_STATUSES, REFUND_STATUSES } from './payments.types.js';
 
 export const createCheckoutBody = z.object({
@@ -11,7 +12,7 @@ export const cancelSubscriptionBody = z.object({
 });
 
 export const paginationQuery = z.object({
-  page: z.coerce.number().int().min(1).default(1),
+  page: z.coerce.number().int().min(1).max(MAX_PAGE).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });
 

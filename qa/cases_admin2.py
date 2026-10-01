@@ -25,12 +25,13 @@ SEED_POST = ("Bài viết seed: POST-5C0A7BA8 (growth-lab, Sarah, 'Welcome to Gr
 SEED_CMT = ("Bình luận seed: CMT-2B7C14C7 (Maya, 'DM me for a better growth hack...', ĐÃ GỠ Spam, dưới POST-2467DDA0), CMT-B213F111 (Ava, 'Check out my new site: cheap-pills.example...', ĐÃ GỠ Spam, dưới POST-B0D6AD49), "
             "CMT-88427752 (Sophia, 'You are a fraud and this community is a scam.', ĐÃ ẨN Harassment, pixel-pro), CMT-D923CB58 (Noah, 'This is false, the instructor replied...', 1 báo cáo harassment mở), "
             "CMT-A3B80A38 (Liam, 'Great write-up, did you A/B test...', bình thường, growth-lab), CMT-B610023F (Ava, 'Token bucket in 38 lines...', bình thường, code-camp).")
-SEED_CRS = ("'Khóa học' của admin = ClassroomModule: Growth Foundations & Experimentation Playbook (growth-lab, published, mỗi khóa 4 bài), Node.js from Zero (code-camp, published), "
-            "System Design Drafts (code-camp, DRAFT), 12-Week Strength Program (fit-forever, published), Budgeting 101 (old edition) (mindful-money, ARCHIVED), Typography Masterclass (pixel-pro, published), "
-            "Get Rich Quick Secrets (spam-hub, ĐÃ GỠ 'Misleading claims'); mỗi cộng đồng còn có thêm 2 mô-đun mặc định 'Chào mừng & Lộ trình' / 'Tư duy & Nền tảng' (mỗi mô-đun 1 bài). Tổng seed sạch: 124 khóa (121 published, 1 draft, 1 archived, 1 removed).")
+SEED_CRS = ("'Khóa học' của admin = entity Course (bảng LearningCourse, sau tách Community/Course; trước đây là ClassroomModule): mỗi cộng đồng có 1 khóa mặc định, cộng thêm 8 khóa seed admin-batch2 (mỗi khóa 1 mô-đun + 4 bài): "
+            "Growth Foundations và Experimentation Playbook (growth-lab, published), Node.js from Zero (code-camp, published), System Design Drafts (code-camp, DRAFT), 12-Week Strength Program (fit-forever, published), "
+            "Budgeting 101 (old edition) (mindful-money, ARCHIVED), Typography Masterclass (pixel-pro, published), Get Rich Quick Secrets (spam-hub, ĐÃ GỠ 'Misleading claims'); "
+            "ngoài ra seed tách khóa học có photo 2 khóa, yt 2 khóa, fin 3 khóa (gồm bản nháp 'Quản trị rủi ro (bản nháp)'). Số đếm tab KHÔNG cố định: tổng = số cộng đồng (1 khóa mặc định mỗi cộng đồng) + 8 + khóa thêm của photo/yt/fin; luôn đối chiếu GET /api/admin/content/courses/summary (draft >= 2: System Design Drafts + bản nháp của fin; archived >= 1; removed >= 1).")
 SEED_LSN = ("Bài học seed: ĐÃ ẨN LSN-408423DE ('Templates & checklists 3', video 14 phút, mô-đun 12-Week Strength Program, lý do 'Outdated content') và LSN-303F7046 ('Templates & checklists 3', video 30 phút, mô-đun Experimentation Playbook); "
             "ĐÃ GỠ LSN-DA91F381 ('Templates & checklists 4', mô-đun Node.js from Zero, 'Policy violation') và cả 4 bài của 'Get Rich Quick Secrets' (LSN-09BE0A86, LSN-188D10D6, LSN-6AF36F53, LSN-BE2E4E81). "
-            "Tổng seed sạch: 473 bài (466 published, 2 hidden, 5 removed). Bài bình thường dùng được: LSN-39855DC0 (growth-lab, 'Case study walkthrough 4', video 12 phút, Experimentation Playbook), LSN-6CFA84D6 ('Setting up your workspace 2', text 23 phút).")
+            "Tổng số bài KHÔNG cố định (seed tách khóa học thêm bài cho photo/yt/fin; luôn đối chiếu GET /content/lessons/summary); hidden = 2 và removed = 5 như liệt kê trên. Bài bình thường dùng được: LSN-39855DC0 (growth-lab, 'Case study walkthrough 4', video 12 phút, Experimentation Playbook), LSN-6CFA84D6 ('Setting up your workspace 2', text 23 phút).")
 SEED_EVT = ("Sự kiện seed (giờ tính từ lúc nạp seed): 'Growth AMA with the founders' (growth-lab, host Sarah, +3 ngày, RSVP alex/daniel/liam/ava, có link họp), 'Live coding: build a CLI in Node' (code-camp, Alex, +7 ngày, capacity 30, RSVP noah/emma/ava), "
             "'Portfolio review night' (pixel-pro, Emma, +1,5 ngày, RSVP sophia/liam), 'Mobility workshop (live now)' (fit-forever, Noah, bắt đầu 30 phút trước lúc seed -> 'Đang diễn ra' CHỈ trong 2 giờ đầu, sau đó thành 'Hoàn tất'; RSVP sarah/olivia/daniel), "
             "'Quarterly budget reset' (mindful-money, Liam, 6 ngày trước, 5 RSVP, Hoàn tất), 'Retention teardown session' (growth-lab, Sarah, 15 ngày trước, Hoàn tất), "
@@ -255,14 +256,14 @@ def load(add):
     F = "Nội dung · Khóa học"
     A(F, "Trang Khóa học: tab trạng thái có đếm, cột và dữ liệu seed", "Giao diện", "Cao", UI + " " + SEED_CRS,
       ["Mở /admin/content/courses", "Đọc số đếm 5 tab: Tất cả, Đã xuất bản, Nháp, Đã lưu trữ, Đã gỡ", "Tìm 'System Design Drafts'"], "System Design Drafts",
-      "Tiêu đề 'Khóa học' (phụ đề 'Khóa học do creator xuất bản trên nền tảng.'); đếm khớp /content/courses/summary (seed sạch: 124/121/1/1/1); dòng 'System Design Drafts': mã rút gọn 8 ký tự id, Giảng viên 'Alex Rivera', Cộng đồng 'Code Camp', "
+      "Tiêu đề 'Khóa học' (phụ đề FE hiện tại 'Khóa học nằm trong các cộng đồng (một cộng đồng có thể có nhiều khóa học).'); đếm khớp /content/courses/summary (không so số cố định, xem SEED_CRS: draft >= 2, archived >= 1, removed >= 1); dòng 'System Design Drafts': mã rút gọn 8 ký tự id (id khóa học, không còn id mô-đun), Giảng viên 'Alex Rivera', Cộng đồng 'Code Camp', "
       "Học viên = số thành viên cộng đồng (≈68), Bài học 4, Hoàn thành thanh ≈5%, Báo cáo 0, Trạng thái 'Nháp'. Không có thẻ KPI trên đầu trang này.")
     A(F, "Tìm Khóa học theo tên khóa, tên cộng đồng, tên chủ cộng đồng", "Chức năng", "Trung bình", UI + " " + SEED_CRS,
       ["Gõ 'Typography'", "Gõ 'Code Camp'", "Gõ 'Sarah'"], "Typography | Code Camp | Sarah",
-      "Lần 1: Typography Masterclass. Lần 2: 4 mô-đun của Code Camp (Node.js from Zero, System Design Drafts + 2 mô-đun mặc định). Lần 3: mô-đun của cộng đồng do Sarah Kim làm chủ (Growth Lab).")
+      "Lần 1: Typography Masterclass. Lần 2: các khóa của Code Camp (khóa mặc định, Node.js from Zero, System Design Drafts). Lần 3: các khóa của cộng đồng do Sarah Kim làm chủ (Growth Lab: khóa mặc định, Growth Foundations, Experimentation Playbook).")
     A(F, "Lọc theo tab Nháp / Đã lưu trữ / Đã gỡ trả đúng khóa seed", "Chức năng", "Cao", UI + " " + SEED_CRS,
       ["Bấm tab 'Nháp'", "Bấm tab 'Đã lưu trữ'", "Bấm tab 'Đã gỡ'"], "-",
-      "Nháp: System Design Drafts. Đã lưu trữ: Budgeting 101 (old edition). Đã gỡ: Get Rich Quick Secrets (badge 'Đã gỡ' đỏ, preview hiện 'Lý do kiểm duyệt' = Misleading claims). Mỗi tab 1 dòng.")
+      "Nháp: System Design Drafts và 'Quản trị rủi ro (bản nháp)' (fin). Đã lưu trữ: Budgeting 101 (old edition). Đã gỡ: Get Rich Quick Secrets (badge 'Đã gỡ' đỏ, preview hiện 'Lý do kiểm duyệt' = Misleading claims). Tab Nháp 2 dòng, hai tab còn lại 1 dòng.")
     A(F, "Sắp xếp Khóa học: Cũ nhất, Nhiều học viên, Nhiều bài học, Tên A–Z", "Chức năng", "Thấp", UI,
       ["Chọn lần lượt 4 mục 'Sắp xếp'", "Bấm 'Xóa bộ lọc'"], "-", "'Tên A–Z' tăng dần theo tiêu đề; 'Nhiều học viên' giảm dần theo số học viên; 'Nhiều bài học' giảm dần theo số bài; không lỗi; 'Xóa bộ lọc' về mặc định (mới nhất).")
     A(F, "Menu thao tác Khóa học theo trạng thái (Xuất bản/Hủy xuất bản/Lưu trữ/Gỡ/Khôi phục/Mở cộng đồng)", "Chức năng", "Cao", UI + " " + SEED_CRS,
@@ -284,14 +285,14 @@ def load(add):
       ["Menu 'Budgeting 101 (old edition)' (archived) > 'Gỡ' lý do 'Khác'", "Quan sát badge 'Đã gỡ'", "Menu > 'Khôi phục' > xác nhận"], "Budgeting 101",
       "Sau Gỡ: 'Đã gỡ' (tab Đã lưu trữ -1, Đã gỡ +1); sau Khôi phục: quay lại 'Đã lưu trữ' (KHÔNG thành published) vì removedAt độc lập với trạng thái xuất bản; toast 'Đã gỡ khóa học' / 'Đã khôi phục khóa học'.")
     A(F, "API Khóa học: list/summary/detail, lọc status/courseId, sort, 400", "Chức năng", "Cao", API + " " + SEED_CRS,
-      ["GET /content/courses/summary", "GET /content/courses?courseId=code-camp&status=draft", "GET /content/courses?sort=students&limit=5", "GET /content/courses/<id Node.js from Zero = 8da8a3b9-...>", "GET /content/courses?status=nope", "GET /content/courses?sort=nope", "GET /content/courses/nope"], "code-camp",
-      "summary {total,published,draft,archived,removed}; lọc ra đúng 1 dòng 'System Design Drafts' (lessons=4, creator=Alex Rivera); detail có description và lessonList (4 phần tử {id,title,type,durationMin,status}) + history; nope 404 'Không tìm thấy khóa học'; status/sort lạ 400. thumbnail luôn null, reports luôn 0.")
+      ["GET /content/courses/summary", "GET /content/courses?courseId=code-camp&status=draft", "GET /content/courses?sort=students&limit=5", "GET /content/courses/<id Node.js from Zero, lấy từ GET /content/courses?q=Node.js (id khóa học, KHÔNG phải id mô-đun cũ 8da8a3b9-...)>", "GET /content/courses?status=nope", "GET /content/courses?sort=nope", "GET /content/courses/nope"], "code-camp",
+      "summary {total,published,draft,archived,removed}; lọc ra đúng 1 dòng 'System Design Drafts' (lessons=4, creator=Alex Rivera); detail có description và lessonList (4 phần tử {id,title,type,durationMin,status}) + history; nope 404 'Không tìm thấy khóa học'; status/sort lạ 400. Mỗi phần tử có thêm modules (số mô-đun) và detail có moduleList; thumbnail = thumbnailUrl của khóa (seed: null), reports luôn 0 (chưa có cơ chế báo cáo).")
     A(F, "API Khóa học: bảng chuyển trạng thái publish/unpublish/archive/remove/restore và mã 400/409", "Chức năng", "Cao", APIM + " " + SEED_CRS,
       ["publish trên khóa published -> 409", "unpublish không reason -> 400", "unpublish {reason:'Quality'} -> draft", "unpublish lần 2 -> 409", "publish -> published", "archive -> archived", "remove {reason:'Policy'} -> removed", "remove lần 2 -> 409", "restore -> archived", "restore lần 2 -> 409", "publish id 'nope' -> 404"], "Experimentation Playbook",
       "409 'Chỉ xuất bản được khóa học đang ở trạng thái nháp hoặc lưu trữ'; 400 thiếu lý do; unpublish ra status='draft'; sau remove status='removed'; restore trả 'archived' (giữ trạng thái xuất bản trước đó); id lạ 404.")
     A(F, "Khóa học draft/archived/removed biến mất khỏi API lớp học của thành viên thường", "Chức năng", "Cao", UIM + " " + SEED_CRS + " Đăng nhập daniel@sofinhub.test (thành viên growth-lab).",
-      ["Daniel: GET /api/courses/growth-lab/modules (ghi nhận 'Experimentation Playbook')", "Admin hủy xuất bản 'Experimentation Playbook'", "Daniel gọi lại", "Admin xuất bản lại, rồi lưu trữ", "Daniel gọi lại", "Admin gỡ, Daniel gọi lại"], "growth-lab / Experimentation Playbook",
-      "Chỉ trạng thái published và chưa gỡ mới hiện trong /courses/growth-lab/modules; draft, archived, removed đều ẩn với thành viên thường; xuất bản lại thì hiện lại.")
+      ["Daniel: GET /api/communities/growth-lab/courses (ghi nhận id 'Experimentation Playbook') và GET /api/communities/growth-lab/courses/<id>/modules", "Admin hủy xuất bản 'Experimentation Playbook'", "Daniel gọi lại cả hai", "Admin xuất bản lại, rồi lưu trữ", "Daniel gọi lại", "Admin gỡ, Daniel gọi lại"], "growth-lab / Experimentation Playbook",
+      "Chỉ khóa published và chưa gỡ mới hiện trong danh sách khóa học của thành viên thường và truy cập được .../courses/<id>/modules (draft/archived/removed: ẩn khỏi danh sách hoặc 404); xuất bản lại thì hiện lại. (Route cũ GET /courses/growth-lab/modules chỉ phản ánh khóa mặc định - communities-courses.md mục 0.4.)")
     A(F, "Mô-đun draft do admin hủy xuất bản cũng ẩn với mod cộng đồng", "Bảo mật", "Trung bình", BASE2 + " Admin hủy xuất bản một mô-đun của cộng đồng photo (mod photo: mod@sofinhub.test). " + MUTATE,
       ["Admin: GET /content/courses?courseId=photo rồi POST .../unpublish {reason:'QA'} cho 1 mô-đun", "mod@sofinhub.test: GET /api/courses/photo/modules"], "photo",
       "Mod cộng đồng KHÔNG còn thấy mô-đun đó (khác hành vi cũ: mod thấy cả khóa draft do chính mình tạo) - đúng mục 10 'Khác biệt' của admin-batch2.md.", pw="Một phần")
@@ -303,7 +304,7 @@ def load(add):
     F = "Nội dung · Bài học"
     A(F, "Trang Bài học: tab loại (Tất cả/Video/Văn bản/Tệp), lọc Trạng thái, cột 'Lượt hoàn thành'", "Giao diện", "Cao", UI + " " + SEED_LSN,
       ["Mở /admin/content/lessons", "Bấm tab 'Video', 'Văn bản', 'Tệp'", "Lọc 'Trạng thái' = 'Đã ẩn'", "Lọc 'Trạng thái' = 'Đã gỡ'"], "-",
-      "Tiêu đề 'Bài học' (phụ đề 'Từng bài học trong các khóa học.'); chỉ tab 'Tất cả' có số đếm (≈473); tab loại chỉ hiện đúng loại; 'Đã ẩn' ra 2 dòng (LSN-408423DE, LSN-303F7046); 'Đã gỡ' ra 5 dòng; cột: Bài học (tiêu đề+mã LSN), Mô-đun, Cộng đồng, Loại, Lượt hoàn thành, Báo cáo, Trạng thái.")
+      "Tiêu đề 'Bài học' (phụ đề 'Từng bài học trong các khóa học.'); chỉ tab 'Tất cả' có số đếm (khớp /content/lessons/summary.total); tab loại chỉ hiện đúng loại; 'Đã ẩn' ra 2 dòng (LSN-408423DE, LSN-303F7046); 'Đã gỡ' ra 5 dòng; cột: Bài học (tiêu đề+mã LSN), Mô-đun, Cộng đồng, Loại, Lượt hoàn thành, Báo cáo, Trạng thái.")
     A(F, "Tìm Bài học theo tiêu đề, tên mô-đun, cộng đồng, mã LSN", "Chức năng", "Trung bình", UI + " " + SEED_LSN,
       ["Gõ 'Get Rich Quick'", "Gõ 'LSN-408423DE'", "Gõ 'Case study walkthrough 4'"], "Get Rich Quick | LSN-408423DE | Case study walkthrough 4",
       "Lần 1: 4 bài (tất cả 'Đã gỡ') thuộc mô-đun Get Rich Quick Secrets; lần 2: đúng 'Templates & checklists 3' (Đã ẩn) của 12-Week Strength Program; lần 3: các bài có tiêu đề này, gồm LSN-39855DC0 (Experimentation Playbook).")
@@ -582,8 +583,8 @@ def load(add):
     # ============================================================ 10. THANH TOÁN - HOÀN TIỀN
     F = "Thanh toán · Hoàn tiền (UI)"
     A(F, "Trang Hoàn tiền: tab mặc định 'Yêu cầu mới' và số đếm 3 tab", "Giao diện", "Cao", UI + " " + SEED_RF,
-      ["Mở /admin/payments/refunds", "Đọc số đếm tab 'Yêu cầu mới', 'Hoàn tất', 'Đã từ chối'", "Bấm 'Tất cả'"], "-",
-      "Tiêu đề 'Hoàn tiền' (phụ đề 'Yêu cầu hoàn tiền từ thành viên.'); mở sẵn tab 'Yêu cầu mới' (5 dòng); số đếm 5 / 4 / 2; 'Tất cả' không có số đếm và hiện 11 dòng; cột: Mã hoàn tiền, Giao dịch, Khách hàng, Creator, Số tiền, Lý do, Trạng thái, Ngày yêu cầu.")
+      ["Mở /admin/payments/refunds", "Đọc số đếm tab 'Yêu cầu mới', 'Đang hoàn tiền', 'Hoàn tất', 'Đã từ chối'", "Bấm 'Tất cả'"], "-",
+      "Tiêu đề 'Hoàn tiền' (phụ đề 'Yêu cầu hoàn tiền từ thành viên.'); mở sẵn tab 'Yêu cầu mới' (5 dòng); có thêm tab 'Đang hoàn tiền' (trạng thái refunding, 0 dòng trên seed sạch - PaymentsViews.tsx:464); số đếm 5 / 0 / 4 / 2; 'Tất cả' không có số đếm và hiện 11 dòng; cột: Mã hoàn tiền, Giao dịch, Khách hàng, Creator, Số tiền, Lý do, Trạng thái, Ngày yêu cầu.")
     A(F, "Bảng Hoàn tiền: dữ liệu một dòng, hoàn một phần hiển thị số tiền yêu cầu", "Giao diện", "Trung bình", UI + " " + SEED_RF,
       ["Tab 'Hoàn tất', gõ 'RF-E3DF8C52'"], "RF-E3DF8C52", "Dòng: Mã RF-E3DF8C52, Giao dịch TXN-E9A88057, Khách 'Daniel Park', Creator 'Noah Williams', Số tiền $39.50 (một phần của giao dịch $79), Lý do 'Content not as described', Trạng thái 'Hoàn tất'.")
     A(F, "Tìm Hoàn tiền theo mã RF, mã TXN, khách, chủ cộng đồng, lý do", "Chức năng", "Trung bình", UI + " " + SEED_RF,
@@ -615,7 +616,7 @@ def load(add):
     F = "Thanh toán · Hoàn tiền (API)"
     A(F, "GET /payments/refunds: list/summary, lọc status/courseId, q, sort, 400", "Chức năng", "Cao", API + " " + SEED_RF,
       ["GET /payments/refunds/summary", "GET /payments/refunds?status=pending&courseId=pixel-pro", "GET /payments/refunds?q=RF-1542230F", "GET /payments/refunds?sort=amount&limit=3", "GET /payments/refunds?status=bogus", "GET /payments/refunds?sort=bogus"], "-",
-      "summary {pending:5,approved:4,rejected:2,pendingAmountCents:32500,refundedAmountCents:20650}; pending+pixel-pro ra RF-1542230F, RF-AEB9A758; q ra đúng RF; sort=amount $99 trước; sai giá trị 400. Phần tử: code RF-..., transactionCode, customer, creator, community, amountCents, paymentAmountCents, status, auto, note, requestedAt, resolvedAt, resolvedBy.")
+      "summary {pending:5,refunding:0,approved:4,rejected:2,pendingAmountCents:32500,refundedAmountCents:20650} (có thêm trường refunding sau audit bước 2); pending+pixel-pro ra RF-1542230F, RF-AEB9A758; q ra đúng RF; sort=amount $99 trước; sai giá trị 400. Phần tử: code RF-..., transactionCode, customer, creator, community, amountCents, paymentAmountCents, status, auto, note, requestedAt, resolvedAt, resolvedBy.")
     A(F, "GET /payments/refunds/:id: payment, paymentHistory, customerHistory, creatorResponse=null", "Chức năng", "Cao", API + " " + SEED_RF,
       ["Lấy id RF-1542230F", "GET /payments/refunds/<id>", "GET /payments/refunds/nope"], "RF-1542230F",
       "200: payment (AdminTransaction TXN-763C9F36), paymentHistory (giao dịch của khách ở cộng đồng, <=10), customerHistory {memberSince, previousRefunds[<=5], reportsReceived}, creatorResponse=null, history; nope 404.")
@@ -674,7 +675,7 @@ def load(add):
     F = "Thanh toán · Doanh thu creator"
     A(F, "Trang Doanh thu creator: chip ngày, 5 KPI và bảng creator", "Giao diện", "Cao", UI + " " + SEED_CRV,
       ["Mở /admin/payments/creator", "Chọn chip '90 ngày'", "Đối chiếu /payments/creators/summary?from=<hôm nay − 90 ngày>"], "-",
-      "Tiêu đề 'Doanh thu creator' (phụ đề 'Thu nhập của chủ cộng đồng sau phí và hoàn tiền.'); KPI: 'Creator' (7), 'Doanh thu gộp', 'Phí nền tảng', 'Thu nhập thuần', 'Số dư chờ'; bảng: Creator (tên+email), Cộng đồng, Doanh thu gộp, Hoàn tiền, Phí nền tảng, Thu nhập thuần, Số dư chờ; mặc định sắp theo Thu nhập thuần giảm dần (Emma Garcia đầu). 'Số dư chờ' luôn toàn thời gian, các cột kia theo chip.")
+      "Tiêu đề 'Doanh thu creator' (phụ đề 'Thu nhập của chủ cộng đồng sau phí và hoàn tiền.'); KPI: 'Creator' (7), 'Doanh thu gộp', 'Phí nền tảng', 'Thu nhập thuần', 'Số dư chờ'; KPI thêm 'Có thể rút', 'Đang giữ (holding)', 'Quỹ dự phòng', 'Nợ creator' (đỏ khi > 0); bảng: Creator (tên+email), Cộng đồng, Doanh thu gộp, Hoàn tiền, Phí nền tảng, Thu nhập thuần, Số dư chờ, Có thể rút, Đang giữ, Dự phòng, Nợ (PaymentsViews.tsx:738-742); mặc định sắp theo Thu nhập thuần giảm dần (Emma Garcia đầu). 'Số dư chờ' luôn toàn thời gian, các cột kia theo chip.")
     A(F, "Số liệu creator Emma Garcia khớp công thức (toàn thời gian qua API)", "Chức năng", "Cao", API + " " + SEED_CRV + " " + FEE,
       ["GET /payments/creators?q=emma&limit=5 (không from)", "Đối chiếu với SQL tổng Payment theo cộng đồng pixel-pro và creator-academy"], "Emma Garcia",
       "{communities:2, grossCents:158400, refundsCents:9900, platformFeeCents:14850, gatewayFeeCents:5072, netCents:128578, pendingBalanceCents:96078, paidOutCents:0}: phí NT = 10% × (158400−9900); net = 158400−9900−14850−5072; chờ = net − (25000 payout xử lý + 7500 thất bại) = 96078. " + PENDING_DECISION + " hoa hồng/phí cổng.")
@@ -687,7 +688,7 @@ def load(add):
       ["Chọn '90 ngày' rồi '7 ngày'", "So sánh cột 'Số dư chờ' của Emma"], "-", "Doanh thu gộp/Hoàn tiền/Phí/Thu nhập thuần giảm khi thu hẹp kỳ; 'Số dư chờ' của mỗi creator không đổi (toàn thời gian); KPI tổng 'Số dư chờ' cũng không đổi.")
     A(F, "Chi tiết creator: KPI, biểu đồ Gộp/Thuần/Hoàn tiền, bảng Cộng đồng/Giao dịch/Chi trả", "Giao diện", "Cao", UI + " " + SEED_CRV + " " + SEED_PO,
       ["Bấm dòng 'Emma Garcia'", "Chọn chip '90 ngày'"], "Emma Garcia",
-      "Tiêu đề 'Emma Garcia', phụ đề 'Doanh thu creator · emma@sofinhub.test', breadcrumb 'Doanh thu creator'; 5 KPI; biểu đồ 'Doanh thu · Emma Garcia' với 3 chuỗi (Gộp, Thuần, Hoàn tiền màu đỏ), mỗi ngày trong kỳ có điểm; bảng 'Cộng đồng' (Creator Academy, Pixel Pro: gộp, thuần, số dư chờ); "
+      "Tiêu đề 'Emma Garcia', phụ đề 'Doanh thu creator · emma@sofinhub.test', breadcrumb 'Doanh thu creator'; KPI gồm cả số dư mới (Có thể rút, Đang giữ, Quỹ dự phòng, Nợ creator - PaymentsViews.tsx:837-841); biểu đồ 'Doanh thu · Emma Garcia' với 3 chuỗi (Gộp, Thuần, Hoàn tiền màu đỏ), mỗi ngày trong kỳ có điểm; bảng 'Cộng đồng' (Creator Academy, Pixel Pro: gộp, thuần, số dư chờ, có thể rút, đang giữ, dự phòng, nợ); "
       "'Lịch sử giao dịch' ('20 giao dịch gần nhất'); 'Chi trả' ('10 khoản gần nhất') gồm PO-4F3DDE23 ($250 'Đang xử lý') và PO-55B8FDCB ($75 'Thất bại'). Bấm dòng cộng đồng -> /admin/communities/<id>; bấm giao dịch -> /admin/payments/tx/<id>.")
     A(F, "Chi tiết creator không có cộng đồng/giao dịch/chi trả hiện thông báo rỗng đúng", "Giao diện", "Thấp", UI,
       ["Mở /admin/payments/creator/<id Olivia Owner> (có cộng đồng, chi trả)", "Mở /admin/payments/creator/<id người dùng không sở hữu cộng đồng, ví dụ maya>"], "maya (seed-admin-user-maya)",
@@ -700,7 +701,7 @@ def load(add):
       "Lần 1: series dài 30 ngày (mặc định 30 ngày gần nhất) với tổng grossCents trong series = kpis.grossCents của kỳ; communities[2] có pendingBalanceCents; Lần 2: series 5 phần tử, kpis.grossCents=0 nhưng pendingBalanceCents giữ nguyên; nope 404 'Không tìm thấy chủ cộng đồng'; maya 404 'Người dùng này không sở hữu cộng đồng nào'.")
     A(F, "Số liệu creator khớp doanh thu của chính chủ cộng đồng (/courses/:id/revenue)", "Chức năng", "Cao", API + " " + SEED_CRV + " Đăng nhập sarah@sofinhub.test (chủ growth-lab).",
       ["sarah@: GET /api/courses/growth-lab/revenue", "Admin: GET /payments/creators?q=sarah"], "growth-lab",
-      "netCents của admin = netCents của /courses/growth-lab/revenue; pendingBalanceCents = availableBalanceCents của chủ cộng đồng (cùng công thức phí và cùng cách trừ payout chưa bị từ chối).")
+      "netCents của admin = netCents của /courses/growth-lab/revenue; pendingBalanceCents = 'net - đã yêu cầu rút' (trước đây gọi là availableBalanceCents; từ audit bước 2 availableBalanceCents của /courses/:id/revenue đổi nghĩa thành 'có thể rút ngay' = trừ holding 14 ngày + quỹ dự phòng nên KHÔNG còn bằng pendingBalanceCents - xem TC-MONEY-080).")
 
     # ============================================================ 13. THANH TOÁN - CHI TRẢ
     F = "Thanh toán · Chi trả (UI)"
@@ -721,7 +722,7 @@ def load(add):
     A(F, "Xem xét chi trả (modal): thông tin, số dư creator, lịch sử", "Chức năng", "Cao", UI + " " + SEED_PO + " " + SEED_AUD,
       ["Bấm 'Xem xét' ở PO-50974388 (Noah, tạm giữ)"], "PO-50974388",
       "Modal 'Chi trả PO-50974388' (phụ đề 'Noah Williams'): Creator 'Noah Williams (noah@sofinhub.test)', Cộng đồng 'Fit Forever', Số tiền $52.00, Phương thức 'Bank · Techcombank •• 7731', Trạng thái 'Tạm giữ', Lịch chi trả, Đã chi trả '—', Ghi chú 'Held pending identity re-verification'; "
-      "'Số dư creator': Thu nhập thuần, Đã yêu cầu rút (tổng payout chưa bị từ chối của cộng đồng), Có thể rút = thuần − đã yêu cầu; 'Lịch sử quản trị' có payout.hold (lý do Identity re-verification).")
+      "'Số dư creator': Thu nhập thuần, Đã yêu cầu rút (tổng payout chưa bị từ chối của cộng đồng), 'Net − đã yêu cầu' (nghĩa cũ), 'Có thể rút ngay', 'Đang giữ (14 ngày)', 'Quỹ dự phòng', 'Nợ (hoàn tiền sau khi rút)' (PaymentsViews.tsx:897-900); 'Lịch sử quản trị' có payout.hold (lý do Identity re-verification).")
     A(F, "Duyệt chi trả (requested -> approved): toast, trạng thái, thông báo owner, audit", "Chức năng", "Cao", UIM + " " + SEED_PO,
       ["Menu PO-60986918 > 'Duyệt' > xác nhận (ghi chú tùy chọn)", "sarah@ xem thông báo"], "PO-60986918",
       "Modal 'Duyệt chi trả?'; toast 'Đã duyệt chi trả (đang xử lý)'; trạng thái 'Đang xử lý'; tab 'Đang chờ' −1 / 'Đang xử lý' +1; KPI chuyển $180 từ 'Đang chờ' sang 'Đang xử lý'; Sarah nhận 'Yêu cầu rút tiền đã được duyệt'; audit payout.approve (metadata from=requested,to=approved).")

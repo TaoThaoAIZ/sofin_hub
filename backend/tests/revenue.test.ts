@@ -9,6 +9,9 @@ process.env.PAYOUT_MIN_USD = '10';
 process.env.PLATFORM_COMMISSION_PCT = '10';
 process.env.GATEWAY_FEE_PCT = '2.9';
 process.env.GATEWAY_FEE_FIXED_CENTS = '30';
+// Chính sách rút tiền (holding period + reserve) được test riêng ở money-lifecycle.test.ts; ở đây tắt reserve và lùi ngày thanh toán để kiểm số học doanh thu/payout.
+process.env.PAYOUT_RESERVE_PCT = '0';
+process.env.PAYOUT_DISPUTE_WINDOW_DAYS = '0';
 
 const COURSE = 'ai'; // giá $7 = 700 cent
 const BANK = { type: 'bank', bankName: 'Vietcombank', accountNumber: '0123456789', accountHolder: 'NGUYEN VAN A' };
@@ -22,6 +25,9 @@ describe('doanh thu & payout cho Owner', () => {
   let owner: { token: string; id: string };
   let buyers: { token: string; id: string }[] = [];
   let payments: any[] = [];
+  let prisma: typeof import('../src/db/prisma.js').prisma;
+  /** Lùi mọi thanh toán gần đây 30 ngày để vượt holding period (refund window 7 ngày) — số dư mới rút được. */
+  const age = () => prisma.payment.updateMany({ where: { confirmedAt: { gt: new Date(Date.now() - 10 * 86_400_000) } }, data: { confirmedAt: new Date(Date.now() - 30 * 86_400_000) } });
 
   async function pay(user: { token: string }) {
     const co = await c.call('POST', `/courses/${COURSE}/checkout`, { token: user.token, body: { method: 'stripe' } });
@@ -33,6 +39,7 @@ describe('doanh thu & payout cho Owner', () => {
   before(async () => {
     server = await startTestServer();
     c = makeClient(server.baseUrl);
+    ({ prisma } = await import('../src/db/prisma.js'));
     ({ enrollmentService } = await import('../src/modules/enrollments/enrollments.service.js'));
     ({ notificationStore } = await import('../src/modules/notifications/notifications.service.js'));
     const r = await c.call('POST', '/auth/register', { body: { email: ADMIN_EMAIL, password: 'Passw0rd!x', firstName: 'Plat', lastName: 'Admin' } });
@@ -44,6 +51,7 @@ describe('doanh thu & payout cho Owner', () => {
       buyers.push(b);
       payments.push(await pay(b));
     }
+    await age();
   });
   after(() => server.close());
 
@@ -95,8 +103,9 @@ describe('doanh thu & payout cho Owner', () => {
     const r = await c.call('GET', `/courses/${COURSE}/revenue?from=${future}`, { token: owner.token });
     assert.equal(r.body.data.grossCents, 0);
     assert.equal(r.body.data.availableBalanceCents, 1160); // số dư không phụ thuộc bộ lọc
-    const today = new Date().toISOString().slice(0, 10);
-    const inRange = await c.call('GET', `/courses/${COURSE}/revenue?from=${today}&to=${today}`, { token: owner.token });
+    // Thanh toán đã được lùi về 30 ngày trước (xem `age`).
+    const day = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
+    const inRange = await c.call('GET', `/courses/${COURSE}/revenue?from=${day(31)}&to=${day(29)}`, { token: owner.token });
     assert.equal(inRange.body.data.grossCents, 1400);
     assert.equal((await c.call('GET', `/courses/${COURSE}/revenue?from=khong-phai-ngay`, { token: owner.token })).status, 400);
   });
@@ -155,6 +164,7 @@ describe('doanh thu & payout cho Owner', () => {
 
     // Lệnh mới bị từ chối → số dư được hoàn lại.
     for (let i = 0; i < 2; i++) await pay(await c.registerUser(`buyer-more${i}`));
+    await age();
     const balance = (await c.call('GET', `/courses/${COURSE}/revenue`, { token: owner.token })).body.data.availableBalanceCents as number;
     assert.equal(balance, 160 + 2 * 580);
     const p2 = await c.call('POST', `/courses/${COURSE}/payouts`, { token: owner.token, body: { amountCents: 1200, method: BANK } });
@@ -166,8 +176,11 @@ describe('doanh thu & payout cho Owner', () => {
   });
 
   it('hoàn tiền làm giảm doanh thu: hoa hồng tính trên phần giữ lại, phí cổng không được trả lại', async () => {
+    // Giao dịch mới (chưa lùi ngày) ⇒ còn trong cửa sổ hoàn tiền nên tự duyệt.
+    const nb = await c.registerUser('refund-new');
+    const np = await pay(nb);
     const before = (await c.call('GET', `/courses/${COURSE}/revenue`, { token: owner.token })).body.data;
-    const r = await c.call('POST', `/payments/${payments[0].id}/refund-request`, { token: buyers[0]!.token, body: { reason: 'Đổi ý' } });
+    const r = await c.call('POST', `/payments/${np.id}/refund-request`, { token: nb.token, body: { reason: 'Đổi ý' } });
     assert.equal(r.body.data.status, 'approved');
     const after = (await c.call('GET', `/courses/${COURSE}/revenue`, { token: owner.token })).body.data;
     assert.equal(after.refundsCents, 700);
@@ -179,6 +192,7 @@ describe('doanh thu & payout cho Owner', () => {
   });
   it('nhiều payout song song cùng vượt số dư: tổng đã chấp nhận không vượt số dư khả dụng (khóa Course FOR UPDATE)', async () => {
     for (let i = 0; i < 4; i++) await pay(await c.registerUser('buyer-pay' + i));
+    await age();
     const url = `/courses/${COURSE}/payouts`;
     const bal = async () => (await c.call('GET', `/courses/${COURSE}/revenue`, { token: owner.token })).body.data.availableBalanceCents as number;
     const before = await bal();

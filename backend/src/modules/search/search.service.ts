@@ -1,146 +1,122 @@
-import { communityService } from '../community/community.service.js';
-import type { Course } from '../courses/course.types.js';
-import { courseService } from '../courses/courses.service.js';
+import { handleFor } from '../community/community.handle.js';
 import { enrollmentService } from '../enrollments/enrollments.service.js';
-import { atLeast, getRole } from '../permissions/policy.js';
-import { postsService } from '../posts/posts.service.js';
+import { isPlatformAdmin } from '../permissions/policy.js';
+import { buildTerms, searchRepository as defaultRepo, trgmSchema, type PageSpec, type SearchTerms } from './search.repository.js';
 import type { SearchQuery } from './search.schema.js';
-import { makeSnippet, matches, normalizeText, type Segment } from './search.text.js';
+import { highlightNeedle, makeSnippetFor, type Segment } from './search.text.js';
 
 export type SearchResult =
   | { type: 'course'; id: string; title: Segment[]; snippet: Segment[]; link: string }
-  | { type: 'member'; id: string; courseId: string; courseTitle: string; name: Segment[]; handle: string; role: 'admin' | 'member'; link: string }
-  | { type: 'post'; id: string; courseId: string; courseTitle: string; author: string; snippet: Segment[]; createdAt: string; link: string };
+  | { type: 'member'; id: string; courseId: string; communityId: string; courseTitle: string; name: Segment[]; handle: string; role: 'admin' | 'member'; link: string }
+  | { type: 'post'; id: string; courseId: string; communityId: string; courseTitle: string; author: string; snippet: Segment[]; createdAt: string; link: string };
 
-/** Giới hạn quét trong bộ nhớ: tránh 1 truy vấn duyệt vô hạn (nâng cấp: Postgres full-text / pg_trgm). */
-const MAX_PAGES_PER_COURSE = 20;
-const PAGE = 50;
+type Repo = typeof defaultRepo;
+type Group = 'courses' | 'members' | 'posts';
 
-/** Cờ "khóa/xóa" có thể do module khác thêm vào Course sau này; đọc lỏng để không phụ thuộc kiểu. */
-const isSearchable = (c: Course) => {
-  const x = c as Course & { locked?: boolean; deletedAt?: string | null; status?: string };
-  return !x.locked && !x.deletedAt;
-};
+/**
+ * Tìm kiếm toàn cục (STEP 8 audit): mọi lọc/xếp hạng/phân trang chạy trong Postgres (xem search.repository.ts); service chỉ
+ * dựng phạm vi (cộng đồng của user), cắt trang qua 3 nhóm courses → members → posts và sinh Segment[] cho đúng các dòng của trang.
+ */
+export function createSearchService(repo: Repo = defaultRepo) {
+  const termsOf = async (q: string) => buildTerms(q, (await trgmSchema()) !== null);
 
-async function publicCourses(): Promise<Course[]> {
-  const out: Course[] = [];
-  for (let page = 1; page <= MAX_PAGES_PER_COURSE; page++) {
-    const r = await courseService.list({ visibility: 'public', sort: 'newest', page, limit: PAGE }, { forSearch: true });
-    out.push(...r.data);
-    if (page >= r.meta.totalPages) break;
-  }
-  return out.filter(isSearchable);
-}
-
-export function createSearchService() {
-  async function searchCourses(needle: string, courseId?: string): Promise<SearchResult[]> {
-    return (await publicCourses())
-      .filter((c) => (!courseId || c.id === courseId) && (matches(c.title, needle) || matches(c.description, needle)))
-      // searchVisibility=reduced: xếp sau các kết quả bình thường (sort ổn định giữ thứ tự cũ trong mỗi nhóm).
-      .sort((a, b) => Number(a.searchVisibility === 'reduced') - Number(b.searchVisibility === 'reduced'))
-      .map((c) => ({
-        type: 'course' as const,
-        id: c.id,
-        title: makeSnippet(c.title, needle, 100),
-        snippet: makeSnippet(c.description, needle),
-        link: `/courses/${c.id}`,
-      }));
-  }
-
-  /** Cộng đồng user là thành viên (hoặc đúng courseId nếu chỉ định — 404/403 nếu không hợp lệ). */
-  async function scopeCourses(userId: string, courseId?: string): Promise<Course[]> {
-    if (courseId) {
-      const course = await courseService.getById(courseId);
-      await enrollmentService.requireMembership(userId, courseId);
-      return [course];
+  /** Cộng đồng user là thành viên (hoặc đúng communityId nếu chỉ định — 404/403 nếu không hợp lệ). */
+  async function scopeIds(userId: string, communityId?: string): Promise<string[]> {
+    if (communityId) {
+      await enrollmentService.requireMembership(userId, communityId); // 404 nếu không có khóa, 403 nếu chưa tham gia
+      return [communityId];
     }
-    const memberships = await enrollmentService.listByUser(userId);
-    const courses = await Promise.all(memberships.map((m) => courseService.getById(m.courseId).catch(() => undefined)));
-    return courses.filter((c): c is Course => !!c && isSearchable(c));
+    return repo.scopeCourseIds(userId);
   }
 
-  async function searchMembers(courses: Course[], needle: string): Promise<SearchResult[]> {
-    const out: SearchResult[] = [];
-    for (const course of courses) {
-      for (let page = 1; page <= MAX_PAGES_PER_COURSE; page++) {
-        const r = await communityService.listMembers(course.id, { filter: 'all', sort: 'active', page, limit: PAGE });
-        for (const m of r.data) {
-          if (!matches(m.name, needle) && !normalizeText(m.handle).includes(needle)) continue;
-          out.push({
-            type: 'member',
-            id: m.id,
-            courseId: course.id,
-            courseTitle: course.title,
-            name: makeSnippet(m.name, needle, 100),
-            handle: m.handle,
-            role: m.role,
-            link: `/courses/${course.id}/community?tab=members`,
-          });
-        }
-        if (page >= r.meta.totalPages) break;
-      }
-    }
-    return out;
-  }
+  const toCourse = (c: { id: string; title: string; description: string }, t: SearchTerms): SearchResult => ({
+    type: 'course',
+    id: c.id,
+    title: makeSnippetFor(c.title, t.needle, t.tokens, 100),
+    snippet: makeSnippetFor(c.description, t.needle, t.tokens),
+    link: `/courses/${c.id}`,
+  });
 
-  async function searchPosts(userId: string, courses: Course[], needle: string): Promise<SearchResult[]> {
-    const out: SearchResult[] = [];
-    for (const course of courses) {
-      const canSeeHidden = atLeast(await getRole(userId, course.id), 'mod');
-      for (let page = 1; page <= MAX_PAGES_PER_COURSE; page++) {
-        const r = await postsService.list(course.id, { sort: 'latest', page, limit: PAGE }, userId);
-        for (const p of r.data) {
-          if ((p as { hidden?: boolean }).hidden && !canSeeHidden) continue; // bài bị ẩn chỉ mod+ thấy
-          const haystack = `${p.content} ${p.tags.join(' ')} ${p.author.name}`;
-          if (!matches(haystack, needle)) continue;
-          out.push({
-            type: 'post',
-            id: p.id,
-            courseId: course.id,
-            courseTitle: course.title,
-            author: p.author.name,
-            snippet: makeSnippet(matches(p.content, needle) ? p.content : `${p.tags.join(' ')} ${p.content}`, needle),
-            createdAt: p.createdAt,
-            link: `/courses/${course.id}/community?post=${p.id}`,
-          });
-        }
-        if (page >= r.meta.totalPages) break;
-      }
-    }
-    return out.sort((a, b) => (a.type === 'post' && b.type === 'post' ? b.createdAt.localeCompare(a.createdAt) : 0));
-  }
-
-  /** Gom kết quả theo loại (chưa phân trang). */
-  async function collect(userId: string, q: string, type: SearchQuery['type'], courseId?: string) {
-    const needle = normalizeText(q);
-    const wantCourses = type === 'all' || type === 'courses';
-    const wantScoped = type === 'all' || type === 'posts' || type === 'members';
-    // Khóa học là công khai nên type=courses không cần là thành viên; posts/members thì bắt buộc.
-    const scoped = wantScoped ? await scopeCourses(userId, courseId) : [];
+  const toMember = (m: Awaited<ReturnType<Repo['pageMembers']>>[number], t: SearchTerms): SearchResult => {
+    const name = `${m.firstName} ${m.lastName}`;
     return {
-      courses: wantCourses ? await searchCourses(needle, courseId) : [],
-      members: type === 'all' || type === 'members' ? await searchMembers(scoped, needle) : [],
-      posts: type === 'all' || type === 'posts' ? await searchPosts(userId, scoped, needle) : [],
+      type: 'member',
+      id: m.id,
+      courseId: m.courseId,
+      communityId: m.courseId,
+      courseTitle: m.courseTitle,
+      name: makeSnippetFor(name, t.needle, t.tokens, 100),
+      handle: handleFor(name, m.id),
+      role: m.role === 'member' ? 'member' : 'admin',
+      link: `/courses/${m.courseId}/community?tab=members`,
     };
-  }
+  };
+
+  const toPost = (p: Awaited<ReturnType<Repo['pagePosts']>>[number], t: SearchTerms): SearchResult => ({
+    type: 'post',
+    id: p.id,
+    courseId: p.courseId,
+    communityId: p.courseId,
+    courseTitle: p.courseTitle,
+    author: p.authorName,
+    snippet: makeSnippetFor(highlightNeedle(p.content, t.needle, t.tokens) ? p.content : `${p.tags.join(' ')} ${p.content}`, t.needle, t.tokens),
+    createdAt: p.createdAt.toISOString(),
+    link: `/courses/${p.courseId}/community?post=${p.id}`,
+  });
+
+  const fetchGroup = {
+    courses: async (t: SearchTerms, _ids: string[], _uid: string, _pa: boolean, page: PageSpec, communityId?: string) =>
+      (await repo.pageCourses(t, page, communityId)).map((c) => toCourse(c, t)),
+    members: async (t: SearchTerms, ids: string[], _uid: string, _pa: boolean, page: PageSpec) => (await repo.pageMembers(ids, t, page)).map((m) => toMember(m, t)),
+    posts: async (t: SearchTerms, ids: string[], uid: string, pa: boolean, page: PageSpec) => (await repo.pagePosts(ids, t, uid, pa, page)).map((p) => toPost(p, t)),
+  };
 
   return {
     async search(userId: string, query: SearchQuery) {
-      const g = await collect(userId, query.q, query.type, query.courseId);
-      const merged: SearchResult[] = [...g.courses, ...g.members, ...g.posts];
-      const total = merged.length;
+      const t = await termsOf(query.q);
+      const want = (g: Group) => query.type === 'all' || query.type === g;
+      // Khóa học là công khai nên type=courses không cần là thành viên; posts/members thì bắt buộc.
+      const ids = want('members') || want('posts') ? await scopeIds(userId, query.communityId) : [];
+      const pa = want('posts') && ids.length > 0 ? await isPlatformAdmin(userId) : false;
+
+      const [nCourses, nMembers, nPosts] = await Promise.all([
+        want('courses') ? repo.countCourses(t, query.communityId) : 0,
+        want('members') ? repo.countMembers(ids, t) : 0,
+        want('posts') ? repo.countPosts(ids, t, userId, pa) : 0,
+      ]);
+      const sizes: Record<Group, number> = { courses: nCourses, members: nMembers, posts: nPosts };
+      const total = nCourses + nMembers + nPosts;
+
+      // Cắt trang trên chuỗi nối [courses, members, posts]: mỗi nhóm chỉ truy vấn đúng đoạn LIMIT/OFFSET giao với trang.
       const start = (query.page - 1) * query.limit;
+      const end = start + query.limit;
+      let offset = 0;
+      const jobs: Promise<SearchResult[]>[] = [];
+      for (const g of ['courses', 'members', 'posts'] as const) {
+        const lo = Math.max(start, offset) - offset;
+        const hi = Math.min(end, offset + sizes[g]) - offset;
+        offset += sizes[g];
+        if (hi > lo) jobs.push(fetchGroup[g](t, ids, userId, pa, { offset: lo, limit: hi - lo }, query.communityId));
+      }
+      const data = (await Promise.all(jobs)).flat();
       return {
-        data: merged.slice(start, start + query.limit),
+        data,
         meta: { page: query.page, limit: query.limit, total, totalPages: Math.max(1, Math.ceil(total / query.limit)) },
-        counts: { courses: g.courses.length, members: g.members.length, posts: g.posts.length },
+        counts: { courses: nCourses, members: nMembers, posts: nPosts },
       };
     },
 
-    /** Gợi ý topbar: tối đa 5 mục, xen kẽ khóa học / thành viên / bài viết. */
+    /** Gợi ý topbar: tối đa 5 mục, xen kẽ khóa học / thành viên / bài viết — mỗi nhóm một truy vấn LIMIT 5 riêng. */
     async suggest(userId: string, q: string) {
-      const g = await collect(userId, q, 'all');
-      const lists = [g.courses, g.members, g.posts];
+      const t = await termsOf(q);
+      const ids = await scopeIds(userId);
+      const pa = ids.length > 0 ? await isPlatformAdmin(userId) : false;
+      const top: PageSpec = { offset: 0, limit: 5 };
+      const lists = await Promise.all([
+        fetchGroup.courses(t, ids, userId, pa, top),
+        fetchGroup.members(t, ids, userId, pa, top),
+        fetchGroup.posts(t, ids, userId, pa, top),
+      ]);
       const out: SearchResult[] = [];
       for (let i = 0; out.length < 5 && lists.some((l) => i < l.length); i++) {
         for (const l of lists) if (i < l.length && out.length < 5) out.push(l[i]!);

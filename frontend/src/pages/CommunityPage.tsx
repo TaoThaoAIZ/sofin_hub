@@ -2,11 +2,11 @@ import { Navigate, Outlet, useParams } from 'react-router-dom';
 import { CommunityTopbar } from '../features/community/components/CommunityTopbar';
 import { Header } from '../components/layout/Header';
 import { CommunitySidebar } from '../features/community/components/CommunitySidebar';
-import { useCourseDetail } from '../features/courses/queries';
+import { useCommunityDetail } from '../features/courses/queries';
 
 export function CommunityPage() {
   const { id = '' } = useParams();
-  const { data: course, isPending } = useCourseDetail(id);
+  const { data: course, isPending } = useCommunityDetail(id);
 
   if (isPending) {
     return (
@@ -20,7 +20,7 @@ export function CommunityPage() {
   if (!course) return <Navigate to="/" replace />;
   // Chặn ở FE cho trải nghiệm mượt (redirect thay vì hiện lỗi 403) — quyền thật luôn được BE
   // xác thực lại ở từng API (bảng tin/lớp học/lịch/thành viên/xếp hạng), không tin riêng cờ này.
-  if (!course.viewerEnrolled) return <Navigate to={`/courses/${id}`} replace />;
+  if (!course.viewerEnrolled) return <Navigate to={`/communities/${id}`} replace />;
 
   return (
     <div className="min-h-screen bg-[#fdfbfa]">

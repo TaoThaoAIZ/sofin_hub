@@ -3,7 +3,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, describe, it } from 'node:test';
-import { makeClient, startTestServer, useTestDb, type TestDb, type TestServer } from './helpers.js';
+import { ensureMainCourse, makeClient, startTestServer, useTestDb, type TestDb, type TestServer } from './helpers.js';
 
 // env.ts parse lúc import app, nên phải đặt TRƯỚC startTestServer().
 const ADMIN_EMAIL = 'platform-admin-batch2@test.local';
@@ -49,18 +49,18 @@ describe('admin đợt 2', () => {
   type U = { token: string; id: string };
   async function com(opts: { owner?: U; price?: number; title?: string; rating?: number; category?: string; discovery?: 'listed' | 'hidden' | 'unlisted'; search?: 'searchable' | 'reduced' | 'hidden' } = {}) {
     const id = uniq('b2-');
-    await db.prisma.course.create({
+    await db.prisma.community.create({
       data: {
         id, title: opts.title ?? `Cộng đồng ${id}`, description: 'Mô tả cộng đồng thử nghiệm đủ dài để qua ngưỡng chất lượng của bảng xếp hạng.', category: (opts.category ?? 'tech') as never,
         thumbnail: '/x.webp', instructorName: 'Ai đó', instructorRole: 'Chủ', priceCents: (opts.price ?? 0) * 100, pricing: opts.price ? 'paid' : 'free', rating: opts.rating ?? 0,
         ratingCount: opts.rating ? 10 : 0, ownerId: opts.owner?.id ?? null, discoveryStatus: opts.discovery ?? 'listed', searchVisibility: opts.search ?? 'searchable',
       },
     });
-    if (opts.owner) await db.prisma.enrollment.create({ data: { userId: opts.owner.id, courseId: id, role: 'owner' } });
+    if (opts.owner) await db.prisma.enrollment.create({ data: { userId: opts.owner.id, communityId: id, role: 'owner' } });
     return id;
   }
-  const join_ = (u: U, courseId: string) => db.prisma.enrollment.upsert({ where: { userId_courseId: { userId: u.id, courseId } }, create: { userId: u.id, courseId, role: 'member' }, update: {} });
-  const mkPost = (courseId: string, authorId: string, content = `Bài viết ${uniq('p')}`) => db.prisma.post.create({ data: { courseId, authorId, content } });
+  const join_ = (u: U, communityId: string) => db.prisma.enrollment.upsert({ where: { userId_communityId: { userId: u.id, communityId } }, create: { userId: u.id, communityId, role: 'member' }, update: {} });
+  const mkPost = (communityId: string, authorId: string, content = `Bài viết ${uniq('p')}`) => db.prisma.post.create({ data: { communityId, authorId, content } });
   const actions = async (targetId: string) => ((await GET(`/audit-logs?targetId=${encodeURIComponent(targetId)}&limit=100`)).body.data as Array<{ action: string }>).map((a) => a.action);
   const notifFor = async (userId: string) => {
     await flush();
@@ -145,7 +145,7 @@ describe('admin đợt 2', () => {
       const courseId = await com({ owner });
       const needle = uniq('needle');
       const [a, b, d] = await Promise.all([mkPost(courseId, author.id, `${needle} một`), mkPost(courseId, author.id, `${needle} hai`), mkPost(courseId, author.id, `${needle} ba`)]);
-      await db.prisma.report.create({ data: { courseId, targetType: 'post', targetId: b.id, targetUserId: author.id, reporterId: reporter.id, reason: 'spam', targetExcerpt: 'x' } });
+      await db.prisma.report.create({ data: { communityId: courseId, targetType: 'post', targetId: b.id, targetUserId: author.id, reporterId: reporter.id, reason: 'spam', targetExcerpt: 'x' } });
       await A('POST', `/content/posts/${d.id}/hide`, { reason: 'x' });
       const sum0 = (await GET('/content/posts/summary')).body.data;
       assert.ok(sum0.total >= 3 && sum0.hidden >= 1 && sum0.reported >= 1);
@@ -219,39 +219,42 @@ describe('admin đợt 2', () => {
       const member = await c.registerUser('m');
       const courseId = await com({ owner });
       await join_(member, courseId);
-      const mod = await db.prisma.classroomModule.create({ data: { courseId, index: 1, title: uniq('Module ') } });
-      const lesson = await db.prisma.classroomLesson.create({ data: { moduleId: mod.id, courseId, index: 1, title: uniq('Bài '), type: 'text', body: 'nội dung' } });
-      const lesson2 = await db.prisma.classroomLesson.create({ data: { moduleId: mod.id, courseId, index: 2, title: uniq('Bài '), type: 'video', body: 'nội dung' } });
-      return { owner, member, courseId, mod, lesson, lesson2 };
+      // POST /communities đã tạo khóa học mặc định; "khóa học" của admin = entity Course.
+      await ensureMainCourse(db.prisma, courseId);
+      const course = await db.prisma.course.findFirstOrThrow({ where: { communityId: courseId } });
+      const mod = await db.prisma.classroomModule.create({ data: { communityId: courseId, learningCourseId: course.id, index: 1, title: uniq('Module ') } });
+      const lesson = await db.prisma.classroomLesson.create({ data: { moduleId: mod.id, communityId: courseId, index: 1, title: uniq('Bài '), type: 'text', body: 'nội dung' } });
+      const lesson2 = await db.prisma.classroomLesson.create({ data: { moduleId: mod.id, communityId: courseId, index: 2, title: uniq('Bài '), type: 'video', body: 'nội dung' } });
+      return { owner, member, courseId, course, mod, lesson, lesson2 };
     }
     const modules = async (m: U, courseId: string) => (await c.call('GET', `/courses/${courseId}/modules`, { token: m.token })).body.data as Array<{ id: string; lessonsCount?: number }>;
 
     it('courses: unpublish/archive/publish/remove/restore điều khiển việc thành viên thấy khóa học; 409; audit', async () => {
-      const { owner, member, courseId, mod } = await classroom();
+      const { owner, member, courseId, course, mod } = await classroom();
       assert.ok((await modules(member, courseId)).some((m) => m.id === mod.id));
-      assert.equal((await A('POST', `/content/courses/${mod.id}/publish`, {})).status, 409);
-      assert.equal((await A('POST', `/content/courses/${mod.id}/unpublish`, {})).status, 400);
-      const u = await A('POST', `/content/courses/${mod.id}/unpublish`, { reason: 'Quality' });
+      assert.equal((await A('POST', `/content/courses/${course.id}/publish`, {})).status, 409);
+      assert.equal((await A('POST', `/content/courses/${course.id}/unpublish`, {})).status, 400);
+      const u = await A('POST', `/content/courses/${course.id}/unpublish`, { reason: 'Quality' });
       assert.equal(u.body.data.status, 'draft');
       assert.ok(!(await modules(member, courseId)).some((m) => m.id === mod.id));
       assert.ok((await notifFor(owner.id)).some((n) => n.title.includes('hủy xuất bản')));
-      assert.equal((await A('POST', `/content/courses/${mod.id}/unpublish`, { reason: 'x' })).status, 409);
-      assert.equal((await A('POST', `/content/courses/${mod.id}/publish`, {})).body.data.status, 'published');
+      assert.equal((await A('POST', `/content/courses/${course.id}/unpublish`, { reason: 'x' })).status, 409);
+      assert.equal((await A('POST', `/content/courses/${course.id}/publish`, {})).body.data.status, 'published');
       assert.ok((await modules(member, courseId)).some((m) => m.id === mod.id));
-      assert.equal((await A('POST', `/content/courses/${mod.id}/archive`, {})).body.data.status, 'archived');
+      assert.equal((await A('POST', `/content/courses/${course.id}/archive`, {})).body.data.status, 'archived');
       assert.ok(!(await modules(member, courseId)).some((m) => m.id === mod.id));
-      const rm = await A('POST', `/content/courses/${mod.id}/remove`, { reason: 'Policy' });
+      const rm = await A('POST', `/content/courses/${course.id}/remove`, { reason: 'Policy' });
       assert.equal(rm.body.data.status, 'removed');
-      assert.equal((await A('POST', `/content/courses/${mod.id}/remove`, { reason: 'x' })).status, 409);
-      assert.equal((await A('POST', `/content/courses/${mod.id}/restore`, {})).body.data.status, 'archived'); // giữ trạng thái xuất bản trước đó
-      assert.equal((await A('POST', `/content/courses/${mod.id}/restore`, {})).status, 409);
+      assert.equal((await A('POST', `/content/courses/${course.id}/remove`, { reason: 'x' })).status, 409);
+      assert.equal((await A('POST', `/content/courses/${course.id}/restore`, {})).body.data.status, 'archived'); // giữ trạng thái xuất bản trước đó
+      assert.equal((await A('POST', `/content/courses/${course.id}/restore`, {})).status, 409);
       assert.equal((await A('POST', '/content/courses/nope/publish', {})).status, 404);
       const l = await GET(`/content/courses?courseId=${courseId}&status=archived`);
       assert.equal(l.body.meta.total, 1);
       assert.equal(l.body.data[0].lessons, 2);
       assert.equal(l.body.data[0].creator.id, owner.id);
-      assert.equal((await GET(`/content/courses/${mod.id}`)).body.data.lessonList.length, 2);
-      assert.ok((await actions(mod.id)).includes('course.unpublish'));
+      assert.equal((await GET(`/content/courses/${course.id}`)).body.data.lessonList.length, 2);
+      assert.ok((await actions(course.id)).includes('course.unpublish'));
       assert.ok((await GET('/content/courses/summary')).body.data.archived >= 1);
       assert.equal((await GET('/content/courses?status=nope')).status, 400);
     });
@@ -286,7 +289,7 @@ describe('admin đợt 2', () => {
       const courseId = await com({ owner });
       await join_(m1, courseId);
       await join_(m2, courseId);
-      const ev = await db.prisma.communityEvent.create({ data: { courseId, hostId: owner.id, title: uniq('Sự kiện '), startAt: new Date(Date.now() + 3 * 86_400_000), timezone: 'UTC', meetingLink: 'https://meet.example.com/x' } });
+      const ev = await db.prisma.communityEvent.create({ data: { communityId: courseId, hostId: owner.id, title: uniq('Sự kiện '), startAt: new Date(Date.now() + 3 * 86_400_000), timezone: 'UTC', meetingLink: 'https://meet.example.com/x' } });
       assert.equal((await c.call('POST', `/events/${ev.id}/rsvp`, { token: m1.token })).status, 200);
       const one = (await GET(`/content/events/${ev.id}`)).body.data;
       assert.equal(one.status, 'upcoming');
@@ -325,7 +328,7 @@ describe('admin đợt 2', () => {
     it('events: live/completed phân loại theo giờ bắt đầu', async () => {
       const courseId = await com();
       const host = await c.registerUser('h');
-      const mk = (offsetMs: number) => db.prisma.communityEvent.create({ data: { courseId, hostId: host.id, title: uniq('E'), startAt: new Date(Date.now() + offsetMs), timezone: 'UTC' } });
+      const mk = (offsetMs: number) => db.prisma.communityEvent.create({ data: { communityId: courseId, hostId: host.id, title: uniq('E'), startAt: new Date(Date.now() + offsetMs), timezone: 'UTC' } });
       const [live, done] = await Promise.all([mk(-30 * 60_000), mk(-5 * 3_600_000)]);
       assert.equal((await GET(`/content/events/${live.id}`)).body.data.status, 'live');
       assert.equal((await GET(`/content/events/${done.id}`)).body.data.status, 'completed');
@@ -507,7 +510,7 @@ describe('admin đợt 2', () => {
   describe('payments: refunds, chargebacks', () => {
     async function pendingRefund(price = 40) {
       const f = await payFlow(price);
-      const r = await db.prisma.refundRequest.create({ data: { paymentId: f.paymentId, courseId: f.courseId, userId: f.buyer.id, amountCents: price * 100, reason: 'Charged twice', status: 'pending' } });
+      const r = await db.prisma.refundRequest.create({ data: { paymentId: f.paymentId, communityId: f.courseId, userId: f.buyer.id, amountCents: price * 100, reason: 'Charged twice', status: 'pending' } });
       return { ...f, refundId: r.id };
     }
 
@@ -631,7 +634,7 @@ describe('admin đợt 2', () => {
       assert.equal(mine.communities, 1);
       const rev = (await c.call('GET', `/courses/${f1.courseId}/revenue`, { token: f1.owner.token })).body.data;
       assert.equal(mine.netCents, rev.netCents, 'khớp công thức doanh thu của chủ cộng đồng');
-      assert.equal(mine.pendingBalanceCents, rev.availableBalanceCents);
+      assert.equal(mine.pendingBalanceCents, rev.totalBalanceCents); // số dư chưa rút toàn thời gian (availableBalanceCents nay = phần rút được sau holding period)
 
       const d = (await GET(`/payments/creators/${f1.owner.id}`)).body.data;
       assert.equal(d.creator.id, f1.owner.id);
@@ -653,7 +656,7 @@ describe('admin đợt 2', () => {
     it('payouts: chuỗi trạng thái approve → failed → retry → hold → release → paid; reject; 409; balance; endpoint cũ', async () => {
       const f = await payFlow(200);
       const mk = (amountCents: number, status: 'requested' | 'approved' = 'requested') =>
-        db.prisma.payout.create({ data: { courseId: f.courseId, ownerId: f.owner.id, amountCents, bankName: 'Chase', accountHolder: 'Own Er', accountLast4: '1203', status } });
+        db.prisma.payout.create({ data: { communityId: f.courseId, ownerId: f.owner.id, amountCents, bankName: 'Chase', accountHolder: 'Own Er', accountLast4: '1203', status } });
       const p = await mk(5000);
       const d0 = (await GET(`/payments/payouts/${p.id}`)).body.data;
       assert.equal(d0.status, 'requested');
@@ -744,7 +747,7 @@ describe('admin đợt 2', () => {
       const word = uniq('lst');
       const a = await com({ owner, title: `Alpha ${word}`, category: 'finance' });
       const b = await com({ title: `Beta ${word}`, category: 'finance', discovery: 'hidden' });
-      await db.prisma.course.update({ where: { id: a }, data: { rating: 4.5, ratingCount: 3 } });
+      await db.prisma.community.update({ where: { id: a }, data: { rating: 4.5, ratingCount: 3 } });
       const l = await GET(`/discovery/communities?q=${word}&category=finance&sort=name`);
       assert.deepEqual(l.body.data.map((x: any) => x.id), [a, b]);
       assert.equal(l.body.data[0].discoveryStatus, 'listed');

@@ -3,10 +3,10 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
-import morgan from 'morgan';
 import { env, isProd } from './config/env.js';
 import { prisma } from './db/prisma.js';
 import { errorHandler, notFoundHandler } from './middlewares/error-handler.js';
+import { requestLogger } from './middlewares/request-logger.js';
 import { apiRouter } from './routes.js';
 
 export function createApp() {
@@ -30,7 +30,7 @@ export function createApp() {
     }),
   );
   app.use(cookieParser());
-  if (env.NODE_ENV !== 'test') app.use(morgan(isProd ? 'combined' : 'dev'));
+  if (env.NODE_ENV !== 'test') app.use(requestLogger(isProd)); // URL/Referer đã được che token/ticket/sig
 
   // Health check cho ALB / ECS / Docker HEALTHCHECK
   app.get('/health', async (_req, res) => {

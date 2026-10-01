@@ -64,17 +64,17 @@ API hiện có (bảng dưới là nhóm đầu tiên; **danh sách đầy đủ
 |---|---|---|
 | GET | `/health` | Health check (ALB/ECS) |
 | GET | `/api/courses` | `q, category, pricing, visibility, status, language, sort(trending\|top\|newest), page, limit` |
-| GET | `/api/courses/:id` | Chi tiết khóa học (kèm `viewerEnrolled` nếu có đăng nhập) |
+| GET | `/api/courses/:id` | Chi tiết khóa học (kèm `viewerEnrolled` nếu có đăng nhập). Không có `modules` (module thật ở `/courses/:id/modules`); `highlights/gains/faqs/reviews` rỗng nếu chưa có dữ liệu thật; `priceNotes` suy ra từ giá + Global Settings `payments.trialDays`; `facts[Bài học]` = số bài học thật |
 | POST | `/api/courses/:id/enroll` | Tham gia/rời khóa học (yêu cầu đăng nhập) |
 | GET | `/api/categories` | Danh mục + số khóa học |
-| GET | `/api/stats` | Số liệu hero |
+| GET | `/api/stats` | Số liệu hero, tính từ DB: `learners` = user thật (không demo) có ghi danh, `courses` = cộng đồng đang listed, `instructors` = chủ cộng đồng thật của chúng, `rating` = TB review thật (null nếu chưa có) |
 | POST | `/api/auth/register` | Đăng ký (trả `accessToken` + set cookie `refresh_token` httpOnly) |
 | POST | `/api/auth/login` | Đăng nhập (có rate limit) |
 | POST | `/api/auth/refresh` | Lấy access token mới từ refresh-token cookie (single-use, tự xoay vòng) |
 | POST | `/api/auth/logout` | Đăng xuất, thu hồi refresh token |
 | GET | `/api/auth/me` | Thông tin người dùng hiện tại (yêu cầu `Authorization: Bearer <accessToken>`) |
 
-Dữ liệu khóa học tạm đọc từ seed trong `modules/courses/courses.seed.ts` qua interface `CourseRepository`; người dùng lưu ở file `backend/data/users.json` qua interface `UserRepository`. Khi có database chỉ cần viết thêm implementation của các interface này.
+Dữ liệu khóa học tạm đọc từ seed trong `modules/catalog/catalog.seed.ts` qua interface `CourseRepository`; người dùng lưu ở file `backend/data/users.json` qua interface `UserRepository`. Khi có database chỉ cần viết thêm implementation của các interface này.
 
 ## Deploy AWS (gợi ý)
 
@@ -84,5 +84,5 @@ Dữ liệu khóa học tạm đọc từ seed trong `modules/courses/courses.se
 
 ## Biến môi trường
 
-- `backend/.env`: `PORT`, `NODE_ENV`, `CORS_ORIGIN`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `ACCESS_TOKEN_TTL_MIN`, `REFRESH_TOKEN_TTL_DAYS` (xem `.env.example`). **Bắt buộc đặt riêng `JWT_*_SECRET`** khi `NODE_ENV=production` (server sẽ không khởi động nếu vẫn dùng giá trị mặc định).
+- `backend/.env`: `PORT`, `NODE_ENV`, `CORS_ORIGIN`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `ACCESS_TOKEN_TTL_MIN`, `REFRESH_TOKEN_TTL_DAYS` (xem `.env.example`). **`NODE_ENV` bắt buộc khai báo**; khi `NODE_ENV=production` phải có `DATABASE_URL` và mọi secret (`JWT_*`, `PAYMENT_WEBHOOK_SECRET`, `UPLOAD_SIGNING_SECRET`) khác `dev-*`, không bật `ENABLE_DEV_OUTBOX` (server sẽ không khởi động nếu vi phạm). Chi tiết: `DEPLOY.md`.
 - `frontend/.env`: `VITE_API_URL`

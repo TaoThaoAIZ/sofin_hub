@@ -1,5 +1,7 @@
 # API Lớp học (classroom)
 
+> **Tách Community/Khóa học (STEP 6):** mọi route `/courses/:id/...` dưới đây giữ nguyên và (a) cũng có ở `/communities/:id/...`; (b) route không chỉ định khóa (`modules`, `progress`, `certificate`, tạo/sắp xếp module) thao tác trên **khóa học mặc định** của cộng đồng. Muốn chọn khóa: dùng `/communities/:id/courses/:courseId/...` hoặc `learningCourseId` trong body tạo module. Chi tiết, DTO mới, CRUD khóa học, chứng nhận theo khóa: [communities-courses.md](./communities-courses.md). Khóa module tuần tự và `requiredLevel` tính trong phạm vi MỘT khóa học.
+
 Module: `src/modules/classroom/`. Test: `tests/classroom.test.ts`. Mọi response thành công dạng `{ data: ... }`.
 "Member" = đã tham gia cộng đồng (`requireMembership`, 403 nếu chưa). "mod+" / "admin+" qua `permissions/policy.ts` (`requireRole`).
 

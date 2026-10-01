@@ -49,7 +49,7 @@
 ## Phase 1.5 — Trang chi tiết khóa học (làm sớm hơn kế hoạch)
 
 - [x] Trang `/courses/:id` theo file thiết kế `Chi tiet khoa hoc.dc.html`: hero, breadcrumb, facts, tab Tổng quan/Nội dung/Đánh giá/FAQ, sidebar giá + tham gia, đánh giá học viên
-- [x] API `GET /api/courses/:id` trả thêm nội dung chi tiết (mô tả, lộ trình học, module, FAQ, đánh giá minh họa — xem `backend/src/modules/courses/course-detail.ts`)
+- [x] API `GET /api/courses/:id` trả thêm nội dung chi tiết (mô tả, lộ trình học, module, FAQ, đánh giá minh họa — xem `backend/src/modules/catalog/course-detail.ts`)
 - [x] API `POST /api/courses/:id/enroll` (yêu cầu đăng nhập) — toggle tham gia/rời khóa học, lưu trạng thái ở server (không phải state ảo trên FE)
 - [x] Model `Enrollment` thật khi có DB (hiện lưu Set trong bộ nhớ, xem `modules/enrollments/enrollments.repository.ts`) — ✅ đã làm (bảng Enrollment + CommunityBan)
 - [ ] Đánh giá học viên hiện là dữ liệu minh họa dùng chung cho mọi khóa học — cần model `Review` thật khi làm Phase 3
@@ -60,11 +60,11 @@
 > thành viên, xếp hạng, giới thiệu) dựng theo file thiết kế `SofinHub Community (1).html`, nhưng
 > **"cộng đồng" tạm gắn 1-1 với `Course` hiện có** (chưa có model `Community`/`Membership`/role
 > owner-admin-mod riêng — mọi người tham gia đều là "Member", không có Owner/Admin thật vì khóa học
-> vẫn là dữ liệu mẫu tĩnh trong `courses.seed.ts`, không do user tạo). DoD gốc "chủ cộng đồng thấy
+> vẫn là dữ liệu mẫu tĩnh trong `catalog.seed.ts`, không do user tạo). DoD gốc "chủ cộng đồng thấy
 > công cụ quản trị" **chưa đạt** — cần làm lại đúng theo model dưới đây khi tách Course ra khỏi
 > Community thật. Xem chi tiết từng phần ở Phase 3/4/5/6/8 bên dưới.
 
-- [ ] Model `Community` (tên, slug, mô tả, ảnh bìa, giá, riêng tư/công khai), `Membership` (role: owner/admin/mod/member)
+- [x] Model `Community` (tên, slug, mô tả, ảnh bìa, giá, riêng tư/công khai), `Membership` (role: owner/admin/mod/member) — ✅ STEP 6 audit: Prisma `Community` (bảng `Course`, giữ dữ liệu) + `Enrollment`; **một cộng đồng có NHIỀU khóa học** (entity `Course`, bảng `LearningCourse`, đúng BRD §5.2/§6). Xem `backend/docs/api/communities-courses.md`, `backend/docs/DATABASE.md`
 - [x] API: tạo / sửa / xem cộng đồng, tham gia / rời, danh sách thành viên — ✅ BE (`POST /communities`, `PATCH|DELETE /courses/:id`, khóa của Platform Admin); FE chưa
 - [ ] FE: luồng "Tạo cộng đồng" (wizard ngắn), trang Khám phá thay cho trang khóa học hiện tại (dùng lại lưới card + filter)
 - [ ] Layout trang cộng đồng `/c/:slug` với tab: Cộng đồng · Khóa học · Lịch · Thành viên · Giới thiệu
@@ -162,12 +162,16 @@
 - [x] Chính sách hủy & hoàn tiền cụ thể (đề xuất: hoàn 100% trong thời gian dùng thử; không hoàn sau khi đã thu phí trừ trường hợp Platform Admin duyệt đặc biệt — cần xác nhận) — ⚠️ đã cài THEO ĐỀ XUẤT (7 ngày, cấu hình `REFUND_WINDOW_DAYS`), vẫn cần xác nhận
 - [ ] Trang thanh toán + quản lý gói của tôi
 - [x] Trang "Doanh thu của tôi" cho Owner: số dư, lịch sử giao dịch, lịch rút tiền tiếp theo — ✅ BE `GET /courses/:id/revenue`; FE chưa
-- [x] Payout cho Owner: định kỳ (đề xuất hàng tháng), có ngưỡng rút tối thiểu, trừ hoa hồng nền tảng + phí cổng thanh toán trước khi chuyển khoản — ✅ BE (duyệt thủ công bởi Platform Admin; ngưỡng/chu kỳ tạm)
+- [x] Payout cho Owner: định kỳ (đề xuất hàng tháng), có ngưỡng rút tối thiểu, trừ hoa hồng nền tảng + phí cổng thanh toán trước khi chuyển khoản — ✅ BE (duyệt thủ công bởi Platform Admin; ngưỡng/chu kỳ tạm). Audit STEP 2: chỉ rút phần đã qua holding period (refund 7d + dispute 7d, **tạm**) trừ rolling reserve 10% (**tạm**); hoàn tiền sau payout ghi sổ nợ `OwnerBalanceLedger` và chặn payout khi số dư ròng < 0
+- [x] Khóa vòng đời tiền (audit §3 + P1, `tests/money-lifecycle.test.ts`): unique 1 gói sống/user/cộng đồng, checkout tái dùng intent pending, settle phát hiện/void khoản trừ trùng, không gia hạn cho người bị kick/ban & cộng đồng xóa/khóa, rời cộng đồng hủy gói cuối kỳ + vào lại không trả tiền, gỡ cấm trả quyền, hoàn tiền 2 pha có idempotency key + job đối soát, `gatewayChargeId` lưu trước settle, webhook có trạng thái/replay, thống nhất thứ tự khóa (hết deadlock settle↔scheduler)
+- [x] Điểm thưởng chống farm (audit §5, `tests/points-policy.test.ts`): khóa nghiệp vụ `PointEvent`, điểm âm bù khi xóa bài/sự kiện cùng transaction, RSVP→hủy→RSVP +1 lần
+- [x] Policy ranh giới trạng thái (audit §6.1/6.2): `requireRole` chặn khi cộng đồng bị khóa, `ban()` hết oracle, duyệt join request nguyên tử & không cấp quyền miễn phí cho cộng đồng có phí, mua/dùng thử cộng đồng riêng tư cần được duyệt, moderation chốt ticket trước + thông báo, rate limit toàn cục + theo nhóm ghi, trần `?page`=1000
+- [ ] Còn mở sau STEP 2/3: webhook `charge.dispute.*` thật, đòi nợ tự động (hiện chỉ chặn payout), dunning/`past_due`, lưu thẻ (PaymentMethod), tạo cộng đồng + transferOwnership chưa nằm trong transaction
 
 ## Phase 9 — Quản trị, Tìm kiếm, i18n, SEO (Ngày 17–18)
 
 - [x] Công cụ kiểm duyệt: báo cáo bài, ẩn/xóa, cấm thành viên — 2 cấp: Owner/Admin kiểm duyệt trong cộng đồng của mình, Platform Admin có quyền ghi đè để xử lý vi phạm toàn nền tảng (khoá/gỡ cộng đồng) — ✅ BE (báo cáo, ẩn nội dung, ban; 2 cấp Owner/Admin + Platform Admin); FE chưa
-- [x] Tìm kiếm toàn cục (đề xuất Postgres full-text trước; OpenSearch khi cần) — ✅ BE lọc trong bộ nhớ (chưa Postgres full-text); ô tìm topbar mới chuyển sang tab Thành viên
+- [x] Tìm kiếm toàn cục (đề xuất Postgres full-text trước; OpenSearch khi cần) — ✅ BE Postgres full-text (tsvector + GIN + pg_trgm, audit STEP 8; trước đây lọc trong bộ nhớ); ô tìm topbar mới chuyển sang tab Thành viên
 - [ ] i18n VI/EN (nút "VI" trên Header hiện chỉ là hình) — `react-i18next`
 - [ ] SEO: meta/OG theo trang, sitemap, SSR/prerender trang công khai nếu cần (cân nhắc chuyển Next.js)
 - [ ] Trang "Xem tất cả", 404/500 hoàn chỉnh, empty states
@@ -195,7 +199,7 @@
 - ✅ **Thu hồi access token tức thì**: JWT mang `sid`+`tv`, mọi request kiểm tra phiên + `tokenVersion` trong DB; đổi/đặt lại mật khẩu, xóa tài khoản, logout, logout-all, thu hồi phiên → token cũ 401 ngay (`tests/token-revocation.test.ts`). Xóa tài khoản = ẩn danh hóa (giữ nội dung).
 - ✅ **Frontend đã nối toàn bộ API mới** (4 nhóm: tài khoản; quản trị cộng đồng; bảng tin/lịch/lớp học/kiểm duyệt; thông báo/chat/tìm kiếm/thanh toán/quản trị nền tảng). Kịch bản thao tác: `docs/features/*.md`. `tsc -b` và `npm run build` sạch; **chưa** chạy Playwright/duyệt trên trình duyệt (chờ người test).
 - ✅ **Bộ test QA** `SofinHub_TestCases.xlsx` được bổ sung testcase cho các tính năng trên (xem sheet "Nhật ký thay đổi").
-- ⏳ **Còn mô phỏng**: cổng thanh toán (`MockGateway`), email chỉ vào outbox dev, upload ổ đĩa cục bộ, SSE/rate-limit 1 instance (cần Redis khi scale).
+- ⏳ **Còn mô phỏng**: cổng thanh toán (`MockGateway`), email chỉ vào outbox dev, upload ổ đĩa cục bộ, SSE/rate-limit: đã tách ra state chia sẻ (Redis tuỳ chọn qua `REDIS_URL`, STEP 7 audit — xem mục cuối file).
 - ❓ **Cần chốt** (giá trị tạm đang dùng): hoa hồng nền tảng 10%; hoàn tiền 100% trong 7 ngày đầu; rút tiền tối thiểu $50; chọn cổng thanh toán (Stripe vs PayOS/VNPay/MoMo); kick/ban thành viên trả phí có hoàn tiền không; xác thực realtime cuối cùng (vé ngắn hạn vs cookie). Tất cả ở `backend/docs/API.md` mục "Quyết định nghiệp vụ CHƯA CHỐT".
 
 ---
@@ -243,3 +247,27 @@ Chưa làm / cần chốt: cổng thanh toán thật (chargeback, retry, payout 
 ## Admin console — đợt 3 (backend ✅)
 Analytics (Users/Communities/Engagement/Retention/Revenue/Conversion với `range=7|30|90` + so sánh kỳ trước, tính từ bảng thật), Support (hệ thống ticket thật: form liên hệ + người dùng + admin tạo, gán, trả lời qua email/dev outbox + thông báo trong app, escalate, resolve/close/reopen, ghi chú nội bộ), System (Admin Accounts + Roles & Permissions với **vai trò nhân viên thật Super Admin/Moderator/Support/Finance + vai trò tuỳ chỉnh, quyền áp cho TOÀN BỘ `/api/admin/*`** qua middleware tập trung; Categories; Feature Flags + `GET /api/feature-flags` công khai (rollout theo %); Integrations (mô phỏng, khóa thật không lưu); Notifications (cài đặt cảnh báo + broadcast hệ thống tới all/creators/paid/community/users); Email Templates (biến `{{x}}`, preview, test-send vào dev outbox, `verify_email`/`reset_password` được dùng thật); Audit (IP, vai trò actor, bộ lọc, export CSV); **Global Settings** — các giá trị nghiệp vụ "tạm" (hoa hồng, phí cổng, cửa sổ hoàn tiền, ngưỡng rút, dùng thử, chu kỳ gói) chỉnh được không cần sửa code, env là mặc định; có chế độ bảo trì thật). API `/api/admin/{analytics,support,system}/*` — xem `backend/docs/api/admin-batch3.md`; schema/seed ở `backend/docs/DATABASE.md` (migration `admin_batch3`); test ở `backend/tests/admin-batch3.test.ts` (**307 test xanh toàn bộ**).
 Chưa làm / cần chốt: 2FA thật (chỉ lưu cờ), thực thi `sessionTimeout`/`currency`/`autoPayouts`, job gửi cảnh báo và báo cáo định kỳ cho đội admin, tích hợp thật (Stripe/Mailgun/Slack... đang mô phỏng), backend tự chặn tính năng theo feature flag; các giá trị "tạm" nay chỉnh được ở Global Settings nhưng **vẫn cần chốt con số chính thức** (hoa hồng 10%, hoàn tiền 7 ngày, rút tối thiểu $50, cổng thanh toán, hoàn tiền khi kick, xác thực SSE).
+
+> **Gỡ dữ liệu giả (audit STEP 4)**: `GET /courses/:id` không còn review/module/highlights/FAQ bịa (bỏ `modules`, `online` không thổi phồng, ghi chú dùng thử lấy từ Global Settings); `GET /api/stats` tính từ DB; FE bỏ Stories + widget doanh thu giả, hết `href="#"`, FAQ viết lại đúng tính năng thật. Còn lại: `Course.rating/ratingCount/students` nền của cộng đồng seed vẫn là số mẫu.
+
+> **Bịt 4 đường vào không cần mật khẩu + lưới an toàn (audit STEP 1 & 5)**: `NODE_ENV` bắt buộc khai báo (hết default `development`); hộp thư dev chỉ mount khi `ENABLE_DEV_OUTBOX=1` (production cấm); production từ chối khởi động nếu bất kỳ secret nào còn `dev-*` hoặc thiếu `DATABASE_URL`; cookie `Secure` trừ development, `err.message` chỉ lộ ở development; SSE bỏ `?access_token=` (còn Bearer + vé một lần) và morgan che token/ticket/sig; `GET /api/files/:key` tách ảnh công khai (avatar/cover/post_image) khỏi file riêng tư (message/lesson/post_file: cần đăng nhập + quyền, URL ký 300s qua `POST /api/files/:key/url`, `private, no-store`, 404 khi không có bản ghi Upload/chưa uploaded, thu hồi tin nhắn xóa file). Test: `backend/tests/security-hardening.test.ts`. Lưới an toàn: GitHub Actions (`.github/workflows/ci.yml`: typecheck + lint + test với Postgres 16 + build), ESLint flat (`eslint.config.mjs`, nợ cũ ở mức warn), `npm run test:coverage` (c8), viết lại `DEPLOY.md` Phần 1 (Postgres/Prisma, bảng env đầy đủ, `db:deploy`/`RUN_MIGRATIONS=1`, health check). Mục "MVP, chưa production" theo phụ lục audit: chưa áp vào bảng ✅ phía trên (việc còn lại cho người điều phối).
+
+
+---
+
+## Audit STEP 7 — Đưa state chia sẻ ra khỏi RAM ✅ (2026-10-01)
+- `src/infra/shared-state.ts` (+ `shared.ts`): adapter `kv` / `pubsub` / `rateLimiter` với 2 cài đặt — Redis (ioredis, bật bằng `REDIS_URL`) và in-memory (mặc định). Test hợp đồng chung `tests/shared-state.test.ts` (chạy Redis khi có `REDIS_URL`).
+- Đã chuyển: SSE fan-out tin nhắn + thông báo (pub/sub), vé stream (messages + notifications), nonce vé upload (`SET NX PX`), rate limit toàn cục/nhóm ghi, rate limit tìm kiếm, rate limit gửi tin + throttle thông báo tin nhắn, vô hiệu cache preference thông báo. Mail outbox giữ in-memory (chỉ dev; production = log-only + cảnh báo khi khởi động).
+- Tín hiệu "người nhận offline" (`push() === 0`) bị bỏ: luôn lưu thông báo (gộp 5 phút), chỉ bỏ qua khi người nhận vừa chủ động tương tác với cuộc trò chuyện trong 30s (ack qua HTTP).
+- Job nền (`src/jobs.ts`: gia hạn, đối soát tiền, nhắc lịch) chạy dưới leader election bằng Postgres advisory lock; `RUN_SCHEDULERS=0` + `npm run start:worker` (`src/worker.ts`) cho web/worker tách riêng.
+- Tắt êm (`src/lifecycle.ts`): dừng scheduler, đóng SSE, server.close, flush thông báo, đóng Prisma/Redis; không còn 10s hard-kill.
+- Thông báo (§6.3): ghi DB có retry; thất bại hẳn nhả cờ chống-trùng (nhắc lịch, `PostLikeNotice`); SSE phát sau khi commit.
+- Còn lại: rate limit `express-rate-limit` ở `auth.routes.ts` vẫn theo instance; `lastTs` của thông báo theo process (thứ tự chỉ xấp xỉ giữa các instance); 7 sự kiện thiếu thông báo (§6.3); fan-out sự kiện cắt 200 người; Redis chưa cấu hình TLS/auth mặc định (đặt trong `REDIS_URL` khi dùng managed Redis).
+
+---
+
+## Audit STEP 8 — Postgres full-text + điểm nóng hiệu năng (§6.4) ✅ (2026-10-01)
+- Tìm kiếm: cột `searchVector` GENERATED + GIN (Course/Post/User), `sf_fold()` gập dấu tiếng Việt, `pg_trgm` cho khớp chuỗi con + gõ sai; `search.service.ts` viết lại: lọc/xếp hạng (`ts_rank`)/phân trang trong SQL, giữ nguyên hình dạng response + quy tắc hiển thị (hidden/removed/searchVisibility/riêng tư/bị cấm); `suggest` là 3 truy vấn `LIMIT 5`. Một lần tìm: 125 -> 7 truy vấn trên dữ liệu thử (audit: ~11.000 -> ~8); không còn trần 1.000 bài. Chi tiết: `backend/docs/api/search.md`.
+- 18 index FK còn thiếu + index Post cho `sort=popular`/category/tag (`backend/docs/DATABASE.md`).
+- N+1/tải thừa: `GET /conversations` 1 truy vấn + keyset (`limit`/`cursor`); mở bài học không nạp thân cả khóa; bỏ tải `Course` thừa ở route lớp học/bảng tin; `/me/enrollments` (+ hồ sơ công khai, `/me/points`) gộp; thông báo owner/admin + xóa/khóa cộng đồng + sự kiện mới không nạp cả thành viên (sự kiện hết cắt 200); phiếu bầu gộp bằng SQL; `GET /courses?q=` trong SQL; feed `cursor` keyset (`page` vẫn dùng); bình luận `limit`/`cursor`. Số truy vấn trước/sau + hàng rào test: `tests/query-count.test.ts`.
+- Cần: extension `pg_trgm` trên DB production (xem `DEPLOY.md`, mục 1.3a). Còn lại: tìm trong bình luận/bài học lớp học; khớp chuỗi con giữa từ cho nội dung bài.

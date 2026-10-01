@@ -1,7 +1,7 @@
 import { useParams } from 'react-router-dom';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { formatCompact } from '../../../lib/format';
-import { useCourseDetail } from '../../courses/queries';
+import { useCommunityDetail } from '../../courses/queries';
 import { CommunityInfoCard, initials } from './shared';
 
 // Tên icon lấy đúng từ aboutLearn trong file thiết kế gốc (Material Symbols).
@@ -11,7 +11,7 @@ const glass = 'glass rounded-[22px]';
 
 export function AboutTab() {
   const { id = '' } = useParams();
-  const { data: course, isPending } = useCourseDetail(id);
+  const { data: course, isPending } = useCommunityDetail(id);
 
   if (isPending || !course) return <p className="py-10 text-center text-stone-400">Đang tải…</p>;
 
@@ -21,10 +21,10 @@ export function AboutTab() {
     { icon: 'sell', t: course.priceUsd === 0 ? 'Miễn phí' : `$${course.priceUsd}/tháng`, s: course.priceUsd === 0 ? 'Tham gia ngay' : 'Gói thành viên' },
     { face: initials(course.instructor.name), t: `Bởi ${course.instructor.name}`, s: `${course.instructor.role} & Admin` },
   ];
+  const lessons = Number(course.facts.find((f) => f.label === 'Bài học')?.value ?? 0);
   const free = [
-    `${course.modules.length} module học full quy trình`,
-    `${course.lessons} bài học thực chiến`,
-    `Cộng đồng ${formatCompact(course.stats.members)} thành viên hoạt động`,
+    ...(lessons > 0 ? [`${lessons} bài học trong Lớp học`] : []),
+    `Cộng đồng ${formatCompact(course.stats.members)} thành viên`,
   ];
 
   return (
@@ -58,6 +58,7 @@ export function AboutTab() {
           </div>
         </section>
 
+        {course.gains.length > 0 && (
         <section className={`${glass} px-6 py-[22px]`}>
           <div className="mb-[18px] flex items-center gap-3.5">
             <span className="grid size-[42px] place-items-center rounded-full bg-brand/10">
@@ -79,6 +80,7 @@ export function AboutTab() {
             ))}
           </div>
         </section>
+        )}
 
         <section className={`${glass} px-6 pt-[22px] pb-[18px]`}>
           <div className="mb-4 flex items-center gap-3.5">
@@ -105,6 +107,7 @@ export function AboutTab() {
                   NÂNG CẤP VIP {course.priceUsd > 0 && <span className="text-brand">(${course.priceUsd}/tháng)</span>}
                 </span>
               </div>
+              {course.priceUsd === 0 && <div className="py-1 text-[14.5px] text-stone-500">Cộng đồng này miễn phí.</div>}
               {course.priceNotes.map((x) => (
                 <div key={x} className="flex items-start gap-3 py-1 text-[14.5px] text-stone-800">
                   <MaterialIcon name="check" size={20} color="#f26a1b" />
@@ -117,10 +120,6 @@ export function AboutTab() {
             <div className="flex items-center gap-3">
               <span className="grid size-10 place-items-center rounded-full bg-[#e7d3c6] text-xs font-bold text-[#7c2d12]">{initials(course.instructor.name)}</span>
               <span className="text-[15px]">Founder: {course.instructor.name}</span>
-            </div>
-            <div className="ml-auto flex items-center gap-2 text-[13px] text-stone-700">
-              <MaterialIcon name="redeem" size={20} filled color="#f26a1b" />
-              Tham gia → Làm Module 1 hôm nay → Post kết quả đầu tiên trong 30 ngày.
             </div>
           </div>
         </section>

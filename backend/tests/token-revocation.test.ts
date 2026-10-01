@@ -151,7 +151,7 @@ describe('thu hồi access token tức thì', () => {
     assert.equal(after.body.data.viewerEnrolled, undefined);
   });
 
-  it('SSE: vé (ticket) vẫn hoạt động; Bearer / access_token đã thu hồi bị 401', async () => {
+  it('SSE: vé (ticket) vẫn hoạt động; Bearer đã thu hồi bị 401', async () => {
     const u = await registerUser('rv-sse');
     const t = await call('POST', '/notifications/stream-ticket', { token: u.token });
     assert.ok(t.status < 300);
@@ -168,12 +168,11 @@ describe('thu hồi access token tức thì', () => {
     ac2.abort();
 
     const ac3 = new AbortController();
-    const live = await fetch(`${server.baseUrl}/notifications/stream?access_token=${u.token}`, { signal: ac3.signal });
+    const live = await fetch(`${server.baseUrl}/notifications/stream`, { headers: { Authorization: `Bearer ${u.token}` }, signal: ac3.signal });
     assert.equal(live.status, 200);
     ac3.abort();
 
     await call('POST', '/auth/logout', { token: u.token });
-    assert.equal((await call('GET', `/notifications/stream?access_token=${u.token}`)).status, 401);
     assert.equal((await call('GET', '/notifications/stream', { token: u.token })).status, 401);
     assert.equal((await call('GET', '/messages/stream', { token: u.token })).status, 401);
     assert.equal((await call('POST', '/notifications/stream-ticket', { token: u.token })).status, 401);

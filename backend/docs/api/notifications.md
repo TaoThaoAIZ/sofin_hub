@@ -13,14 +13,14 @@ Response: `{ data }`; danh sách: `{ data, meta }`. Mọi route cần `Authoriza
 | GET | `/notifications/preferences` | Bearer | - | `{data: {types: {<type>: boolean}, emailDigest}}` | 401 |
 | PUT | `/notifications/preferences` | Bearer | `{types?: {post_liked?: boolean,...}, emailDigest?: 'off'\|'daily'\|'weekly'}` (cập nhật từng phần) | preferences mới | 400 (khóa lạ, tắt loại bắt buộc, body rỗng), 401 |
 | POST | `/notifications/stream-ticket` | Bearer | - | 201 `{data: {ticket, expiresInSec: 30}}` | 401 |
-| GET | `/notifications/stream` | Bearer header, hoặc `?ticket=`, hoặc `?access_token=` | - | SSE `text/event-stream` | 401 |
+| GET | `/notifications/stream` | Bearer header, hoặc `?ticket=` (KHÔNG nhận `?access_token=`) | - | SSE `text/event-stream` | 401 |
 
 ## Realtime SSE
 - Sự kiện: `event: notification` + `data: <JSON Notification>`; comment `: heartbeat` mỗi 25s; `retry: 5000`.
 - Header: `Cache-Control: no-cache, no-transform`, `X-Accel-Buffering: no` (nginx không đệm). Khi client ngắt: dừng heartbeat và gỡ listener.
-- `EventSource` không đặt được header nên có 3 cách xác thực (chỉ route này): Bearer header (dùng `fetch` stream), `?ticket=` (khuyến nghị), `?access_token=` (fallback).
+- `EventSource` không đặt được header nên có 2 cách xác thực (chỉ route này): Bearer header (dùng `fetch` stream) hoặc `?ticket=` (một lần, TTL 30s; khuyến nghị cho `EventSource`).
 - **Khuyến nghị**: FE gọi `POST /notifications/stream-ticket` (có Bearer) rồi mở `new EventSource('/api/notifications/stream?ticket=...')`. Vé dùng 1 lần, sống 30s, nên URL bị lộ vào log cũng vô hại.
-- **Trade-off bảo mật `?access_token=`**: token nằm trong URL nên có thể lọt vào access log của proxy/nginx, lịch sử trình duyệt, header Referer. Chỉ giữ làm fallback; bản chốt nên dùng ticket hoặc cookie httpOnly (SameSite) và có thể bỏ fallback.
+- **Đã bỏ `?access_token=`** (audit 2026-10-01 mục 4.4): token nằm trong URL sẽ lọt vào access log/Referer. Request mang `?access_token=` bị 401. Ngoài ra morgan che `access_token|refresh_token|token|ticket|sig` trong URL và Referer (`middlewares/request-logger.ts`). Test: `tests/security-hardening.test.ts`.
 - Không có replay: mất kết nối thì FE gọi lại `GET /notifications` để bù.
 
 ## Quyết định thiết kế
@@ -31,11 +31,11 @@ Response: `{ data }`; danh sách: `{ data, meta }`. Mọi route cần `Authoriza
 - Đường dẫn cố định (`/preferences`, `/unread-count`, `/stream`) khai báo trước `/:id`.
 
 ## Giới hạn hiện tại
-- Dữ liệu thông báo/preference bền vững (Postgres). Cố ý còn trong bộ nhớ tiến trình: vé SSE (30s, 1 lần) và danh sách listener SSE => chỉ chạy đúng với 1 instance; nhiều instance cần Redis (pub/sub + vé). Cache preference 5s có thể lệch giữa các instance tối đa bằng TTL đó.
+- Dữ liệu thông báo/preference bền vững (Postgres). Vé SSE (30s, 1 lần, `GETDEL` atomic), fan-out SSE (pub/sub `notif:new`) và vô hiệu cache preference (`notif:prefs`) nằm ở state chia sẻ: Redis khi đặt `REDIS_URL` (mint ở instance A redeem được ở B), nếu không thì in-memory (đúng cho 1 instance). Ghi DB nền có retry+backoff (`notificationWriteRetry`); thất bại hẳn => log + thư chết (`deadLetters()`) + `notify(..., { onWriteFailed })` để nhả cờ chống-trùng (nhắc lịch sự kiện, `PostLikeNotice`). SSE chỉ phát SAU khi hàng đã commit (không có thông báo ma). Test: `tests/notifications-durability.test.ts`.
 - Thông báo đang ghi nền mà tiến trình chết đúng lúc đó thì mất (chấp nhận: thông báo không phải dữ liệu tiền tệ).
 - Dọn thông báo cũ theo kiểu khi-ghi, không có job nền.
 
 ## Chưa làm / cần quyết định
 - `emailDigest` mới chỉ lưu tùy chọn; chưa có job gửi email tổng hợp.
-- Chốt cách xác thực SSE cuối cùng (ticket hay cookie) và có bỏ `?access_token=` không.
+- Chốt có chuyển SSE sang cookie httpOnly hay giữ ticket.
 - Gom nhóm thông báo (vd. "5 người đã thích bài của bạn") chưa có.

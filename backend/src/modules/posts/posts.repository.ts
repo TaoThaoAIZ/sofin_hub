@@ -1,4 +1,5 @@
 import { prisma } from '../../db/prisma.js';
+import { revokePointsInTx } from '../points/points.repository.js';
 import { postCategoryFromDomain, postCategoryToDomain } from '../../db/enums.js';
 import { Prisma } from '../../generated/prisma/client.js';
 import type { PostComment as DbComment, Post as DbPost } from '../../generated/prisma/client.js';
@@ -6,25 +7,40 @@ import type { Comment, PollDef, Post, PostCategory } from './posts.types.js';
 
 /** Bảng tin (Postgres qua Prisma: Post, PostComment, PostLike, PostLikeNotice, PollVote). */
 export interface ListPostsParams {
-  courseId: string;
+  communityId: string;
   category?: PostCategory;
   /** Thẻ đã chuẩn hóa (bỏ '#', chữ thường) — so khớp với từng phần tử của Post.tags cũng đã chuẩn hóa. */
   tag?: string;
   sort: 'latest' | 'popular';
   page: number;
   limit: number;
+  /** Phân trang keyset: lấy các bài đứng SAU mốc này (bỏ qua `page`). Không bị lặp/sót khi có bài mới chen vào đầu feed. */
+  after?: PostCursor;
   /** false = chỉ thấy bài không ẩn + bài của chính viewerId; true = thấy tất cả (mod trở lên). */
   seeHidden: boolean;
   viewerId?: string;
 }
 
+/** Vị trí của 1 bài trong thứ tự feed (pinned DESC, [likesCount DESC,] createdAt DESC, id ASC). */
+export interface PostCursor {
+  pinned: boolean;
+  likesCount: number;
+  createdAt: string;
+  id: string;
+}
+
+export interface CommentCursor {
+  createdAt: string;
+  id: string;
+}
+
 export interface PostsRepository {
   /** Ghim lên đầu, sort latest/popular, lọc, ẩn bài hidden và phân trang — tất cả bằng truy vấn DB. */
-  list(params: ListPostsParams): Promise<{ items: Post[]; total: number }>;
+  list(params: ListPostsParams): Promise<{ items: Post[]; total: number; hasMore: boolean }>;
   /** Top thẻ (không tính bài ẩn), gộp theo thẻ chuẩn hóa; `tag` là dạng hiển thị của thẻ được gặp mới nhất. */
-  popularTags(courseId: string, limit: number): Promise<{ tag: string; count: number }[]>;
+  popularTags(communityId: string, limit: number): Promise<{ tag: string; count: number }[]>;
   findById(postId: string): Promise<Post | undefined>;
-  create(courseId: string, authorId: string, content: string, category: PostCategory, tags: string[], imageUrl?: string, poll?: PollDef): Promise<Post>;
+  create(communityId: string, authorId: string, content: string, category: PostCategory, tags: string[], imageUrl?: string, poll?: PollDef): Promise<Post>;
   update(postId: string, patch: { content?: string; category?: PostCategory; tags?: string[] }): Promise<Post | undefined>;
   /** Xóa bài; bình luận, like, phiếu bình chọn xóa theo (CASCADE). */
   delete(postId: string): Promise<void>;
@@ -37,7 +53,8 @@ export interface PostsRepository {
   toggleLike(postId: string, userId: string): Promise<boolean>;
   /** true nếu đây là lần đầu cặp (bài, user) được đánh dấu — dùng để chỉ thông báo/cộng điểm like 1 lần. */
   markLikeNotified(postId: string, userId: string): Promise<boolean>;
-  listComments(postId: string): Promise<Comment[]>;
+  /** Bình luận cũ → mới, phân trang keyset theo (createdAt, id). `seeHidden=false`: chỉ bình luận không ẩn + của chính `viewerId`. Lấy dư 1 dòng để biết còn trang sau. */
+  listComments(postId: string, opts: { limit: number; after?: CommentCursor; seeHidden: boolean; viewerId?: string }): Promise<{ items: Comment[]; hasMore: boolean }>;
   findComment(commentId: string): Promise<Comment | undefined>;
   addComment(postId: string, authorId: string, content: string): Promise<Comment>;
   updateComment(commentId: string, content: string): Promise<Comment | undefined>;
@@ -45,14 +62,23 @@ export interface PostsRepository {
   setCommentHidden(commentId: string, hidden: boolean): Promise<void>;
   /** Ghi đè lựa chọn của user (rỗng = bỏ phiếu). */
   setVote(postId: string, userId: string, optionIds: string[]): Promise<void>;
-  /** userId -> các optionId đã chọn. */
-  getVotes(postId: string): Promise<Map<string, string[]>>;
-  getVotesMany(postIds: string[]): Promise<Map<string, Map<string, string[]>>>;
+  /**
+   * Kết quả bình chọn đã GỘP trong SQL (không nạp từng phiếu): mỗi bài → số phiếu theo lựa chọn, số người đã bầu, và các lựa chọn của viewer.
+   * Poll 20.000 phiếu vẫn chỉ trả vài dòng (≤ số lựa chọn + 1 mỗi bài).
+   */
+  pollTallies(postIds: string[], viewerId: string | undefined): Promise<Map<string, PollTally>>;
+}
+
+export interface PollTally {
+  counts: Map<string, number>;
+  totalVoters: number;
+  viewerVotes: string[];
 }
 
 const toPost = (p: DbPost): Post => ({
   id: p.id,
-  courseId: p.courseId,
+  communityId: p.communityId,
+  courseId: p.communityId,
   authorId: p.authorId,
   content: p.content,
   category: postCategoryToDomain(p.category),
@@ -82,47 +108,41 @@ const isNotFound = (e: unknown) => (e as { code?: string }).code === 'P2025';
 const NORM_TAG_SQL = (col: Prisma.Sql) => Prisma.sql`lower(regexp_replace(btrim(${col}), '^#', ''))`;
 
 export const postsRepository: PostsRepository = {
-  async list({ courseId, category, tag, sort, page, limit, seeHidden, viewerId }) {
-    const skip = (page - 1) * limit;
-    if (!tag) {
-      const where: Prisma.PostWhereInput = {
-        courseId,
-        removedAt: null, // bài bị Platform Admin gỡ: không ai thấy (kể cả tác giả/mod)
-        ...(category ? { category: postCategoryFromDomain(category) } : {}),
-        ...(seeHidden ? {} : { OR: [{ hidden: false }, ...(viewerId ? [{ authorId: viewerId }] : [])] }),
-      };
-      const orderBy: Prisma.PostOrderByWithRelationInput[] =
-        sort === 'popular'
-          ? [{ pinned: 'desc' }, { likesCount: 'desc' }, { createdAt: 'desc' }, { id: 'asc' }]
-          : [{ pinned: 'desc' }, { createdAt: 'desc' }, { id: 'asc' }];
-      const [rows, total] = await Promise.all([prisma.post.findMany({ where, orderBy, skip, take: limit }), prisma.post.count({ where })]);
-      return { items: rows.map(toPost), total };
-    }
-
-    // Lọc theo thẻ cần unnest mảng -> truy vấn thô; chỉ lấy id đã sắp xếp/phân trang rồi nạp bản ghi.
-    const conds: Prisma.Sql[] = [
-      Prisma.sql`p."courseId" = ${courseId}`,
-      Prisma.sql`p."removedAt" IS NULL`,
-      Prisma.sql`EXISTS (SELECT 1 FROM unnest(p."tags") AS t(v) WHERE ${NORM_TAG_SQL(Prisma.sql`t.v`)} = ${tag})`,
-    ];
+  async list({ communityId, category, tag, sort, page, limit, seeHidden, viewerId, after }) {
+    // Mọi đường (có/không thẻ, offset/keyset) đi cùng một truy vấn id có thứ tự ổn định rồi nạp bản ghi theo id.
+    const conds: Prisma.Sql[] = [Prisma.sql`p."courseId" = ${communityId}`, Prisma.sql`p."removedAt" IS NULL`]; // gỡ bởi Platform Admin: không ai thấy
+    if (tag) conds.push(Prisma.sql`sf_tagnorm(p."tags") @> ARRAY[${tag}]::text[]`); // dùng GIN Post_tagsnorm_gin_idx
     if (category) conds.push(Prisma.sql`p."category" = ${category}::"PostCategory"`);
     if (!seeHidden) conds.push(viewerId ? Prisma.sql`(NOT p."hidden" OR p."authorId" = ${viewerId})` : Prisma.sql`NOT p."hidden"`);
+    const countWhere = Prisma.join(conds, ' AND ');
+    if (after) {
+      const t = after.createdAt;
+      const tail = Prisma.sql`(p."createdAt" < ${t}::timestamp OR (p."createdAt" = ${t}::timestamp AND p."id" > ${after.id}::text))`;
+      conds.push(
+        sort === 'popular'
+          ? Prisma.sql`(p."pinned" < ${after.pinned} OR (p."pinned" = ${after.pinned} AND (p."likesCount" < ${after.likesCount} OR (p."likesCount" = ${after.likesCount} AND ${tail}))))`
+          : Prisma.sql`(p."pinned" < ${after.pinned} OR (p."pinned" = ${after.pinned} AND ${tail}))`,
+      );
+    }
     const whereSql = Prisma.join(conds, ' AND ');
     const order =
       sort === 'popular'
         ? Prisma.sql`p."pinned" DESC, p."likesCount" DESC, p."createdAt" DESC, p."id" ASC`
         : Prisma.sql`p."pinned" DESC, p."createdAt" DESC, p."id" ASC`;
+    const offset = after ? 0 : (page - 1) * limit;
+    // Lấy dư 1 dòng để biết còn trang sau mà không cần đếm.
     const [idRows, countRows] = await Promise.all([
-      prisma.$queryRaw<{ id: string }[]>`SELECT p."id" FROM "Post" p WHERE ${whereSql} ORDER BY ${order} LIMIT ${limit} OFFSET ${skip}`,
-      prisma.$queryRaw<{ n: number }[]>`SELECT count(*)::int AS n FROM "Post" p WHERE ${whereSql}`,
+      prisma.$queryRaw<{ id: string }[]>`SELECT p."id" FROM "Post" p WHERE ${whereSql} ORDER BY ${order} LIMIT ${limit + 1} OFFSET ${offset}`,
+      prisma.$queryRaw<{ n: number }[]>`SELECT count(*)::int AS n FROM "Post" p WHERE ${countWhere}`,
     ]);
-    const ids = idRows.map((r) => r.id);
-    const rows = await prisma.post.findMany({ where: { id: { in: ids } } });
+    const hasMore = idRows.length > limit;
+    const ids = idRows.slice(0, limit).map((r) => r.id);
+    const rows = ids.length ? await prisma.post.findMany({ where: { id: { in: ids } } }) : [];
     const byId = new Map(rows.map((r) => [r.id, r]));
-    return { items: ids.map((id) => byId.get(id)).filter((r): r is DbPost => !!r).map(toPost), total: countRows[0]?.n ?? 0 };
+    return { items: ids.map((id) => byId.get(id)).filter((r): r is DbPost => !!r).map(toPost), total: countRows[0]?.n ?? 0, hasMore };
   },
 
-  async popularTags(courseId, limit) {
+  async popularTags(communityId, limit) {
     // Mỗi bài chỉ tính 1 lần cho mỗi thẻ chuẩn hóa; tag hiển thị = dạng của bài mới nhất chứa thẻ đó.
     const norm = NORM_TAG_SQL(Prisma.sql`u.v`);
     const rows = await prisma.$queryRaw<{ tag: string; count: number }[]>`
@@ -130,7 +150,7 @@ export const postsRepository: PostsRepository = {
       FROM (
         SELECT DISTINCT ON (p."id", ${norm}) u.v AS v, ${norm} AS n, p."createdAt" AS "createdAt"
         FROM "Post" p, unnest(p."tags") AS u(v)
-        WHERE p."courseId" = ${courseId} AND NOT p."hidden"
+        WHERE p."courseId" = ${communityId} AND NOT p."hidden"
         ORDER BY p."id", ${norm}
       ) x
       GROUP BY x.n
@@ -144,10 +164,10 @@ export const postsRepository: PostsRepository = {
     return p && !p.removedAt ? toPost(p) : undefined;
   },
 
-  async create(courseId, authorId, content, category, tags, imageUrl, poll) {
+  async create(communityId, authorId, content, category, tags, imageUrl, poll) {
     const p = await prisma.post.create({
       data: {
-        courseId,
+        communityId,
         authorId,
         content,
         category: postCategoryFromDomain(category),
@@ -178,7 +198,11 @@ export const postsRepository: PostsRepository = {
   },
 
   async delete(postId) {
-    await prisma.post.deleteMany({ where: { id: postId } });
+    // Xóa bài + điểm âm bù (điểm đăng bài và điểm like_received của bài) trong CÙNG transaction ⇒ đăng-rồi-xóa không farm được điểm.
+    await prisma.$transaction(async (tx) => {
+      await revokePointsInTx(tx, { sourceType: 'post', sourceId: postId, related: { sourceType: 'post_like', idPrefix: `${postId}:` } });
+      await tx.post.deleteMany({ where: { id: postId } });
+    });
   },
 
   async setPinned(postId, pinned) {
@@ -220,9 +244,15 @@ export const postsRepository: PostsRepository = {
     return r.count === 1;
   },
 
-  async listComments(postId) {
-    const rows = await prisma.postComment.findMany({ where: { postId, removedAt: null }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] });
-    return rows.map(toComment);
+  async listComments(postId, { limit, after, seeHidden, viewerId }) {
+    const and: Prisma.PostCommentWhereInput[] = [{ postId, removedAt: null }];
+    if (!seeHidden) and.push({ OR: [{ hidden: false }, ...(viewerId ? [{ authorId: viewerId }] : [])] });
+    if (after) {
+      const t = new Date(after.createdAt);
+      and.push({ OR: [{ createdAt: { gt: t } }, { createdAt: t, id: { gt: after.id } }] });
+    }
+    const rows = await prisma.postComment.findMany({ where: { AND: and }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }], take: limit + 1 });
+    return { items: rows.slice(0, limit).map(toComment), hasMore: rows.length > limit };
   },
 
   async findComment(commentId) {
@@ -271,20 +301,23 @@ export const postsRepository: PostsRepository = {
     });
   },
 
-  async getVotes(postId) {
-    return (await this.getVotesMany([postId])).get(postId) ?? new Map();
-  },
-
-  async getVotesMany(postIds) {
-    const out = new Map<string, Map<string, string[]>>();
+  async pollTallies(postIds, viewerId) {
+    const out = new Map<string, PollTally>();
     if (postIds.length === 0) return out;
-    const rows = await prisma.pollVote.findMany({ where: { postId: { in: postIds } }, orderBy: { createdAt: 'asc' } });
+    const rows = await prisma.$queryRaw<{ postId: string; optionId: string | null; n: number; mine: boolean | null }[]>`
+      SELECT v."postId", v."optionId", COUNT(*)::int AS n, COALESCE(BOOL_OR(v."userId" = ${viewerId ?? null}::text), false) AS mine
+      FROM "PollVote" v WHERE v."postId" = ANY(${postIds}::text[]) GROUP BY v."postId", v."optionId"
+      UNION ALL
+      SELECT v."postId", NULL, COUNT(DISTINCT v."userId")::int, false
+      FROM "PollVote" v WHERE v."postId" = ANY(${postIds}::text[]) GROUP BY v."postId"`;
     for (const r of rows) {
-      const perPost = out.get(r.postId) ?? new Map<string, string[]>();
-      const list = perPost.get(r.userId) ?? [];
-      list.push(r.optionId);
-      perPost.set(r.userId, list);
-      out.set(r.postId, perPost);
+      const t = out.get(r.postId) ?? { counts: new Map<string, number>(), totalVoters: 0, viewerVotes: [] };
+      if (r.optionId === null) t.totalVoters = r.n;
+      else {
+        t.counts.set(r.optionId, r.n);
+        if (r.mine) t.viewerVotes.push(r.optionId);
+      }
+      out.set(r.postId, t);
     }
     return out;
   },

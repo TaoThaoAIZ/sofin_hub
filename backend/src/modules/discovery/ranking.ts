@@ -59,7 +59,7 @@ export async function loadSignals(ids: string[]): Promise<Map<string, CommunityS
       WHERE "courseId" = ANY(${ids}::text[]) AND "status" = 'resolved' AND "action" IS NOT NULL AND "action" NOT IN ('none', 'dismiss') GROUP BY "courseId"`),
     prisma.$queryRaw<{ id: string; n: number }[]>(Prisma.sql`
       SELECT "courseId" AS id, COUNT(*)::int AS n FROM "Post" WHERE "courseId" = ANY(${ids}::text[]) AND "createdAt" >= ${d30} AND "removedAt" IS NULL GROUP BY "courseId"`),
-    prisma.course.findMany({ where: { id: { in: ids } }, select: { id: true, rating: true, ratingCount: true } }),
+    prisma.community.findMany({ where: { id: { in: ids } }, select: { id: true, rating: true, ratingCount: true } }),
   ]);
   const by = <T extends { id: string }>(rows: T[]) => new Map(rows.map((r) => [r.id, r]));
   const m = by(mem), mr = by(mrr), rp = by(rep), vi = by(vio), po = by(posts);

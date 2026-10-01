@@ -249,7 +249,7 @@ describe('auth bổ sung: quên/đổi mật khẩu, hồ sơ, xác thực email
       for (const t of [u.token, viewer.token]) await call('POST', '/courses/photo/enroll', { token: t });
       const post = (await call('POST', '/courses/photo/posts', { token: u.token, body: { content: 'Bài của người sẽ xóa' } })).body.data;
       const cm = (await call('POST', `/posts/${post.id}/comments`, { token: u.token, body: { content: 'bình luận cũ' } })).body.data;
-      await db.pointEvent.create({ data: { userId: u.id, courseId: 'photo', points: 5, reason: 'post' } });
+      await db.pointEvent.create({ data: { userId: u.id, communityId: 'photo', points: 5, reason: 'post' } });
       await db.notification.create({ data: { userId: u.id, type: 'system', title: 't', body: 'b' } });
       const pointsBefore = await db.pointEvent.count({ where: { userId: u.id } });
       const login = await call('POST', '/auth/login', { body: { email: u.email, password: u.password } });

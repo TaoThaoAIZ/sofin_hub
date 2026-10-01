@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { CATEGORY_IDS, LANGUAGES, VISIBILITIES } from '../courses/course.types.js';
+import { MAX_PAGE } from '../../utils/pagination.js';
+import { CATEGORY_IDS, LANGUAGES, VISIBILITIES } from '../catalog/community.types.js';
 
 const title = z.string().trim().min(3, 'Tên cộng đồng tối thiểu 3 ký tự').max(80, 'Tên cộng đồng tối đa 80 ký tự');
 const description = z.string().trim().min(1, 'Vui lòng nhập mô tả').max(2000, 'Mô tả tối đa 2000 ký tự');
@@ -54,6 +55,6 @@ export const reviewBody = z.object({
   text: z.string().trim().max(1000, 'Nội dung tối đa 1000 ký tự').default(''),
 });
 export const reviewsQuery = z.object({
-  page: z.coerce.number().int().min(1).default(1),
+  page: z.coerce.number().int().min(1).max(MAX_PAGE).default(1),
   limit: z.coerce.number().int().min(1).max(50).default(10),
 });

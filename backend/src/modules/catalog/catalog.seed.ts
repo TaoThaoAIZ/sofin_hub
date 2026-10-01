@@ -1,4 +1,4 @@
-import type { Category, CategoryId, Course, CourseStatus, CourseTag, Language, Pricing, Visibility } from './course.types.js';
+import type { Category, CategoryId, Community, CourseStatus, CourseTag, Language, Pricing, Visibility } from './community.types.js';
 
 export const categories: Category[] = [
   { id: 'business', name: 'Kinh doanh' },
@@ -57,7 +57,7 @@ const rows: Row[] = [
 const DAY = 24 * 60 * 60 * 1000;
 const seedEpoch = Date.UTC(2026, 8, 1);
 
-export const courses: Course[] = rows.map((r, i) => ({
+export const seedCommunities: Community[] = rows.map((r, i) => ({
   id: r.id,
   title: r.title,
   description: r.description,
@@ -80,11 +80,4 @@ export const courses: Course[] = rows.map((r, i) => ({
 }));
 
 /** Thứ tự khai báo dùng làm xếp hạng "Đang nổi" cho tới khi có số liệu thật. */
-export const trendingRank: ReadonlyMap<string, number> = new Map(courses.map((c, i) => [c.id, i]));
-
-export const platformStats = {
-  learners: 100_000,
-  courses: 1_000,
-  instructors: 500,
-  rating: 4.9,
-};
+export const trendingRank: ReadonlyMap<string, number> = new Map(seedCommunities.map((c, i) => [c.id, i]));

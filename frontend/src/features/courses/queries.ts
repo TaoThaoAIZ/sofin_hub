@@ -33,7 +33,8 @@ export const usePlatformStats = () =>
     staleTime: 5 * 60_000,
   });
 
-export const useCourseDetail = (id: string) => {
+/** Chi tiết cộng đồng (GET /communities/:id). */
+export const useCommunityDetail = (id: string) => {
   const { accessToken, status } = useAuth();
   return useQuery({
     queryKey: courseKeys.detail(id),
@@ -57,3 +58,5 @@ export const useToggleEnrollment = (id: string) => {
     },
   });
 };
+export const useCourseDetail = useCommunityDetail;
+export const useCommunities = useCourses;

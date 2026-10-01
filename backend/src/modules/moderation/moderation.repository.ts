@@ -8,18 +8,21 @@ export interface ModerationRepository {
   create(input: Omit<Report, 'id' | 'createdAt' | 'status'>): Promise<Report>;
   findById(id: string): Promise<Report | undefined>;
   findByReporterAndTarget(reporterId: string, targetType: ReportTargetType, targetId: string): Promise<Report | undefined>;
-  /** courseId bỏ trống = mọi cộng đồng (Platform Admin). Mới nhất trước; phân trang ở DB. */
-  list(filter: { courseId?: string; status?: ReportStatus; page: number; limit: number }): Promise<{ items: Report[]; total: number }>;
+  /** communityId bỏ trống = mọi cộng đồng (Platform Admin). Mới nhất trước; phân trang ở DB. */
+  list(filter: { communityId?: string; status?: ReportStatus; page: number; limit: number }): Promise<{ items: Report[]; total: number }>;
   /**
    * Chuyển báo cáo từ open sang trạng thái xử lý — atomic (`updateMany ... WHERE status = 'open'`).
    * Trả báo cáo mới, hoặc undefined nếu nó không còn open (đã có người xử lý trước).
    */
   resolve(id: string, patch: { status: 'resolved' | 'dismissed'; action: ReportAction; note?: string; resolvedBy: string }): Promise<Report | undefined>;
+  /** Hoàn tác `resolve` khi thi hành hành động thất bại (trả về trạng thái trước đó, chỉ nếu vẫn đang resolved/dismissed). */
+  reopen(id: string, previousStatus: 'open' | 'under_review'): Promise<void>;
 }
 
 const toReport = (r: DbReport): Report => ({
   id: r.id,
-  courseId: r.courseId,
+  communityId: r.communityId,
+  courseId: r.communityId,
   targetType: r.targetType,
   targetId: r.targetId,
   targetUserId: r.targetUserId,
@@ -39,7 +42,7 @@ export const moderationRepository: ModerationRepository = {
   async create(input) {
     const r = await prisma.report.create({
       data: {
-        courseId: input.courseId,
+        communityId: input.communityId,
         targetType: input.targetType,
         targetId: input.targetId,
         targetUserId: input.targetUserId,
@@ -62,8 +65,8 @@ export const moderationRepository: ModerationRepository = {
     return r ? toReport(r) : undefined;
   },
 
-  async list({ courseId, status, page, limit }) {
-    const where = { ...(courseId ? { courseId } : {}), ...(status ? { status } : {}) };
+  async list({ communityId, status, page, limit }) {
+    const where = { ...(communityId ? { communityId } : {}), ...(status ? { status } : {}) };
     const [rows, total] = await Promise.all([
       prisma.report.findMany({ where, orderBy: [{ createdAt: 'desc' }, { id: 'asc' }], skip: (page - 1) * limit, take: limit }),
       prisma.report.count({ where }),
@@ -78,6 +81,13 @@ export const moderationRepository: ModerationRepository = {
     });
     if (r.count === 0) return undefined;
     return this.findById(id);
+  },
+
+  async reopen(id, previousStatus) {
+    await prisma.report.updateMany({
+      where: { id, status: { in: ['resolved', 'dismissed'] } },
+      data: { status: previousStatus, action: null, note: null, resolvedById: null, resolvedAt: null },
+    });
   },
 };
 

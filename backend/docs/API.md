@@ -12,7 +12,8 @@
 | Cộng đồng & thành viên | [communities.md](./api/communities.md) | tạo/sửa/xóa/khóa cộng đồng, 3 luồng tham gia, yêu cầu tham gia, lời mời, đổi vai trò, kick/ban, chuyển quyền, đánh giá |
 | Bài viết & sự kiện | [content.md](./api/content.md) | sửa/xóa/ẩn/chia sẻ bài, bình luận, poll, thẻ; sửa/xóa sự kiện, `.ics`, nhắc lịch |
 | Kiểm duyệt | [moderation.md](./api/moderation.md) | báo cáo bài/bình luận/thành viên, xử lý báo cáo, admin nền tảng |
-| Lớp học | [classroom.md](./api/classroom.md) | CRUD module & bài học, player, tiến độ, khóa theo module/cấp độ, chứng nhận |
+| Lớp học | [classroom.md](./api/classroom.md) | CRUD module & bài học, player, tiến độ, khóa theo module/cấp độ, chứng nhận (route cũ `/courses/:id/*` = KHÓA MẶC ĐỊNH của cộng đồng) |
+| Cộng đồng ↔ Khóa học | [communities-courses.md](./api/communities-courses.md) | **Tách Community/Course**: `GET /communities`, mirror `/communities/:id/*` của mọi route `/courses/:id/*`, CRUD khóa học `/communities/:id/courses`, module/tiến độ/chứng nhận theo khóa, `communityId`/`learningCourseId` trong JSON |
 | Tìm kiếm | [search.md](./api/search.md) | tìm toàn cục (khóa học, bài viết, thành viên), gợi ý |
 | Thông báo | [notifications.md](./api/notifications.md) | danh sách, chưa đọc, tuỳ chọn, realtime SSE |
 | Tin nhắn | [messages.md](./api/messages.md) | chat 1-1, chặn người dùng, realtime SSE |
@@ -54,12 +55,14 @@ Giá trị nghiệp vụ "tạm" (hoa hồng, phí cổng, cửa sổ hoàn ti�
 
 ## Mã lỗi nghiệp vụ đáng chú ý
 `PAYMENT_REQUIRED` (402) · `JOIN_REQUEST_REQUIRED` (403) · `COMMUNITY_LOCKED` (403) · `MODULE_LOCKED` (403) · `QUOTA_EXCEEDED` (413) ·
-`INVITE_REVOKED|INVITE_EXPIRED|INVITE_EXHAUSTED` (410) · `VALIDATION_ERROR` (400) · `UNAUTHORIZED` · `FORBIDDEN` · `NOT_FOUND` · `CONFLICT` · `TOO_MANY_REQUESTS`.
+`PAYOUT_BLOCKED|PAYOUT_EXCEEDS_AVAILABLE` (400) · `INVITE_REVOKED|INVITE_EXPIRED|INVITE_EXHAUSTED` (410) · `VALIDATION_ERROR` (400) · `UNAUTHORIZED` · `FORBIDDEN` · `NOT_FOUND` · `CONFLICT` · `TOO_MANY_REQUESTS`.
 
 ## Biến môi trường mới (xem `backend/.env.example`)
-`PLATFORM_ADMIN_EMAILS`, `FRONTEND_URL`, `SUPPORT_EMAIL`, `UPLOAD_*` (thư mục, bí mật ký, TTL, giới hạn MB, hạn mức mỗi user), `MESSAGE_RATE_LIMIT_PER_MIN`,
+`PLATFORM_ADMIN_EMAILS`, `FRONTEND_URL`, `SUPPORT_EMAIL`, `UPLOAD_*` (thư mục, bí mật ký, TTL, giới hạn MB, hạn mức mỗi user), `MESSAGE_RATE_LIMIT_PER_MIN`, `RATE_LIMIT_DISABLED`, `RATE_LIMIT_GLOBAL_PER_MIN`, `RATE_LIMIT_WRITE_PER_MIN` (rate limit toàn cục/nhóm ghi, `middlewares/rate-limit.ts`), `PAYOUT_DISPUTE_WINDOW_DAYS`, `PAYOUT_RESERVE_PCT`,
+`REDIS_URL` (bỏ trống = in-memory, đúng cho 1 instance; BẮT BUỘC khi nhiều instance), `REDIS_KEY_PREFIX` (mặc định `sofinhub:`), `RUN_SCHEDULERS` (`0` = process web-only không chạy job nền; xem DEPLOY.md mục 1.7), `INSTANCE_COUNT`/`WEB_CONCURRENCY` (chỉ là gợi ý để cảnh báo thiếu Redis khi production).
 `PAYMENT_WEBHOOK_SECRET`, `TRIAL_DAYS`, `SUBSCRIPTION_PERIOD_DAYS`, `REFUND_WINDOW_DAYS`, `PLATFORM_COMMISSION_PCT`, `GATEWAY_FEE_PCT`, `GATEWAY_FEE_FIXED_CENTS`, `PAYOUT_MIN_USD`.
-**Production bắt buộc đặt riêng**: `JWT_*_SECRET`, `UPLOAD_SIGNING_SECRET`, `PAYMENT_WEBHOOK_SECRET`.
+**`NODE_ENV` bắt buộc khai báo** (`development|test|production`, không có default; `npm run dev/test/db:*` đã đặt sẵn bằng cross-env). `ENABLE_DEV_OUTBOX=1` mới mount `GET /api/dev/outbox` (độc lập NODE_ENV; production cấm bật).
+**Production bắt buộc**: `DATABASE_URL` (không default) và mọi secret phải khác `dev-*` (`JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `UPLOAD_SIGNING_SECRET`, `PAYMENT_WEBHOOK_SECRET`) — app thoát ngay khi vi phạm (`config/env-guard.ts`, test `tests/security-hardening.test.ts`). Cookie refresh luôn `Secure` trừ development; `err.message` thô chỉ lộ khi `NODE_ENV=development`.
 
 ## Trạng thái dữ liệu & những phần còn MÔ PHỎNG (cập nhật 2026-09-30, sau khi chuyển sang Postgres)
 - **Database thật: Postgres 16 + Prisma 7** (`docker compose up -d`, cổng **5435**). 37 bảng, migration trong `backend/prisma/migrations`, dữ liệu test nạp bằng `npm run db:seed` (idempotent). Chi tiết: [DATABASE.md](./DATABASE.md). Test tích hợp chạy trên DB thật (mỗi file test một schema Postgres tạm) — **224 test xanh**.
@@ -69,17 +72,20 @@ Giá trị nghiệp vụ "tạm" (hoa hồng, phí cổng, cửa sổ hoàn ti�
 - **Còn mô phỏng / cần làm trước khi lên production:**
   - **Cổng thanh toán chưa chọn**: đang là `MockGateway` (`payments.gateway.ts`). Chờ chốt Stripe hay PayOS/VNPay.
   - **Email chưa gửi thật**: chỉ ghi vào outbox dev (`GET /dev/outbox`). Cần nối AWS SES/SMTP (`setMailProvider()` trong `mail.service.ts`).
-  - **Upload lưu ổ đĩa cục bộ**: `StorageProvider` đã tách sẵn, cần hiện thực S3/MinIO; `/files/:key` hiện công khai (bảo mật bằng khóa ngẫu nhiên).
+  - **Upload lưu ổ đĩa cục bộ**: `StorageProvider` đã tách sẵn, cần hiện thực S3/MinIO; `/files/:key` chỉ công khai cho ảnh avatar/cover/post_image; file riêng tư cần đăng nhập + quyền (URL ký hạn ngắn, xem `docs/api/uploads.md`).
   - **Nhiều instance**: vé & kết nối SSE (thông báo, tin nhắn), rate limit, giãn cách thông báo tin nhắn, nonce vé upload nằm trong bộ nhớ tiến trình; scheduler nhắc lịch/gia hạn gói đã chống trùng bằng DB nhưng cần một chỗ chạy job rõ ràng → cần Redis / hàng đợi job khi chạy >1 instance.
-  - Chưa có job dọn Session hết hạn; chưa có `migrate deploy` trong quy trình deploy; tìm kiếm toàn cục lọc trong bộ nhớ trên tập đã lấy từ DB (nâng cấp Postgres full-text sau).
+  - Chưa có job dọn Session hết hạn; `migrate deploy` chạy qua `npm run db:deploy` (release command) hoặc `RUN_MIGRATIONS=1` trong Docker entrypoint (xem `DEPLOY.md`); tìm kiếm toàn cục lọc trong bộ nhớ trên tập đã lấy từ DB (nâng cấp Postgres full-text sau).
+
+## Vòng đời tiền & điểm (audit STEP 2/3, 2026-10-01)
+Chi tiết + tên test: `docs/api/payments.md` (mục "Vòng đời tiền"), `docs/api/content.md` (điểm chống farm, rate limit, trần `?page`), `docs/api/communities.md` (khóa cộng đồng, ban/unban, duyệt yêu cầu có phí). Migration `20261004100000_money_lifecycle_points`. Test mới: `tests/money-lifecycle.test.ts`, `tests/points-policy.test.ts`.
 
 ## Quyết định nghiệp vụ CHƯA CHỐT (đang dùng giá trị tạm, cấu hình bằng env)
 1. Cổng thanh toán (PLAN câu hỏi #2).
 2. Mô hình doanh thu & hoa hồng nền tảng — tạm 10% + phí cổng 2.9% + 30¢ (#6).
 3. Chính sách hoàn tiền — tạm hoàn 100% trong 7 ngày đầu, ngoài đó Platform Admin duyệt (#8).
-4. Payout — tạm ngưỡng tối thiểu $50, duyệt thủ công (#9).
+4. Payout — tạm ngưỡng tối thiểu $50, duyệt thủ công (#9); **holding period = refund window 7 ngày + dispute window 7 ngày (tạm), rolling reserve 10% (tạm)** — chỉnh ở Global Settings (`payments.disputeWindowDays`, `payments.payoutReservePct`).
 5. Kick/ban thành viên trả phí có hoàn tiền không; owner đổi giá có ảnh hưởng gói đang thuê không.
-6. `/files` cho tệp đính kèm tin nhắn có cần đăng nhập không; xác thực SSE cuối cùng (vé ngắn hạn hay cookie, có bỏ `?access_token=` không).
+6. (Đã chốt trong code, audit STEP 1) `/files` riêng tư cần đăng nhập + quyền; SSE chỉ nhận Bearer hoặc `?ticket=` (đã bỏ `?access_token=`). Còn mở: có chuyển SSE sang cookie httpOnly không.
 7. Chứng nhận: mod thêm bài mới sau khi đã cấp thì xử lý thế nào.
 
 ## Tích hợp frontend (đã nối 2026-09-30)

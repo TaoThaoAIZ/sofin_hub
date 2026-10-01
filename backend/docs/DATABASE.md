@@ -7,7 +7,7 @@ courses, enrollments (+ban). Các module còn lại (communities, content, platf
 
 - `import { prisma } from '../../db/prisma.js'` trong repository. Repository: `userRepository` (`auth/auth.repository.ts`; `fileUserRepository` là alias deprecated), `courseRepository` (`inMemoryCourseRepository` là alias deprecated), `enrollmentRepository`.
 - **Xác thực**: `authenticateAccessToken(token)` (`auth/tokens.ts`) -> `{ userId, sid } | null`, dùng cho mọi chỗ cần xác thực ngoài `requireAuth` (SSE...). `req.sessionId` có sau `requireAuth`. Đừng dùng `verifyAccessToken` (chỉ kiểm chữ ký).
-- **Course**: `students` hiển thị = `Course.students` (số nền minh họa, CHỈ với khóa seed có `trendingRank`) + số thành viên thật (Enrollment không bị ban, `isDemo=false`); khóa người dùng tạo chỉ tính số thật. `courseService.update(id, { locked, lockReason })` ghi `Course.lockReason` (`lockReason: null` khi mở khóa), đọc bằng `courseService.getLockReason(id)`. `stats.admins/online` lấy từ Enrollment thật. Nội dung minh họa của trang chi tiết (highlights, gains, faqs, modules, reviews minh họa) vẫn được SINH khi đọc trong `course-detail.ts` (quyết định: chưa có hệ thống soạn nội dung khóa học riêng; chỉ course, review thật, stats lấy từ DB).
+- **Course**: `students` hiển thị = `Course.students` (số nền minh họa, CHỈ với khóa seed có `trendingRank`) + số thành viên thật (Enrollment không bị ban, `isDemo=false`); khóa người dùng tạo chỉ tính số thật. `catalogService.update(id, { locked, lockReason })` ghi `Course.lockReason` (`lockReason: null` khi mở khóa), đọc bằng `catalogService.getLockReason(id)`. `stats.admins/online` lấy từ Enrollment thật. Nội dung minh họa của trang chi tiết (highlights, gains, faqs, modules, reviews minh họa) vẫn được SINH khi đọc trong `course-detail.ts` (quyết định: chưa có hệ thống soạn nội dung khóa học riêng; chỉ course, review thật, stats lấy từ DB).
 - **Ban**: `enrollmentService.setBanned(userId, courseId, true, { reason, bannedById })` ghi `CommunityBan` (tham số cuối tùy chọn).
 - **Test**: DB thật là mặc định. `startTestServer()` nạp Course nền (21 khóa seed, KHÔNG có thành viên/bài viết demo); `resetDb()` xóa sạch rồi nạp lại Course nền; `(await useTestDb()).reset()` = trống hoàn toàn; `db.seedBase()`. Không còn `TEST_DB` / `USERS_FILE`.
 - `data/users.json` **deprecated**: chỉ để nhập một lần bằng `npm run db:import-users`.
@@ -66,18 +66,18 @@ Container tắt fsync (chỉ dev/test) nên không dùng cấu hình này cho pr
 | newbie@sofinhub.test | Chưa tham gia cộng đồng nào |
 | banned@sofinhub.test | Có Enrollment ở `photo` nhưng bị `CommunityBan` (không còn là thành viên) |
 
-Seed cũng ghi **21 Course thật** từ `courses.seed.ts` (kèm `trendingRank`, `priceCents`).
+Seed cũng ghi **21 Course thật** từ `catalog.seed.ts` (kèm `trendingRank`, `priceCents`).
 
 ## Sơ đồ bảng
 
-Nhóm bảng (37 bảng):
+Nhóm bảng (38 bảng):
 
 - **Auth**: `User`, `Session` (refresh token xoay vòng, id = `sid`), `OneTimeToken` (reset mật khẩu / xác thực email, chỉ lưu hash).
-- **Cộng đồng**: `Course` (id = slug), `Enrollment` (PK ghép user+course, có `role`), `CommunityBan`, `JoinRequest`, `Invite`, `Review`.
+- **Cộng đồng**: Prisma `Community` (bảng `"Course"`, id = slug), `Enrollment` (PK ghép user+community, có `role`), `CommunityBan`, `JoinRequest`, `Invite`, `Review`. Xem "Tách Community / Khóa học" bên dưới.
 - **Bảng tin**: `Post` (+ `poll` Json), `PostComment`, `PostLike`, `PostLikeNotice`, `PollVote`.
 - **Sự kiện**: `CommunityEvent`, `EventRsvp` (có `remindedAt`).
 - **Điểm**: `PointEvent` (sổ cái append-only; bảng xếp hạng = SUM).
-- **Lớp học**: `ClassroomModule`, `ClassroomLesson`, `LessonProgress`, `ClassroomSettings`, `Certificate`.
+- **Lớp học**: Prisma `Course` (bảng `"LearningCourse"` = khóa học), `ClassroomModule`, `ClassroomLesson`, `LessonProgress`, `ClassroomSettings`, `Certificate`.
 - **Thông báo / nhắn tin**: `Notification`, `NotificationPreference`, `Conversation`, `Message`, `UserBlock`.
 - **Kiểm duyệt**: `Report`.
 - **Thanh toán**: `Payment` (= `PaymentIntent`), `Subscription`, `RefundRequest`, `Payout`, `InvoiceSequence`, `IdempotencyKey`, `WebhookEvent`.
@@ -157,7 +157,7 @@ erDiagram
 - **Seed vs người thật**: bài viết/sự kiện seed cũ có `seedAuthorName`/`seedHostName`; sau chuyển đổi tác giả là `User.isDemo=true` (xem dưới), nên
   các field này biến mất khỏi DB (view domain lấy tên từ User).
 - **Các thứ KHÔNG lưu DB** (cố ý): outbox mail dev, vé SSE/stream, bộ đếm rate-limit, khóa/ nhớ lần gửi verify (`lastVerificationSent`), lock in-memory thanh toán.
-  Reviews: điểm nền `Course.rating/ratingCount` + `Review` thật (tính lại atomically trong repository: nền = `courses.seed.ts`, không còn Map `baselines` trong bộ nhớ).
+  Reviews: điểm nền `Course.rating/ratingCount` + `Review` thật (tính lại atomically trong repository: nền = `catalog.seed.ts`, không còn Map `baselines` trong bộ nhớ).
 
 ## Quy ước repository Prisma (cho agent giai đoạn sau)
 
@@ -269,14 +269,57 @@ Chi tiết nghiệp vụ: [api/admin.md](./api/admin.md). Thay đổi schema:
 - `db:reset` chưa được kiểm chứng trong phiên dựng nền (Prisma chặn `migrate reset` khi chạy bởi AI agent nếu không có xác nhận của người dùng) — chạy thủ công một lần.
 - Dockerfile đã thêm bước `prisma generate`; chưa có bước `migrate deploy` khi deploy (cần thêm vào quy trình DEPLOY.md khi có RDS).
 
+## Tách Community / Khóa học (STEP 6 audit §2.1; migration `20261006100000_community_course_split`)
+
+BRD §5.2/§6: một cộng đồng có NHIỀU khóa học. Trước đây Prisma `Course` đóng cả hai vai nên mỗi cộng đồng chỉ có một danh sách module phẳng.
+
+**Cách làm (đổi tên + entity mới, không di chuyển dữ liệu cộng đồng):**
+1. *Phase 1 — đổi tên domain, DB không đổi.* Model Prisma `Course` → `Community` (`@@map("Course")`); mọi FK `courseId` → field `communityId` (`@map("courseId")`) trên 19 bảng. `prisma migrate diff` cho kết quả rỗng (tên bảng/cột/chỉ mục/ràng buộc giữ nguyên, raw SQL cũ vẫn chạy).
+2. *Phase 2 — migration `20261006100000_community_course_split`.* Thêm bảng `"LearningCourse"` (Prisma model `Course`), `ClassroomModule.learningCourseId` + `Certificate.learningCourseId` (Prisma field `learningCourseId`), backfill 1 khóa mặc định / cộng đồng (tên = tên cộng đồng) chứa toàn bộ module/chứng nhận cũ, đổi unique chứng nhận thành `(userId, learningCourseId)`.
+   Lệch với kế hoạch expand→migrate→contract của audit: gộp 1 migration vì backfill xác định và không đụng cột cũ (cột `courseId` = id cộng đồng giữ nguyên; rollback chỉ cần DROP phần mới).
+
+**Bảng đổi tên (tên Prisma ↔ tên bảng/cột DB):**
+
+| Prisma (sau) | Bảng / cột DB | Ghi chú |
+|---|---|---|
+| `Community` | `"Course"` | cộng đồng (id = slug); giữ cột marketplace `rating/ratingCount/instructorName/instructorRole/durationMinutes/tag/students`; `lessons` là cột seed cũ KHÔNG còn dùng — API tính `lessons` từ lớp học |
+| `Course` | `"LearningCourse"` | khóa học: `id uuid, communityId, title, description, thumbnailUrl, position, publishStatus, certificatesEnabled?, removedAt/modReason/modAt/modById, createdAt/updatedAt` |
+| `<bảng>.communityId` (19 bảng) | `<bảng>."courseId"` | Enrollment, CommunityBan, JoinRequest, Invite, Review, Post, CommunityEvent, PointEvent, ClassroomModule, ClassroomLesson, ClassroomSettings, Certificate, Notification, Report, Payment, Subscription, RefundRequest, Payout, Chargeback, OwnerBalanceLedger, Upload, DiscoveryFeature |
+| `ClassroomModule.learningCourseId`, `Certificate.learningCourseId` | `"learningCourseId"` | FK → `"LearningCourse"` (CASCADE) |
+| `User.ownedCommunities` | — | trước là `ownedCourses` |
+
+> Prisma không cho một field mang tên trùng với cột DB của field khác (`courseId` đã là cột của `communityId`) nên FK mới tên `learningCourseId` ở cả Prisma lẫn DB.
+
+**ERD (phần thay đổi):**
+
+```mermaid
+erDiagram
+  Community ||--o{ Course : "has many (LearningCourse)"
+  Course ||--o{ ClassroomModule : contains
+  Community ||--o{ ClassroomModule : "communityId (phi chuẩn hóa)"
+  ClassroomModule ||--o{ ClassroomLesson : has
+  Community ||--|| ClassroomSettings : "mặc định certificatesEnabled"
+  Course ||--o{ Certificate : "1 / (user, khóa)"
+  Community ||--o{ Certificate : communityId
+```
+
+- Khóa **mặc định** = `published` đầu tiên theo `(position, createdAt)` (không có thì khóa chưa gỡ đầu tiên). Route cũ `/courses/:id/modules|progress|certificate` thao tác trên khóa này.
+- Tạo cộng đồng = 1 transaction: `Community` + `Enrollment(owner)` + `Course` mặc định (+ thử slug kế tiếp khi đua unique). Cộng đồng tạo thẳng bằng DB (test/seed cũ) được `ensureDefault` tạo khóa khi cần (thêm module qua route cũ).
+- Thứ tự/khóa tuần tự của module và `requiredLevel` tính TRONG từng khóa (khóa dòng `"LearningCourse"` khi đổi `index`); điểm/level vẫn theo cộng đồng.
+- `ClassroomSettings.certificatesEnabled` = mặc định của cộng đồng; `Course.certificatesEnabled` (nullable) ghi đè: `certificatesEffective = course ?? settings`.
+- Seed (`prisma/seed/courses.ts`, `classroom.ts`): khóa mặc định id `course-<community>-main`; photo (2 khóa), yt (2, khóa 2 ghi đè chứng nhận), fin (3, 1 nháp); chứng nhận cố định `FIN-DEMO-CERT-001` (khóa mặc định fin) + `PHOTO-DEMO-CERT-002` (khóa "Chỉnh sửa ảnh nâng cao"). Admin Content "khóa học" (`prisma/seed/admin-batch2.ts`) = các khóa id `seed-b2-course-*`.
+
 ## Lớp học (module `classroom`, đã chuyển Prisma)
 
+> Cập nhật tách Community/Khóa học: khóa học → module → bài; xem mục "Tách Community / Khóa học" ở trên. Repo: `classroom.repository.ts` (module/bài/tiến độ/chứng nhận), `learning-catalog.repository.ts` (khóa học).
+
+
 - Bảng: `ClassroomModule`, `ClassroomLesson`, `LessonProgress`, `ClassroomSettings`, `Certificate`. Repo: `classroom.repository.ts` (`classroomRepository`).
-- Nội dung minh họa là SEED (`prisma/seed/classroom.ts`, id xác định `mod-<courseId>-<n>`, `les-<courseId>-<n>-<m>`, thumbnail null); runtime KHÔNG còn sinh lười. Khóa đã có module thì seed bỏ qua.
+- Nội dung minh họa là SEED (`prisma/seed/classroom.ts`, id xác định `mod-<communityId>-<n>`, `les-<communityId>-<n>-<m>`, thumbnail null); runtime KHÔNG còn sinh lười. Khóa đã có module thì seed bỏ qua.
 - `index` do transaction đánh lại (khóa dòng Course/Module `FOR UPDATE` để tạo/xóa/sắp xếp đồng thời không trùng index); xóa module/bài cascade tiến độ.
 - Điểm bài học chỉ cộng 1 lần: `LessonProgress` có dòng = đã từng hoàn thành; `toggleCompleted` chèn `ON CONFLICT DO NOTHING` — chỉ lời gọi chèn được dòng mới trả `firstTime=true`. Không thêm cột.
-- Chứng nhận: mã 96-bit ngẫu nhiên (`randomBytes(12)` base64url), unique `(userId, courseId)`, `createMany skipDuplicates` nên cấp đồng thời chỉ 1 bản; xác minh công khai theo `code`.
-- Truy vấn không N+1: `getModules` (2 truy vấn), `completedAtMap` (1), `getCourseLessons` (1).
+- Chứng nhận: mã 96-bit ngẫu nhiên (`randomBytes(12)` base64url), unique `(userId, learningCourseId)` (1 chứng nhận / user / KHÓA HỌC), `createMany skipDuplicates` nên cấp đồng thời chỉ 1 bản; xác minh công khai theo `code`.
+- Truy vấn không N+1: `getModules` (2 truy vấn), `completedAtMap` (1), `findLesson` (1 JOIN bài+module+khóa).
 - Kịch bản seed thủ công: photo (member1 xong module 1; member2 2 bài; member3 chưa học; certificatesEnabled), yt (module 2 requiredLevel=2; member1 xong module 1), fin (certificatesEnabled; member1 xong 100%, chứng nhận `FIN-DEMO-CERT-001`).
 
 ## Admin đợt 2 (migration `20261002100000_admin_batch2`)
@@ -293,3 +336,33 @@ Chi tiết nghiệp vụ: [api/admin-batch3.md](./api/admin-batch3.md). Thay đ�
 - **Nhân viên**: **AdminRole** (khóa chuỗi, `permissions String[]`, `isSystem`; migration NẠP SẴN 4 vai trò hệ thống super_admin/moderator/support/finance để schema test không cần seed) và **AdminAccount** (PK = `userId`, `roleKey`, `status` active|suspended, `twoFactorEnabled` chỉ là cờ, `invitedById`). Email trong `PLATFORM_ADMIN_EMAILS` không có hàng ở đây (luôn Super Admin).
 - **Hệ thống**: **FeatureFlag** (`stage` draft|beta|active, `enabled`, `rolloutPercent`), **Integration** (cấu hình không nhạy cảm + `secretMask` 4 ký tự cuối; KHÔNG lưu khóa thật), **EmailTemplate** (`subject`/`body` Json `{en,vi}`, `variables`, `status` active|draft|disabled, `isSystem`), **PlatformBroadcast** (lịch sử thông báo hệ thống). Cấu hình nền tảng dùng lại **PlatformSetting**: khóa `global.settings` (chỉ lưu các khóa bị ghi đè; mặc định ở env) và `admin.alerts` (cài đặt cảnh báo cho đội admin).
 - **Seed** (`prisma/seed/admin-batch3.ts`, chạy cuối `runSeed`, idempotent, id `seed-admin3-*`/UUID suy từ tên): vai trò tuỳ chỉnh `content_reviewer`; nhân viên `moderator@`, `support@`, `finance@`, `tom@`, `nina@` (suspended) + `john.carter@`, `mia.lopez@` làm Moderator; 22 ticket (3 nhóm x đủ 5 trạng thái, 4 mức ưu tiên, 2 đã escalate, có tin nhắn/ghi chú nội bộ); 6 feature flag, 8 tích hợp, 7 mẫu email (en+vi; `verify_email`/`reset_password` đang `active` nên được dùng thật), 2 broadcast, 6 dòng audit của nhân viên (có IP). Để Analytics có hình dạng: rải lại `User.createdAt` của thành viên demo trong 150 ngày (chỉ khi vừa seed trong 3 ngày gần nhất), dời `Enrollment.enrolledAt` tương ứng và thêm Session đã thu hồi mô phỏng "quay lại" ở các tuần 1/2/4/8/12. Lưu ý: số liệu "New users" của Dashboard đợt 1 trên DB dev vì vậy phân bố theo 150 ngày thay vì dồn vào ngày seed.
+
+## Vòng đời tiền + điểm (migration `20261004100000_money_lifecycle_points`)
+- **Subscription**: partial unique index `Subscription_one_live_per_user_course` = `UNIQUE(userId, courseId) WHERE status IN ('trialing','active')` (Prisma không khai báo được — chỉ có trong SQL migration; `prisma migrate diff` sẽ báo lệch, bỏ qua). Migration tự dọn gói trùng (giữ gói `active`/mới nhất, còn lại `canceled`).
+- **RefundRequest**: enum `RefundStatus` + `refunding`; cột `gatewayRefundId`, `refundingAt` (khóa idempotency gửi cổng = `id`).
+- **WebhookEvent**: enum `WebhookStatus` (`received|processing|done|failed`); cột `type`, `payload` (Json), `status`, `attempts`, `lastError`, `processingAt`, `processedAt`, `updatedAt`; index `(status, updatedAt)`. Dòng cũ backfill `done`.
+- **OwnerBalanceLedger** (mới): `courseId, ownerId?, kind (refund_after_payout|chargeback_after_payout|adjustment), amountCents (<0 = nợ), paymentId?, refundId?, note?` — append-only, ghi khi hoàn tiền/chargeback làm số dư ròng của owner âm.
+- **PointEvent**: enum `PointReason` + `revoked`; cột `sourceType`, `sourceId`; `UNIQUE(userId, reason, sourceType, sourceId)` (NULL không đụng nhau nên dòng cũ vẫn hợp lệ), index `(sourceType, sourceId)`.
+- Thứ tự khóa trong các transaction tiền: advisory `sub:<user>:<course>` → hàng Subscription (`FOR UPDATE`) → Payment → … → `InvoiceSequence` (cuối cùng). Cổng thanh toán KHÔNG được gọi trong transaction (hoàn tiền 2 pha, xem `docs/api/payments.md`).
+
+## Tìm kiếm toàn văn + index FK (STEP 8; migration `20261005100000_search_fulltext`, `20261005100100_fk_indexes`)
+Chi tiết hành vi: [api/search.md](./api/search.md).
+- **Extension `pg_trgm`** (cài vào schema `public` nếu chưa có). Hàm SQL IMMUTABLE `sf_fold(text)` (gập dấu + hạ chữ thường), `sf_tags(text[])`, `sf_tagnorm(text[])` (chuẩn hóa thẻ: trim, bỏ `#`, chữ thường). Hàm nằm trong schema của app (`search_path`), nên mỗi schema test có bản riêng; riêng `pg_trgm` dùng chung ở `public` (migration chịu được nhiều process cùng tạo; opclass/toán tử được tra schema động).
+- **Cột sinh sẵn `searchVector tsvector GENERATED ALWAYS AS (...) STORED`** trên `Course`, `Post`, `User` + GIN (`Course_searchVector_idx`, `Post_searchVector_idx`, `User_searchVector_idx`). Prisma khai báo `Unsupported("tsvector")?` (không ghi được, seed/`create` bỏ qua; đọc bằng `$queryRaw`). Trigram GIN dạng expression: `Course_title_trgm_idx` (`sf_fold(title)`), `User_name_trgm_idx` (`sf_fold(firstName || ' ' || lastName)`) — không khai báo được trong Prisma nên `migrate diff` bỏ qua.
+- **Lệch `migrate diff` cần biết**: 3 dòng `ALTER COLUMN "searchVector" DROP DEFAULT` (Course/Post/User) xuất hiện vì Prisma không biết cột generated — KHÔNG đưa vào migration mới (sẽ lỗi). Cùng loại với partial unique index của Subscription.
+- **Index FK đã thêm (18)**: Certificate.courseId, CommunityBan.userId + bannedById, CommunityEvent.hostId, Invite.createdById, JoinRequest.decidedById, Notification.courseId, PollVote.userId, PostLikeNotice.userId, RefundRequest.userId + resolvedById, Report.resolvedById (+ assignedToId, thêm bởi đợt sau; `targetUserId` đã có), Review.userId, Upload.courseId, ReportEvent.actorId, Chargeback.userId, DiscoveryFeature.courseId. Test `tests/perf-sql.test.ts` kiểm bằng `pg_constraint` ⋈ `pg_index` rằng không còn FK nào thiếu index dẫn đầu.
+- **Index `Post`**: `(courseId, pinned, likesCount, createdAt)` cho `sort=popular` (quét ngược), `(courseId, category, createdAt)` cho lọc category, GIN `Post_tagsnorm_gin_idx` trên `sf_tagnorm(tags)` cho lọc thẻ (truy vấn dùng `sf_tagnorm(tags) @> ARRAY[tag]`).
+- Lưu ý vận hành: `ADD COLUMN ... GENERATED STORED` viết lại bảng (khóa ACCESS EXCLUSIVE) — chạy migration lúc ít tải nếu `Post` lớn.
+
+### Số truy vấn trước/sau (đo bằng `tests/query-count.test.ts`)
+Đếm câu SQL thật gửi Postgres (patch `pg.Client.query`, bỏ BEGIN/COMMIT). Các lần gọi qua HTTP đã gồm ~2 truy vấn của middleware xác thực. Test giữ làm hàng rào chống tái phát (ngưỡng ở cuối cột "sau").
+
+| Điểm nóng | Dữ liệu đo | Trước | Sau |
+|---|---|---|---|
+| `GET /search` (type=all) | 3 cộng đồng x 20 thành viên x 120 bài (gọi service) | 125 (tăng tuyến tính theo số bài/thành viên, ~55 truy vấn/trang x tối đa 20 trang x mỗi cộng đồng: ~11.000 ở quy mô audit) | 7 (cố định: phạm vi + 3 đếm + <=3 trang) |
+| `GET /search/suggest` | như trên | 125 (chạy cả phép quét rồi cắt 5) | 5 (3 truy vấn `LIMIT 5`) |
+| `GET /conversations` | 20 hội thoại | 45 (~2/hội thoại + cố định; audit: 4/hội thoại) | 3 (1 truy vấn + auth), bất kể số hội thoại |
+| `GET /courses/:id/lessons/:lessonId` | khóa 4 module x 12 bài, thân bài 5KB | 21, gồm 1 truy vấn nạp thân bài của MỌI bài trong khóa (~20MB ở quy mô audit) | 10, không nạp thân bài nào ngoài bài đang mở |
+| `GET /me/enrollments` | 8 cộng đồng, mỗi khóa 4 module | 44 (~5/cộng đồng, tuần tự) | 6 (ghi danh 2 + thông tin khóa 1 + tiến độ gộp 1 + auth 2), bất kể số cộng đồng |
+
+Thay đổi khác cùng đợt (không đo bằng số): mọi route lớp học/bảng tin bỏ tải `Course` thừa (`requireMembership` dùng `lockState` 1 truy vấn nhẹ + `touchIfMember` 1 câu `UPDATE ... RETURNING`; `policy.getRole` còn 1 truy vấn thay vì 2); thông báo "xin vào"/xóa/khóa cộng đồng và sự kiện mới không còn nạp toàn bộ thành viên (lọc/duyệt theo lô trong SQL; sự kiện mới rải cho MỌI thành viên, lô đầu 500 trong request, các lô sau chạy nền — hết cắt cứng 200); `pollTallies` gộp phiếu bầu bằng `GROUP BY` (poll 20.000 phiếu ⇒ vài dòng); `GET /courses?q=` chọn id bằng SQL thay vì đọc cả bảng; feed có `cursor` keyset (+ `hasMore`/`nextCursor`), bình luận có `limit`/`cursor` (mặc định 100).

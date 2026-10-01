@@ -95,7 +95,7 @@ function ProfileContent() {
                 <ul className="m-0 grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-2">
                   {profile.communities.map((c) => (
                     <li key={c.course.id}>
-                      <Link to={`/courses/${c.course.id}/community`} className="glass flex items-center gap-3 rounded-2xl p-3 text-stone-900 hover:brightness-[1.03]">
+                      <Link to={`/communities/${c.course.id}/community`} className="glass flex items-center gap-3 rounded-2xl p-3 text-stone-900 hover:brightness-[1.03]">
                         <img src={c.course.thumbnail} alt="" className="size-14 flex-none rounded-xl object-cover" />
                         <div className="min-w-0">
                           <div className="truncate font-semibold">{c.course.title}</div>

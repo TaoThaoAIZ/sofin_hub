@@ -95,7 +95,7 @@ export async function seedAdmin(ctx: SeedContext): Promise<void> {
   ];
   for (const c of coms) {
     const o = PEOPLE.find((p) => p.key === c.owner)!;
-    const data: Prisma.CourseUncheckedCreateInput = {
+    const data: Prisma.CommunityUncheckedCreateInput = {
       id: c.id, title: c.title, description: `Cộng đồng ${c.title} dành cho những ai muốn học hỏi, chia sẻ và cùng nhau phát triển.`,
       category: c.category, tag: 'new', ...common, instructorName: `${o.first} ${o.last}`, priceCents: c.priceUsd * 100,
       pricing: c.priceUsd > 0 ? 'paid' : 'free', visibility: 'public', ownerId: uid(c.owner), createdAt: ago(c.hoursAgo ?? 100),
@@ -108,10 +108,10 @@ export async function seedAdmin(ctx: SeedContext): Promise<void> {
         deletedById: c.deleted.byOwner ? null : adminId,
       });
     }
-    await db.course.upsert({ where: { id: c.id }, create: data, update: {} });
+    await db.community.upsert({ where: { id: c.id }, create: data, update: {} });
     await db.enrollment.upsert({
-      where: { userId_courseId: { userId: uid(c.owner), courseId: c.id } },
-      create: { userId: uid(c.owner), courseId: c.id, role: 'owner' },
+      where: { userId_communityId: { userId: uid(c.owner), communityId: c.id } },
+      create: { userId: uid(c.owner), communityId: c.id, role: 'owner' },
       update: {},
     });
   }
@@ -123,21 +123,21 @@ export async function seedAdmin(ctx: SeedContext): Promise<void> {
     ai: ['sarah', 'alex', 'liam', 'noah', 'emma'], mkt: ['daniel', 'maya', 'olivia', 'ava'], fit: ['liam', 'emma'], des: ['sophia', 'ava'], biz: ['ethan', 'noah'],
   };
   const extraOwners: Record<string, string> = { ai: 'alex', mkt: 'daniel', fit: 'liam', des: 'sophia', biz: 'ethan' };
-  for (const [courseId, key] of Object.entries(extraOwners)) {
+  for (const [communityId, key] of Object.entries(extraOwners)) {
     const o = PEOPLE.find((p) => p.key === key)!;
-    await db.course.updateMany({ where: { id: courseId, ownerId: null }, data: { ownerId: uid(key), instructorName: `${o.first} ${o.last}` } });
+    await db.community.updateMany({ where: { id: communityId, ownerId: null }, data: { ownerId: uid(key), instructorName: `${o.first} ${o.last}` } });
     await db.enrollment.upsert({
-      where: { userId_courseId: { userId: uid(key), courseId } },
-      create: { userId: uid(key), courseId, role: 'owner' },
+      where: { userId_communityId: { userId: uid(key), communityId: communityId } },
+      create: { userId: uid(key), communityId: communityId, role: 'owner' },
       update: {},
     });
   }
-  for (const [courseId, keys] of Object.entries(memberOf)) {
-    if (!(await db.course.findUnique({ where: { id: courseId }, select: { id: true } }))) continue;
+  for (const [communityId, keys] of Object.entries(memberOf)) {
+    if (!(await db.community.findUnique({ where: { id: communityId }, select: { id: true } }))) continue;
     for (const k of keys) {
       await db.enrollment.upsert({
-        where: { userId_courseId: { userId: uid(k), courseId } },
-        create: { userId: uid(k), courseId, role: 'member', enrolledAt: daysAgo(5 + keys.indexOf(k) * 9), lastActiveAt: ago(2 + keys.indexOf(k) * 20) },
+        where: { userId_communityId: { userId: uid(k), communityId: communityId } },
+        create: { userId: uid(k), communityId: communityId, role: 'member', enrolledAt: daysAgo(5 + keys.indexOf(k) * 9), lastActiveAt: ago(2 + keys.indexOf(k) * 20) },
         update: {},
       });
     }
@@ -154,7 +154,7 @@ export async function seedAdmin(ctx: SeedContext): Promise<void> {
   for (const p of posts) {
     await db.post.upsert({
       where: { id: p.id },
-      create: { id: p.id, courseId: p.course, authorId: uid(p.author), content: p.text, createdAt: ago(p.hoursAgo), likesCount: 3, commentsCount: 1 },
+      create: { id: p.id, communityId: p.course, authorId: uid(p.author), content: p.text, createdAt: ago(p.hoursAgo), likesCount: 3, commentsCount: 1 },
       update: {},
     });
   }
@@ -198,7 +198,7 @@ export async function seedAdmin(ctx: SeedContext): Promise<void> {
     await db.report.upsert({
       where: { id },
       create: {
-        id, courseId: r.course, targetType: r.type, targetId: r.target, targetUserId: uid(r.targetUser), targetExcerpt: r.type === 'member' ? null : exc(r.target).slice(0, 120),
+        id, communityId: r.course, targetType: r.type, targetId: r.target, targetUserId: uid(r.targetUser), targetExcerpt: r.type === 'member' ? null : exc(r.target).slice(0, 120),
         reporterId: uid(r.reporter), reason: r.reason, detail: r.detail ?? null, status: r.status, risk: r.risk, assignedToId: staff(r.assignee), action: r.action ?? null,
         note: r.note ?? null, resolvedById: staff(r.resolvedBy), resolvedAt: r.action ? ago(r.hoursAgo - 1) : null, createdAt: ago(r.hoursAgo),
       },

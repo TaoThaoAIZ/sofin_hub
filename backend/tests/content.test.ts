@@ -447,8 +447,8 @@ describe('nội dung: bài viết và sự kiện', () => {
       const { pointsService } = await import('../src/modules/points/points.service.js');
       const demoId = `demo-${COURSE}-test-${Date.now().toString(36)}`;
       await db.user.create({ data: { id: demoId, email: `${demoId}@demo.sofinhub.invalid`, firstName: 'Khách', lastName: 'Minh Họa', passwordHash: '!x', isDemo: true } });
-      await db.enrollment.create({ data: { userId: demoId, courseId: COURSE } });
-      const post = await db.post.create({ data: { courseId: COURSE, authorId: demoId, content: 'Bài minh họa' } });
+      await db.enrollment.create({ data: { userId: demoId, communityId: COURSE } });
+      const post = await db.post.create({ data: { communityId: COURSE, authorId: demoId, content: 'Bài minh họa' } });
       const liker = await member('demolike');
       const before = notifications().length;
       const r = await c.call('POST', `/posts/${post.id}/like`, { token: liker.token });
@@ -593,13 +593,13 @@ describe('nội dung: bài viết và sự kiện', () => {
       assert.deepEqual(await counts(), first, 'idempotent');
 
       // Mọi cộng đồng có bài + sự kiện; likesCount/commentsCount khớp bản ghi.
-      const courses = await db.course.count();
+      const courses = await db.community.count();
       assert.equal(await db.post.count({ where: { id: { startsWith: 'seed-post-' }, authorId: { startsWith: 'demo-' } } }), courses * 4);
       const mismatched = await db.$queryRaw<{ n: number }[]>`
         SELECT count(*)::int AS n FROM "Post" p WHERE p."likesCount" <> (SELECT count(*) FROM "PostLike" l WHERE l."postId" = p.id)
           OR p."commentsCount" <> (SELECT count(*) FROM "PostComment" c WHERE c."postId" = p.id)`;
       assert.equal(mismatched[0]!.n, 0);
-      assert.ok((await db.communityEvent.count({ where: { courseId: 'yt' } })) >= 2);
+      assert.ok((await db.communityEvent.count({ where: { communityId: 'yt' } })) >= 2);
 
       const login = async (key: string) => (await c.call('POST', '/auth/login', { body: { email: `${key}@sofinhub.test`, password: TEST_PASSWORD } })).body.data.accessToken as string;
       const [m1, m2, m3, mod] = await Promise.all([login('member1'), login('member2'), login('member3'), login('mod')]);

@@ -27,7 +27,7 @@ export function useCommunityActions(onDone?: () => void) {
     const ref = { id: c.id, name: c.name };
     const list: RowAction[] = [];
     if (opts.includeView !== false) list.push({ label: 'Xem', onClick: () => navigate(`/admin/communities/${c.id}`) });
-    if (c.status !== 'deleted') list.push({ label: 'Mở cộng đồng', icon: 'open_in_new', onClick: () => window.open(`/courses/${c.id}/community`, '_blank', 'noopener') });
+    if (c.status !== 'deleted') list.push({ label: 'Mở cộng đồng', icon: 'open_in_new', onClick: () => window.open(`/communities/${c.id}/community`, '_blank', 'noopener') });
     if (c.status === 'pending_review' || c.status === 'changes_requested') list.push({ label: 'Xét duyệt', icon: 'how_to_reg', onClick: () => navigate(`/admin/communities/review?id=${c.id}`) });
     if (c.status === 'active') list.push({ label: 'Tạm ngưng', icon: 'pause_circle', danger: true, onClick: () => open('suspend', ref) });
     if (c.status === 'suspended') list.push({ label: 'Khôi phục', icon: 'restore', onClick: () => open('restore', ref) });

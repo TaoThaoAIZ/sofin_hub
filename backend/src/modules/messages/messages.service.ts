@@ -6,7 +6,8 @@ import { userBriefView } from '../auth/user-view.js';
 import { enrollmentService } from '../enrollments/enrollments.service.js';
 import { notify } from '../notifications/notifications.service.js';
 import { uploadService } from '../uploads/uploads.service.js';
-import { prismaMessageRepository, type MessageRepository } from './messages.repository.js';
+import { prismaMessageRepository, type ConversationCursor, type MessageRepository } from './messages.repository.js';
+import { shared } from '../../infra/shared.js';
 import { streamHub } from './messages.stream.js';
 import { RECALLED_TEXT, type Attachment, type Conversation, type MessageRecord, type MessageView } from './messages.types.js';
 
@@ -15,15 +16,32 @@ export const messageRateLimit = {
   max: env.NODE_ENV === 'test' ? 0 : env.MESSAGE_RATE_LIMIT_PER_MIN,
   windowMs: 60_000,
 };
-const sentAt = new Map<string, number[]>();
 
 /**
- * Tối đa 1 thông báo / cuộc trò chuyện / người nhận trong khoảng này. Throttle giữ trong BỘ NHỚ tiến trình (đơn giản nhất):
- * mất khi restart / lệch giữa các instance thì tệ nhất là người nhận có thêm 1 thông báo; không ảnh hưởng dữ liệu.
- * (Hạn chế: rate limit gửi tin `sentAt` cũng ở bộ nhớ — nhiều instance cần Redis.)
+ * Tối đa 1 thông báo / cuộc trò chuyện / người nhận trong khoảng này (gộp thông báo). Khóa throttle nằm ở state chia sẻ
+ * (SET NX PX — atomic, đúng giữa các instance); khi người nhận ĐỌC cuộc trò chuyện thì khóa được xóa để tin kế tiếp báo lại.
  */
 export const NOTIFY_THROTTLE_MS = 5 * 60_000;
-const lastNotified = new Map<string, number>();
+
+/**
+ * TÍN HIỆU "ĐANG XEM" (thay cho `push() === 0` cũ vốn sai với kết nối SSE xác sống): người nhận được coi là đang chủ động ở trong
+ * cuộc trò chuyện chỉ khi CHÍNH HỌ vừa gọi API trên cuộc trò chuyện đó (mở/tải tin, đánh dấu đã đọc, gửi tin) trong khoảng này.
+ * Đó là một ack phía client qua HTTP — kết nối xác sống không thể tạo ra. Mọi trường hợp còn lại: LUÔN lưu thông báo (có gộp theo
+ * throttle trên) và SSE chỉ là kênh best-effort. Số tin chưa đọc (`unreadCount`) luôn ở DB nên không bao giờ mất.
+ */
+export const ACTIVE_VIEW_TTL_MS = 30_000;
+const activeKey = (conversationId: string, userId: string) => `dm:active:${conversationId}:${userId}`;
+const throttleKey = (conversationId: string, userId: string) => `dm:notified:${conversationId}:${userId}`;
+
+const encodeCursor = (c: ConversationCursor) => Buffer.from(`${c.lastMessageAt}|${c.createdAt}|${c.id}`).toString('base64url');
+function decodeCursor(raw: string): ConversationCursor {
+  const [lastMessageAt, createdAt, id, ...rest] = Buffer.from(raw, 'base64url').toString('utf8').split('|');
+  const iso = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
+  if (rest.length > 0 || !lastMessageAt || !createdAt || !id || !iso.test(lastMessageAt) || !iso.test(createdAt) || id.length > 100) {
+    throw HttpError.badRequest('Mốc phân trang không hợp lệ');
+  }
+  return { lastMessageAt, createdAt, id };
+}
 
 const HTML_TAG = /<\/?[a-z!][^>]*>/i;
 
@@ -58,17 +76,35 @@ export function createMessageService(repo: MessageRepository = prismaMessageRepo
 
   async function shareCommunity(a: string, b: string): Promise<boolean> {
     const [ma, mb] = await Promise.all([enrollmentService.listByUser(a), enrollmentService.listByUser(b)]);
-    const set = new Set(ma.map((m) => m.courseId));
-    return mb.some((m) => set.has(m.courseId));
+    const set = new Set(ma.map((m) => m.communityId));
+    return mb.some((m) => set.has(m.communityId));
   }
 
-  function checkRate(userId: string) {
+  async function checkRate(userId: string) {
     if (messageRateLimit.max <= 0) return;
-    const now = Date.now();
-    const recent = (sentAt.get(userId) ?? []).filter((t) => now - t < messageRateLimit.windowMs);
-    if (recent.length >= messageRateLimit.max) throw HttpError.tooMany('Bạn gửi tin nhắn quá nhanh, vui lòng thử lại sau');
-    recent.push(now);
-    sentAt.set(userId, recent);
+    let ok = true;
+    try {
+      ok = (await shared().rateLimiter.hit(`dm:send:${userId}`, messageRateLimit.max, messageRateLimit.windowMs)).ok;
+    } catch (e) {
+      console.error('[messages] rate limiter lỗi, bỏ qua (fail-open):', e instanceof Error ? e.message : e);
+    }
+    if (!ok) throw HttpError.tooMany('Bạn gửi tin nhắn quá nhanh, vui lòng thử lại sau');
+  }
+
+  /** Ghi nhận user vừa chủ động tương tác với cuộc trò chuyện (best-effort: lỗi => coi như không "đang xem" => vẫn báo). */
+  async function markActive(conversationId: string, userId: string) {
+    try {
+      await shared().kv.set(activeKey(conversationId, userId), '1', ACTIVE_VIEW_TTL_MS);
+    } catch {
+      /* best-effort */
+    }
+  }
+  async function isActive(conversationId: string, userId: string): Promise<boolean> {
+    try {
+      return (await shared().kv.get(activeKey(conversationId, userId))) !== null;
+    } catch {
+      return false;
+    }
   }
 
   async function resolveAttachments(userId: string, input: Attachment[]): Promise<Attachment[]> {
@@ -112,12 +148,25 @@ export function createMessageService(repo: MessageRepository = prismaMessageRepo
       return { created, data: await conversationView(conv, userId) };
     },
 
-    async listConversations(userId: string) {
-      return Promise.all((await repo.listConversations(userId)).map((c) => conversationView(c, userId)));
+    /** Hội thoại mới hoạt động trước; phân trang keyset (`cursor` = `meta.nextCursor` của trang trước). Mọi dữ liệu lấy bằng 1 truy vấn. */
+    async listConversations(userId: string, limit = 50, cursor?: string) {
+      const { items, hasMore } = await repo.listConversationSummaries(userId, { limit, cursor: cursor ? decodeCursor(cursor) : undefined });
+      return {
+        data: items.map((s) => ({
+          id: s.conversation.id,
+          other: s.other,
+          lastMessage: s.lastMessage ? toView(s.lastMessage) : null,
+          unreadCount: s.unreadCount,
+          lastMessageAt: s.conversation.lastMessageAt,
+          blockedByMe: s.blockedByMe,
+        })),
+        meta: { hasMore, nextCursor: hasMore ? encodeCursor(items[items.length - 1]!.cursor) : null },
+      };
     },
 
     async listMessages(userId: string, conversationId: string, before: string | undefined, limit: number) {
       const c = await requireParticipant(userId, conversationId);
+      await markActive(c.id, userId);
       let beforeSeq: number | undefined;
       if (before) {
         const m = await repo.getMessage(before);
@@ -135,23 +184,27 @@ export function createMessageService(repo: MessageRepository = prismaMessageRepo
       await assertNotBlocked(userId, otherId);
       // Lưu văn bản thuần: từ chối thẻ HTML thay vì lọc âm thầm (FE vẫn phải escape khi hiển thị).
       if (HTML_TAG.test(content)) throw HttpError.badRequest('Tin nhắn không được chứa mã HTML');
-      checkRate(userId);
+      await checkRate(userId);
       const files = await resolveAttachments(userId, attachments);
       const msg = await repo.addMessage(c, userId, content, files);
       const view = toView(msg);
 
-      streamHub.push(userId, 'message', view); // đồng bộ các tab khác của người gửi
-      if (streamHub.push(otherId, 'message', view) === 0) await this.notifyOffline(c, userId, otherId, content);
+      // Người gửi vừa tương tác => đang xem; SSE (mọi instance) là best-effort, không quyết định việc có thông báo hay không.
+      await markActive(c.id, userId);
+      await Promise.all([streamHub.push(userId, 'message', view), streamHub.push(otherId, 'message', view)]);
+      if (!(await isActive(c.id, otherId))) await this.notifyRecipient(c, userId, otherId, content);
       return view;
     },
 
-    /** Gộp thông báo: tối đa 1 / cuộc trò chuyện / 5 phút cho người không online. */
-    async notifyOffline(c: Conversation, senderId: string, recipientId: string, content: string) {
-      const k = `${c.id}:${recipientId}`;
-      const now = Date.now();
-      if (now - (lastNotified.get(k) ?? 0) < NOTIFY_THROTTLE_MS) return;
-      for (const [key, t] of lastNotified) if (now - t >= NOTIFY_THROTTLE_MS) lastNotified.delete(key); // không phình bộ nhớ
-      lastNotified.set(k, now);
+    /** Gộp thông báo: tối đa 1 / cuộc trò chuyện / 5 phút cho người không chủ động xem cuộc trò chuyện (atomic SET NX). */
+    async notifyRecipient(c: Conversation, senderId: string, recipientId: string, content: string) {
+      let first = true;
+      try {
+        first = await shared().kv.setNx(throttleKey(c.id, recipientId), '1', NOTIFY_THROTTLE_MS);
+      } catch {
+        /* lỗi store: thà báo dư 1 thông báo còn hơn nuốt mất */
+      }
+      if (!first) return;
       const sender = await userBriefView(senderId);
       notify({
         userId: recipientId,
@@ -165,6 +218,8 @@ export function createMessageService(repo: MessageRepository = prismaMessageRepo
     async markRead(userId: string, conversationId: string) {
       const c = await requireParticipant(userId, conversationId);
       await repo.markRead(c, userId);
+      await markActive(c.id, userId);
+      await shared().kv.del(throttleKey(c.id, userId)).catch(() => undefined); // đã đọc => tin mới kế tiếp được báo lại ngay
       return { unreadCount: 0 };
     },
 
@@ -174,8 +229,10 @@ export function createMessageService(repo: MessageRepository = prismaMessageRepo
       if (!m || !c || !c.userIds.includes(userId)) throw HttpError.notFound('Không tìm thấy tin nhắn');
       if (m.senderId !== userId) throw HttpError.forbidden('Chỉ người gửi mới được thu hồi tin nhắn');
       await repo.softDelete(m.id);
+      // Thu hồi phải thu hồi cả file: không còn phục vụ (xóa nếu không tin nhắn sống nào khác dùng lại).
+      await uploadService.discardMessageFiles(m.attachments.map((a) => a.url));
       const view = toView((await repo.getMessage(m.id)) ?? { ...m, deletedAt: new Date().toISOString(), content: '', attachments: [] });
-      for (const u of c.userIds) streamHub.push(u, 'message_deleted', view);
+      await Promise.all(c.userIds.map((u) => streamHub.push(u, 'message_deleted', view)));
       return view;
     },
 

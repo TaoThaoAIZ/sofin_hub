@@ -22,7 +22,9 @@ export interface PollDef {
 
 export interface Post {
   id: string;
-  courseId: string;
+  communityId: string;
+  /** @deprecated alias của communityId (tương thích JSON cũ) — repository luôn điền. */
+  courseId?: string;
   authorId: string;
   content: string;
   category: PostCategory;

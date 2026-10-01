@@ -125,13 +125,13 @@ export const adminAnalyticsService = {
     const live = { moderationStatus: { not: 'deleted' as const } };
     const paidWhere = { ...live, pricing: 'paid' as const, priceCents: { gt: 0 } };
     const [total, totalPrev, created, createdPrev, paid, paidPrev, suspended, members, membersPrev] = await Promise.all([
-      prisma.course.count({ where: { ...live, createdAt: { lt: w.to } } }),
-      prisma.course.count({ where: { ...live, createdAt: { lt: w.from } } }),
-      prisma.course.count({ where: { ...live, createdAt: { gte: w.from, lt: w.to } } }),
-      prisma.course.count({ where: { ...live, createdAt: { gte: w.prevFrom, lt: w.from } } }),
-      prisma.course.count({ where: { ...paidWhere, createdAt: { lt: w.to } } }),
-      prisma.course.count({ where: { ...paidWhere, createdAt: { lt: w.from } } }),
-      prisma.course.count({ where: { moderationStatus: 'suspended' } }),
+      prisma.community.count({ where: { ...live, createdAt: { lt: w.to } } }),
+      prisma.community.count({ where: { ...live, createdAt: { lt: w.from } } }),
+      prisma.community.count({ where: { ...live, createdAt: { gte: w.from, lt: w.to } } }),
+      prisma.community.count({ where: { ...live, createdAt: { gte: w.prevFrom, lt: w.from } } }),
+      prisma.community.count({ where: { ...paidWhere, createdAt: { lt: w.to } } }),
+      prisma.community.count({ where: { ...paidWhere, createdAt: { lt: w.from } } }),
+      prisma.community.count({ where: { moderationStatus: 'suspended' } }),
       prisma.enrollment.count({ where: { enrolledAt: { lt: w.to } } }),
       prisma.enrollment.count({ where: { enrolledAt: { lt: w.from } } }),
     ]);
@@ -143,7 +143,7 @@ export const adminAnalyticsService = {
         SELECT ${D} AS d, count(DISTINCT x."courseId") AS n FROM ${DAYS(w)} AS d(day)
         LEFT JOIN (SELECT "courseId", "createdAt" AS ts FROM "Post" UNION ALL SELECT "courseId", "enrolledAt" FROM "Enrollment") x
           ON x.ts >= d.day AND x.ts < d.day + interval '1 day' GROUP BY 1`,
-      prisma.course.groupBy({ by: ['category'], where: { ...live, createdAt: { lt: w.to } }, _count: { _all: true } }),
+      prisma.community.groupBy({ by: ['category'], where: { ...live, createdAt: { lt: w.to } }, _count: { _all: true } }),
       prisma.discoveryCategory.findMany({ select: { key: true, name: true } }),
       prisma.$queryRaw<Array<{ id: string; title: string; category: string; members: bigint; new_members: bigint; mrr: bigint }>>`
         SELECT c.id, c.title, c.category::text AS category,

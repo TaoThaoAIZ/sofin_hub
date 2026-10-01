@@ -1,4 +1,4 @@
-import { Button } from '../../components/ui/Button';
+import { ButtonLink } from '../../components/ui/Button';
 
 /** Box "Tạo cộng đồng của riêng bạn" — nền ảnh cta-mockup + 2 thẻ kính nổi bên phải. */
 export function CommunityCta() {
@@ -22,24 +22,12 @@ export function CommunityCta() {
             Biến kiến thức, kinh nghiệm và tầm ảnh hưởng của bạn thành một cộng đồng học tập, cùng phát triển và tạo
             giá trị bền vững.
           </p>
-          <Button className="mt-[26px] h-[52px] gap-2.5 rounded-2xl px-7 text-base font-semibold">
+          <ButtonLink to="/communities/new" className="mt-[26px] h-[52px] gap-2.5 rounded-2xl px-7 text-base font-semibold">
             Tạo cộng đồng ngay <span aria-hidden="true">→</span>
-          </Button>
+          </ButtonLink>
         </div>
 
         <div className="pointer-events-none relative z-[1] hidden h-[260px] md:block" aria-hidden="true">
-          <div className="absolute -top-1.5 right-0 flex items-end gap-3.5 rounded-[18px] border border-white/90 bg-white/72 px-4 py-3 shadow-[0_14px_30px_rgba(0,0,0,.2)] backdrop-blur-[20px] backdrop-saturate-[180%]">
-            <div>
-              <div className="text-xs text-stone-600">Doanh thu tháng</div>
-              <div className="text-xl font-extrabold text-stone-900">+$12,500</div>
-            </div>
-            <div className="flex h-[34px] items-end gap-1">
-              <div className="h-3 w-1.5 rounded-[3px] bg-[#22c55e]" />
-              <div className="h-5 w-1.5 rounded-[3px] bg-[#22c55e]" />
-              <div className="h-[27px] w-1.5 rounded-[3px] bg-[#22c55e]" />
-              <div className="h-[34px] w-1.5 rounded-[3px] bg-[#16a34a]" />
-            </div>
-          </div>
           <div className="absolute right-2 bottom-[18px] flex items-center gap-2 rounded-2xl border border-white/90 bg-white/78 px-[18px] py-3 text-[15px] font-semibold text-brand shadow-[0_14px_30px_rgba(0,0,0,.2)] backdrop-blur-[20px]">
             ＋ Mời thành viên
           </div>

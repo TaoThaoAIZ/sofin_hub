@@ -221,7 +221,7 @@ describe('kiểm duyệt', () => {
     const row = await db.report.findUniqueOrThrow({ where: { id: rep.id } });
     assert.equal(row.status, 'resolved');
     assert.equal(row.action, 'ban_member');
-    const ban = await db.communityBan.findUniqueOrThrow({ where: { courseId_userId: { courseId: COURSE, userId: author.id } } });
+    const ban = await db.communityBan.findUniqueOrThrow({ where: { communityId_userId: { communityId: COURSE, userId: author.id } } });
     assert.ok(ban.bannedById === mod.id || ban.bannedById === mod2.id);
     assert.ok(ban.reason && ban.reason.includes('spam'));
   });
@@ -232,8 +232,8 @@ describe('kiểm duyệt', () => {
     const mod = await member('dmod', 'mod');
     const demoId = `demo-${COURSE}-mod-${Date.now().toString(36)}`;
     await db.user.create({ data: { id: demoId, email: `${demoId}@demo.sofinhub.invalid`, firstName: 'Khách', lastName: 'Demo', passwordHash: '!x', isDemo: true } });
-    await db.enrollment.create({ data: { userId: demoId, courseId: COURSE } });
-    const post = await db.post.create({ data: { courseId: COURSE, authorId: demoId, content: 'bài demo' } });
+    await db.enrollment.create({ data: { userId: demoId, communityId: COURSE } });
+    const post = await db.post.create({ data: { communityId: COURSE, authorId: demoId, content: 'bài demo' } });
     const rep = (await reportPost(reporter.token, post.id)).body.data;
     assert.equal(rep.targetUserName, 'Khách Demo');
     assert.equal((await c.call('PATCH', `/reports/${rep.id}`, { token: mod.token, body: { action: 'ban_member' } })).status, 400);

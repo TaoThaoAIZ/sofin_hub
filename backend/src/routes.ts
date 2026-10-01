@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import { communityAlias } from './middlewares/community-alias.js';
+import { globalRateLimit } from './middlewares/rate-limit.js';
 import { authRouter } from './modules/auth/auth.routes.js';
 import { mailRouter } from './modules/mail/mail.routes.js';
 import { supportRouter } from './modules/support/support.routes.js';
@@ -7,7 +9,7 @@ import { usersRouter } from './modules/users/users.routes.js';
 import { classroomRouter } from './modules/classroom/classroom.routes.js';
 import { communitiesRouter } from './modules/communities/communities.routes.js';
 import { communityRouter } from './modules/community/community.routes.js';
-import { coursesRouter } from './modules/courses/courses.routes.js';
+import { catalogRouter } from './modules/catalog/catalog.routes.js';
 import { eventsRouter } from './modules/events/events.routes.js';
 import { metaRouter } from './modules/meta/meta.routes.js';
 import { notificationsRouter } from './modules/notifications/notifications.routes.js';
@@ -24,6 +26,8 @@ import { moderationRouter } from './modules/moderation/moderation.routes.js';
 
 export const apiRouter = Router();
 
+apiRouter.use(globalRateLimit); // giới hạn toàn cục theo IP (tắt khi test; xem middlewares/rate-limit.ts)
+apiRouter.use(communityAlias); // /communities/:id/* ≡ /courses/:id/*, courseId ≡ communityId (tách Community/Course)
 apiRouter.use(maintenanceGuard);
 apiRouter.use('/', platformRouter);
 
@@ -32,7 +36,7 @@ apiRouter.use('/', mailRouter);
 apiRouter.use('/', usersRouter);
 apiRouter.use('/', supportRouter);
 apiRouter.use('/', ticketsRouter);
-apiRouter.use('/courses', coursesRouter);
+apiRouter.use('/courses', catalogRouter);
 apiRouter.use('/', metaRouter);
 apiRouter.use('/', postsRouter);
 apiRouter.use('/', moderationRouter);

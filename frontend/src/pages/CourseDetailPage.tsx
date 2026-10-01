@@ -8,8 +8,8 @@ import { PathIcon, StarIcon, UserIcon } from '../components/ui/icons';
 import { SectionTitle } from '../components/ui/SectionTitle';
 import { useAuth } from '../features/auth/AuthContext';
 import { TAG_UI } from '../features/courses/constants';
-import { useCategories, useCourseDetail, useToggleEnrollment } from '../features/courses/queries';
-import type { CourseDetail, CourseFaq, CourseHighlight, CourseModule } from '../features/courses/types';
+import { useCategories, useCommunityDetail, useToggleEnrollment } from '../features/courses/queries';
+import type { CommunityDetail, CourseFaq, CourseHighlight } from '../features/courses/types';
 import { ApiError } from '../lib/api';
 import { formatCompact } from '../lib/format';
 import { JoinRequestDialog, loadPendingRequestId, savePendingRequestId } from '../features/communities/components/JoinRequestDialog';
@@ -26,20 +26,22 @@ const TABS: { key: TabKey | 'reviews'; label: string }[] = [
   { key: 'faq', label: 'Câu hỏi thường gặp' },
 ];
 
-const SIDEBAR_PERKS = [
-  'Toàn bộ nội dung khóa học',
-  'Cập nhật bài học mỗi tuần',
-  'Tham gia cộng đồng & networking',
-  'Hỗ trợ trực tiếp từ đội ngũ',
-  'Miễn phí dùng thử 7 ngày',
-];
+/** Danh sách quyền lợi chỉ gồm điều thật: số bài học thật, cộng đồng, và ghi chú giá/dùng thử từ API. */
+function sidebarPerks(course: CommunityDetail): string[] {
+  const lessons = Number(course.facts.find((f) => f.label === 'Bài học')?.value ?? 0);
+  return [
+    ...(lessons > 0 ? [`${lessons} bài học trong lớp học`] : []),
+    'Thảo luận và kết nối cùng thành viên cộng đồng',
+    ...course.priceNotes,
+  ];
+}
 
 export function CourseDetailPage() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
   const { status } = useAuth();
   const { data: categories = [] } = useCategories();
-  const { data: course, isPending, error } = useCourseDetail(id);
+  const { data: course, isPending, error } = useCommunityDetail(id);
   const enroll = useToggleEnrollment(id);
   const [tab, setTab] = useState<TabKey>('overview');
   const [showPaidDialog, setShowPaidDialog] = useState(false);
@@ -94,6 +96,7 @@ export function CourseDetailPage() {
   const scrollToReviews = () =>
     reviewsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
+  const trialNote = course.priceNotes.find((n) => n.startsWith('Miễn phí dùng thử'));
   const isPrivate = course.visibility === 'private';
   const canJoinFlow = !course.viewerEnrolled;
   const hasPendingRequest = canJoinFlow && pendingRequest !== null;
@@ -120,11 +123,17 @@ export function CourseDetailPage() {
   const handleJoin = () => {
     setJoinNotice(null);
     if (status !== 'authenticated') {
-      navigate('/login', { state: { from: `/courses/${id}` } });
+      navigate('/login', { state: { from: `/communities/${id}` } });
       return;
     }
     // Đã tham gia rồi: giữ nguyên hành vi toggle rời khóa học hiện có, không đổi.
     if (course.viewerEnrolled) {
+      // Cộng đồng có phí: rời = mất quyền truy cập ngay và gói bị hủy vào cuối kỳ (không bị trừ kỳ sau, tiền kỳ đã trả không hoàn).
+      if (
+        course.priceUsd > 0 &&
+        !window.confirm('Rời cộng đồng có phí này? Bạn sẽ mất quyền truy cập ngay, gói thành viên sẽ bị hủy vào cuối kỳ hiện tại (không bị tính phí kỳ sau) và khoản đã thanh toán cho kỳ này không được hoàn lại. Bạn có thể vào lại miễn phí trong kỳ đã trả.')
+      )
+        return;
       enroll.mutate(undefined, { onError: (e) => setJoinNotice(errorText(e)) });
       return;
     }
@@ -132,7 +141,7 @@ export function CourseDetailPage() {
     if (hasPendingRequest) return;
     // Cộng đồng riêng tư: để BE quyết (403 JOIN_REQUEST_REQUIRED → hộp thoại gửi yêu cầu).
     if (isPrivate) {
-      enroll.mutate(undefined, { onSuccess: () => navigate(`/courses/${id}/community`), onError: onJoinError });
+      enroll.mutate(undefined, { onSuccess: () => navigate(`/communities/${id}/community`), onError: onJoinError });
       return;
     }
     // Chưa tham gia + khóa học có phí: hiện dialog xác nhận trước khi sang trang thanh toán
@@ -141,7 +150,7 @@ export function CourseDetailPage() {
       setShowPaidDialog(true);
       return;
     }
-    enroll.mutate(undefined, { onSuccess: () => navigate(`/courses/${id}/community`), onError: onJoinError });
+    enroll.mutate(undefined, { onSuccess: () => navigate(`/communities/${id}/community`), onError: onJoinError });
   };
 
   const handleCancelRequest = () => {
@@ -195,15 +204,6 @@ export function CourseDetailPage() {
                 {tag.label}
               </span>
             )}
-            <button
-              type="button"
-              aria-label="Xem giới thiệu"
-              className="absolute top-1/2 left-1/2 grid size-[76px] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-white/80 bg-white/35 shadow-[0_10px_30px_rgba(0,0,0,.25)] backdrop-blur-[14px]"
-            >
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff">
-                <path d="M8 5v14l11-7z" />
-              </svg>
-            </button>
           </div>
 
           <div>
@@ -243,7 +243,7 @@ export function CourseDetailPage() {
           </div>
 
           <div className="no-scrollbar flex gap-1 overflow-x-auto border-b border-[rgba(120,60,20,.1)]">
-            {TABS.map((t) => {
+            {TABS.filter((t) => t.key !== 'faq' || course.faqs.length > 0).map((t) => {
               const isActive = t.key === tab;
               return (
                 <button
@@ -261,8 +261,8 @@ export function CourseDetailPage() {
           </div>
 
           {tab === 'overview' && <OverviewTab course={course} priceLabel={priceLabel} />}
-          {tab === 'content' && <ContentTab modules={course.modules} />}
-          {tab === 'faq' && <FaqTab faqs={course.faqs} />}
+          {tab === 'content' && <ContentTab courseId={id} enrolled={!!course.viewerEnrolled} lessons={Number(course.facts.find((f) => f.label === 'Bài học')?.value ?? 0)} />}
+          {tab === 'faq' && course.faqs.length > 0 && <FaqTab faqs={course.faqs} />}
         </main>
 
         <aside className="sticky top-24 flex min-w-0 flex-1 basis-[320px] flex-col gap-4 max-lg:static max-lg:basis-full">
@@ -276,9 +276,6 @@ export function CourseDetailPage() {
                   {priceLabel}
                   {course.priceUsd > 0 && <span className="text-lg font-semibold">/tháng</span>}
                 </div>
-                <span className="flex items-center gap-1.5 rounded-full border border-green-500/25 bg-green-500/10 px-3 py-1.5 text-[13px] font-semibold whitespace-nowrap text-green-700">
-                  Giá trị cao
-                </span>
               </div>
 
               <div className="grid grid-cols-3 text-center">
@@ -338,7 +335,7 @@ export function CourseDetailPage() {
               {joinNotice && <p className="text-center text-sm text-red-600">{joinNotice}</p>}
               {isAtLeast(course.viewerRole, 'admin') && (
                 <Link
-                  to={`/courses/${id}/community/cai-dat`}
+                  to={`/communities/${id}/community/cai-dat`}
                   className="flex h-10 items-center justify-center gap-2 rounded-xl bg-brand/10 text-sm font-semibold text-brand hover:bg-brand/15"
                 >
                   <MaterialIcon name="settings" size={18} color="#f26a1b" />
@@ -351,7 +348,7 @@ export function CourseDetailPage() {
           <div className="glass rounded-[22px] p-5">
             <div className="mb-3.5 text-[17px] font-bold">Bạn sẽ nhận được</div>
             <div className="flex flex-col gap-3.5">
-              {SIDEBAR_PERKS.map((p) => (
+              {sidebarPerks(course).map((p) => (
                 <div key={p} className="flex items-center gap-3 text-[15px] text-stone-800">
                   <span className="bg-brand-gradient grid size-[26px] flex-none place-items-center rounded-full shadow-[0_4px_10px_rgba(242,106,27,.3)]">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={3.5} strokeLinecap="round" strokeLinejoin="round">
@@ -380,12 +377,12 @@ export function CourseDetailPage() {
                 </div>
               </div>
             </div>
-            <button
-              type="button"
+            <Link
+              to="/contact"
               className="flex h-[46px] items-center justify-center gap-2 rounded-2xl border-[1.5px] border-[#fdba8c] bg-white/70 text-[15px] font-semibold text-brand hover:bg-brand-soft"
             >
               Gửi tin nhắn
-            </button>
+            </Link>
           </div>
         </aside>
       </div>
@@ -423,7 +420,7 @@ export function CourseDetailPage() {
             <h2 className="mt-4 text-lg font-extrabold">Khóa học có phí</h2>
             <p className="mt-2 text-sm leading-relaxed text-stone-600">
               "{course.title}" có phí <b>${course.priceUsd}/tháng</b>. Bạn sẽ được chuyển tới trang thanh toán để hoàn tất tham gia
-              (có 7 ngày dùng thử miễn phí, hủy bất cứ lúc nào).
+              {trialNote ? `(${trialNote.toLowerCase()}, hủy bất cứ lúc nào).` : '(hủy bất cứ lúc nào).'}
             </p>
             <div className="mt-5 flex gap-3">
               <button
@@ -432,7 +429,7 @@ export function CourseDetailPage() {
               >
                 Để sau
               </button>
-              <Button onClick={() => navigate(`/courses/${id}/checkout`)} className="h-11 flex-1 rounded-xl text-sm font-bold">
+              <Button onClick={() => navigate(`/communities/${id}/checkout`)} className="h-11 flex-1 rounded-xl text-sm font-bold">
                 Đi tới thanh toán
               </Button>
             </div>
@@ -443,19 +440,22 @@ export function CourseDetailPage() {
   );
 }
 
-function OverviewTab({ course, priceLabel }: { course: CourseDetail; priceLabel: string }) {
+function OverviewTab({ course, priceLabel }: { course: CommunityDetail; priceLabel: string }) {
   return (
     <div className="flex flex-col gap-[22px]">
       <section className="glass flex flex-col gap-4 rounded-[26px] p-6">
         <SectionTitle>Về khóa học</SectionTitle>
         <p className="m-0 text-[15px] leading-[1.75] text-stone-600 text-pretty">{course.about}</p>
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,300px),1fr))] gap-3">
-          {course.highlights.map((h) => (
-            <HighlightCard key={h.title} item={h} />
-          ))}
-        </div>
+        {course.highlights.length > 0 && (
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,300px),1fr))] gap-3">
+            {course.highlights.map((h) => (
+              <HighlightCard key={h.title} item={h} />
+            ))}
+          </div>
+        )}
       </section>
 
+      {course.gains.length > 0 && (
       <section className="glass flex flex-col gap-4.5 rounded-[26px] p-6">
         <SectionTitle>Bạn sẽ nhận được gì?</SectionTitle>
         <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-x-7 gap-y-5">
@@ -472,6 +472,7 @@ function OverviewTab({ course, priceLabel }: { course: CourseDetail; priceLabel:
           ))}
         </div>
       </section>
+      )}
 
       <section className="glass flex flex-col gap-4.5 rounded-[26px] p-6">
         <SectionTitle>Chi phí tham gia</SectionTitle>
@@ -484,7 +485,7 @@ function OverviewTab({ course, priceLabel }: { course: CourseDetail; priceLabel:
               {priceLabel} {course.priceUsd > 0 && <span className="text-[26px] font-semibold tracking-normal">/ tháng</span>}
             </div>
           </div>
-          <div className="hidden w-px self-stretch bg-[rgba(242,106,27,.2)] sm:block" />
+          {course.priceNotes.length > 0 && <div className="hidden w-px self-stretch bg-[rgba(242,106,27,.2)] sm:block" />}
           <div className="flex flex-1 basis-[260px] flex-col gap-2.5">
             {course.priceNotes.map((p) => (
               <div key={p} className="flex items-center gap-2.5 text-[15px] text-stone-800">
@@ -515,24 +516,20 @@ function HighlightCard({ item }: { item: CourseHighlight }) {
   );
 }
 
-function ContentTab({ modules }: { modules: CourseModule[] }) {
+function ContentTab({ courseId, enrolled, lessons }: { courseId: string; enrolled: boolean; lessons: number }) {
+  // Module/bài học thật nằm trong Lớp học của cộng đồng (chỉ thành viên xem được), không có bản "xem trước" bịa ở đây.
   return (
-    <section className="glass flex flex-col gap-1.5 rounded-3xl p-2.5">
-      {modules.map((m) => (
-        <div key={m.index} className="flex items-center gap-3.5 rounded-2xl bg-white/60 p-3.5">
-          <span className="grid size-9 flex-none place-items-center rounded-xl bg-[#ffe7d4] text-sm font-bold text-brand">
-            {m.index}
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="text-[15px] font-semibold">{m.title}</div>
-            <div className="text-[13px] text-stone-500">{m.meta}</div>
-          </div>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a8a29e" strokeWidth={2}>
-            <rect x="5" y="11" width="14" height="10" rx="2" />
-            <path d="M8 11V7a4 4 0 0 1 8 0v4" />
-          </svg>
-        </div>
-      ))}
+    <section className="glass flex flex-col items-center gap-3 rounded-3xl p-8 text-center">
+      <p className="m-0 text-[15px] text-stone-700">
+        {lessons > 0
+          ? `Cộng đồng có ${lessons} bài học trong Lớp học. Nội dung chi tiết hiển thị cho thành viên.`
+          : 'Cộng đồng này chưa có bài học nào trong Lớp học.'}
+      </p>
+      {enrolled && (
+        <Link to={`/communities/${courseId}/community/lop-hoc`} className="text-sm font-semibold text-brand hover:underline">
+          Mở Lớp học →
+        </Link>
+      )}
     </section>
   );
 }

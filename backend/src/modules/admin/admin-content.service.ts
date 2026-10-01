@@ -68,8 +68,8 @@ async function modTransition(del: ModDelegate, id: string, action: ModAction, ad
   return prev;
 }
 
-const tell = (userId: string | null | undefined, title: string, body: string, courseId?: string) => {
-  if (userId) notify({ userId, type: 'system', title, body, ...(courseId ? { courseId } : {}) });
+const tell = (userId: string | null | undefined, title: string, body: string, communityId?: string) => {
+  if (userId) notify({ userId, type: 'system', title, body, ...(communityId ? { communityId } : {}) });
 };
 
 /* -------------------------------------------------------------------------------- schemas */
@@ -77,7 +77,7 @@ const statusCsv = z.string().optional();
 export const postsQuery = pageQuery.extend({
   q: z.string().trim().max(100).optional(),
   status: statusCsv,
-  courseId: z.string().max(100).optional(),
+  communityId: z.string().max(100).optional(),
   authorId: z.string().max(100).optional(),
   sort: z.enum(['newest', 'oldest', 'engagement', 'reports']).default('newest'),
 });
@@ -85,21 +85,22 @@ export const commentsQuery = postsQuery.extend({ postId: z.string().max(100).opt
 export const coursesQuery = pageQuery.extend({
   q: z.string().trim().max(100).optional(),
   status: statusCsv,
-  courseId: z.string().max(100).optional(),
+  communityId: z.string().max(100).optional(),
   sort: z.enum(['newest', 'oldest', 'students', 'lessons', 'title']).default('newest'),
 });
 export const lessonsQuery = pageQuery.extend({
+  learningCourseId: z.string().max(100).optional(),
   q: z.string().trim().max(100).optional(),
   status: statusCsv,
   type: z.enum(['video', 'text', 'file']).optional(),
-  courseId: z.string().max(100).optional(),
+  communityId: z.string().max(100).optional(),
   moduleId: z.string().max(100).optional(),
   sort: z.enum(['newest', 'views', 'title']).default('newest'),
 });
 export const eventsQuery = pageQuery.extend({
   q: z.string().trim().max(100).optional(),
   status: statusCsv,
-  courseId: z.string().max(100).optional(),
+  communityId: z.string().max(100).optional(),
   sort: z.enum(['startAt', 'newest']).default('startAt'),
 });
 export const mediaQuery = pageQuery.extend({
@@ -107,7 +108,7 @@ export const mediaQuery = pageQuery.extend({
   kind: z.enum(['image', 'video', 'document', 'audio']).optional(),
   status: statusCsv,
   purpose: z.string().max(40).optional(),
-  courseId: z.string().max(100).optional(),
+  communityId: z.string().max(100).optional(),
   ownerId: z.string().max(100).optional(),
   sort: z.enum(['newest', 'size', 'name']).default('newest'),
 });
@@ -129,7 +130,7 @@ export const flagBody = z.object({ reason: reasonField });
 export const removeMediaBody = z.object({ reason: reasonField, notifyOwner: z.boolean().default(true) });
 
 /* ================================================================================ POSTS */
-const postInclude = { author: { select: personSelect }, course: { select: { id: true, title: true } } } satisfies Prisma.PostInclude;
+const postInclude = { author: { select: personSelect }, community: { select: { id: true, title: true } } } satisfies Prisma.PostInclude;
 type PostRow = Prisma.PostGetPayload<{ include: typeof postInclude }>;
 
 async function toPostItems(rows: PostRow[]) {
@@ -144,7 +145,7 @@ async function toPostItems(rows: PostRow[]) {
       excerpt: excerpt(p.content, 200),
       category: p.category,
       author: person(p.author),
-      community: ref(p.course),
+      community: ref(p.community),
       likes: p.likesCount,
       comments: p.commentsCount,
       engagement: p.likesCount + p.commentsCount,
@@ -165,7 +166,7 @@ async function toPostItems(rows: PostRow[]) {
 /* ================================================================================ COMMENTS */
 const commentInclude = {
   author: { select: personSelect },
-  post: { select: { id: true, content: true, courseId: true, course: { select: { id: true, title: true } } } },
+  post: { select: { id: true, content: true, communityId: true, community: { select: { id: true, title: true } } } },
 } satisfies Prisma.PostCommentInclude;
 type CommentRow = Prisma.PostCommentGetPayload<{ include: typeof commentInclude }>;
 
@@ -181,7 +182,7 @@ async function toCommentItems(rows: CommentRow[]) {
       excerpt: excerpt(c.content, 200),
       author: person(c.author),
       post: { id: c.post.id, title: excerpt(c.post.content, 60) },
-      community: ref(c.post.course),
+      community: ref(c.post.community),
       reports,
       underReview: status === 'published' && reports > 0,
       status,
@@ -203,42 +204,50 @@ async function reportList(type: 'post' | 'comment', id: string) {
   return rows.map((r) => ({ id: r.id, caseCode: caseCode(r.caseNo), reason: r.reason, status: r.status, reporter: person(r.reporter), createdAt: r.createdAt.toISOString() }));
 }
 
-/* ================================================================================ COURSES (ClassroomModule) */
-const moduleInclude = {
-  course: { select: { id: true, title: true, owner: { select: personSelect } } },
-  _count: { select: { lessons: true } },
-} satisfies Prisma.ClassroomModuleInclude;
-type ModuleRow = Prisma.ClassroomModuleGetPayload<{ include: typeof moduleInclude }>;
+/* ================================================================================ COURSES (entity Course = Khóa học; bảng LearningCourse) */
+const courseInclude = {
+  community: { select: { id: true, title: true, owner: { select: personSelect } } },
+  _count: { select: { modules: true } },
+} satisfies Prisma.CourseInclude;
+type CourseRow = Prisma.CourseGetPayload<{ include: typeof courseInclude }>;
 const COURSE_STATUSES = ['published', 'draft', 'archived', 'removed'] as const;
 const courseStatus = (m: { publishStatus: string; removedAt: Date | null }) => (m.removedAt ? 'removed' : m.publishStatus);
 
-async function toCourseItems(rows: ModuleRow[]) {
+async function toCourseItems(rows: CourseRow[]) {
   if (!rows.length) return [];
-  const courseIds = [...new Set(rows.map((r) => r.courseId))];
-  const [members, done, mods] = await Promise.all([
+  const communityIds = [...new Set(rows.map((r) => r.communityId))];
+  const courseIds = rows.map((r) => r.id);
+  const [members, lessonCounts, done, mods] = await Promise.all([
     prisma.$queryRaw<{ id: string; n: number }[]>(Prisma.sql`
       SELECT e."courseId" AS id, COUNT(*)::int AS n FROM "Enrollment" e
-      WHERE e."courseId" = ANY(${courseIds}::text[]) AND NOT EXISTS (SELECT 1 FROM "CommunityBan" b WHERE b."courseId" = e."courseId" AND b."userId" = e."userId")
+      WHERE e."courseId" = ANY(${communityIds}::text[]) AND NOT EXISTS (SELECT 1 FROM "CommunityBan" b WHERE b."courseId" = e."courseId" AND b."userId" = e."userId")
       GROUP BY e."courseId"`),
     prisma.$queryRaw<{ id: string; n: number }[]>(Prisma.sql`
-      SELECT l."moduleId" AS id, COUNT(*)::int AS n FROM "ClassroomLesson" l
+      SELECT m."learningCourseId" AS id, COUNT(*)::int AS n FROM "ClassroomLesson" l
+      JOIN "ClassroomModule" m ON m."id" = l."moduleId"
+      WHERE m."learningCourseId" = ANY(${courseIds}::text[]) GROUP BY m."learningCourseId"`),
+    prisma.$queryRaw<{ id: string; n: number }[]>(Prisma.sql`
+      SELECT m."learningCourseId" AS id, COUNT(*)::int AS n FROM "ClassroomLesson" l
+      JOIN "ClassroomModule" m ON m."id" = l."moduleId"
       JOIN "LessonProgress" lp ON lp."lessonId" = l."id" AND lp."completedAt" IS NOT NULL
-      WHERE l."moduleId" = ANY(${rows.map((r) => r.id)}::text[]) GROUP BY l."moduleId"`),
+      WHERE m."learningCourseId" = ANY(${courseIds}::text[]) GROUP BY m."learningCourseId"`),
     nameMap(rows.map((r) => r.modById)),
   ]);
   const mem = new Map(members.map((m) => [m.id, m.n]));
+  const ln = new Map(lessonCounts.map((m) => [m.id, m.n]));
   const dn = new Map(done.map((m) => [m.id, m.n]));
   return rows.map((m) => {
-    const students = mem.get(m.courseId) ?? 0;
-    const lessons = m._count.lessons;
+    const students = mem.get(m.communityId) ?? 0;
+    const lessons = ln.get(m.id) ?? 0;
     return {
       id: m.id,
       title: m.title,
-      thumbnail: m.thumbnail,
-      community: ref(m.course),
-      creator: person(m.course.owner),
+      thumbnail: m.thumbnailUrl,
+      community: ref(m.community),
+      creator: person(m.community.owner),
       students,
       lessons,
+      modules: m._count.modules,
       completionPct: lessons && students ? Math.min(100, Math.round(((dn.get(m.id) ?? 0) / (lessons * students)) * 100)) : 0,
       reports: 0,
       status: courseStatus(m),
@@ -253,7 +262,7 @@ async function toCourseItems(rows: ModuleRow[]) {
 /* ================================================================================ LESSONS */
 const lessonInclude = {
   module: { select: { id: true, title: true } },
-  course: { select: { id: true, title: true } },
+  community: { select: { id: true, title: true } },
   _count: { select: { progress: true } },
 } satisfies Prisma.ClassroomLessonInclude;
 type LessonRow = Prisma.ClassroomLessonGetPayload<{ include: typeof lessonInclude }>;
@@ -267,7 +276,7 @@ async function toLessonItems(rows: LessonRow[]) {
     type: l.type,
     durationMin: l.durationMin,
     module: l.module,
-    community: ref(l.course),
+    community: ref(l.community),
     views: l._count.progress,
     reports: 0,
     status: modStatus(l),
@@ -280,7 +289,7 @@ async function toLessonItems(rows: LessonRow[]) {
 
 /* ================================================================================ EVENTS */
 const eventInclude = {
-  course: { select: { id: true, title: true } },
+  community: { select: { id: true, title: true } },
   host: { select: personSelect },
   _count: { select: { rsvps: true } },
 } satisfies Prisma.CommunityEventInclude;
@@ -311,7 +320,7 @@ async function toEventItems(rows: EventRow[]) {
   return rows.map((e) => ({
     id: e.id,
     title: e.title,
-    community: ref(e.course),
+    community: ref(e.community),
     host: person(e.host),
     attendees: e._count.rsvps,
     capacity: e.capacity,
@@ -327,7 +336,7 @@ async function toEventItems(rows: EventRow[]) {
 }
 
 /* ================================================================================ MEDIA */
-const mediaInclude = { owner: { select: personSelect }, course: { select: { id: true, title: true } } } satisfies Prisma.UploadInclude;
+const mediaInclude = { owner: { select: personSelect }, community: { select: { id: true, title: true } } } satisfies Prisma.UploadInclude;
 type MediaRow = Prisma.UploadGetPayload<{ include: typeof mediaInclude }>;
 type Kind = 'image' | 'video' | 'document' | 'audio';
 export const mediaKind = (contentType: string): Kind =>
@@ -344,7 +353,7 @@ async function toMediaItems(rows: MediaRow[]) {
     size: u.size,
     purpose: u.purpose,
     owner: person(u.owner),
-    community: u.course ? ref(u.course) : null,
+    community: u.community ? ref(u.community) : null,
     url: u.removedAt ? null : `/api/files/${u.key}`,
     status: mediaStatus(u),
     flagged: u.flagged,
@@ -380,7 +389,7 @@ export const adminContentService = {
     const statuses = enumList(q.status, [...MOD_STATUSES, 'under_review'] as const, 'status');
     const where: Prisma.PostWhereInput = {
       ...(await modStatusWhere(statuses, async () => [...(await reportCounts('post')).keys()])),
-      ...(q.courseId ? { courseId: q.courseId } : {}),
+      ...(q.communityId ? { communityId: q.communityId } : {}),
       ...(q.authorId ? { authorId: q.authorId } : {}),
     };
     if (q.q) {
@@ -431,10 +440,10 @@ export const adminContentService = {
     const p = await prisma.post.findUniqueOrThrow({ where: { id }, include: postInclude });
     await auditService.record(adminId, {
       action: `post.${action}`, targetType: 'post', targetId: id, targetLabel: excerpt(p.content, 80), reason: body.reason, note: body.note,
-      metadata: { community: p.courseId, from: modStatus(prev as unknown as { hidden: boolean; removedAt: Date | null }) },
+      metadata: { community: p.communityId, from: modStatus(prev as unknown as { hidden: boolean; removedAt: Date | null }) },
     });
     if (action !== 'restore' && body.notifyAuthor !== false) {
-      tell(p.authorId, action === 'hide' ? 'Bài viết của bạn đã bị ẩn' : 'Bài viết của bạn đã bị gỡ', `"${excerpt(p.content, 60)}"${body.reason ? ` — Lý do: ${body.reason}` : ''}`, p.courseId);
+      tell(p.authorId, action === 'hide' ? 'Bài viết của bạn đã bị ẩn' : 'Bài viết của bạn đã bị gỡ', `"${excerpt(p.content, 60)}"${body.reason ? ` — Lý do: ${body.reason}` : ''}`, p.communityId);
     }
     return (await toPostItems([p]))[0]!;
   },
@@ -459,7 +468,7 @@ export const adminContentService = {
     const statuses = enumList(q.status, [...MOD_STATUSES, 'under_review'] as const, 'status');
     const where: Prisma.PostCommentWhereInput = {
       ...(await modStatusWhere(statuses, async () => [...(await reportCounts('comment')).keys()])),
-      ...(q.courseId ? { post: { courseId: q.courseId } } : {}),
+      ...(q.communityId ? { post: { communityId: q.communityId } } : {}),
       ...(q.authorId ? { authorId: q.authorId } : {}),
       ...(q.postId ? { postId: q.postId } : {}),
     };
@@ -499,10 +508,10 @@ export const adminContentService = {
     if (action === 'restore' && prev.removedAt) await prisma.post.update({ where: { id: c.postId }, data: { commentsCount: { increment: 1 } } });
     await auditService.record(adminId, {
       action: `comment.${action}`, targetType: 'comment', targetId: id, targetLabel: excerpt(c.content, 80), reason: body.reason, note: body.note,
-      metadata: { community: c.post.courseId, postId: c.postId },
+      metadata: { community: c.post.communityId, postId: c.postId },
     });
     if (action !== 'restore' && body.notifyAuthor !== false) {
-      tell(c.authorId, action === 'hide' ? 'Bình luận của bạn đã bị ẩn' : 'Bình luận của bạn đã bị gỡ', `"${excerpt(c.content, 60)}"${body.reason ? ` — Lý do: ${body.reason}` : ''}`, c.post.courseId);
+      tell(c.authorId, action === 'hide' ? 'Bình luận của bạn đã bị ẩn' : 'Bình luận của bạn đã bị gỡ', `"${excerpt(c.content, 60)}"${body.reason ? ` — Lý do: ${body.reason}` : ''}`, c.post.communityId);
     }
     return (await toCommentItems([c]))[0]!;
   },
@@ -511,51 +520,57 @@ export const adminContentService = {
     return bulk(b, (id) => this.commentAction(adminId, id, b.action, { reason: b.reason, notifyAuthor: true }));
   },
 
-  /* ---------------------------------------------------------------- courses (ClassroomModule) */
+  /* ---------------------------------------------------------------- courses (entity Course = Khóa học) */
   async coursesSummary() {
     const [total, draft, archived, removed] = await Promise.all([
-      prisma.classroomModule.count(),
-      prisma.classroomModule.count({ where: { publishStatus: 'draft', removedAt: null } }),
-      prisma.classroomModule.count({ where: { publishStatus: 'archived', removedAt: null } }),
-      prisma.classroomModule.count({ where: { removedAt: { not: null } } }),
+      prisma.course.count(),
+      prisma.course.count({ where: { publishStatus: 'draft', removedAt: null } }),
+      prisma.course.count({ where: { publishStatus: 'archived', removedAt: null } }),
+      prisma.course.count({ where: { removedAt: { not: null } } }),
     ]);
     return { total, published: total - draft - archived - removed, draft, archived, removed };
   },
 
   async listCourses(q: z.infer<typeof coursesQuery>) {
     const statuses = enumList(q.status, COURSE_STATUSES, 'status');
-    const ors: Prisma.ClassroomModuleWhereInput[] = [];
+    const ors: Prisma.CourseWhereInput[] = [];
     for (const s of statuses) ors.push(s === 'removed' ? { removedAt: { not: null } } : { publishStatus: s, removedAt: null });
-    const where: Prisma.ClassroomModuleWhereInput = {
+    const where: Prisma.CourseWhereInput = {
       ...(ors.length ? { OR: ors } : {}),
-      ...(q.courseId ? { courseId: q.courseId } : {}),
-      ...(q.q ? { AND: [{ OR: [{ title: likeAny(q.q) }, { course: { title: likeAny(q.q) } }, { course: { owner: authorMatch(q.q) } }] }] } : {}),
+      ...(q.communityId ? { communityId: q.communityId } : {}),
+      ...(q.q ? { AND: [{ OR: [{ title: likeAny(q.q) }, { community: { title: likeAny(q.q) } }, { community: { owner: authorMatch(q.q) } }] }] } : {}),
     };
-    const orderBy: Prisma.ClassroomModuleOrderByWithRelationInput[] =
+    const orderBy: Prisma.CourseOrderByWithRelationInput[] =
       q.sort === 'oldest' ? [{ createdAt: 'asc' }, { id: 'asc' }]
         : q.sort === 'title' ? [{ title: 'asc' }, { id: 'asc' }]
-          : q.sort === 'lessons' ? [{ lessons: { _count: 'desc' } }, { id: 'asc' }]
-            : q.sort === 'students' ? [{ course: { enrollments: { _count: 'desc' } } }, { id: 'asc' }]
+          : q.sort === 'lessons' ? [{ modules: { _count: 'desc' } }, { id: 'asc' }]
+            : q.sort === 'students' ? [{ community: { enrollments: { _count: 'desc' } } }, { id: 'asc' }]
               : [{ createdAt: 'desc' }, { id: 'asc' }];
     const [rows, total] = await Promise.all([
-      prisma.classroomModule.findMany({ where, orderBy, skip: (q.page - 1) * q.limit, take: q.limit, include: moduleInclude }),
-      prisma.classroomModule.count({ where }),
+      prisma.course.findMany({ where, orderBy, skip: (q.page - 1) * q.limit, take: q.limit, include: courseInclude }),
+      prisma.course.count({ where }),
     ]);
     return { data: await toCourseItems(rows), meta: pageMeta(q.page, q.limit, total) };
   },
 
   async courseDetail(id: string) {
-    const m = await prisma.classroomModule.findUnique({ where: { id }, include: moduleInclude });
+    const m = await prisma.course.findUnique({ where: { id }, include: courseInclude });
     if (!m) throw HttpError.notFound('Không tìm thấy khóa học');
-    const [[item], lessons, history] = await Promise.all([
+    const [[item], lessons, modules, history] = await Promise.all([
       toCourseItems([m]),
-      prisma.classroomLesson.findMany({ where: { moduleId: id }, orderBy: [{ index: 'asc' }, { createdAt: 'asc' }] }),
+      prisma.classroomLesson.findMany({ where: { module: { learningCourseId: id } }, orderBy: [{ module: { index: 'asc' } }, { index: 'asc' }, { createdAt: 'asc' }] }),
+      prisma.classroomModule.findMany({
+        where: { learningCourseId: id },
+        orderBy: [{ index: 'asc' }, { createdAt: 'asc' }],
+        select: { id: true, title: true, publishStatus: true, removedAt: true, _count: { select: { lessons: true } } },
+      }),
       auditService.forTarget('course', id),
     ]);
     return {
       ...item!,
       description: m.description,
       lessonList: lessons.map((l) => ({ id: l.id, title: l.title, type: l.type, durationMin: l.durationMin, status: modStatus(l) })),
+      moduleList: modules.map((mod) => ({ id: mod.id, title: mod.title, lessons: mod._count.lessons, status: courseStatus(mod) })),
       history,
     };
   },
@@ -569,16 +584,16 @@ export const adminContentService = {
       remove: { where: { removedAt: null }, data: { removedAt: now, modReason: body.reason ?? null }, conflict: 'Khóa học đã bị gỡ' },
       restore: { where: { removedAt: { not: null } }, data: { removedAt: null, modReason: null }, conflict: 'Khóa học chưa bị gỡ' },
     }[action];
-    const exists = await prisma.classroomModule.findUnique({ where: { id }, select: { id: true } });
+    const exists = await prisma.course.findUnique({ where: { id }, select: { id: true } });
     if (!exists) throw HttpError.notFound('Không tìm thấy khóa học');
-    const r = await prisma.classroomModule.updateMany({ where: { id, ...spec.where }, data: { ...spec.data, modAt: now, modById: adminId } });
+    const r = await prisma.course.updateMany({ where: { id, ...spec.where }, data: { ...spec.data, modAt: now, modById: adminId } });
     if (r.count === 0) throw HttpError.conflict(spec.conflict);
-    const m = await prisma.classroomModule.findUniqueOrThrow({ where: { id }, include: moduleInclude });
+    const m = await prisma.course.findUniqueOrThrow({ where: { id }, include: courseInclude });
     await auditService.record(adminId, {
-      action: `course.${action}`, targetType: 'course', targetId: id, targetLabel: m.title, reason: body.reason, note: body.note, metadata: { community: m.courseId },
+      action: `course.${action}`, targetType: 'course', targetId: id, targetLabel: m.title, reason: body.reason, note: body.note, metadata: { community: m.communityId },
     });
     if (['unpublish', 'remove'].includes(action) && body.notifyAuthor !== false) {
-      tell(m.course.owner?.id, action === 'remove' ? 'Khóa học đã bị gỡ' : 'Khóa học đã bị hủy xuất bản', `"${m.title}"${body.reason ? ` — Lý do: ${body.reason}` : ''}`, m.courseId);
+      tell(m.community.owner?.id, action === 'remove' ? 'Khóa học đã bị gỡ' : 'Khóa học đã bị hủy xuất bản', `"${m.title}"${body.reason ? ` — Lý do: ${body.reason}` : ''}`, m.communityId);
     }
     return (await toCourseItems([m]))[0]!;
   },
@@ -598,9 +613,10 @@ export const adminContentService = {
     const where = {
       ...(await modStatusWhere(statuses, async () => [])),
       ...(q.type ? { type: q.type } : {}),
-      ...(q.courseId ? { courseId: q.courseId } : {}),
+      ...(q.communityId ? { communityId: q.communityId } : {}),
       ...(q.moduleId ? { moduleId: q.moduleId } : {}),
-      ...(q.q ? { AND: [{ OR: [{ title: likeAny(q.q) }, { module: { title: likeAny(q.q) } }, { course: { title: likeAny(q.q) } }, ...(codePrefix(q.q, 'LSN') ? [{ id: { startsWith: codePrefix(q.q, 'LSN')! } }] : [])] }] } : {}),
+      ...(q.learningCourseId ? { module: { learningCourseId: q.learningCourseId } } : {}),
+      ...(q.q ? { AND: [{ OR: [{ title: likeAny(q.q) }, { module: { title: likeAny(q.q) } }, { community: { title: likeAny(q.q) } }, ...(codePrefix(q.q, 'LSN') ? [{ id: { startsWith: codePrefix(q.q, 'LSN')! } }] : [])] }] } : {}),
     } as Prisma.ClassroomLessonWhereInput;
     const orderBy: Prisma.ClassroomLessonOrderByWithRelationInput[] =
       q.sort === 'views' ? [{ progress: { _count: 'desc' } }, { id: 'asc' }] : q.sort === 'title' ? [{ title: 'asc' }, { id: 'asc' }] : [{ createdAt: 'desc' }, { id: 'asc' }];
@@ -620,12 +636,12 @@ export const adminContentService = {
 
   async lessonAction(adminId: string, id: string, action: ModAction, body: { reason?: string | null; note?: string; notifyAuthor?: boolean }) {
     await modTransition(prisma.classroomLesson as unknown as ModDelegate, id, action, adminId, body.reason ?? null, 'bài học');
-    const l = await prisma.classroomLesson.findUniqueOrThrow({ where: { id }, include: { ...lessonInclude, course: { select: { id: true, title: true, ownerId: true } } } });
+    const l = await prisma.classroomLesson.findUniqueOrThrow({ where: { id }, include: { ...lessonInclude, community: { select: { id: true, title: true, ownerId: true } } } });
     await auditService.record(adminId, {
-      action: `lesson.${action}`, targetType: 'lesson', targetId: id, targetLabel: l.title, reason: body.reason, note: body.note, metadata: { community: l.courseId, moduleId: l.moduleId },
+      action: `lesson.${action}`, targetType: 'lesson', targetId: id, targetLabel: l.title, reason: body.reason, note: body.note, metadata: { community: l.communityId, moduleId: l.moduleId },
     });
     if (action !== 'restore' && body.notifyAuthor !== false) {
-      tell(l.course.ownerId, action === 'hide' ? 'Bài học đã bị ẩn' : 'Bài học đã bị gỡ', `"${l.title}"${body.reason ? ` — Lý do: ${body.reason}` : ''}`, l.courseId);
+      tell(l.community.ownerId, action === 'hide' ? 'Bài học đã bị ẩn' : 'Bài học đã bị gỡ', `"${l.title}"${body.reason ? ` — Lý do: ${body.reason}` : ''}`, l.communityId);
     }
     return (await toLessonItems([l]))[0]!;
   },
@@ -649,8 +665,8 @@ export const adminContentService = {
     const statuses = enumList(q.status, EVENT_STATUSES, 'status');
     const where: Prisma.CommunityEventWhereInput = {
       ...(statuses.length ? eventStatusWhere(statuses) : {}),
-      ...(q.courseId ? { courseId: q.courseId } : {}),
-      ...(q.q ? { AND: [{ OR: [{ title: likeAny(q.q) }, { course: { title: likeAny(q.q) } }, { host: authorMatch(q.q) }] }] } : {}),
+      ...(q.communityId ? { communityId: q.communityId } : {}),
+      ...(q.q ? { AND: [{ OR: [{ title: likeAny(q.q) }, { community: { title: likeAny(q.q) } }, { host: authorMatch(q.q) }] }] } : {}),
     };
     const orderBy: Prisma.CommunityEventOrderByWithRelationInput[] = q.sort === 'newest' ? [{ createdAt: 'desc' }, { id: 'asc' }] : [{ startAt: 'desc' }, { id: 'asc' }];
     const [rows, total] = await Promise.all([
@@ -706,12 +722,12 @@ export const adminContentService = {
     if (r.count === 0) throw HttpError.conflict(spec.conflict);
     const e = await prisma.communityEvent.findUniqueOrThrow({ where: { id }, include: eventInclude });
     await auditService.record(adminId, {
-      action: `event.${action}`, targetType: 'event', targetId: id, targetLabel: e.title, reason: body.reason, note: body.note, metadata: { community: e.courseId },
+      action: `event.${action}`, targetType: 'event', targetId: id, targetLabel: e.title, reason: body.reason, note: body.note, metadata: { community: e.communityId },
     });
     if (action !== 'restore' && body.notifyAttendees !== false) {
       const rsvps = await prisma.eventRsvp.findMany({ where: { eventId: id }, select: { userId: true } });
       for (const u of rsvps) {
-        tell(u.userId, 'Sự kiện đã bị hủy', `Sự kiện "${e.title}" đã bị quản trị viên ${action === 'cancel' ? 'hủy' : 'gỡ'}${body.reason ? ` (${body.reason})` : ''}.`, e.courseId);
+        tell(u.userId, 'Sự kiện đã bị hủy', `Sự kiện "${e.title}" đã bị quản trị viên ${action === 'cancel' ? 'hủy' : 'gỡ'}${body.reason ? ` (${body.reason})` : ''}.`, e.communityId);
       }
     }
     return (await toEventItems([e]))[0]!;
@@ -744,11 +760,11 @@ export const adminContentService = {
         ? { NOT: [{ contentType: { startsWith: 'image/' } }, { contentType: { startsWith: 'video/' } }, { contentType: { startsWith: 'audio/' } }] }
         : { contentType: { startsWith: `${q.kind}/` } });
     }
-    if (q.q) and.push({ OR: [{ filename: likeAny(q.q) }, { owner: authorMatch(q.q) }, { course: { title: likeAny(q.q) } }] });
+    if (q.q) and.push({ OR: [{ filename: likeAny(q.q) }, { owner: authorMatch(q.q) }, { community: { title: likeAny(q.q) } }] });
     const where: Prisma.UploadWhereInput = {
       status: 'uploaded',
       ...(q.purpose ? { purpose: q.purpose as never } : {}),
-      ...(q.courseId ? { courseId: q.courseId } : {}),
+      ...(q.communityId ? { communityId: q.communityId } : {}),
       ...(q.ownerId ? { ownerId: q.ownerId } : {}),
       ...(and.length ? { AND: and } : {}),
     };
@@ -785,7 +801,7 @@ export const adminContentService = {
       action: `media.${action}`, targetType: 'media', targetId: key, targetLabel: u.filename, reason: body.reason, note: body.note, metadata: { owner: u.ownerId, size: u.size },
     });
     if (action === 'remove' && body.notifyOwner !== false) {
-      tell(u.ownerId, 'File của bạn đã bị gỡ', `"${u.filename}"${body.reason ? ` — Lý do: ${body.reason}` : ''}`, u.courseId ?? undefined);
+      tell(u.ownerId, 'File của bạn đã bị gỡ', `"${u.filename}"${body.reason ? ` — Lý do: ${body.reason}` : ''}`, u.communityId ?? undefined);
     }
     return (await toMediaItems([u]))[0]!;
   },

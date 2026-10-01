@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { formatCompact } from '../../../lib/format';
-import type { CourseDetail } from '../../courses/types';
+import type { CommunityDetail } from '../../courses/types';
 import { isAtLeast, ROLE_LABEL } from '../../communities/types';
 import { useMembers } from '../queries';
 
@@ -50,7 +50,7 @@ export function PageBanner({
 }
 
 /** Thẻ thông tin cộng đồng bên phải (trang Thành viên / Giới thiệu). */
-export function CommunityInfoCard({ course, coverHeight = 150 }: { course: CourseDetail; coverHeight?: number }) {
+export function CommunityInfoCard({ course, coverHeight = 150 }: { course: CommunityDetail; coverHeight?: number }) {
   const members = useMembers(course.id, {});
   const shown = members.data?.data.slice(0, 8) ?? [];
   const remaining = Math.max(0, course.stats.members - shown.length);
@@ -63,8 +63,8 @@ export function CommunityInfoCard({ course, coverHeight = 150 }: { course: Cours
         </div>
         <div className="px-[18px] pt-4 pb-[18px]">
           <div className="text-lg font-extrabold">{course.title}</div>
-          <Link to={`/courses/${course.id}`} className="mt-1 block truncate text-[13px] text-stone-600 hover:text-brand">
-            sofinhub.com/courses/{course.id}
+          <Link to={`/communities/${course.id}`} className="mt-1 block truncate text-[13px] text-stone-600 hover:text-brand">
+            sofinhub.com/communities/{course.id}
           </Link>
           <p className="mt-2.5 line-clamp-3 text-[13.5px] leading-[1.55] text-stone-800">{course.description}</p>
           <div className="mt-3.5 grid grid-cols-3 border-t border-[rgba(120,60,20,.08)] pt-3 text-center">
@@ -103,7 +103,7 @@ export function CommunityInfoCard({ course, coverHeight = 150 }: { course: Cours
           )}
           {isAtLeast(course.viewerRole, 'admin') && (
             <Link
-              to={`/courses/${course.id}/community/cai-dat`}
+              to={`/communities/${course.id}/community/cai-dat`}
               className="mt-3 flex h-[42px] w-full items-center justify-center gap-2 rounded-xl bg-brand/10 text-sm font-semibold text-brand hover:bg-brand/15"
             >
               <MaterialIcon name="settings" size={19} color="#f26a1b" />

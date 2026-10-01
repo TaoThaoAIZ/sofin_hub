@@ -81,7 +81,7 @@ export function CreateCommunityPage() {
         priceUsd: price,
         thumbnail: thumbnail.trim() || undefined,
       },
-      { onSuccess: (course) => navigate(`/courses/${course.id}/community`) },
+      { onSuccess: (course) => navigate(`/communities/${course.id}/community`) },
     );
   };
 
@@ -229,6 +229,9 @@ export function CreateCommunityPage() {
                   <dt className="text-stone-500">Giá</dt>
                   <dd>{price === 0 ? 'Miễn phí' : `$${price}/tháng`}</dd>
                 </dl>
+                <p className="mt-3 mb-0 rounded-xl bg-brand-soft px-3 py-2 text-[12.5px] text-stone-700">
+                  Hệ thống sẽ tự tạo sẵn khóa học đầu tiên "Khóa học chính" trong cộng đồng. Bạn có thể thêm module, bài học hoặc tạo thêm khóa học khác sau trong tab Lớp học.
+                </p>
               </div>
             </>
           )}

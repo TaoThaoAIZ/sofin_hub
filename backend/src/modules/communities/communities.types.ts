@@ -2,7 +2,9 @@ export type JoinRequestStatus = 'pending' | 'approved' | 'rejected';
 
 export interface JoinRequest {
   id: string;
-  courseId: string;
+  communityId: string;
+  /** @deprecated alias của communityId (tương thích JSON cũ) — repository luôn điền. */
+  courseId?: string;
   userId: string;
   message: string;
   status: JoinRequestStatus;
@@ -13,7 +15,9 @@ export interface JoinRequest {
 
 export interface Invite {
   code: string;
-  courseId: string;
+  communityId: string;
+  /** @deprecated alias của communityId (tương thích JSON cũ) — repository luôn điền. */
+  courseId?: string;
   createdBy: string;
   maxUses: number | null;
   usedCount: number;
@@ -23,7 +27,9 @@ export interface Invite {
 }
 
 export interface BanRecord {
-  courseId: string;
+  communityId: string;
+  /** @deprecated alias của communityId (tương thích JSON cũ) — repository luôn điền. */
+  courseId?: string;
   userId: string;
   reason: string;
   bannedBy: string;
@@ -32,7 +38,9 @@ export interface BanRecord {
 
 export interface Review {
   id: string;
-  courseId: string;
+  communityId: string;
+  /** @deprecated alias của communityId (tương thích JSON cũ) — repository luôn điền. */
+  courseId?: string;
   userId: string;
   rating: number;
   text: string;

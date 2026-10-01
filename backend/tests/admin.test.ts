@@ -34,7 +34,7 @@ describe('admin đợt 1', () => {
   /** Tạo cộng đồng ở trạng thái kiểm duyệt cho trước (không đi qua luồng tạo thường, giữ nguyên hành vi hiện có). */
   async function makeCommunity(opts: { status?: 'pending_review' | 'active'; owner?: string; price?: number; title?: string } = {}) {
     const id = `adm-${Date.now().toString(36)}-${seq++}`;
-    await db.prisma.course.create({
+    await db.prisma.community.create({
       data: {
         id, title: opts.title ?? `Cộng đồng ${id}`, description: 'Mô tả cộng đồng thử nghiệm đủ dài.', category: 'tech', thumbnail: '/x.webp',
         instructorName: 'Ai đó', instructorRole: 'Chủ', priceCents: (opts.price ?? 0) * 100, pricing: opts.price ? 'paid' : 'free',
@@ -173,7 +173,7 @@ describe('admin đợt 1', () => {
 
     // quá hạn lưu giữ -> không khôi phục được
     await A('POST', `/communities/${id}/delete`, { reason: 'Spam' });
-    await db.prisma.course.update({ where: { id }, data: { deletedAt: new Date(Date.now() - 40 * 86_400_000) } });
+    await db.prisma.community.update({ where: { id }, data: { deletedAt: new Date(Date.now() - 40 * 86_400_000) } });
     const late = await A('POST', `/communities/${id}/undelete`, {});
     assert.equal(late.status, 409);
     assert.equal(late.body.error.code, 'RETENTION_EXPIRED');
@@ -185,7 +185,7 @@ describe('admin đợt 1', () => {
   it('khóa/mở khóa kiểu cũ vẫn chạy và cũng ghi audit; summary/list/detail/members/reports', async () => {
     const owner = await c.registerUser('lockowner');
     const id = await makeCommunity({ status: 'active', owner: owner.id, title: 'Zebra Unique Title' });
-    await db.prisma.enrollment.create({ data: { userId: owner.id, courseId: id, role: 'owner' } });
+    await db.prisma.enrollment.create({ data: { userId: owner.id, communityId: id, role: 'owner' } });
     const lock = await c.call('POST', `/admin/courses/${id}/lock`, { token: admin.token, body: { reason: 'Vi phạm' } });
     assert.equal(lock.status, 200);
     assert.equal(await status(id), 'suspended', 'locked cũ hiển thị là suspended');

@@ -11,6 +11,7 @@ E401 = "401 UNAUTHORIZED (\"Vui lòng đăng nhập để tiếp tục\")"
 E403M = "403 FORBIDDEN (\"Bạn cần tham gia cộng đồng này trước\")"
 E403R = "403 FORBIDDEN (\"Bạn không có quyền thực hiện thao tác này trong cộng đồng\")"
 E403P = "403 FORBIDDEN (\"Chỉ Platform Admin mới có quyền này\")"
+E403S = "403 FORBIDDEN (\"Chỉ nhân viên admin mới có quyền này\")"  # adminOnly (admin.common.ts + assertAllowed): refunds/payouts/dashboard... không phải nhân viên
 
 ROLES8 = [
     ("Khách", "không gửi Authorization"),
@@ -351,8 +352,8 @@ def _admin(add):
     a("Khu quản trị nền tảng", "Admin lọc và xem yêu cầu hoàn tiền: pending/approved/rejected khớp seed",
       "Chức năng", "Trung bình",
       RESET + "admin đăng nhập. Seed paid-demo: seed-refund-pending (chờ duyệt, member minh họa #2) và seed-refund-approved (đã duyệt).",
-      ["GET /api/admin/refunds?status=pending", "GET /api/admin/refunds?status=approved", "GET /api/admin/refunds?status=xyz", "UI /admin tab Hoàn tiền: đổi bộ lọc Chờ duyệt/Đã duyệt/Từ chối/Tất cả"], "-",
-      "pending chứa seed-refund-pending; approved chứa seed-refund-approved; status=xyz → 400 VALIDATION_ERROR; UI hiển thị đúng theo bộ lọc, mỗi yêu cầu chờ duyệt có nút \"Duyệt hoàn tiền\" và \"Từ chối\".")
+      ["GET /api/admin/refunds?status=pending", "GET /api/admin/refunds?status=approved", "GET /api/admin/refunds?status=xyz"], "-",
+      "pending chứa seed-refund-pending; approved chứa seed-refund-approved; status=xyz → 400 VALIDATION_ERROR. (Phần UI: trang /admin 4 tab cũ đã được thay bằng Admin Console - xem ADM2 mục Thanh toán > Hoàn tiền.)")
     a("Khu quản trị nền tảng", "Admin duyệt hoàn tiền yêu cầu chờ: giao dịch thành Đã hoàn tiền, gói bị hủy, người mua nhận thông báo",
       "Chức năng", "Cao",
       RESET + "admin đăng nhập; yêu cầu seed-refund-pending thuộc giao dịch seed-pay-pendref (cổng MockGateway luôn chấp nhận).",
@@ -367,22 +368,22 @@ def _admin(add):
       "Chức năng", "Trung bình",
       RESET + "Yêu cầu seed-refund-approved (đã duyệt). admin và owner đăng nhập.",
       ["admin: PATCH /api/admin/refunds/seed-refund-approved {action:'approve'}", "admin: PATCH /api/admin/refunds/khong-co {action:'approve'}", "admin: PATCH ... {action:'xoa'}", "owner: PATCH /api/admin/refunds/seed-refund-pending {action:'approve'}"], "-",
-      "409 CONFLICT \"Yêu cầu này đã được xử lý\"; 404 \"Không tìm thấy yêu cầu hoàn tiền\"; 400 VALIDATION_ERROR; owner: " + E403P + ".")
+      "409 CONFLICT \"Yêu cầu này đã được xử lý\"; 404 \"Không tìm thấy yêu cầu hoàn tiền\"; 400 VALIDATION_ERROR; owner: " + E403S + " (route adminOnly).")
     a("Khu quản trị nền tảng", "Admin duyệt yêu cầu rút tiền: requested → approved → paid, owner nhận thông báo mỗi bước",
       "Chức năng", "Cao",
       RESET + "Payout seed-payout-pending ($50.00, requested, owner paid-demo, số TK ****4 số cuối). admin và owner đăng nhập.",
-      ["admin: PATCH /api/admin/payouts/seed-payout-pending {action:'approve'}", "PATCH ... {action:'mark_paid', note:'Đã chuyển khoản'}", "owner: GET /api/notifications", "UI /admin tab Rút tiền: đổi bộ lọc"], "-",
-      "Bước 1: status=\"approved\", owner nhận \"Yêu cầu rút tiền đã được duyệt\". Bước 2: status=\"paid\", owner nhận \"Đã chuyển tiền\" với ****<4 số cuối>; UI hiện nút Duyệt/Từ chối chỉ ở trạng thái Đã yêu cầu.")
+      ["admin: PATCH /api/admin/payouts/seed-payout-pending {action:'approve'}", "PATCH ... {action:'mark_paid', note:'Đã chuyển khoản'}", "owner: GET /api/notifications"], "-",
+      "Bước 1: status=\"approved\", owner nhận \"Yêu cầu rút tiền đã được duyệt\". Bước 2: status=\"paid\", owner nhận \"Đã chuyển tiền\" với ****<4 số cuối>. (UI: /admin 4 tab cũ đã thay bằng Admin Console - xem ADM2 mục Chi trả.)")
     a("Khu quản trị nền tảng", "Admin từ chối payout: số dư khả dụng của owner được hoàn lại",
       "Chức năng", "Trung bình",
       RESET + "Ghi lại availableBalanceCents từ GET /api/courses/paid-demo/revenue (owner). Payout seed-payout-pending đang requested ($50).",
       ["admin: PATCH /api/admin/payouts/seed-payout-pending {action:'reject', note:'Sai thông tin TK'}", "owner: GET /api/courses/paid-demo/revenue"], 'Body {"action":"reject","note":"Sai thông tin TK"}',
-      "status=\"rejected\"; availableBalanceCents tăng đúng 5000 cent so với trước; payoutRequestedCents giảm 5000; owner nhận thông báo \"Yêu cầu rút tiền bị từ chối\" với \"Lý do: Sai thông tin TK\".")
+      "status=\"rejected\"; payoutRequestedCents giảm 5000 và totalBalanceCents tăng đúng 5000 cent so với trước; availableBalanceCents (số CÓ THỂ RÚT = min(eligible - reserve - requested, total)) tăng tối đa 5000 (đối chiếu công thức, không còn là net - requested); owner nhận thông báo \"Yêu cầu rút tiền bị từ chối\" với \"Lý do: Sai thông tin TK\".")
     a("Khu quản trị nền tảng", "Chuyển trạng thái payout sai thứ tự bị 409; owner/khách bị chặn",
       "Bảo mật", "Trung bình",
       RESET + "Payout seed-payout-paid (đã paid). admin, owner đăng nhập.",
       ["admin: PATCH /api/admin/payouts/seed-payout-paid {action:'approve'}", "admin: {action:'reject'}", "admin: PATCH /api/admin/payouts/khong-co {action:'approve'}", "owner: PATCH /api/admin/payouts/seed-payout-pending {action:'approve'}", "owner: GET /api/admin/payouts"], "-",
-      "approve → 409 \"Chỉ duyệt được yêu cầu đang chờ\"; reject → 409 \"Yêu cầu đã được xử lý xong\"; id lạ → 404 \"Không tìm thấy yêu cầu rút tiền\"; owner: " + E403P + ".")
+      "approve → 409 \"Chỉ duyệt được yêu cầu đang chờ\"; reject → 409 \"Yêu cầu đã được xử lý xong\"; id lạ → 404 \"Không tìm thấy yêu cầu rút tiền\"; owner: " + E403S + " (route adminOnly).")
     a("Khu quản trị nền tảng", "PLATFORM_ADMIN_EMAILS: thêm owner@ vào biến môi trường và restart thì owner có quyền admin nền tảng",
       "Bảo mật", "Cao",
       "Có quyền sửa `backend/.env`. Ban đầu PLATFORM_ADMIN_EMAILS=admin@sofinhub.test.",
@@ -393,12 +394,12 @@ def _admin(add):
       "Bảo mật", "Trung bình",
       "Có quyền sửa backend/.env.",
       ["Đặt PLATFORM_ADMIN_EMAILS= (rỗng) và restart", "admin: GET /api/admin/refunds", "admin: POST /api/admin/courses/photo/lock"], "-",
-      "Cả hai: " + E403P + "; /admin hiện \"Bạn không có quyền truy cập khu vực quản trị.\"; token cũ vẫn hợp lệ nhưng không còn đặc quyền (quyền tính từ env mỗi request).",
+      "GET /api/admin/refunds: " + E403S + " (admin@ không còn là nhân viên - trừ khi seed gán AdminAccount); POST /api/admin/courses/photo/lock: " + E403P + "; /admin hiện \"Bạn không có quyền truy cập khu vực quản trị.\"; token cũ vẫn hợp lệ nhưng không còn đặc quyền (quyền tính từ env mỗi request).",
       pw="Không")
     a("Khu quản trị nền tảng", "Rủi ro chiếm quyền: email trong PLATFORM_ADMIN_EMAILS chưa có tài khoản — ai đăng ký trước sẽ thành Platform Admin",
       "Bảo mật", "Cao",
       "Môi trường thử: đặt PLATFORM_ADMIN_EMAILS=chiemquyen@sofinhub.test (chưa có tài khoản) rồi restart BE.",
-      ["POST /api/auth/register với email chiemquyen@sofinhub.test, mật khẩu hợp lệ", "GET /api/admin/refunds với access token vừa nhận", "GET /api/dev/outbox?to=... chưa xác thực email"], 'Body {"firstName":"Kẻ","lastName":"Lạ","email":"chiemquyen@sofinhub.test","password":"Passw0rd!x"}',
+      ["POST /api/auth/register với email chiemquyen@sofinhub.test, mật khẩu hợp lệ", "GET /api/admin/refunds với access token vừa nhận", "GET /api/dev/outbox?to=... chưa xác thực email (chỉ mount khi ENABLE_DEV_OUTBOX=1 và NODE_ENV != production; ngược lại 404)"], 'Body {"firstName":"Kẻ","lastName":"Lạ","email":"chiemquyen@sofinhub.test","password":"Passw0rd!x"}',
       "HÀNH VI THỰC TẾ của code: isPlatformAdmin chỉ so email (không đòi emailVerified) nên đăng ký xong là 200 — ghi nhận là rủi ro bảo mật (giá trị tạm / chưa chốt), đề xuất bắt buộc xác thực email cho Platform Admin.",
       pw="Có")
     a("Khu quản trị nền tảng", "Tổng quan số liệu toàn nền tảng (người dùng, cộng đồng, giao dịch, báo cáo) trên /admin",
@@ -555,12 +556,14 @@ def _role(add):
     P403 = "403 FORBIDDEN (\"Chỉ chủ cộng đồng mới được yêu cầu rút tiền\")"
     mx("Ma trận: thanh toán", "Yêu cầu rút tiền paid-demo: chỉ đúng Owner (Platform Admin cũng bị chặn)",
        "POST /api/courses/paid-demo/payouts", 'Body {"amountCents":5000,"method":{"type":"bank","bankName":"VCB","accountNumber":"0123456789","accountHolder":"NGUYEN VAN A"}}', "rr", "owner",
-       "201 (số TK ****6789) khi số dư khả dụng >= $50",
-       extra="Nếu số dư không đủ, owner nhận 400 \"Số tiền rút vượt quá số dư khả dụng\" thay vì 201",
+       "201 (số TK ****6789) khi số CÓ THỂ RÚT (availableBalanceCents) >= $50",
+       extra="Nếu số có thể rút không đủ (tiền mới còn trong holding 14 ngày, trừ quỹ dự phòng 10%), owner nhận 400 PAYOUT_EXCEEDS_AVAILABLE \"Số tiền rút vượt quá số dư có thể rút (...)\" thay vì 201",
        overrides={"newbie": P403, "member1": P403, "mod": P403, "cadmin": P403, "banned": P403,
                   "admin nền tảng": P403 + " — dùng isCourseOwner, không tính Platform Admin"})
     mx("Ma trận: nền tảng", "Hoàn tiền/rút tiền phía admin (GET /api/admin/refunds, GET /api/admin/payouts)",
-       "GET /api/admin/refunds và GET /api/admin/payouts", "-", "pa", "admin nền tảng", "200 {data,meta} cho cả hai")
+       "GET /api/admin/refunds và GET /api/admin/payouts", "-", "pa", "admin nền tảng", "200 {data,meta} cho cả hai",
+       extra="HIỆN TẠI: 2 route này đi qua adminOnly (nhân viên admin + quyền payment.view): người không phải nhân viên nhận message 'Chỉ nhân viên admin mới có quyền này' (khác 'Chỉ Platform Admin' của /admin/reports và lock); nhân viên có vai trò (Finance, Super Admin) được vào theo ma trận quyền ở ADM3",
+       overrides={n: E403S for n in ("newbie", "member1", "mod", "cadmin", "owner", "banned")})
     mx("Ma trận: nền tảng", "Khóa cộng đồng (POST /api/admin/courses/:id/lock) chỉ dành cho Platform Admin",
        "POST /api/admin/courses/<id cộng đồng thử>/lock", 'Body {"reason":"Thử ma trận"}', "pa", "admin nền tảng", "200 {locked:true}",
        extra="Mở khóa bằng POST .../unlock sau khi thử")
@@ -679,7 +682,7 @@ def _role(add):
     a("Nâng quyền", "Mass assignment: PATCH /api/auth/me không cho tự sửa role, emailVerified, isDemo, tokenVersion, email",
       "Bảo mật", "Cao", RESET + "member1 đăng nhập.",
       ["PATCH /api/auth/me {firstName:'Minh', role:'admin', emailVerified:true, isDemo:false, tokenVersion:99, email:'hacker@x.test'}", "GET /api/auth/me", "GET /api/admin/refunds"], "-",
-      "PATCH 200 nhưng các trường lạ bị zod bỏ (không lưu); /auth/me giữ email member1@sofinhub.test và emailVerified như cũ; /api/admin/refunds vẫn " + E403P + ".")
+      "PATCH 200 nhưng các trường lạ bị zod bỏ (không lưu); /auth/me giữ email member1@sofinhub.test và emailVerified như cũ; /api/admin/refunds vẫn " + E403S + ".")
     a("Nâng quyền", "Tạo cộng đồng với ownerId/locked giả trong body: bị bỏ qua, chủ luôn là người gọi",
       "Bảo mật", "Trung bình", RESET + "newbie đăng nhập.",
       ["POST /api/communities {title:'Cộng đồng thử', description:'m', category:<id danh mục hợp lệ>, priceUsd:0, visibility:'public', ownerId:'<id owner khác>', locked:true}", "GET chi tiết cộng đồng vừa tạo"], "-",
@@ -930,7 +933,7 @@ def _integ(add):
       "Postgres đã migrate. Chạy `npm run db:reset` một lần; có psql/prisma studio để đếm bản ghi.",
       ["Đếm: SELECT count(*) FROM \"User\", \"Course\", \"Post\", \"Comment\", \"Event\", \"Report\", \"Invite\", \"JoinRequest\", \"Enrollment\", \"Payment\"", "Chạy `cd backend && npm run db:seed` thêm lần 2 (không reset)", "Đếm lại và so sánh", "Đăng nhập lại member1 bằng " + PW],
       "-",
-      "Số bản ghi mỗi bảng không đổi giữa hai lần đếm (createMany skipDuplicates/upsert); seed-report-photo-open vẫn đúng 1 bản ghi; mã mời DEMO-VALID vẫn 1; đăng nhập 9 tài khoản seed vẫn được; không lỗi unique violation.", pw="Không")
+      "Số bản ghi mỗi bảng không đổi giữa hai lần đếm (createMany skipDuplicates/upsert); seed-report-photo-open vẫn đúng 1 bản ghi; mã mời DEMO-VALID vẫn 1; đăng nhập các tài khoản seed chính (>= 9; db:seed nay còn thêm nhân viên admin đợt 3) vẫn được; không lỗi unique violation.", pw="Không")
     a("Migration & seed", "Chạy `npm run db:deploy` khi không còn migration mới là no-op, không lỗi",
       "Tích hợp", "Trung bình",
       "DB đã áp mọi migration.",
@@ -940,7 +943,7 @@ def _integ(add):
       "Tích hợp", "Trung bình",
       "Đã xử lý báo cáo seed-report-photo-open (dismiss) ở case ADMIN trước đó.",
       ["Chạy `cd backend && npm run db:reset`", "mod: GET /api/courses/photo/reports?status=open"], "-",
-      "seed-report-photo-open trở lại status=open, note/resolvedBy rỗng; tài khoản test tự tạo bị xóa; 9 tài khoản seed đăng nhập được với " + PW + ". (Lưu ý: db:seed thường KHÔNG khôi phục dữ liệu đã bị đổi trạng thái — chỉ db:reset.)", pw="Không")
+      "seed-report-photo-open trở lại status=open, note/resolvedBy rỗng; tài khoản test tự tạo bị xóa; các tài khoản seed chính (>= 9; db:seed nay còn thêm nhân viên admin đợt 3) đăng nhập được với " + PW + ". (Lưu ý: db:seed thường KHÔNG khôi phục dữ liệu đã bị đổi trạng thái — chỉ db:reset.)", pw="Không")
     a("Health & vận hành", "GET /health công khai trả status ok và uptime khi DB sống (không nằm dưới /api)",
       "Tích hợp", "Trung bình",
       "BE chạy :4000, Postgres sống (health nay chạy SELECT 1; DB chết -> 503 {status:'db_unavailable'}, xem case Postgres mất kết nối).",
@@ -1021,7 +1024,7 @@ def _sec(add):
     a("Header bảo mật", "Cookie refresh_token có HttpOnly, Path=/api/auth, SameSite=Lax (dev), Secure/None chỉ khi production",
       "Bảo mật", "Cao", RESET + "Đăng nhập member1 bằng request context để đọc Set-Cookie.",
       ["POST /api/auth/login, đọc header Set-Cookie", "Trong trình duyệt: page.evaluate(() => document.cookie)", "POST /api/auth/logout rồi xem cookie bị xóa"], "-",
-      "Set-Cookie: refresh_token=...; Path=/api/auth; HttpOnly; SameSite=Lax; Max-Age=30 ngày (2592000). document.cookie không chứa refresh_token. Production: SameSite=None; Secure. Logout xóa cookie (clearCookie cùng path).", pw="Một phần")
+      "Set-Cookie: refresh_token=...; Path=/api/auth; HttpOnly; SameSite=Lax; Max-Age=30 ngày (2592000). document.cookie không chứa refresh_token. Cờ Secure đặt ở MỌI môi trường trừ NODE_ENV=development (nên không có Secure trên localhost dev); production: SameSite=None; Secure (auth.routes.ts setRefreshCookie). Logout xóa cookie (clearCookie cùng path).", pw="Một phần")
     a("Header bảo mật", "CORS: chỉ origin được cấu hình nhận header Access-Control-Allow-Origin",
       "Bảo mật", "Cao", "CORS_ORIGIN mặc định http://localhost:5173.",
       ["GET /api/courses với Origin: http://localhost:5173", "GET /api/courses với Origin: http://evil.example", "OPTIONS /api/auth/login với Origin evil + Access-Control-Request-Method: POST"], "-",
@@ -1119,14 +1122,14 @@ def _sec(add):
       "Form thanh toán và nút \"Bắt đầu dùng thử\" không tràn; bảng lịch sử cuộn ngang trong khung hoặc chuyển dạng thẻ (không làm rộng cả trang); hộp thoại hóa đơn cuộn được.", pw="Một phần")
     a("Responsive", "Khu quản trị /admin và kiểm duyệt trên mobile và tablet",
       "Giao diện", "Thấp", RESET + RSP + "admin@sofinhub.test; mod cho trang kiểm duyệt.",
-      ["Mở /admin ở 375px: cuộn hàng 4 tab", "Mở mỗi tab, bấm nút Duyệt/Từ chối", "Mở /courses/photo/community/kiem-duyet với mod", "Lặp lại ở 768px"], "-",
-      "4 tab xuống dòng (flex-wrap) không tràn; bảng/hàng yêu cầu đọc được; các nút hành động (Bỏ qua, Ẩn nội dung, Cấm thành viên) không bị che, hộp thoại xác nhận nằm giữa màn hình.", pw="Một phần")
+      ["Mở /admin (Admin Console) ở 375px: bấm nút \"Mở menu\" (ẩn từ lg) để mở sidebar", "Mở vài trang (Dashboard, Thanh toán > Hoàn tiền, Kiểm duyệt)", "Mở /courses/photo/community/kiem-duyet với mod", "Lặp lại ở 768px"], "-",
+      "Trang /admin 4 tab cũ đã được thay bằng Admin Console: sidebar thu gọn vào nút menu, bảng không tràn ngang trang; trang kiểm duyệt cộng đồng: các nút hành động (Bỏ qua, Ẩn nội dung, Cấm thành viên) không bị che, hộp thoại xác nhận nằm giữa màn hình.", pw="Một phần")
 
     # ------------------------------------------------------------------ Trạng thái UI & a11y
     a("Trạng thái giao diện", "Trạng thái loading: trang Quản trị và Kiểm duyệt hiện chữ đang tải khi API chậm",
-      "Giao diện", "Thấp", RESET + "Throttle mạng chậm (Playwright route.fulfill trễ 3s cho /api/admin/refunds và /api/courses/photo/reports).",
+      "Giao diện", "Thấp", RESET + "Throttle mạng chậm (Playwright route.fulfill trễ 3s cho /api/admin/me và /api/courses/photo/reports).",
       ["admin: mở /admin", "mod: mở /courses/photo/community/kiem-duyet"], "-",
-      "/admin hiện \"Đang kiểm tra quyền…\" rồi mới hiện tab; kiểm duyệt hiện \"Đang tải báo cáo…\"; không nhấp nháy nội dung sai (ví dụ không hiện \"Bạn không có quyền\" khi đang tải).", pw="Một phần")
+      "/admin hiện \"Đang kiểm tra quyền…\" (AdminLayout, chờ GET /api/admin/me) rồi mới hiện khung admin; kiểm duyệt hiện \"Đang tải báo cáo…\"; không nhấp nháy nội dung sai (ví dụ không hiện \"Bạn không có quyền\" khi đang tải).", pw="Một phần")
     a("Trạng thái giao diện", "Trạng thái rỗng: danh sách rỗng hiển thị thông điệp thân thiện thay vì bảng trống",
       "Giao diện", "Thấp", RESET + "Tài khoản newbie (chưa có thông báo, hội thoại, giao dịch).",
       ["Mở /notifications", "Mở /messages", "Mở /billing", "Mở /me/communities", "mod: kiểm duyệt tab \"Đã bỏ qua\" khi chưa có báo cáo dismiss"], "-",

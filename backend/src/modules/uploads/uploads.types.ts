@@ -18,6 +18,8 @@ export interface UploadRecord {
   /** Dung lượng khai báo lúc presign; được thay bằng dung lượng thực sau khi PUT xong. */
   size: number;
   purpose: UploadPurpose;
+  communityId?: string;
+  /** @deprecated alias của communityId. */
   courseId?: string;
   status: 'pending' | 'uploaded';
   /** true khi Platform Admin đã gỡ file: không còn phục vụ công khai. */
@@ -74,3 +76,7 @@ export function purposeRule(purpose: UploadPurpose): PurposeRule {
 
 export const KEY_PATTERN = /^[a-f0-9]{32}\.[a-z0-9]{2,5}$/;
 export const FILE_URL_PREFIX = '/api/files/';
+
+/** Ảnh công khai (avatar/bìa/ảnh bài viết): ai có URL cũng xem được, cache dài. Mục đích khác là RIÊNG TƯ (cần đăng nhập + quyền). */
+export const PUBLIC_PURPOSES: readonly UploadPurpose[] = ['avatar', 'cover', 'post_image'];
+export const isPublicPurpose = (p: UploadPurpose) => PUBLIC_PURPOSES.includes(p);

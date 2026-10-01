@@ -1,12 +1,15 @@
 import { z } from 'zod';
+import { MAX_PAGE } from '../../utils/pagination.js';
 import { POST_CATEGORIES } from './posts.types.js';
 
 export const listPostsQuery = z.object({
   category: z.enum(POST_CATEGORIES).optional(),
   tag: z.string().trim().min(1).max(30).optional(),
   sort: z.enum(['latest', 'popular']).default('latest'),
-  page: z.coerce.number().int().min(1).default(1),
+  page: z.coerce.number().int().min(1).max(MAX_PAGE).default(1),
   limit: z.coerce.number().int().min(1).max(50).default(10),
+  /** Phân trang keyset (tùy chọn): `meta.nextCursor` của trang trước. Có cursor thì bỏ qua `page`; không bị lặp/sót khi có bài mới. */
+  cursor: z.string().trim().min(1).max(400).optional(),
 });
 export type ListPostsQuery = z.infer<typeof listPostsQuery>;
 
@@ -48,3 +51,10 @@ export const pollVoteBody = z.object({
   optionIds: z.array(z.string().min(1)).min(1, 'Hãy chọn ít nhất 1 lựa chọn').max(6),
 });
 export type PollVoteBody = z.infer<typeof pollVoteBody>;
+
+export const listCommentsQuery = z.object({
+  /** Mặc định 100 bình luận đầu (cũ → mới); bài nhiều bình luận hơn thì đi tiếp bằng `cursor`. */
+  limit: z.coerce.number().int().min(1).max(200).default(100),
+  cursor: z.string().trim().min(1).max(300).optional(),
+});
+export type ListCommentsQuery = z.infer<typeof listCommentsQuery>;

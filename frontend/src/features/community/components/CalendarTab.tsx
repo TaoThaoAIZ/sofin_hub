@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { useClickOutside } from '../../../lib/useClickOutside';
-import { useCourseDetail } from '../../courses/queries';
+import { useCommunityDetail } from '../../courses/queries';
 import { useCancelRsvp, useCreateEvent, useDeleteEvent, useDownloadIcs, useEvents, useToggleRsvp, useUpdateEvent } from '../queries';
 import type { CommunityEvent } from '../types';
 import { areaCls, ConfirmDialog, Dialog, errText, ErrorNote, ghostBtn, inputCls, isModPlus, primaryBtn, safeUrl, toast, ToastHost, toLocalInput } from './contentUi';
@@ -49,7 +49,7 @@ function buildDays(view: View, cur: Date): Date[] {
 
 export function CalendarTab() {
   const { id: courseId = '' } = useParams();
-  const { data: course } = useCourseDetail(courseId);
+  const { data: course } = useCommunityDetail(courseId);
   const canManage = isModPlus(course?.viewerRole);
   const events = useEvents(courseId);
   const rsvp = useToggleRsvp(courseId);

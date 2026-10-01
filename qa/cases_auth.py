@@ -7,6 +7,16 @@ backend/src/modules/auth/*, support/*, users/*. Hành vi lấy theo CODE thật 
 DONE = "Đã hoàn thiện"
 PLAN = "Kế hoạch"
 
+OUTBOX_NOTE = ("Hộp thư dev GET /api/dev/outbox chỉ mount khi ENABLE_DEV_OUTBOX=1 (backend/.env, có sẵn trong .env.example; độc lập NODE_ENV; "
+               "production cấm bật và BE không khởi động). Tiêu đề/nội dung thư đặt lại mật khẩu và xác thực email lấy từ Mẫu email reset_password/verify_email "
+               "(Admin > Hệ thống, đang active, ngôn ngữ mặc định vi) - sửa mẫu hoặc đổi ngôn ngữ sẽ làm đổi chữ trong thư.")
+
+
+def _pre(pre, steps, exp):
+    if "outbox" in (" ".join(steps) + " " + exp + " " + pre) and "ENABLE_DEV_OUTBOX" not in pre:
+        return pre + ". " + OUTBOX_NOTE
+    return pre
+
 PW = "Passw0rd!x"
 LIMIT_NOTE = ("Lưu ý: /auth/login giới hạn 10 lần đăng nhập THẤT BẠI / 15 phút / IP (đăng nhập đúng không bị đếm, skipSuccessfulRequests) - "
               "khởi động lại BE trước khi chạy nhóm case đăng nhập SAI hàng loạt.")
@@ -16,7 +26,7 @@ def load(add):
     M, MN = "AUTH", "Tài khoản & Xác thực"
 
     def a(feature, title, ttype, prio, status, pre, steps, data, exp, pw="Có"):
-        add(M, MN, feature, title, ttype, prio, status, pre, steps, data, exp, pw=pw)
+        add(M, MN, feature, title, ttype, prio, status, _pre(pre, steps, exp), steps, data, exp, pw=pw)
 
     # ------------------------------------------------------------------ ĐĂNG KÝ
     a("Đăng ký", "API đăng ký trả 200 kèm phiên, cookie refresh và user không lộ trường nội bộ",
@@ -26,7 +36,7 @@ def load(add):
        "Gọi GET /api/auth/me với accessToken vừa nhận"],
       '{"firstName":"Lan","lastName":"Tran","email":"qa.reg01@sofinhub.test","password":"Matkhau@123"}',
       "HTTP 200 (không phải 201). Body {data:{user,accessToken}}; user có id, email, firstName='Lan', lastName='Tran', emailVerified=false, createdAt; "
-      "KHÔNG có passwordHash, tokenVersion, isDemo, deletedAt. Set-Cookie refresh_token; HttpOnly; Path=/api/auth; SameSite=Lax; Max-Age=2592000 (30 ngày). "
+      "KHÔNG có passwordHash, tokenVersion, isDemo, deletedAt. Set-Cookie refresh_token; HttpOnly; Path=/api/auth; SameSite=Lax; Max-Age=2592000 (30 ngày) khi NODE_ENV=development (không Secure); NODE_ENV=test thêm Secure; production thêm Secure + SameSite=None (auth.routes.ts setRefreshCookie). "
       "GET /api/auth/me bằng accessToken trả 200 cùng user.")
     a("Đăng ký", "Đăng ký trùng email seed khác hoa/thường và có khoảng trắng hai đầu",
       "Chức năng", "Cao", DONE, "Tài khoản seed member1@sofinhub.test đã tồn tại",
@@ -100,9 +110,9 @@ def load(add):
         ("owner", "Olivia", "Owner", "owner của photo, yt, fin (và private-demo, paid-demo theo seed); /api/me/enrollments có role='owner'"),
         ("cadmin", "Adam", "CommunityAdmin", "admin của photo; /api/me/enrollments có photo với role='admin'"),
         ("mod", "Mia", "Moderator", "mod của photo; /api/me/enrollments có photo với role='mod'"),
-        ("member1", "Minh", "Member1", "member của photo, yt, fin; /api/me/enrollments có 3 mục role='member'"),
-        ("member2", "Mai", "Member2", "member của photo; /api/me/enrollments có đúng 1 mục photo"),
-        ("member3", "Manh", "Member3", "member của photo; /api/me/enrollments có đúng 1 mục photo"),
+        ("member1", "Minh", "Member1", "member của photo, yt, fin và paid-demo (seed payments: gói active); /api/me/enrollments có 4 mục role='member'"),
+        ("member2", "Mai", "Member2", "member của photo và paid-demo (seed payments: gói đã hủy cuối kỳ nhưng còn hạn); /api/me/enrollments có đúng 2 mục photo, paid-demo"),
+        ("member3", "Manh", "Member3", "member của photo và paid-demo (seed payments: đang dùng thử); /api/me/enrollments có đúng 2 mục photo, paid-demo"),
         ("newbie", "Nam", "Newbie", "chưa ở cộng đồng nào; /api/me/enrollments trả []"),
     ]
     for key, fn, ln, note in seeds:
@@ -115,10 +125,10 @@ def load(add):
     a("Đăng nhập tài khoản seed", "Đăng nhập bằng tài khoản banned@sofinhub.test thành công (ban chỉ áp dụng ở cấp cộng đồng photo)",
       "Chức năng", "Cao", DONE, f"banned@sofinhub.test bị cấm khỏi photo (CommunityBan). {LIMIT_NOTE}",
       [f"POST /api/auth/login với banned@sofinhub.test / {PW}", "GET /api/me/enrollments",
-       "POST /api/courses/photo/enroll bằng accessToken"],
+       "POST /api/communities/photo/enroll bằng accessToken"],
       f"banned@sofinhub.test / {PW}",
       "Login HTTP 200 (tài khoản không bị khóa toàn hệ thống). /api/me/enrollments KHÔNG chứa photo (người bị ban không được coi là thành viên). "
-      "POST /api/courses/photo/enroll trả 403 FORBIDDEN 'Bạn đã bị cấm khỏi cộng đồng này'.")
+      "POST /api/communities/photo/enroll trả 403 FORBIDDEN 'Bạn đã bị cấm khỏi cộng đồng này'.")
     a("Đăng nhập", "Đăng nhập chuẩn hóa email: viết hoa và khoảng trắng hai đầu vẫn vào được",
       "Chức năng", "Trung bình", DONE, f"Tài khoản member1 tồn tại. {LIMIT_NOTE}",
       ["POST /api/auth/login với email '  MEMBER1@SofinHub.Test ' và mật khẩu đúng"],
@@ -262,7 +272,7 @@ def load(add):
       "bio chứa thẻ img onerror và script",
       "PATCH HTTP 200. Trang /users/<id> hiển thị đúng chuỗi thẻ dưới dạng chữ; không có dialog alert, không có phần tử img/script được chèn vào DOM.")
     a("Hồ sơ cá nhân", "Đổi tên hiển thị được phản ánh ở bài viết cũ của chính user",
-      "Tích hợp", "Trung bình", DONE, "User mới đã tham gia photo (POST /api/courses/photo/enroll) và đăng 1 bài",
+      "Tích hợp", "Trung bình", DONE, "User mới đã tham gia photo (POST /api/communities/photo/enroll) và đăng 1 bài",
       ["PATCH /api/auth/me firstName='Đổi'", "GET /api/posts/<id bài đã đăng> bằng token của member1"],
       "firstName='Đổi'", "post.author.name bắt đầu bằng 'Đổi' (tên lấy động từ bảng User, không lưu cứng vào bài).")
     a("Hồ sơ cá nhân", "UI tab Hồ sơ: xóa trống Tên/Họ hoặc nhập website/avatar sai báo lỗi tại ô",
@@ -273,10 +283,10 @@ def load(add):
 
     # ---------------------------------------------------- HỒ SƠ CÔNG KHAI / CỘNG ĐỒNG CỦA TÔI / ĐIỂM
     a("Hồ sơ công khai", "GET /users/:id không có email và chỉ liệt kê cộng đồng công khai (owner)",
-      "Chức năng", "Cao", DONE, "Đăng nhập member1; biết id của owner@sofinhub.test (lấy từ GET /api/courses/photo hoặc danh sách thành viên)",
+      "Chức năng", "Cao", DONE, "Đăng nhập member1; biết id của owner@sofinhub.test (lấy từ GET /api/communities/photo hoặc danh sách thành viên)",
       ["GET /api/users/<ownerId>", "Rà soát toàn bộ JSON"], "id của owner@sofinhub.test",
       "HTTP 200; data có id, name='Olivia Owner', bio, location, website, avatarUrl, joinedAt, communities[], totalPoints; KHÔNG có email/passwordHash. "
-      "communities có photo, yt, fin, paid-demo (role='owner') nhưng KHÔNG có private-demo (visibility riêng tư bị ẩn).")
+      "communities chỉ có các cộng đồng CÔNG KHAI photo, yt, paid-demo (role='owner'); KHÔNG có fin (riêng tư, $5) và private-demo (riêng tư): users.service.publicProfile lọc visibility='public'.")
     a("Hồ sơ công khai", "Người bị ban khỏi photo không thấy photo trong hồ sơ công khai của họ",
       "Chức năng", "Trung bình", DONE, "Đăng nhập member1; biết id của banned@sofinhub.test",
       ["GET /api/users/<bannedId>"], "id của banned@sofinhub.test",
@@ -308,7 +318,7 @@ def load(add):
     a("Cộng đồng của tôi", "UI /me/communities hiển thị thẻ cộng đồng với vai trò, ngày tham gia và tiến độ",
       "Giao diện", "Trung bình", DONE, "Đăng nhập member1@sofinhub.test",
       ["Mở /me/communities", "Bấm 'Vào cộng đồng' ở thẻ photo"], "-",
-      "3 thẻ photo, yt, fin, mỗi thẻ có ảnh, tên, vai trò 'member', ngày tham gia, thanh % tiến độ khớp progressPct của API; nút dẫn tới /courses/photo/community.")
+      "4 thẻ photo, yt, fin, paid-demo (me/enrollments liệt kê cả cộng đồng riêng tư), mỗi thẻ có ảnh, tên, vai trò 'member', ngày tham gia, thanh % tiến độ khớp progressPct của API; nút dẫn tới /communities/photo/community.")
     a("Cộng đồng của tôi", "Chủ cộng đồng thấy role='owner' ở mọi cộng đồng sở hữu",
       "Chức năng", "Trung bình", DONE, "Đăng nhập owner@sofinhub.test",
       ["GET /api/me/enrollments"], "-",
@@ -322,14 +332,14 @@ def load(add):
       ["GET /api/me/points"], "-", "HTTP 200 {total:0, byCourse:[], recent:[]}.")
     a("Điểm của tôi", "Đăng bài trong cộng đồng cộng 5 điểm và hiện ở khối 'Điểm của tôi'",
       "Tích hợp", "Trung bình", DONE, "Đăng nhập member2@sofinhub.test (thành viên photo). Ghi lại total trước khi thao tác",
-      ["GET /api/me/points lấy total_trước", "POST /api/courses/photo/posts {\"content\":\"Bài QA điểm\"}", "GET /api/me/points lần nữa",
+      ["GET /api/me/points lấy total_trước", "POST /api/communities/photo/posts {\"content\":\"Bài QA điểm\"}", "GET /api/me/points lần nữa",
        "Mở /me/communities và xem khối 'Điểm của tôi'"],
       "content='Bài QA điểm'",
       "total tăng đúng 5 (đăng bài +5), byCourse của photo tăng 5, recent[0] là sự kiện mới nhất; UI hiển thị số điểm mới sau khi tải lại.")
 
     # ------------------------------------------------------------------ QUÊN / ĐẶT LẠI MẬT KHẨU
     a("Quên mật khẩu", "Gửi yêu cầu quên mật khẩu: thư vào outbox với link 30 phút và token không lộ trong response",
-      "Chức năng", "Cao", DONE, "Tài khoản mới đăng ký qa.fp01@sofinhub.test; NODE_ENV != production",
+      "Chức năng", "Cao", DONE, "Tài khoản mới đăng ký qa.fp01@sofinhub.test",
       ["POST /api/auth/forgot-password {\"email\":\"qa.fp01@sofinhub.test\"}",
        "GET /api/dev/outbox?to=qa.fp01@sofinhub.test"],
       "email=qa.fp01@sofinhub.test",
@@ -533,7 +543,7 @@ def load(add):
       "Chức năng", "Cao", DONE, f"Đăng nhập owner@sofinhub.test (owner photo, yt, fin, ...). Case này không phá seed",
       ["DELETE /api/auth/me {\"password\":\"Passw0rd!x\"}", "Đăng nhập lại owner@sofinhub.test"], f"password={PW}",
       "HTTP 409 CONFLICT 'Bạn đang là chủ của một cộng đồng, hãy chuyển quyền sở hữu trước khi xóa tài khoản'; đăng nhập lại vẫn thành công, quyền owner giữ nguyên. "
-      "(Chưa có API chuyển quyền owner nên người dùng chưa gỡ được điều kiện này - giá trị chưa chốt.)")
+      "Đã có POST /api/communities/:id/transfer-ownership (communities.routes.ts): owner phải chuyển quyền (hoặc xóa) MỌI cộng đồng sở hữu rồi mới xóa được tài khoản; luồng chuyển quyền kiểm ở nhóm COMM (không phá seed owner@ ở case này).")
     a("Xóa tài khoản", "Xóa thành công: 204, ẩn danh hóa hàng User, không đăng nhập lại được",
       "Chức năng", "Cao", DONE, "User mới qa.del02@sofinhub.test đã đăng nhập ở 2 phiên",
       ["DELETE /api/auth/me {\"password\":\"Matkhau@123\"}", "Đăng nhập lại bằng email/mật khẩu cũ", "Kiểm tra bảng User trong DB"], "Matkhau@123",
@@ -590,7 +600,7 @@ def load(add):
       ["Cuộn xuống Footer", "Nhập email hợp lệ và bấm gửi", "Gửi lại cùng email", "Nhập email sai định dạng"], "qa.news02@sofinhub.test / abc",
       "Hiện 'Cảm ơn bạn đã đăng ký!' cả hai lần; email sai hiện lỗi của trình duyệt/BE và không có thông báo thành công.")
     a("Liên hệ", "Gửi liên hệ hợp lệ: 202, thư tới hộp hỗ trợ có tiêu đề '[Liên hệ] ...'",
-      "Chức năng", "Trung bình", DONE, "SUPPORT_EMAIL mặc định support@sofinhub.local",
+      "Chức năng", "Trung bình", DONE, "Email nhận = Cài đặt chung platform.supportEmail (Admin > Hệ thống; mặc định env SUPPORT_EMAIL=support@sofinhub.local; contact() còn tạo 1 ticket nguồn contact_form - đối chiếu ở nhóm ADM3)",
       ["POST /api/contact với payload bên dưới", "GET /api/dev/outbox?to=support@sofinhub.local"],
       '{"name":"Nguyễn Văn A","email":"a@example.com","subject":"Hỏi về gói","message":"Xin chào"}',
       "HTTP 202 {data:{message:'Chúng tôi đã nhận được tin nhắn và sẽ phản hồi sớm.'}}; outbox có thư subject '[Liên hệ] Hỏi về gói', text bắt đầu 'Từ: Nguyễn Văn A <a@example.com>'.")
@@ -616,11 +626,18 @@ def load(add):
       ["Bấm gửi khi bỏ trống", "Điền đủ Họ tên, Email, Tiêu đề, Nội dung và gửi"], "-",
       "Trống: lỗi tại từng ô. Đủ: thông báo thành công (BE 202) và các ô được làm trống.")
 
+    # ---------------------------------------------------------------- bổ sung sau rà soát lỗi thời (thay thế TC-AUTH-095)
+    a("Cộng đồng của tôi", "GET /me/enrollments của member1: các cộng đồng đã tham gia (kể cả riêng tư), vai trò member, progressPct nguyên 0-100",
+      "Chức năng", "Cao", DONE, "Đăng nhập member1@sofinhub.test (seed: photo, yt, fin riêng tư, paid-demo)",
+      ["GET /api/me/enrollments"], "-",
+      "HTTP 200, mảng đúng 4 phần tử photo, yt, fin, paid-demo (fin riêng tư vẫn hiện vì đây là danh sách của chính mình); mỗi phần tử có course{id,title,thumbnail,category,visibility}, role='member', enrolledAt, "
+      "progressPct là số nguyên 0..100 (làm tròn bài hoàn thành / tổng bài classroom, tính trên mọi khóa học của cộng đồng).")
+
     # ==================================================================== SEC
     M, MN = "SEC", "Bảo mật & Yêu cầu phi chức năng"
 
     def s(feature, title, ttype, prio, status, pre, steps, data, exp, pw="Có"):
-        add(M, MN, feature, title, ttype, prio, status, pre, steps, data, exp, pw=pw)
+        add(M, MN, feature, title, ttype, prio, status, _pre(pre, steps, exp), steps, data, exp, pw=pw)
 
     T = "Dùng 2 user mới đăng ký (không dùng seed): S1 là access token lúc đăng ký, S2 là token từ lần đăng nhập thứ hai."
 
@@ -680,7 +697,7 @@ def load(add):
     s("JWT", "Header Authorization: token đặt trong query hoặc scheme khác không được dùng cho API thường",
       "Bảo mật", "Trung bình", DONE, "Có access token hợp lệ",
       ["GET /api/auth/me?access_token=<token> không Authorization", "GET /api/auth/me với Cookie: access_token=<token>"], "-",
-      "Cả hai 401 (chỉ header 'Authorization: Bearer' được đọc; access_token trên query chỉ dành cho SSE).")
+      "Cả hai 401 (chỉ header 'Authorization: Bearer' được đọc; ?access_token ĐÃ BỊ BỎ ở mọi route kể cả SSE - SSE dùng Bearer hoặc vé ?ticket= dùng một lần, xem nhóm SECX).")
     s("Refresh token", "Refresh token dùng lại (replay) bị từ chối, token mới vẫn dùng bình thường",
       "Bảo mật", "Cao", DONE, "Đăng nhập user mới, có cookie C1",
       ["POST /api/auth/refresh với C1 -> nhận cookie C2", "POST /api/auth/refresh lại với C1", "POST /api/auth/refresh với C2"], "-",
@@ -698,13 +715,13 @@ def load(add):
       ["POST /api/auth/refresh với C1 nhận A2", "GET /api/auth/me bằng A1", "GET /api/auth/me bằng A2"], "-",
       "Cả A1 và A2 đều 200 vì cùng sid và tv; A1 chỉ mất hiệu lực khi hết 15 phút hoặc phiên bị thu hồi (không phải lỗi, ghi nhận để thống nhất).")
     s("Cookie", "Cookie refresh_token có HttpOnly, Path=/api/auth, Max-Age 30 ngày, SameSite=Lax (dev)",
-      "Bảo mật", "Cao", DONE, "Môi trường dev (NODE_ENV != production)",
+      "Bảo mật", "Cao", DONE, "BE chạy NODE_ENV=development (NODE_ENV bắt buộc, không còn mặc định ngầm; chạy qua npm run dev)",
       ["POST /api/auth/login", "Xem chi tiết header Set-Cookie"], "-",
-      "Set-Cookie: refresh_token=...; Max-Age=2592000; Path=/api/auth; HttpOnly; SameSite=Lax (không Secure). Production (NODE_ENV=production) phải là Secure + SameSite=None.")
+      "Set-Cookie: refresh_token=...; Max-Age=2592000; Path=/api/auth; HttpOnly; SameSite=Lax (không Secure). NODE_ENV=test: có Secure; NODE_ENV=production: Secure + SameSite=None (setRefreshCookie: secure = NODE_ENV != development, sameSite = production ? none : lax).")
     s("Cookie", "JavaScript trong trang không đọc được refresh_token và cookie không đi kèm request ngoài /api/auth",
       "Bảo mật", "Cao", DONE, "Đăng nhập trong trình duyệt tại :5173",
-      ["Trong DevTools chạy document.cookie", "Xem header Cookie của GET /api/courses", "Xem header Cookie của POST /api/auth/refresh"], "-",
-      "document.cookie không chứa refresh_token; request /api/courses không mang cookie này; chỉ request dưới /api/auth mới mang refresh_token.")
+      ["Trong DevTools chạy document.cookie", "Xem header Cookie của GET /api/communities", "Xem header Cookie của POST /api/auth/refresh"], "-",
+      "document.cookie không chứa refresh_token; request /api/communities không mang cookie này; chỉ request dưới /api/auth mới mang refresh_token.")
     s("Cookie", "Cookie refresh bị trình duyệt chặn khi POST /auth/refresh từ origin khác (SameSite=Lax)",
       "Bảo mật", "Trung bình", DONE, "Đăng nhập tại :5173; một trang tĩnh ở origin khác (ví dụ http://localhost:9999) chứa form/fetch POST tới http://localhost:4000/api/auth/refresh",
       ["Mở trang tĩnh ở origin khác", "Bấm nút submit form POST hoặc fetch có credentials"], "-",
@@ -715,7 +732,7 @@ def load(add):
       "Không có bất kỳ trường/giá trị nào trong danh sách trên ở cả 4 response.")
     s("Dữ liệu nhạy cảm", "Hồ sơ công khai và bảng tin không lộ email người dùng",
       "Bảo mật", "Cao", DONE, "Đăng nhập member1",
-      ["GET /api/users/<id owner>", "GET /api/courses/photo/posts (bảng tin)", "Tìm chuỗi '@sofinhub.test' trong body"], "-",
+      ["GET /api/users/<id owner>", "GET /api/communities/photo/posts (bảng tin)", "Tìm chuỗi '@sofinhub.test' trong body"], "-",
       "Không tìm thấy email trong hồ sơ công khai và author của bài viết (chỉ id, name). GET /api/auth/me chỉ trả email của chính mình.")
     s("Dữ liệu nhạy cảm", "Token một lần chỉ được lưu dạng băm sha256, không có token thô trong response API",
       "Bảo mật", "Cao", DONE, "Có token reset T lấy từ outbox; quyền đọc DB test",
@@ -736,7 +753,7 @@ def load(add):
       "Trước logout ticket và access_token đều mở được stream (200). Sau logout: cả ba lệnh cuối HTTP 401. Tương tự cho /api/messages/stream.", pw="Một phần")
     s("Thu hồi token tức thì", "API dùng optionalAuth coi token đã thu hồi như khách (200, không 401)",
       "Chức năng", "Trung bình", DONE, "User mới chưa tham gia photo",
-      ["GET /api/courses/photo bằng token -> viewerEnrolled=false", "POST /api/auth/logout", "GET /api/courses/photo bằng token đã thu hồi"], "-",
+      ["GET /api/communities/photo bằng token -> viewerEnrolled=false", "POST /api/auth/logout", "GET /api/communities/photo bằng token đã thu hồi"], "-",
       "Trước: 200 và viewerEnrolled=false. Sau: HTTP 200 (không phải 401) và viewerEnrolled không có trong response (coi như khách).")
     s("Giới hạn tần suất", "Không có khóa tạm theo tài khoản: chỉ giới hạn theo IP ở login/forgot/contact/newsletter",
       "Bảo mật", "Trung bình", PLAN, "Chưa làm: khóa tạm tài khoản sau N lần sai, captcha, rate limit theo tài khoản (đối lập với các case cũ mô tả 'tạm khóa')",

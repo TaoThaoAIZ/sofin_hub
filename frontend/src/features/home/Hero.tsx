@@ -14,31 +14,31 @@ const STAT_ITEMS: {
 }[] = [
   {
     key: 'learners',
-    label: 'học viên đang học',
+    label: 'học viên',
     bg: '#ffe7d4',
     fg: '#f26a1b',
     d: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21v-1a6 6 0 0 1 12 0v1M16 3.5a4 4 0 0 1 0 7.5M22 21v-1a6 6 0 0 0-4-5.6',
-    format: (n) => `${Math.round(n / 1000)}K+`,
+    format: (n) => n.toLocaleString('vi-VN'),
   },
   {
     key: 'courses',
-    label: 'khóa học chất lượng',
+    label: 'cộng đồng',
     bg: '#ede9fe',
     fg: '#8b5cf6',
     d: 'M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5zM20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5a1.5 1.5 0 0 0 1.5-1.5z',
-    format: (n) => `${n.toLocaleString('vi-VN')}+`,
+    format: (n) => n.toLocaleString('vi-VN'),
   },
   {
     key: 'instructors',
-    label: 'chuyên gia, giảng viên',
+    label: 'chủ cộng đồng',
     bg: '#dbeafe',
     fg: '#3b82f6',
     d: 'M12 4 2 9l10 5 10-5zM6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5M22 9v6',
-    format: (n) => `${n}+`,
+    format: (n) => n.toLocaleString('vi-VN'),
   },
   {
     key: 'rating',
-    label: 'đánh giá từ học viên',
+    label: 'điểm đánh giá trung bình',
     bg: '#dcfce7',
     fg: '#22c55e',
     d: 'm12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z',
@@ -102,7 +102,7 @@ export function Hero({ onSearch }: { onSearch: (q: string) => void }) {
                 <PathIcon d={s.d} stroke={s.fg} />
               </div>
               <div>
-                <div className="text-xl font-bold">{stats ? s.format(stats[s.key]) : '–'}</div>
+                <div className="text-xl font-bold">{stats && stats[s.key] !== null ? s.format(stats[s.key] as number) : '–'}</div>
                 <div className="text-[13px] text-stone-500">{s.label}</div>
               </div>
             </div>

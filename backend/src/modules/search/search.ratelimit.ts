@@ -1,30 +1,31 @@
 import type { RequestHandler } from 'express';
 import { env } from '../../config/env.js';
+import { createMemoryShared } from '../../infra/shared-state.js';
+import { shared } from '../../infra/shared.js';
 import { HttpError } from '../../utils/http-error.js';
 
-/** Rate limit cửa sổ trượt theo khóa (user hoặc IP), lưu trong bộ nhớ. Nhiều instance -> cần Redis. */
-export function createRateLimiter(max: number, windowMs: number, now: () => number = Date.now) {
-  const hits = new Map<string, number[]>();
+/**
+ * Rate limit theo khóa (user hoặc IP) trên state chia sẻ (Redis khi có REDIS_URL, nếu không thì RAM). Cửa sổ cố định.
+ * `now` chỉ để test: có `now` thì dùng store in-memory riêng với đồng hồ đó. Lỗi store => cho qua (fail-open).
+ */
+export function createRateLimiter(max: number, windowMs: number, now?: () => number) {
+  const own = now ? createMemoryShared({ now }) : undefined;
   return {
     /** true nếu còn trong hạn mức (và ghi nhận lượt này). */
-    hit(key: string): boolean {
-      const t = now();
-      const recent = (hits.get(key) ?? []).filter((x) => t - x < windowMs);
-      if (recent.length >= max) {
-        hits.set(key, recent);
-        return false;
+    async hit(key: string): Promise<boolean> {
+      try {
+        return (await (own ?? shared()).rateLimiter.hit(`search:${key}`, max, windowMs)).ok;
+      } catch (e) {
+        console.error('[search] rate limiter lỗi, cho qua (fail-open):', e instanceof Error ? e.message : e);
+        return true;
       }
-      recent.push(t);
-      hits.set(key, recent);
-      if (hits.size > 10_000) for (const [k, v] of hits) if (v.every((x) => t - x >= windowMs)) hits.delete(k);
-      return true;
     },
   };
 }
 
 const limiter = createRateLimiter(env.NODE_ENV === 'test' ? 100_000 : 40, 60_000);
 
-export const searchRateLimit: RequestHandler = (req, _res, next) => {
-  if (!limiter.hit(req.userId ?? req.ip ?? 'anon')) return next(HttpError.tooMany('Bạn tìm kiếm quá nhanh, vui lòng thử lại sau'));
+export const searchRateLimit: RequestHandler = async (req, _res, next) => {
+  if (!(await limiter.hit(req.userId ?? req.ip ?? 'anon'))) return next(HttpError.tooMany('Bạn tìm kiếm quá nhanh, vui lòng thử lại sau'));
   next();
 };

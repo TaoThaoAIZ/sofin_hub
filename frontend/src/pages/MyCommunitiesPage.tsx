@@ -62,7 +62,7 @@ function Content() {
                         <div className="bg-brand-gradient h-full" style={{ width: `${e.progressPct}%` }} />
                       </div>
                     </div>
-                    <ButtonLink to={`/courses/${e.course.id}/community`} className="mt-auto h-10 rounded-[14px] text-sm font-semibold">
+                    <ButtonLink to={`/communities/${e.course.id}/community`} className="mt-auto h-10 rounded-[14px] text-sm font-semibold">
                       Vào cộng đồng
                     </ButtonLink>
                   </div>
@@ -89,7 +89,7 @@ function Content() {
                   <ul className="m-0 flex list-none flex-col gap-2 p-0 text-sm">
                     {points.data.byCourse.map((b) => (
                       <li key={b.course.id} className="flex justify-between gap-3">
-                        <Link to={`/courses/${b.course.id}/community`} className="min-w-0 truncate">
+                        <Link to={`/communities/${b.course.id}/community`} className="min-w-0 truncate">
                           {'title' in b.course ? b.course.title : 'Cộng đồng'}
                         </Link>
                         <b>{b.points}</b>

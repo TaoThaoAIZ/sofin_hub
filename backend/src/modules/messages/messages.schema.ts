@@ -21,3 +21,8 @@ export const messagesQuerySchema = z.object({
   before: z.string().trim().min(1).max(100).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(30),
 });
+
+export const conversationsQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  cursor: z.string().trim().min(1).max(300).optional(),
+});

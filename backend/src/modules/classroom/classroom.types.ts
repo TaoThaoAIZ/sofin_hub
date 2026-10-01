@@ -9,7 +9,9 @@ export interface LessonAttachment {
 export interface ClassroomLesson {
   id: string;
   moduleId: string;
-  courseId: string;
+  communityId: string;
+  /** @deprecated alias của communityId (tương thích JSON cũ; `courseId` ở DTO cũ = id cộng đồng). Repository luôn điền. */
+  courseId?: string;
   index: number;
   title: string;
   type: LessonType;
@@ -25,7 +27,11 @@ export interface ClassroomLesson {
 
 export interface ClassroomModule {
   id: string;
-  courseId: string;
+  communityId: string;
+  /** @deprecated alias của communityId (tương thích JSON cũ). Repository luôn điền. */
+  courseId?: string;
+  /** Khóa học (entity Course) chứa module. */
+  learningCourseId: string;
   index: number;
   title: string;
   description: string;
@@ -39,6 +45,8 @@ export type LockReason = 'previous_module' | 'level' | null;
 
 export interface ClassroomModuleView {
   id: string;
+  learningCourseId: string;
+  communityId: string;
   index: number;
   title: string;
   description: string;
@@ -51,11 +59,13 @@ export interface ClassroomModuleView {
   lockReason: LockReason;
 }
 
-export interface ClassroomLessonView extends Omit<ClassroomLesson, 'moduleId' | 'courseId'> {
+export interface ClassroomLessonView extends Omit<ClassroomLesson, 'moduleId' | 'courseId' | 'communityId'> {
   completed: boolean;
 }
 
 export interface ClassroomLessonDetail extends ClassroomLessonView {
+  learningCourseId: string;
+  communityId: string;
   moduleId: string;
   moduleTitle: string;
   moduleIndex: number;
@@ -64,6 +74,7 @@ export interface ClassroomLessonDetail extends ClassroomLessonView {
 }
 
 export interface ClassroomProgress {
+  learningCourseId: string | null;
   percent: number;
   completedLessons: number;
   totalLessons: number;
@@ -79,7 +90,10 @@ export interface ClassroomSettings {
 export interface Certificate {
   code: string;
   userId: string;
-  courseId: string;
+  communityId: string;
+  /** @deprecated alias của communityId. */
+  courseId?: string;
+  learningCourseId: string;
   holderName: string;
   courseTitle: string;
   completedAt: string;
@@ -87,7 +101,43 @@ export interface Certificate {
 }
 
 /** Dạng trả về cho chủ chứng nhận (không có userId/courseId). */
-export type CertificateView = Pick<Certificate, 'code' | 'holderName' | 'courseTitle' | 'completedAt' | 'issuedAt'>;
+export type CertificateView = Pick<Certificate, 'code' | 'holderName' | 'courseTitle' | 'completedAt' | 'issuedAt' | 'learningCourseId' | 'communityId'>;
 
 /** Dạng công khai khi xác minh: KHÔNG lộ userId/email. */
 export type PublicCertificateView = Pick<Certificate, 'holderName' | 'courseTitle' | 'issuedAt'> & { valid: true };
+
+export type CoursePublishStatus = 'published' | 'draft' | 'archived';
+
+/** Khóa học (entity mới) — bản ghi thuần, chưa gắn số liệu người xem. */
+export interface LearningCourseRecord {
+  id: string;
+  communityId: string;
+  title: string;
+  description: string;
+  thumbnailUrl: string | null;
+  position: number;
+  publishStatus: CoursePublishStatus;
+  certificatesEnabled: boolean | null;
+  removedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** DTO trả về FE (docs/api/communities-courses.md). */
+export interface LearningCourseView {
+  id: string;
+  communityId: string;
+  title: string;
+  description: string;
+  thumbnailUrl: string | null;
+  position: number;
+  publishStatus: CoursePublishStatus;
+  certificatesEnabled: boolean | null;
+  certificatesEffective: boolean;
+  isDefault: boolean;
+  modulesCount: number;
+  lessonsCount: number;
+  progress: { percent: number; completedLessons: number; totalLessons: number };
+  createdAt: string;
+  updatedAt: string;
+}

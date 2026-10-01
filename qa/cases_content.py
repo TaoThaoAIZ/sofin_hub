@@ -98,11 +98,11 @@ def load(add):
     F("Tạo bài viết", "Cộng đồng không tồn tại trả 404 khi đăng bài",
       "Chức năng", "Thấp", ACC,
       [login("member1"), "POST /api/courses/khong-ton-tai/posts với content hợp lệ"], 'Body: {"content":"x"}',
-      "404 NOT_FOUND (không tìm thấy cộng đồng); không tạo bài.")
+      "404 NOT_FOUND, message \"Không tìm thấy khóa học\" (BE vẫn dùng chữ 'khóa học' cho cộng đồng không tồn tại: catalog.service.ts requireLockState); không tạo bài.")
     F("Tạo bài viết", "Nội dung 2 bài giống hệt nhau vẫn được tạo (không chống trùng)",
       "Chức năng", "Thấp", ACC,
       [login("member2"), "POST cùng một body 2 lần liên tiếp", "GET danh sách"],
-      'Body: {"content":"Bài lặp lại"}', "2 lần 201 với 2 id khác nhau; danh sách có 2 bài; member2 nhận +5 điểm mỗi bài (không giới hạn tốc độ đăng bài — cần cân nhắc, chưa chốt).")
+      'Body: {"content":"Bài lặp lại"}', "2 lần 201 với 2 id khác nhau; danh sách có 2 bài; member2 nhận +5 điểm mỗi bài (mỗi bài một khóa nghiệp vụ (post, postId) riêng). Không chống trùng nội dung; nhưng đăng bài bị rate limit 10 lần/phút/user (429) - xem GAME.")
 
     # ------------------------------------------------------------------ POLL KHI TẠO
     F("Bình chọn (poll)", "Tạo poll hợp lệ: 3 lựa chọn, 1 đáp án, có hạn đóng",
@@ -237,7 +237,7 @@ def load(add):
     F("Xóa bài viết", "Tác giả xóa bài của mình: xóa cả bình luận, like, phiếu (CASCADE)",
       "Chức năng", "Cao", ACC,
       [login("member2"), "Tạo bài có poll; member1 like, bình luận, vote", "member2 DELETE /api/posts/<id>", "GET /api/posts/<id>, GET /api/posts/<id>/comments"],
-      "-", "DELETE 200 {deleted:true}; sau đó GET bài và bình luận đều 404 \"Không tìm thấy bài viết\"; bài không còn trong danh sách; tổng bài trong meta giảm 1.")
+      "-", "DELETE 200 {deleted:true}; sau đó GET bài và bình luận đều 404 \"Không tìm thấy bài viết\"; bài không còn trong danh sách; tổng bài trong meta giảm 1. Điểm +5 của bài (và điểm like nhận được của bài) bị bù âm (reason 'revoked') trong cùng transaction nên tổng điểm của member2 quay về mức trước khi đăng (backend/docs/api/content.md, chi tiết ở GAME).")
     F("Xóa bài viết", "Member khác xóa bài của người khác bị 403 (IDOR)",
       "Bảo mật", "Cao", SEED + " " + ACC,
       [login("member2"), "DELETE /api/posts/seed-post-photo-m1-image", "GET lại bài"], "-",
@@ -444,7 +444,7 @@ def load(add):
       [login("member2"), "Tạo bài 500 ký tự", "GET /share"], "content: 'x' * 500", "excerpt có 140 ký tự, ký tự cuối là \"…\" (139 ký tự đầu + …).")
     F("Chia sẻ bài viết", "Mở link chia sẻ bằng thành viên: cuộn tới bài, hiện khối \"Bài viết được chia sẻ với bạn\" nếu ngoài trang đầu",
       "Giao diện", "Cao", SEED + " " + ACC,
-      ["Đăng nhập member3, mở /courses/photo/community?post=seed-post-photo-3", "Tạo trước 12 bài mới bằng API để bài seed nằm ngoài trang đầu, tải lại link"], "-",
+      ["Đăng nhập member3, mở /courses/photo/community?post=seed-post-photo-3", "Tạo trước 12 bài mới bằng API để bài seed nằm ngoài trang đầu (BE dev bật rate limit nhóm posts = 10 bài/phút/user (middlewares/rate-limit.ts WRITE_LIMITS): đặt RATE_LIMIT_DISABLED=1 khi chạy BE, hoặc chia thành đợt ≤ 10 bài/phút/tài khoản. ), tải lại link"], "-",
       "Trang cuộn tới bài và viền cam nổi bật; nếu không ở trang đầu, khối \"Bài viết được chia sẻ với bạn\" ở đầu (tải bằng GET /api/posts/:id) có nút \"Đóng\" bỏ tham số ?post.")
     F("Chia sẻ bài viết", "Link chia sẻ tới bài đã xóa/đã ẩn (với người thường): báo không mở được",
       "Giao diện", "Trung bình", SEED + " " + ACC,
@@ -461,7 +461,7 @@ def load(add):
     F("Lọc & sắp xếp", "Danh sách mặc định (latest): bài ghim trước, sau đó mới nhất; tổng 7 với member thường",
       "Chức năng", "Cao", SEED + " " + ACC,
       [login("member2"), "GET /api/courses/photo/posts"], "-",
-      "200; meta {page:1, limit:10, total:7, totalPages:1}; thứ tự: seed-post-photo-0 (ghim), seed-post-photo-owner-pinned (ghim), m1-poll, m1-image, seed-post-photo-1, seed-post-photo-2, seed-post-photo-3.")
+      "200; meta {page:1, limit:10, total:7, totalPages:1, hasMore:false, nextCursor:null} (hasMore/nextCursor là phần thêm của phân trang keyset, xem PERF); thứ tự: seed-post-photo-0 (ghim), seed-post-photo-owner-pinned (ghim), m1-poll, m1-image, seed-post-photo-1, seed-post-photo-2, seed-post-photo-3.")
     F("Lọc & sắp xếp", "Sắp xếp popular: ghim trước rồi theo số like giảm dần",
       "Chức năng", "Cao", SEED + " " + ACC,
       [login("member2"), "GET /api/courses/photo/posts?sort=popular"], "-",
@@ -503,13 +503,13 @@ def load(add):
     F("Phân trang", "limit/page: page=2&limit=3, page vượt tổng, page=0, limit=51, limit=0",
       "Chức năng", "Cao", SEED + " " + ACC,
       [login("member2"), "GET ?limit=3&page=2", "GET ?limit=3&page=99", "GET ?page=0", "GET ?limit=51", "GET ?limit=0", "GET ?limit=50"], "-",
-      f"page=2&limit=3: 3 bài (thứ 4-6), meta {{page:2, limit:3, total:7, totalPages:3}}. page=99: data=[], total=7. page=0, limit=51, limit=0: {E400V}. limit=50: 200.")
+      f"page=2&limit=3: 3 bài (thứ 4-6), meta {{page:2, limit:3, total:7, totalPages:3, hasMore:true, nextCursor:<chuỗi>}}. page=99: data=[], total=7. page=0, limit=51, limit=0, page=1001 (vượt MAX_PAGE=1000): {E400V}. limit=50: 200.")
     F("Phân trang", "Phân trang ổn định: duyệt hết các trang không trùng, không sót bài",
       "Chức năng", "Trung bình", SEED + " " + ACC,
-      [login("member1"), "Tạo 25 bài", "Duyệt page=1..N với limit=10", "Gộp id và kiểm tra trùng"], "-", "Không id nào lặp; tổng số bài duyệt bằng meta.total (33 với member1 thấy cả bài ẩn của mình); totalPages = ceil(total/10).")
+      [login("member1"), "Tạo 25 bài (BE dev bật rate limit nhóm posts = 10 bài/phút/user (middlewares/rate-limit.ts WRITE_LIMITS): đặt RATE_LIMIT_DISABLED=1 khi chạy BE, hoặc chia thành đợt ≤ 10 bài/phút/tài khoản.)", "Duyệt page=1..N với limit=10", "Gộp id và kiểm tra trùng"], "-", "Không id nào lặp; tổng số bài duyệt bằng meta.total (33 với member1 thấy cả bài ẩn của mình); totalPages = ceil(total/10).")
     F("Phân trang", "UI: nút \"Tải thêm bài viết (đã hiện/tổng)\" tải 10 bài mỗi lần và biến mất khi hết",
       "Giao diện", "Cao", SEED + " " + ACC,
-      ["Dùng API tạo thêm 8 bài để tổng = 15", "Đăng nhập member2, mở /courses/photo/community", "Quan sát nút cuối trang, bấm nút", "Đổi chip chuyên mục"], "-",
+      ["Dùng API tạo thêm 8 bài để tổng = 15 (≤ 10 bài/phút/tài khoản do rate limit posts)", "Đăng nhập member2, mở /courses/photo/community", "Quan sát nút cuối trang, bấm nút", "Đổi chip chuyên mục"], "-",
       "Hiển thị 10 bài và nút \"Tải thêm bài viết (10/15)\". Bấm: hiện đủ 15, nút biến mất. Đổi chuyên mục: tải lại từ trang 1.")
     F("Phân trang", "Hiệu năng: GET danh sách 50 bài < 500ms (server local), số truy vấn không tăng theo số bài",
       "Hiệu năng", "Trung bình", "DB có ≥ 200 bài trong photo (tạo bằng script POST). " + ACC,
@@ -733,7 +733,7 @@ def load(add):
     E("Xóa sự kiện", "Xóa sự kiện: người đã RSVP nhận thông báo \"Sự kiện đã bị hủy\", RSVP bị xóa",
       "Chức năng", "Cao", ESEED + " " + ACC,
       [login("member1"), "member1 và member3 RSVP một sự kiện mới do mod tạo", login("mod"), "DELETE /api/events/<id>", login("member1"), "GET /api/notifications", "GET /api/events/<id>"], "-",
-      "DELETE 200 {deleted:true}. member1, member3 nhận thông báo type=system, title \"Sự kiện đã bị hủy\", body `Sự kiện \"<tên>\" đã bị hủy`, link /courses/photo/community/lich (đã sửa, trước đây /calendar). member2 (không RSVP) không nhận. GET sự kiện -> 404.")
+      "DELETE 200 {deleted:true}. member1, member3 nhận thông báo type=system, title \"Sự kiện đã bị hủy\", body `Sự kiện \"<tên>\" đã bị hủy`, link /courses/photo/community/lich (đã sửa, trước đây /calendar). member2 (không RSVP) không nhận. GET sự kiện -> 404. Điểm +1 (event_rsvp) của member1, member3 cho sự kiện này bị bù âm trong cùng transaction (reason 'revoked', GAME).")
     E("Xóa sự kiện", "Xóa sự kiện xóa luôn RSVP (CASCADE); xóa lần 2 trả 404",
       "Chức năng", "Trung bình", ESEED + " " + ACC,
       [login("owner"), "DELETE /api/events/seed-event-photo-full", "DELETE lần 2", "GET /api/courses/photo/events"], "-", "Lần 1: 200. Lần 2: 404. Danh sách không còn sự kiện; bản ghi EventRsvp của sự kiện đó bị xóa.")
@@ -904,7 +904,7 @@ def load(add):
       [login("member1"), "Đo thời gian GET /api/courses/photo/events"], "-", "Thời gian < 500ms (giá trị tạm); rsvpCount/viewerRsvped đúng cho từng sự kiện.", pw="Không")
     E("Tích hợp sự kiện", "Điều hướng từ Header/Sidebar tới tab Lịch sự kiện đúng route",
       "Giao diện", "Thấp", ACC,
-      ["Đăng nhập member1, mở /courses/photo/community", "Bấm mục \"Lịch sự kiện\" trong sidebar cộng đồng"], "-", "URL đổi thành /courses/photo/community/lich, tab được đánh dấu đang chọn, lịch hiển thị.")
+      ["Đăng nhập member1, mở /courses/photo/community", "Bấm mục \"Lịch sự kiện\" trong sidebar cộng đồng"], "-", "URL đổi thành /communities/photo/community/lich (đường dẫn chuẩn sau khi tách Community/Course; /courses/photo/community/lich vẫn vào được nhờ LegacyCourseRedirect), tab được đánh dấu đang chọn, lịch hiển thị.")
     E("Tích hợp sự kiện", "Khách chưa đăng nhập mở /courses/photo/community/lich",
       "Bảo mật", "Trung bình", ACC,
       ["Mở trình duyệt ẩn danh, vào /courses/photo/community/lich"], "-", "Bị chuyển tới trang đăng nhập/không thấy dữ liệu sự kiện; API events trả 401 nếu gọi thẳng.")

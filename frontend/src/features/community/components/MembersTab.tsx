@@ -5,7 +5,7 @@ import { useClickOutside } from '../../../lib/useClickOutside';
 import { useAuth } from '../../auth/AuthContext';
 import { MemberActionsMenu } from '../../communities/components/MemberActionsMenu';
 import { ROLE_LABEL } from '../../communities/types';
-import { useCourseDetail } from '../../courses/queries';
+import { useCommunityDetail } from '../../courses/queries';
 import { useStartConversation } from '../../messages/useStartConversation';
 import { useMembers } from '../queries';
 import type { MemberFilter } from '../types';
@@ -46,7 +46,7 @@ function pageList(page: number, total: number): (number | '…')[] {
 
 export function MembersTab() {
   const { id: courseId = '' } = useParams();
-  const { data: course } = useCourseDetail(courseId);
+  const { data: course } = useCommunityDetail(courseId);
   const [searchParams] = useSearchParams();
   const [q, setQ] = useState(searchParams.get('q') ?? '');
   const [page, setPage] = useState(1);

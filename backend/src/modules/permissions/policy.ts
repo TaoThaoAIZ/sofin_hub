@@ -1,4 +1,5 @@
 import { env } from '../../config/env.js';
+import { prisma } from '../../db/prisma.js';
 import { HttpError } from '../../utils/http-error.js';
 import { userRepository } from '../auth/auth.repository.js';
 import { enrollmentService } from '../enrollments/enrollments.service.js';
@@ -24,18 +25,25 @@ export async function isPlatformAdmin(userId: string): Promise<boolean> {
 }
 
 /** Vai trò hiệu lực của user trong 1 cộng đồng; null nếu chưa tham gia (và không phải Platform Admin). */
-export async function getRole(userId: string, courseId: string): Promise<Role | null> {
+export async function getRole(userId: string, communityId: string): Promise<Role | null> {
   if (await isPlatformAdmin(userId)) return 'platform_admin';
-  if (!(await enrollmentService.isEnrolled(userId, courseId))) return null;
-  return (await enrollmentService.getMember(userId, courseId))?.role ?? 'member';
+  return (await enrollmentService.getActiveRole(userId, communityId)) ?? null; // 1 truy vấn (null nếu chưa tham gia / bị cấm)
 }
 
 export const atLeast = (role: Role | null, min: Role) => role !== null && RANK[role] >= RANK[min];
 
-/** 403 nếu user không đạt vai trò tối thiểu trong cộng đồng. Trả về vai trò để route dùng tiếp. */
-export async function requireRole(userId: string, courseId: string, min: Role): Promise<Role> {
-  const role = await getRole(userId, courseId);
+/**
+ * 403 nếu user không đạt vai trò tối thiểu trong cộng đồng. Trả về vai trò để route dùng tiếp.
+ * Cộng đồng đang BỊ KHÓA (Course.locked, gồm cả đình chỉ kiểm duyệt): chỉ Platform Admin / nhân viên admin vượt được — owner/admin/mod
+ * không sửa, xóa, chuyển quyền, rút tiền, xem doanh thu hay quản lý lớp học (lệnh khóa không còn chỉ chặn thành viên thường).
+ */
+export async function requireRole(userId: string, communityId: string, min: Role): Promise<Role> {
+  const role = await getRole(userId, communityId);
   if (!atLeast(role, min)) throw HttpError.forbidden('Bạn không có quyền thực hiện thao tác này trong cộng đồng');
+  if (role !== 'platform_admin') {
+    const community = await prisma.community.findUnique({ where: { id: communityId }, select: { locked: true } });
+    if (community?.locked && !(await isStaff(userId))) throw HttpError.coded(403, 'COMMUNITY_LOCKED', 'Cộng đồng này đang bị khóa');
+  }
   return role!;
 }
 
@@ -45,24 +53,23 @@ export async function requirePlatformAdmin(userId: string): Promise<void> {
 }
 
 /** Được sửa/xóa nội dung của người khác? (tác giả luôn được; ngoài ra cần đạt `min` — mặc định mod). */
-export async function canManageContent(userId: string, courseId: string, authorId: string, min: Role = 'mod'): Promise<boolean> {
+export async function canManageContent(userId: string, communityId: string, authorId: string, min: Role = 'mod'): Promise<boolean> {
   if (userId === authorId) return true;
-  return atLeast(await getRole(userId, courseId), min);
+  return atLeast(await getRole(userId, communityId), min);
 }
 
 /** Bậc số của vai trò (member=0 ... platform_admin=4) — dùng so sánh thứ bậc khi kick/ban/đổi vai trò. */
 export const roleRank = (role: Role | null): number => (role === null ? -1 : RANK[role]);
 
 /** Chính xác là Owner của cộng đồng (KHÔNG tính Platform Admin) — dùng cho thao tác gắn với tài khoản nhận tiền như rút tiền. */
-export async function isCourseOwner(userId: string, courseId: string): Promise<boolean> {
-  if (!(await enrollmentService.isEnrolled(userId, courseId))) return false;
-  return (await enrollmentService.getMember(userId, courseId))?.role === 'owner';
+export async function isCommunityOwner(userId: string, communityId: string): Promise<boolean> {
+  if (!(await enrollmentService.isEnrolled(userId, communityId))) return false;
+  return (await enrollmentService.getMember(userId, communityId))?.role === 'owner';
 }
 
 /** Nhân viên admin đang hoạt động? (email trong env HOẶC có AdminAccount `active`). Quyền chi tiết do middleware admin kiểm tra theo route. */
 export async function isStaff(userId: string): Promise<boolean> {
   if (await isPlatformAdmin(userId)) return true;
-  const { prisma } = await import('../../db/prisma.js');
   const acc = await prisma.adminAccount.findUnique({ where: { userId }, select: { status: true } });
   return acc?.status === 'active';
 }

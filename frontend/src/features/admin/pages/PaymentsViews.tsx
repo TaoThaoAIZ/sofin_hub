@@ -461,6 +461,7 @@ export function RefundsView() {
         rowKey={(r) => r.id}
         tabs={[
           { key: 'pending', label: 'Yêu cầu mới', count: s?.pending },
+          { key: 'refunding', label: 'Đang hoàn tiền', count: s?.refunding },
           { key: 'approved', label: 'Hoàn tất', count: s?.approved },
           { key: 'rejected', label: 'Đã từ chối', count: s?.rejected },
           { key: '', label: 'Tất cả' },
@@ -735,6 +736,10 @@ export function CreatorsView() {
     { key: 'fee', label: 'Phí nền tảng', render: (c) => money(c.platformFeeCents) },
     { key: 'net', label: 'Thu nhập thuần', render: (c) => money(c.netCents) },
     { key: 'pend', label: 'Số dư chờ', render: (c) => money(c.pendingBalanceCents) },
+    { key: 'wd', label: 'Có thể rút', render: (c) => money(c.withdrawableCents ?? 0) },
+    { key: 'held', label: 'Đang giữ', render: (c) => money(c.heldCents ?? 0) },
+    { key: 'rsv', label: 'Dự phòng', render: (c) => money(c.reserveCents ?? 0) },
+    { key: 'debt', label: 'Nợ', render: (c) => ((c.debtCents ?? 0) > 0 ? <span style={{ color: '#dc2626', fontWeight: 600 }}>{formatCents(c.debtCents ?? 0)}</span> : money(0)) },
   ];
 
   return (
@@ -749,6 +754,10 @@ export function CreatorsView() {
             { icon: 'percent', label: 'Phí nền tảng', value: formatCents(s.platformFeeCents) },
             { icon: 'account_balance_wallet', label: 'Thu nhập thuần', value: formatCents(s.netCents) },
             { icon: 'hourglass_top', label: 'Số dư chờ', value: formatCents(s.pendingBalanceCents) },
+            ...(s.withdrawableCents !== undefined ? [{ icon: 'savings', label: 'Có thể rút', value: formatCents(s.withdrawableCents) }] : []),
+            ...(s.heldCents !== undefined ? [{ icon: 'lock_clock', label: 'Đang giữ (holding)', value: formatCents(s.heldCents) }] : []),
+            ...(s.reserveCents !== undefined ? [{ icon: 'shield', label: 'Quỹ dự phòng', value: formatCents(s.reserveCents) }] : []),
+            ...(s.debtCents !== undefined ? [{ icon: 'warning', label: 'Nợ creator', value: formatCents(s.debtCents), bad: s.debtCents > 0 }] : []),
           ]}
         />
       )}
@@ -800,6 +809,10 @@ export function CreatorDetailView() {
     { key: 'gross', label: 'Doanh thu gộp', render: (c) => money(c.grossCents) },
     { key: 'net', label: 'Thu nhập thuần', render: (c) => money(c.netCents) },
     { key: 'pend', label: 'Số dư chờ', render: (c) => money(c.pendingBalanceCents) },
+    { key: 'wd', label: 'Có thể rút', render: (c) => money(c.withdrawableCents ?? 0) },
+    { key: 'held', label: 'Đang giữ', render: (c) => money(c.heldCents ?? 0) },
+    { key: 'rsv', label: 'Dự phòng', render: (c) => money(c.reserveCents ?? 0) },
+    { key: 'debt', label: 'Nợ', render: (c) => money(c.debtCents ?? 0) },
   ];
 
   return (
@@ -822,6 +835,10 @@ export function CreatorDetailView() {
               { icon: 'percent', label: 'Phí nền tảng', value: formatCents(d.kpis.platformFeeCents) },
               { icon: 'account_balance_wallet', label: 'Thu nhập thuần', value: formatCents(d.kpis.netCents) },
               { icon: 'hourglass_top', label: 'Số dư chờ', value: formatCents(d.kpis.pendingBalanceCents) },
+              ...(d.kpis.withdrawableCents !== undefined ? [{ icon: 'savings', label: 'Có thể rút', value: formatCents(d.kpis.withdrawableCents) }] : []),
+              ...(d.kpis.heldCents !== undefined ? [{ icon: 'lock_clock', label: 'Đang giữ (holding)', value: formatCents(d.kpis.heldCents) }] : []),
+              ...(d.kpis.reserveCents !== undefined ? [{ icon: 'shield', label: 'Quỹ dự phòng', value: formatCents(d.kpis.reserveCents) }] : []),
+              ...(d.kpis.debtCents !== undefined ? [{ icon: 'warning', label: 'Nợ creator', value: formatCents(d.kpis.debtCents), bad: d.kpis.debtCents > 0 }] : []),
             ]}
           />
           <ChartCard
@@ -874,7 +891,15 @@ function PayoutDetailDialog({ id, onClose }: { id: string; onClose: () => void }
               items={[
                 ['Thu nhập thuần', formatCents(d.creatorBalance.netCents)],
                 ['Đã yêu cầu rút', formatCents(d.creatorBalance.requestedCents)],
-                ['Có thể rút', formatCents(d.creatorBalance.availableCents)],
+                ['Net − đã yêu cầu', formatCents(d.creatorBalance.availableCents)],
+                ...(d.creatorBalance.withdrawableCents !== undefined
+                  ? ([
+                      ['Có thể rút ngay', formatCents(d.creatorBalance.withdrawableCents)],
+                      ['Đang giữ' + (d.creatorBalance.holdDays ? ` (${d.creatorBalance.holdDays} ngày)` : ''), formatCents(d.creatorBalance.heldCents ?? 0)],
+                      ['Quỹ dự phòng', formatCents(d.creatorBalance.reserveCents ?? 0)],
+                      ['Nợ (hoàn tiền sau khi rút)', formatCents(d.creatorBalance.debtCents ?? 0)],
+                    ] as [string, ReactNode][])
+                  : []),
               ]}
             />
           </PreviewSection>

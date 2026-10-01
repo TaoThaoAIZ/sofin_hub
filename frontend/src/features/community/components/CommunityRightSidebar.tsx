@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { formatCompact } from '../../../lib/format';
-import { useCourses } from '../../courses/queries';
-import type { CourseDetail } from '../../courses/types';
+import { useCommunities } from '../../courses/queries';
+import type { CommunityDetail } from '../../courses/types';
 import { useMembers } from '../queries';
 
 // Màu lấy đúng từ bảng pal[]/logoStyle trong file thiết kế gốc SofinHub Community.html.
@@ -14,9 +14,9 @@ function initials(name: string) {
   return parts.length > 1 ? (parts[0]!.charAt(0) + parts[parts.length - 1]!.charAt(0)).toUpperCase() : name.slice(0, 2).toUpperCase();
 }
 
-export function CommunityRightSidebar({ course }: { course: CourseDetail }) {
+export function CommunityRightSidebar({ course }: { course: CommunityDetail }) {
   const members = useMembers(course.id, {});
-  const suggested = useCourses({ page: 1, limit: 4, sort: 'trending' });
+  const suggested = useCommunities({ page: 1, limit: 4, sort: 'trending' });
   const shownMembers = members.data?.data.slice(0, 6) ?? [];
   const remaining = Math.max(0, course.stats.members - shownMembers.length);
   const suggestedCourses = (suggested.data?.data ?? []).filter((c) => c.id !== course.id).slice(0, 3);
@@ -85,7 +85,7 @@ export function CommunityRightSidebar({ course }: { course: CourseDetail }) {
             </Link>
           </div>
           {suggestedCourses.map((c, i) => (
-            <Link key={c.id} to={`/courses/${c.id}`} className="flex items-center gap-3 py-[7px] hover:opacity-90">
+            <Link key={c.id} to={`/communities/${c.id}`} className="flex items-center gap-3 py-[7px] hover:opacity-90">
               <span
                 className="grid size-[38px] flex-none place-items-center rounded-[10px] text-[11.5px] font-extrabold text-white"
                 style={{ background: LOGO_PALETTE[i % LOGO_PALETTE.length] }}

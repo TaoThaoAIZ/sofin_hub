@@ -103,6 +103,8 @@ export interface AdminCourse {
   creator: Person | null;
   students: number;
   lessons: number;
+  /** Số module của khóa học (contract communities-courses §5). */
+  modules?: number;
   completionPct: number;
   reports: number;
   status: CourseStatus;
@@ -113,6 +115,7 @@ export interface AdminCourse {
 export interface AdminCourseDetail extends AdminCourse {
   description: string | null;
   lessonList: { id: string; title: string; type: string; durationMin: number | null; status: string }[];
+  moduleList?: { id: string; title: string; lessons: number }[];
   history: AuditLogItem[];
 }
 
@@ -271,9 +274,10 @@ export interface AdminSubscription {
   createdAt: string;
 }
 
-export type RefundStatus = 'pending' | 'approved' | 'rejected';
+export type RefundStatus = 'pending' | 'refunding' | 'approved' | 'rejected';
 export interface RefundSummary {
   pending: number;
+  refunding?: number;
   approved: number;
   rejected: number;
   pendingAmountCents: number;
@@ -350,6 +354,10 @@ export interface CreatorSummary {
   gatewayFeeCents: number;
   netCents: number;
   pendingBalanceCents: number;
+  withdrawableCents?: number;
+  heldCents?: number;
+  reserveCents?: number;
+  debtCents?: number;
 }
 export interface AdminCreatorRevenue {
   creator: Person;
@@ -361,12 +369,16 @@ export interface AdminCreatorRevenue {
   netCents: number;
   pendingBalanceCents: number;
   paidOutCents: number;
+  withdrawableCents?: number;
+  heldCents?: number;
+  reserveCents?: number;
+  debtCents?: number;
 }
 export interface CreatorDetail {
   creator: Person;
   kpis: Omit<CreatorSummary, 'creators'> & { paidOutCents: number };
   series: { date: string; grossCents: number; netCents: number; refundsCents: number }[];
-  communities: { id: string; name: string; grossCents: number; netCents: number; pendingBalanceCents: number }[];
+  communities: { id: string; name: string; grossCents: number; netCents: number; pendingBalanceCents: number; withdrawableCents?: number; heldCents?: number; reserveCents?: number; debtCents?: number }[];
   transactions: AdminTransaction[];
   payouts: AdminPayout[];
 }
@@ -397,7 +409,7 @@ export interface AdminPayout {
   updatedAt: string;
 }
 export interface AdminPayoutDetail extends AdminPayout {
-  creatorBalance: { netCents: number; requestedCents: number; availableCents: number };
+  creatorBalance: { netCents: number; requestedCents: number; availableCents: number; withdrawableCents?: number; heldCents?: number; reserveCents?: number; debtCents?: number; holdDays?: number };
   history: AuditLogItem[];
 }
 
@@ -535,6 +547,7 @@ export const SUB_STATUS: Record<string, StatusMeta> = {
 
 export const REFUND_STATUS: Record<RefundStatus, StatusMeta> = {
   pending: { label: 'Yêu cầu mới', tone: 'o' },
+  refunding: { label: 'Đang hoàn tiền (chờ cổng)', tone: 'b' },
   approved: { label: 'Hoàn tất', tone: 'g' },
   rejected: { label: 'Đã từ chối', tone: 'r' },
 };

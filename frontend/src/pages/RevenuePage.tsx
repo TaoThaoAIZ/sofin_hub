@@ -6,17 +6,24 @@ import { MaterialIcon } from '../components/ui/MaterialIcon';
 import { Pager } from '../components/ui/Pager';
 import { ApiError } from '../lib/api';
 import { formatCents, formatDate, formatDateTime } from '../lib/datetime';
-import { useCourseDetail } from '../features/courses/queries';
+import { useCommunityDetail } from '../features/courses/queries';
 import { usePayouts, useRequestPayout, useRevenue } from '../features/payments/queries';
 import type { PayoutStatus } from '../features/payments/types';
 
-const errText = (e: unknown) => (e instanceof ApiError ? e.message : 'Đã có lỗi xảy ra, vui lòng thử lại');
+const ERR_CODE_TEXT: Record<string, string> = {
+  PAYOUT_BLOCKED: 'Số dư ròng đang âm do hoàn tiền sau khi đã rút — chưa thể rút thêm cho đến khi nợ được bù trừ.',
+  COMMUNITY_LOCKED: 'Cộng đồng đang bị khóa nên không thể rút tiền.',
+};
+const errText = (e: unknown) =>
+  e instanceof ApiError ? (e.code && ERR_CODE_TEXT[e.code]) || e.message : 'Đã có lỗi xảy ra, vui lòng thử lại';
 
 const PAYOUT_LABEL: Record<PayoutStatus, { text: string; cls: string }> = {
   requested: { text: 'Đã yêu cầu', cls: 'bg-amber-500/10 text-amber-700' },
   approved: { text: 'Đã duyệt', cls: 'bg-blue-500/10 text-blue-700' },
   paid: { text: 'Đã chi trả', cls: 'bg-green-500/10 text-green-700' },
   rejected: { text: 'Bị từ chối', cls: 'bg-red-500/10 text-red-600' },
+  failed: { text: 'Thất bại', cls: 'bg-red-500/10 text-red-600' },
+  on_hold: { text: 'Tạm giữ', cls: 'bg-stone-500/10 text-stone-700' },
 };
 
 function Stat({ label, value, hint, accent }: { label: string; value: string; hint?: string; accent?: boolean }) {
@@ -29,7 +36,7 @@ function Stat({ label, value, hint, accent }: { label: string; value: string; hi
   );
 }
 
-function PayoutForm({ courseId, available }: { courseId: string; available: number }) {
+function PayoutForm({ courseId, available, blocked }: { courseId: string; available: number; blocked: boolean }) {
   const request = useRequestPayout(courseId);
   const [amount, setAmount] = useState('');
   const [bankName, setBankName] = useState('');
@@ -44,8 +51,9 @@ function PayoutForm({ courseId, available }: { courseId: string; available: numb
     e.preventDefault();
     setError(null);
     setOk(false);
+    if (blocked) return setError(ERR_CODE_TEXT.PAYOUT_BLOCKED ?? null);
     if (!Number.isFinite(cents) || cents <= 0) return setError('Nhập số tiền hợp lệ (USD).');
-    if (cents > available) return setError('Số tiền vượt quá số dư khả dụng.');
+    if (cents > available) return setError(`Số tiền vượt quá số dư có thể rút (${formatCents(available)}).`);
     if (!/^\d{6,20}$/.test(accountNumber.trim())) return setError('Số tài khoản phải gồm 6–20 chữ số.');
     request.mutate(
       { amountCents: cents, method: { type: 'bank', bankName: bankName.trim(), accountNumber: accountNumber.trim(), accountHolder: accountHolder.trim() } },
@@ -65,8 +73,8 @@ function PayoutForm({ courseId, available }: { courseId: string; available: numb
     <form onSubmit={submit} className="glass grid gap-3 rounded-3xl p-5 sm:grid-cols-2">
       <h2 className="text-lg font-extrabold sm:col-span-2">Yêu cầu rút tiền</h2>
       <label className="text-[12.5px] font-semibold sm:col-span-2">
-        Số tiền (USD) — khả dụng {formatCents(available)}
-        <input type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} className={`${input} mt-1`} required />
+        Số tiền (USD) — có thể rút {formatCents(available)}
+        <input type="number" min="0" step="0.01" max={available / 100} disabled={blocked} value={amount} onChange={(e) => setAmount(e.target.value)} className={`${input} mt-1`} required />
       </label>
       <label className="text-[12.5px] font-semibold">
         Ngân hàng
@@ -83,7 +91,7 @@ function PayoutForm({ courseId, available }: { courseId: string; available: numb
       {error && <div role="alert" className="rounded-xl bg-red-50 px-4 py-2 text-sm font-medium text-red-600 sm:col-span-2">{error}</div>}
       {ok && <div className="rounded-xl bg-green-50 px-4 py-2 text-sm font-medium text-green-700 sm:col-span-2">Đã gửi yêu cầu rút tiền, chờ quản trị viên nền tảng duyệt.</div>}
       <div className="sm:col-span-2">
-        <button type="submit" disabled={request.isPending} className="h-11 rounded-xl bg-brand px-6 text-[14px] font-bold text-white disabled:opacity-60">
+        <button type="submit" disabled={request.isPending || blocked || available <= 0} className="h-11 rounded-xl bg-brand px-6 text-[14px] font-bold text-white disabled:opacity-60">
           {request.isPending ? 'Đang gửi…' : 'Gửi yêu cầu rút tiền'}
         </button>
       </div>
@@ -93,7 +101,7 @@ function PayoutForm({ courseId, available }: { courseId: string; available: numb
 
 function RevenueInner() {
   const { id = '' } = useParams();
-  const { data: course } = useCourseDetail(id);
+  const { data: course } = useCommunityDetail(id);
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const range = { from: from || undefined, to: to || undefined };
@@ -101,13 +109,15 @@ function RevenueInner() {
   const [page, setPage] = useState(1);
   const payouts = usePayouts(id, page);
   const d = revenue.data;
+  const pol = d?.payoutPolicy;
+  const debt = d?.debtCents ?? 0;
   const forbidden = revenue.error instanceof ApiError && revenue.error.status === 403;
 
   return (
     <div className="min-h-screen bg-white">
       <Header />
       <div className="mx-auto max-w-[960px] px-4 py-8 md:px-0">
-        <Link to={`/courses/${id}/community`} className="inline-flex items-center gap-1 text-[13px] text-stone-500 hover:text-brand">
+        <Link to={`/communities/${id}/community`} className="inline-flex items-center gap-1 text-[13px] text-stone-500 hover:text-brand">
           <MaterialIcon name="arrow_back" size={16} /> Về cộng đồng
         </Link>
         <h1 className="mt-1 text-2xl font-extrabold">Doanh thu & rút tiền</h1>
@@ -141,12 +151,25 @@ function RevenueInner() {
               <Stat label="Hoa hồng nền tảng*" value={formatCents(d.platformCommissionCents)} hint={`tạm tính ${d.assumptions.platformCommissionPct}%`} />
               <Stat label="Phí cổng thanh toán*" value={formatCents(d.gatewayFeeCents)} hint={`${d.assumptions.gatewayFeePct}% + ${formatCents(d.assumptions.gatewayFeeFixedCents)}`} />
               <Stat label="Thực nhận (net)" value={formatCents(d.netCents)} accent />
-              <Stat label="Số dư khả dụng" value={formatCents(d.availableBalanceCents)} hint="toàn thời gian" accent />
+              <Stat label="Có thể rút ngay" value={formatCents(d.availableBalanceCents)} hint="toàn thời gian" accent />
+              {d.heldCents !== undefined && <Stat label="Đang giữ (chờ hoàn tiền/tranh chấp)" value={formatCents(d.heldCents)} hint={pol ? `rút được sau ${pol.holdDays} ngày` : undefined} />}
+              {d.reserveCents !== undefined && <Stat label="Quỹ dự phòng" value={formatCents(d.reserveCents)} hint={pol ? `giữ lại ${pol.reservePct}%` : undefined} />}
               <Stat label="MRR" value={formatCents(d.mrrCents)} hint={`${d.activePaidMembers} thành viên trả phí · ${d.trialingMembers} dùng thử`} />
               <Stat label="Đang chờ rút" value={formatCents(d.payoutRequestedCents)} />
             </div>
+            {debt > 0 && (
+              <div role="alert" className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-[13px] font-medium text-red-700">
+                Bạn đang còn nợ {formatCents(debt)} do hoàn tiền/chargeback sau khi đã rút. Tính năng rút tiền tạm khóa cho đến khi doanh thu mới bù trừ khoản nợ này.
+              </div>
+            )}
+            {pol && (
+              <p className="mt-3 rounded-xl bg-stone-50 px-4 py-2.5 text-[12.5px] text-stone-600">
+                Chính sách rút tiền: tiền mới thu chỉ rút được sau {pol.holdDays} ngày (cửa sổ hoàn tiền {pol.refundWindowDays} ngày + tranh chấp {pol.disputeWindowDays} ngày), và luôn giữ lại {pol.reservePct}% làm quỹ dự phòng.
+                {pol.note ? ` ${pol.note}.` : ''}
+              </p>
+            )}
             <p className="mt-3 rounded-xl bg-amber-50 px-4 py-2.5 text-[12.5px] text-amber-800">
-              * {d.assumptions.note}. Hoa hồng và phí cổng là giá trị TẠM/mô phỏng, có thể thay đổi khi chốt mô hình doanh thu. Số dư khả dụng không phụ thuộc bộ lọc ngày.
+              * {d.assumptions.note}. Hoa hồng và phí cổng là giá trị TẠM/mô phỏng, có thể thay đổi khi chốt mô hình doanh thu. Số dư có thể rút không phụ thuộc bộ lọc ngày.
             </p>
 
             <h2 className="mt-8 mb-3 text-lg font-extrabold">Giao dịch gần nhất</h2>
@@ -184,7 +207,7 @@ function RevenueInner() {
             </div>
 
             <div className="mt-8">
-              <PayoutForm courseId={id} available={d.availableBalanceCents} />
+              <PayoutForm courseId={id} available={d.availableBalanceCents} blocked={debt > 0} />
             </div>
 
             <h2 className="mt-8 mb-3 text-lg font-extrabold">Lệnh rút tiền</h2>

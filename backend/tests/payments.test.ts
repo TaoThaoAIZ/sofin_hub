@@ -100,7 +100,8 @@ describe('thanh toán, gói thành viên, hoàn tiền, webhook', () => {
       const b = await c.call('POST', '/courses/biz/checkout', { token: u.token, body: { method: 'stripe' }, headers: h });
       const d = await c.call('POST', '/courses/biz/checkout', { token: u.token, body: { method: 'stripe' }, headers: { 'Idempotency-Key': 'key-xyz' } });
       assert.equal(a.body.data.id, b.body.data.id);
-      assert.notEqual(a.body.data.id, d.body.data.id);
+      // Key khác nhưng vẫn còn intent pending chưa hết hạn cho cùng (user, course): tái dùng intent đó (chống 2 intent song song → double-charge).
+      assert.equal(a.body.data.id, d.body.data.id);
       // Cùng key nhưng khóa học khác → 409.
       const e = await c.call('POST', '/courses/mkt/checkout', { token: u.token, body: { method: 'stripe' }, headers: h });
       assert.equal(e.status, 409);
@@ -220,18 +221,18 @@ describe('thanh toán, gói thành viên, hoàn tiền, webhook', () => {
 
     it('hóa đơn: chủ giao dịch / owner cộng đồng / platform admin được xem; người khác 403', async () => {
       const buyer = await c.registerUser('inv');
-      const payment = await pay(buyer, 'lead');
+      const payment = await pay(buyer, 'des');
       const owner = await c.registerUser('invowner');
-      await enrollmentService.grant(owner.id, 'lead', 'owner');
+      await enrollmentService.grant(owner.id, 'des', 'owner');
       const adminMember = await c.registerUser('invadmin');
-      await enrollmentService.grant(adminMember.id, 'lead', 'admin');
+      await enrollmentService.grant(adminMember.id, 'des', 'admin');
 
       const mine = await c.call('GET', `/payments/${payment.id}/invoice`, { token: buyer.token });
       assert.equal(mine.status, 200);
       assert.equal(mine.body.data.invoiceNumber, payment.invoiceNumber);
       assert.equal(mine.body.data.totalCents, 1000);
       assert.equal(mine.body.data.buyer.id, buyer.id);
-      assert.equal(mine.body.data.community.id, 'lead');
+      assert.equal(mine.body.data.community.id, 'des');
       assert.equal(mine.body.data.items.length, 1);
       assert.equal(mine.body.data.status, 'succeeded');
 
@@ -245,7 +246,7 @@ describe('thanh toán, gói thành viên, hoàn tiền, webhook', () => {
 
       // Giao dịch chưa thanh toán chưa có hóa đơn.
       const s = await c.registerUser('inv-pending');
-      const co = await c.call('POST', '/courses/lead/checkout', { token: s.token, body: { method: 'stripe' } });
+      const co = await c.call('POST', '/courses/des/checkout', { token: s.token, body: { method: 'stripe' } });
       assert.equal((await c.call('GET', `/payments/${co.body.data.id}/invoice`, { token: s.token })).status, 409);
     });
   });
@@ -409,7 +410,7 @@ describe('thanh toán, gói thành viên, hoàn tiền, webhook', () => {
 
     it('2 confirm song song (2 instance service, không chung promise) chỉ ghi nhận 1 lần: 1 hóa đơn, 1 gói, số hóa đơn tăng đúng 1', async () => {
       const u = await c.registerUser('confirm-race');
-      const co = await c.call('POST', '/courses/lead/checkout', { token: u.token, body: { method: 'stripe' } });
+      const co = await c.call('POST', '/courses/des/checkout', { token: u.token, body: { method: 'stripe' } });
       const s1 = createPaymentsService(repo, mockGateway);
       const s2 = createPaymentsService(repo, mockGateway);
       const year = new Date().getUTCFullYear();
@@ -420,9 +421,9 @@ describe('thanh toán, gói thành viên, hoàn tiền, webhook', () => {
       assert.equal(a.invoiceNumber, b.invoiceNumber);
       const after = (await prisma.invoiceSequence.findUnique({ where: { year } }))!.lastNumber;
       assert.equal(after, before + 1);
-      assert.equal(await prisma.subscription.count({ where: { userId: u.id, courseId: 'lead' } }), 1);
+      assert.equal(await prisma.subscription.count({ where: { userId: u.id, communityId: 'des' } }), 1);
       assert.equal(await prisma.payment.count({ where: { userId: u.id, status: 'succeeded' } }), 1);
-      assert.equal(await prisma.enrollment.count({ where: { userId: u.id, courseId: 'lead' } }), 1);
+      assert.equal(await prisma.enrollment.count({ where: { userId: u.id, communityId: 'des' } }), 1);
     });
 
     it('số hóa đơn tuần tự, không trùng, không hở dưới đồng thời; reset theo năm', async () => {

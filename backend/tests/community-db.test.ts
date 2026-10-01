@@ -45,11 +45,11 @@ describe('community trên DB: thành viên minh họa, điểm, xếp hạng, c�
   const members = (q: string, who = 'member1', course = 'photo') => c.call('GET', `/courses/${course}/members${q}`, { token: tokens[who] });
 
   it('seed thành viên minh họa: User isDemo + Enrollment cho MỌI cộng đồng, idempotent', async () => {
-    const courseCount = await db.course.count();
+    const courseCount = await db.community.count();
     const n = demoIds.DEMO_NAMES.length;
     assert.equal(await db.user.count({ where: { isDemo: true } }), courseCount * n);
     assert.equal(await db.enrollment.count({ where: { userId: { startsWith: 'demo-' } } }), courseCount * n);
-    const admin = await db.enrollment.findUnique({ where: { userId_courseId: { userId: demoIds.demoUserId('photo', 0), courseId: 'photo' } } });
+    const admin = await db.enrollment.findUnique({ where: { userId_communityId: { userId: demoIds.demoUserId('photo', 0), communityId: 'photo' } } });
     assert.equal(admin?.role, 'admin');
     const u = await db.user.findUnique({ where: { id: demoIds.demoUserId('lead', 1) } });
     assert.equal(u?.email, demoIds.demoEmail('lead', 1));
@@ -75,9 +75,9 @@ describe('community trên DB: thành viên minh họa, điểm, xếp hạng, c�
     const day = 86_400_000;
     await db.pointEvent.createMany({
       data: [
-        { userId: u.id, courseId: 'yt', points: 10, reason: 'post', createdAt: new Date(Date.now() - 2 * day) },
-        { userId: u.id, courseId: 'yt', points: 7, reason: 'post', createdAt: new Date(Date.now() - 20 * day) },
-        { userId: u.id, courseId: 'yt', points: 3, reason: 'post', createdAt: new Date(Date.now() - 90 * day) },
+        { userId: u.id, communityId: 'yt', points: 10, reason: 'post', createdAt: new Date(Date.now() - 2 * day) },
+        { userId: u.id, communityId: 'yt', points: 7, reason: 'post', createdAt: new Date(Date.now() - 20 * day) },
+        { userId: u.id, communityId: 'yt', points: 3, reason: 'post', createdAt: new Date(Date.now() - 90 * day) },
       ],
     });
     assert.equal(await pointsSvc.totalFor('yt', u.id, '7d'), 10);
@@ -85,7 +85,7 @@ describe('community trên DB: thành viên minh họa, điểm, xếp hạng, c�
     assert.equal(await pointsSvc.totalFor('yt', u.id, 'all'), 20);
     const sum = await pointsSvc.summaryForUser(u.id, 2);
     assert.equal(sum.total, 20);
-    assert.deepEqual(sum.byCourse, [{ courseId: 'yt', points: 20 }]);
+    assert.deepEqual(sum.byCourse, [{ communityId: 'yt', courseId: 'yt', points: 20 }]); // courseId = alias cũ của communityId
     assert.deepEqual(sum.recent.map((e) => e.points), [10, 7]); // mới trước, cắt theo limit
   });
 
@@ -152,7 +152,7 @@ describe('community trên DB: thành viên minh họa, điểm, xếp hạng, c�
     assert.equal(m1.points, 110);
     assert.equal(m1.rank, full.findIndex((r) => r.userId === ids.member1) + 1);
     // người bị cấm có điểm vẫn không xuất hiện
-    await db.pointEvent.create({ data: { userId: ids.banned, courseId: 'photo', points: 9999, reason: 'post' } });
+    await db.pointEvent.create({ data: { userId: ids.banned, communityId: 'photo', points: 9999, reason: 'post' } });
     assert.ok(!(await pointsSvc.leaderboard('photo', 'all')).some((r) => r.userId === ids.banned));
     assert.notEqual((await board('all'))[0].userId, ids.banned);
     // cộng đồng khác không lẫn điểm
@@ -226,7 +226,7 @@ describe('community trên DB: thành viên minh họa, điểm, xếp hạng, c�
     assert.equal((await c.call('POST', `/join-requests/${req.id}/approve`, { token: tokens.owner })).body.data.status, 'approved');
 
     // 3 review thật của member1..3: điểm = (nền seed + review thật)
-    const { courses } = await import('../src/modules/courses/courses.seed.js');
+    const { seedCommunities: courses } = await import('../src/modules/catalog/catalog.seed.js');
     const photo = courses.find((x) => x.id === 'photo')!;
     const expected = Math.round(((photo.rating * photo.ratingCount + 12) / (photo.ratingCount + 3)) * 10) / 10;
     const d = (await c.call('GET', '/courses/photo')).body.data;
@@ -236,7 +236,7 @@ describe('community trên DB: thành viên minh họa, điểm, xếp hạng, c�
     assert.equal((await c.call('DELETE', '/courses/photo/reviews/mine', { token: tokens.member3 })).status, 200);
     assert.equal((await c.call('GET', '/courses/photo')).body.data.ratingCount, photo.ratingCount + 2);
 
-    assert.equal(await db.communityBan.count({ where: { courseId: 'photo', userId: ids.banned } }), 1);
+    assert.equal(await db.communityBan.count({ where: { communityId: 'photo', userId: ids.banned } }), 1);
     const bans = await c.call('GET', '/courses/photo/bans', { token: tokens.owner });
     assert.equal(bans.body.data.length, 1);
   });
@@ -247,9 +247,9 @@ describe('community trên DB: thành viên minh họa, điểm, xếp hạng, c�
       Array.from({ length: 5 }, () => c.call('POST', '/courses/lead/join-requests', { token: u.token, body: {} })),
     );
     assert.equal(outcomes.filter((o) => o.status === 201).length, 1, JSON.stringify(outcomes.map((o) => o.status)));
-    assert.equal(await db.joinRequest.count({ where: { courseId: 'lead', userId: u.id, status: 'pending' } }), 1);
+    assert.equal(await db.joinRequest.count({ where: { communityId: 'lead', userId: u.id, status: 'pending' } }), 1);
 
-    await db.invite.create({ data: { code: 'RACE-ONE', courseId: 'private-demo', createdById: ids.owner, maxUses: 1 } });
+    await db.invite.create({ data: { code: 'RACE-ONE', communityId: 'private-demo', createdById: ids.owner, maxUses: 1 } });
     const users = await Promise.all([c.registerUser('r1'), c.registerUser('r2'), c.registerUser('r3')]);
     const acc = await Promise.all(users.map((x) => c.call('POST', '/invites/RACE-ONE/accept', { token: x.token })));
     assert.equal(acc.filter((a) => a.status === 200).length, 1, JSON.stringify(acc.map((a) => a.status)));

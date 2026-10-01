@@ -225,7 +225,7 @@ export const adminUsersService = {
     const now = new Date();
     const paidStatuses = ['succeeded', 'refunded'] as ('succeeded' | 'refunded')[];
     const [owned, posts, comments, purchases, spend, activeSubs, received, confirmed, warnings, suspensions, sessions, recent] = await Promise.all([
-      prisma.course.count({ where: { ownerId: id, deletedAt: null } }),
+      prisma.community.count({ where: { ownerId: id, deletedAt: null } }),
       prisma.post.count({ where: { authorId: id } }),
       prisma.postComment.count({ where: { authorId: id } }),
       prisma.payment.count({ where: { userId: id, status: { in: paidStatuses } } }),
@@ -283,20 +283,20 @@ export const adminUsersService = {
         orderBy: { enrolledAt: 'desc' },
         skip: (q.page - 1) * q.limit,
         take: q.limit,
-        include: { course: { select: { id: true, title: true, priceCents: true, pricing: true, moderationStatus: true, locked: true, deletedAt: true } } },
+        include: { community: { select: { id: true, title: true, priceCents: true, pricing: true, moderationStatus: true, locked: true, deletedAt: true } } },
       }),
       prisma.enrollment.count({ where }),
     ]);
     return {
       data: rows.map((e) => ({
-        id: e.course.id,
-        name: e.course.title,
+        id: e.community.id,
+        name: e.community.title,
         role: e.role,
-        membership: e.course.pricing === 'free' ? ('free' as const) : ('paid' as const),
-        priceUsd: e.course.priceCents / 100,
+        membership: e.community.pricing === 'free' ? ('free' as const) : ('paid' as const),
+        priceUsd: e.community.priceCents / 100,
         joinedAt: e.enrolledAt.toISOString(),
         lastActiveAt: e.lastActiveAt.toISOString(),
-        status: e.course.deletedAt ? 'deleted' : e.course.moderationStatus === 'active' && e.course.locked ? 'suspended' : e.course.moderationStatus,
+        status: e.community.deletedAt ? 'deleted' : e.community.moderationStatus === 'active' && e.community.locked ? 'suspended' : e.community.moderationStatus,
       })),
       meta: pageMeta(q.page, q.limit, total),
     };
@@ -319,26 +319,26 @@ export const adminUsersService = {
           rows.forEach((s) => items.push({ type: 'login', icon: 'login', title: 'Đăng nhập', detail: [s.userAgent, s.ip].filter(Boolean).join(' · '), createdAt: s.createdAt })),
         ),
       want('content') &&
-        prisma.post.findMany({ where: { authorId: id }, orderBy: { createdAt: 'desc' }, take, include: { course: { select: { title: true } } } }).then((rows) =>
-          rows.forEach((p) => items.push({ type: 'content', icon: 'article', title: `Đăng bài trong ${p.course.title}`, detail: p.content.slice(0, 120), createdAt: p.createdAt })),
+        prisma.post.findMany({ where: { authorId: id }, orderBy: { createdAt: 'desc' }, take, include: { community: { select: { title: true } } } }).then((rows) =>
+          rows.forEach((p) => items.push({ type: 'content', icon: 'article', title: `Đăng bài trong ${p.community.title}`, detail: p.content.slice(0, 120), createdAt: p.createdAt })),
         ),
       want('content') &&
         prisma.postComment.findMany({ where: { authorId: id }, orderBy: { createdAt: 'desc' }, take }).then((rows) =>
           rows.forEach((c) => items.push({ type: 'content', icon: 'chat', title: 'Bình luận', detail: c.content.slice(0, 120), createdAt: c.createdAt })),
         ),
       want('community') &&
-        prisma.enrollment.findMany({ where: { userId: id }, orderBy: { enrolledAt: 'desc' }, take, include: { course: { select: { title: true } } } }).then((rows) =>
-          rows.forEach((e) => items.push({ type: 'community', icon: 'group_add', title: `Tham gia ${e.course.title}`, detail: `Vai trò: ${e.role}`, createdAt: e.enrolledAt })),
+        prisma.enrollment.findMany({ where: { userId: id }, orderBy: { enrolledAt: 'desc' }, take, include: { community: { select: { title: true } } } }).then((rows) =>
+          rows.forEach((e) => items.push({ type: 'community', icon: 'group_add', title: `Tham gia ${e.community.title}`, detail: `Vai trò: ${e.role}`, createdAt: e.enrolledAt })),
         ),
       want('payment') &&
         prisma.payment
-          .findMany({ where: { userId: id, status: { in: ['succeeded', 'refunded'] } }, orderBy: { createdAt: 'desc' }, take, include: { course: { select: { title: true } } } })
+          .findMany({ where: { userId: id, status: { in: ['succeeded', 'refunded'] } }, orderBy: { createdAt: 'desc' }, take, include: { community: { select: { title: true } } } })
           .then((rows) =>
             rows.forEach((p) =>
               items.push({
                 type: 'payment',
                 icon: 'workspace_premium',
-                title: `${p.status === 'refunded' ? 'Đã hoàn tiền' : 'Thanh toán'} ${p.course.title}`,
+                title: `${p.status === 'refunded' ? 'Đã hoàn tiền' : 'Thanh toán'} ${p.community.title}`,
                 detail: `$${(p.amountCents / 100).toFixed(2)}`,
                 createdAt: p.confirmedAt ?? p.createdAt,
               }),
@@ -370,7 +370,7 @@ export const adminUsersService = {
     await getItem(id);
     const where = { userId: id };
     const [rows, total, spend, subs] = await Promise.all([
-      prisma.payment.findMany({ where, orderBy: { createdAt: 'desc' }, skip: (q.page - 1) * q.limit, take: q.limit, include: { course: { select: { id: true, title: true } } } }),
+      prisma.payment.findMany({ where, orderBy: { createdAt: 'desc' }, skip: (q.page - 1) * q.limit, take: q.limit, include: { community: { select: { id: true, title: true } } } }),
       prisma.payment.count({ where }),
       prisma.payment.aggregate({ where: { userId: id, status: { in: ['succeeded', 'refunded'] } }, _sum: { amountCents: true, refundedCents: true } }),
       prisma.subscription.count({ where: { userId: id, status: 'active' } }),
@@ -379,8 +379,8 @@ export const adminUsersService = {
       data: rows.map((p) => ({
         id: p.id,
         invoiceNumber: p.invoiceNumber,
-        courseId: p.course.id,
-        courseName: p.course.title,
+        communityId: p.community.id,
+        courseName: p.community.title,
         amountCents: p.amountCents,
         refundedCents: p.refundedCents,
         status: p.status,

@@ -1,6 +1,6 @@
 import { HttpError } from '../../utils/http-error.js';
 import { userBriefView } from '../auth/user-view.js';
-import { courseService } from '../courses/courses.service.js';
+import { catalogService } from '../catalog/catalog.service.js';
 import { enrollmentService } from '../enrollments/enrollments.service.js';
 import { notify } from '../notifications/notifications.service.js';
 import { pointsService } from '../points/points.service.js';
@@ -9,10 +9,13 @@ import { eventsRepository, type EventPatch, type EventsRepository } from './even
 import type { CommunityEvent, CommunityEventView } from './events.types.js';
 import type { CreateEventBody, UpdateEventBody } from './events.schema.js';
 
-/** Giới hạn số thành viên nhận thông báo "sự kiện mới" để cộng đồng đông không tạo hàng nghìn bản ghi. */
-const EVENT_CREATED_NOTIFY_LIMIT = 200;
+/**
+ * Thông báo "sự kiện mới" được rải cho MỌI thành viên theo lô (không còn cắt cứng 200 người). Lô đầu chạy ngay trong request
+ * (cộng đồng nhỏ nhận thông báo ngay khi tạo); các lô sau chạy nền để request tạo sự kiện không bị kéo dài.
+ */
+const EVENT_NOTIFY_BATCH = 500;
 
-export const eventPath = (e: Pick<CommunityEvent, 'courseId'>) => `/courses/${e.courseId}/community/lich`;
+export const eventPath = (e: Pick<CommunityEvent, 'communityId'>) => `/courses/${e.communityId}/community/lich`;
 
 export function createEventsService(repo: EventsRepository = eventsRepository) {
   async function toViews(events: CommunityEvent[], viewerId: string): Promise<CommunityEventView[]> {
@@ -33,23 +36,33 @@ export function createEventsService(repo: EventsRepository = eventsRepository) {
   }
 
   return {
-    async list(courseId: string, viewerId: string): Promise<CommunityEventView[]> {
-      await courseService.getById(courseId);
-      return toViews(await repo.listByCourse(courseId), viewerId);
+    async list(communityId: string, viewerId: string): Promise<CommunityEventView[]> {
+      await catalogService.getById(communityId);
+      return toViews(await repo.listByCourse(communityId), viewerId);
     },
 
-    async create(courseId: string, hostId: string, body: CreateEventBody) {
-      const event = await repo.create({ courseId, hostId, ...body });
-      const members = (await enrollmentService.listMembers(courseId)).filter((m) => m.userId !== hostId).slice(0, EVENT_CREATED_NOTIFY_LIMIT);
-      for (const m of members) {
-        notify({
-          userId: m.userId,
-          type: 'event_created',
-          title: 'Sự kiện mới',
-          body: `Sự kiện "${event.title}" vừa được tạo`,
-          link: eventPath(event),
-          courseId,
-        });
+    async create(communityId: string, hostId: string, body: CreateEventBody) {
+      const event = await repo.create({ communityId, hostId, ...body });
+      const notifyBatch = (ids: string[]) => {
+        for (const userId of ids) {
+          notify({ userId, type: 'event_created', title: 'Sự kiện mới', body: `Sự kiện "${event.title}" vừa được tạo`, link: eventPath(event), communityId });
+        }
+      };
+      const first = await enrollmentService.memberIdsPage(communityId, { limit: EVENT_NOTIFY_BATCH, excludeUserId: hostId });
+      notifyBatch(first);
+      if (first.length === EVENT_NOTIFY_BATCH) {
+        const after = first[first.length - 1]!;
+        void (async () => {
+          let cursor = after;
+          for (;;) {
+            const ids = await enrollmentService.memberIdsPage(communityId, { limit: EVENT_NOTIFY_BATCH, excludeUserId: hostId, afterUserId: cursor });
+            if (ids.length === 0) return;
+            notifyBatch(ids);
+            if (ids.length < EVENT_NOTIFY_BATCH) return;
+            cursor = ids[ids.length - 1]!;
+            await new Promise((r) => setImmediate(r)); // nhường event loop giữa các lô
+          }
+        })().catch((e) => console.error('[events] rải thông báo sự kiện mới lỗi giữa chừng:', e instanceof Error ? e.message : e));
       }
       return event;
     },
@@ -89,7 +102,7 @@ export function createEventsService(repo: EventsRepository = eventsRepository) {
           title: 'Sự kiện đã bị hủy',
           body: `Sự kiện "${event.title}" đã bị hủy`,
           link: eventPath(event),
-          courseId: event.courseId,
+          communityId: event.communityId,
         });
       }
       await repo.delete(eventId);
@@ -105,7 +118,8 @@ export function createEventsService(repo: EventsRepository = eventsRepository) {
       if (result === 'gone') throw HttpError.notFound('Không tìm thấy sự kiện');
       if (result === 'full') throw HttpError.conflict('Sự kiện đã đủ số lượng đăng ký');
       const rsvped = result === 'rsvped';
-      if (rsvped) await pointsService.award(userId, event.courseId, 'event_rsvp');
+      // Khóa nghiệp vụ (user, event_rsvp, event, eventId): RSVP → hủy → RSVP lại chỉ cộng điểm đúng 1 lần.
+      if (rsvped) await pointsService.award(userId, event.communityId, 'event_rsvp', { type: 'event', id: eventId });
       return { rsvped, rsvpCount: await repo.rsvpCount(eventId) };
     },
 
@@ -121,9 +135,9 @@ export function createEventsService(repo: EventsRepository = eventsRepository) {
       return buildIcs([{ event, hostName: await hostName(event), url: baseUrl }], event.title);
     },
 
-    async icsForCourse(courseId: string) {
-      const course = await courseService.getById(courseId);
-      const events = await repo.listByCourse(courseId);
+    async icsForCourse(communityId: string) {
+      const course = await catalogService.getById(communityId);
+      const events = await repo.listByCourse(communityId);
       const names = new Map(await Promise.all([...new Set(events.map((e) => e.hostId))].map(async (id) => [id, (await userBriefView(id)).name] as const)));
       const items = events.map((event) => ({ event, hostName: names.get(event.hostId)! }));
       return buildIcs(items, `SofinHub — ${course.title}`);

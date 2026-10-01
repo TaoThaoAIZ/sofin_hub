@@ -1,6 +1,9 @@
 import express, { Router, type Request, type Response } from 'express';
 import { requireAuth } from '../../middlewares/auth.js';
 import { HttpError } from '../../utils/http-error.js';
+import { authenticateAccessToken } from '../auth/tokens.js';
+import { canReadPrivateFile, signFileUrl, verifyFileUrl } from './uploads.access.js';
+import { FILE_URL_PREFIX, isPublicPurpose } from './uploads.types.js';
 import { presignSchema } from './uploads.schema.js';
 import { uploadService } from './uploads.service.js';
 
@@ -40,9 +43,22 @@ uploadsRouter.delete('/uploads/:key', requireAuth, async (req, res) => {
   res.json({ data: { deleted: true } });
 });
 
-// Công khai: URL chứa khóa ngẫu nhiên 128-bit nên không đoán được (cần cho <img> không gửi được header Authorization).
+// Ảnh công khai (avatar/cover/post_image): ai có URL cũng xem được, cache dài (cần cho <img> không gửi được header Authorization).
+// File riêng tư (message_attachment/lesson_attachment/post_file): cần Bearer HOẶC URL ký hạn ngắn lấy từ POST /files/:key/url,
+// và quyền được kiểm lại ở MỖI lần GET (thu hồi tin nhắn / bị kick thì hết xem được). Không bao giờ cache.
 uploadsRouter.get('/files/:key', async (req, res) => {
-  const f = await uploadService.open(req.params.key as string);
+  const key = req.params.key as string;
+  const rec = await uploadService.getServable(key);
+  if (!rec) throw HttpError.notFound('Không tìm thấy file');
+  const isPublic = isPublicPurpose(rec.purpose);
+  if (!isPublic) {
+    const header = req.headers.authorization;
+    const bearer = header?.startsWith('Bearer ') ? (await authenticateAccessToken(header.slice(7)))?.userId : undefined;
+    const userId = bearer ?? verifyFileUrl(key, req.query);
+    if (!userId) throw HttpError.unauthorized('Cần đăng nhập hoặc URL ký còn hạn để xem file này');
+    if (!(await canReadPrivateFile(userId, rec))) throw HttpError.forbidden('Bạn không có quyền xem file này');
+  }
+  const f = await uploadService.open(key);
   if (!f) throw HttpError.notFound('Không tìm thấy file');
   res.setHeader('Content-Type', f.contentType);
   res.setHeader('Content-Length', String(f.size));
@@ -50,11 +66,24 @@ uploadsRouter.get('/files/:key', async (req, res) => {
   res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
   // helmet mặc định đặt CORP same-origin, sẽ chặn FE khác origin nhúng ảnh.
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-  // Khóa không đổi nội dung nên ảnh cache được lâu; file khác chỉ cache riêng tư.
-  res.setHeader('Cache-Control', f.isImage ? 'public, max-age=31536000, immutable' : 'private, max-age=3600');
+  res.setHeader('Cache-Control', isPublic ? 'public, max-age=31536000, immutable' : 'private, no-store');
   if (!f.isImage) {
     res.setHeader('Content-Disposition', `attachment; filename="download"; filename*=UTF-8''${encodeURIComponent(f.filename)}`);
   }
   f.stream.on('error', () => res.destroy());
   f.stream.pipe(res);
+});
+
+// Xin URL dùng được cho <img>/<a href>: file công khai trả URL thường, file riêng tư trả URL ký hạn ngắn (sau khi kiểm quyền).
+uploadsRouter.post('/files/:key/url', requireAuth, async (req, res) => {
+  const key = req.params.key as string;
+  const rec = await uploadService.getServable(key);
+  if (!rec) throw HttpError.notFound('Không tìm thấy file');
+  if (isPublicPurpose(rec.purpose)) {
+    res.json({ data: { url: `${FILE_URL_PREFIX}${key}`, expiresAt: null } });
+    return;
+  }
+  if (!(await canReadPrivateFile(req.userId!, rec))) throw HttpError.forbidden('Bạn không có quyền xem file này');
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.json({ data: signFileUrl(key, req.userId!) });
 });

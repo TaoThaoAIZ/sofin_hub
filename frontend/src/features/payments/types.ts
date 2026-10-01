@@ -87,7 +87,7 @@ export interface RefundRequest {
   resolvedAt?: string;
 }
 
-export type PayoutStatus = 'requested' | 'approved' | 'paid' | 'rejected';
+export type PayoutStatus = 'requested' | 'approved' | 'paid' | 'rejected' | 'failed' | 'on_hold';
 
 export interface Payout {
   id: string;
@@ -109,7 +109,15 @@ export interface RevenueSummary {
   platformCommissionCents: number;
   gatewayFeeCents: number;
   netCents: number;
+  /** Số tiền có thể rút NGAY (sau holding + reserve + payout đang chờ; 0 nếu còn nợ). */
   availableBalanceCents: number;
+  /** net − payout đã yêu cầu (có thể âm). */
+  totalBalanceCents?: number;
+  /** Còn trong cửa sổ hoàn tiền/tranh chấp. */
+  heldCents?: number;
+  reserveCents?: number;
+  debtCents?: number;
+  payoutPolicy?: { holdDays: number; refundWindowDays: number; disputeWindowDays: number; reservePct: number; note?: string };
   payoutRequestedCents: number;
   activePaidMembers: number;
   trialingMembers: number;

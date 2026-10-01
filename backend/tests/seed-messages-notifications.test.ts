@@ -11,10 +11,10 @@ describe('seed messages-notifications', () => {
   after(() => db.drop());
 
   it('tạo kịch bản đúng và chạy lại không nhân đôi', async () => {
-    const { seedAccounts, seedCourses, seedMemberships } = await import('../prisma/seed-base.js');
+    const { seedAccounts, seedCommunityRows, seedMemberships } = await import('../prisma/seed-base.js');
     const { seedMessagesNotifications } = await import('../prisma/seed/messages-notifications.js');
     const userIds = await seedAccounts(db.prisma);
-    await seedCourses(db.prisma, { photo: userIds.owner, yt: userIds.owner, fin: userIds.owner });
+    await seedCommunityRows(db.prisma, { photo: userIds.owner, yt: userIds.owner, fin: userIds.owner });
     await seedMemberships(db.prisma, userIds);
     const ctx = { db: db.prisma, userIds };
     await seedMessagesNotifications(ctx);

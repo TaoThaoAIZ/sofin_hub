@@ -64,6 +64,8 @@ const attachment = z.object({
 });
 
 export const createModuleSchema = z.object({
+  /** Chỉ route cũ (/courses/:id/modules) dùng: khóa học đích; bỏ trống = khóa mặc định. Route mới lấy :courseId từ URL. */
+  learningCourseId: z.string().min(1).max(100).optional(),
   title,
   description: z.string().trim().max(1000, 'Mô tả tối đa 1000 ký tự'),
   thumbnail: httpUrl.optional(),
@@ -111,4 +113,27 @@ export const reorderSchema = z.object({
 
 export const classroomSettingsSchema = z.object({
   certificatesEnabled: z.boolean(),
+});
+
+const courseTitle = z.string().trim().min(1, 'Vui lòng nhập tên khóa học').max(200, 'Tên khóa học tối đa 200 ký tự');
+
+export const createCourseSchema = z.object({
+  title: courseTitle,
+  description: z.string().trim().max(1000, 'Mô tả tối đa 1000 ký tự').default(''),
+  thumbnailUrl: httpUrl.optional(),
+  publishStatus: z.enum(['published', 'draft']).optional(),
+});
+
+export const updateCourseSchema = z
+  .object({
+    title: courseTitle.optional(),
+    description: z.string().trim().max(1000).optional(),
+    thumbnailUrl: httpUrl.nullable().optional(),
+    publishStatus: z.enum(['published', 'draft', 'archived']).optional(),
+    certificatesEnabled: z.boolean().nullable().optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, 'Không có trường nào để cập nhật');
+
+export const listCoursesQuery = z.object({
+  status: z.string().max(100).optional(),
 });

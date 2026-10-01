@@ -19,8 +19,11 @@ import type { PaymentRecord, RefundStatus, Subscription } from '../features/paym
 const errText = (e: unknown) => (e instanceof ApiError ? e.message : 'Đã có lỗi xảy ra, vui lòng thử lại');
 
 function subLabel(s: Subscription): { text: string; cls: string } {
+  if ((s.status === 'active' || s.status === 'trialing') && s.cancelAtPeriodEnd) {
+    const end = s.accessUntil ?? s.currentPeriodEnd;
+    return { text: `Sẽ kết thúc vào ${formatDate(end)}`, cls: 'bg-amber-500/10 text-amber-700' };
+  }
   if (s.status === 'trialing') return { text: 'Đang dùng thử', cls: 'bg-blue-500/10 text-blue-700' };
-  if (s.status === 'active' && s.cancelAtPeriodEnd) return { text: 'Đã hủy — còn truy cập đến hết kỳ', cls: 'bg-amber-500/10 text-amber-700' };
   if (s.status === 'active') return { text: 'Đang hoạt động', cls: 'bg-green-500/10 text-green-700' };
   if (s.status === 'canceled') return { text: 'Đã hủy', cls: 'bg-stone-900/5 text-stone-600' };
   return { text: 'Đã hết hạn', cls: 'bg-red-500/10 text-red-600' };
@@ -85,7 +88,7 @@ function SubscriptionCard({ s }: { s: Subscription }) {
     <div className="glass rounded-2xl p-4">
       <div className="flex flex-wrap items-center gap-3">
         <div className="min-w-0 flex-1">
-          <Link to={`/courses/${s.courseId}/community`} className="block truncate text-[15px] font-bold hover:text-brand">
+          <Link to={`/communities/${s.courseId}/community`} className="block truncate text-[15px] font-bold hover:text-brand">
             {s.courseTitle ?? 'Cộng đồng'}
           </Link>
           <div className="text-[12.5px] text-stone-500">

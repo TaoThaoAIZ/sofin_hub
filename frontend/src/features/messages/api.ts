@@ -4,8 +4,18 @@ import type { BlockedUser, ConversationView, MessageAttachment, MessagePage, Mes
 export const openConversation = (userId: string) =>
   apiPost<{ data: ConversationView }>('/conversations', { userId }).then((r) => r.data);
 
-export const fetchConversations = (signal?: AbortSignal) =>
-  apiGet<{ data: ConversationView[] }>('/conversations', undefined, signal).then((r) => r.data);
+/** Backend phân trang keyset (mặc định 50/lần): gom các trang liên tiếp (tối đa 10 trang) để UI vẫn thấy đủ danh sách. */
+export async function fetchConversations(signal?: AbortSignal): Promise<ConversationView[]> {
+  const out: ConversationView[] = [];
+  let cursor: string | undefined;
+  for (let i = 0; i < 10; i++) {
+    const r = await apiGet<{ data: ConversationView[]; meta?: { nextCursor?: string | null } }>('/conversations', { limit: 100, cursor }, signal);
+    out.push(...r.data);
+    cursor = r.meta?.nextCursor ?? undefined;
+    if (!cursor) break;
+  }
+  return out;
+}
 
 export const fetchMessages = (conversationId: string, before?: string, signal?: AbortSignal) =>
   apiGet<MessagePage>(`/conversations/${conversationId}/messages`, { before, limit: 30 }, signal);

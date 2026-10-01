@@ -1,5 +1,6 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { env } from '../../config/env.js';
+import { shared } from '../../infra/shared.js';
 
 /** Nội dung vé PUT: ràng buộc key + contentType + maxSize + người sở hữu + hạn dùng. */
 export interface UploadTicket {
@@ -14,8 +15,7 @@ export interface UploadTicket {
 const b64 = (b: Buffer | string) => Buffer.from(b).toString('base64url');
 const sign = (payload: string) => createHmac('sha256', env.UPLOAD_SIGNING_SECRET).update(payload).digest();
 
-/** Vé đã dùng (theo nonce) — vé dùng 1 lần; xóa khi quá hạn để không phình bộ nhớ. */
-const used = new Map<string, number>();
+const USED_PREFIX = 'upload:nonce:';
 
 export function signUploadTicket(input: { key: string; contentType: string; maxSize: number; userId: string; ttlSec?: number }) {
   const exp = Date.now() + (input.ttlSec ?? env.UPLOAD_TICKET_TTL_SEC) * 1000;
@@ -26,7 +26,7 @@ export function signUploadTicket(input: { key: string; contentType: string; maxS
 
 export type TicketCheck = { ok: true; ticket: UploadTicket } | { ok: false; reason: 'invalid' | 'expired' | 'used' };
 
-/** Kiểm chữ ký + hạn. KHÔNG đánh dấu đã dùng — gọi `consumeTicket` sau khi mọi ràng buộc khác đã đạt. */
+/** Kiểm chữ ký + hạn (thuần, đồng bộ). KHÔNG đụng tới replay — gọi `consumeTicket` (atomic) sau khi mọi ràng buộc khác đã đạt. */
 export function verifyUploadTicket(token: string): TicketCheck {
   const [body, mac, extra] = token.split('.');
   if (!body || !mac || extra !== undefined) return { ok: false, reason: 'invalid' };
@@ -40,12 +40,20 @@ export function verifyUploadTicket(token: string): TicketCheck {
     return { ok: false, reason: 'invalid' };
   }
   if (typeof ticket.exp !== 'number' || ticket.exp < Date.now()) return { ok: false, reason: 'expired' };
-  if (used.has(ticket.n)) return { ok: false, reason: 'used' };
   return { ok: true, ticket };
 }
 
-export function consumeTicket(ticket: UploadTicket): void {
-  const now = Date.now();
-  for (const [n, exp] of used) if (exp < now) used.delete(n);
-  used.set(ticket.n, ticket.exp);
+/** Kiểm tra nhanh (không đánh dấu) vé đã bị dùng chưa — để phát lại trả 401 "đã dùng" thay vì lỗi khác. Chốt chặn thật là `consumeTicket`. */
+export async function isTicketUsed(ticket: UploadTicket): Promise<boolean> {
+  return (await shared().kv.get(USED_PREFIX + ticket.n)) !== null;
+}
+
+/**
+ * Đánh dấu vé đã dùng bằng SET NX PX (atomic, chia sẻ giữa các instance, sống sót khi restart nếu có Redis).
+ * Trả true nếu CHÍNH lần gọi này là lần dùng đầu tiên; false = đã bị dùng (replay / hai PUT đua nhau — chỉ một bên thắng).
+ * Lỗi store => ném lỗi (fail-closed: thà từ chối upload còn hơn mở cửa replay).
+ */
+export async function consumeTicket(ticket: UploadTicket): Promise<boolean> {
+  const ttlMs = Math.max(1_000, ticket.exp - Date.now() + 1_000);
+  return shared().kv.setNx(USED_PREFIX + ticket.n, '1', ttlMs);
 }

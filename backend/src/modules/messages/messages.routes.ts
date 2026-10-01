@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { requireAuth } from '../../middlewares/auth.js';
 import { HttpError } from '../../utils/http-error.js';
 import { authenticateAccessToken } from '../auth/tokens.js';
-import { messagesQuerySchema, openConversationSchema, sendMessageSchema } from './messages.schema.js';
+import { conversationsQuerySchema, messagesQuerySchema, openConversationSchema, sendMessageSchema } from './messages.schema.js';
 import { messageService } from './messages.service.js';
 import { consumeStreamTicket, issueStreamTicket, streamHub } from './messages.stream.js';
 
@@ -15,7 +15,8 @@ messagesRouter.post('/conversations', requireAuth, async (req, res) => {
 });
 
 messagesRouter.get('/conversations', requireAuth, async (req, res) => {
-  res.json({ data: await messageService.listConversations(req.userId!) });
+  const q = conversationsQuerySchema.parse(req.query);
+  res.json(await messageService.listConversations(req.userId!, q.limit, q.cursor));
 });
 
 messagesRouter.get('/conversations/:id/messages', requireAuth, async (req, res) => {
@@ -40,8 +41,8 @@ messagesRouter.get('/messages/unread-count', requireAuth, async (req, res) => {
   res.json({ data: await messageService.unreadTotal(req.userId!) });
 });
 
-messagesRouter.post('/messages/stream-ticket', requireAuth, (req, res) => {
-  res.json({ data: issueStreamTicket(req.userId!) });
+messagesRouter.post('/messages/stream-ticket', requireAuth, async (req, res) => {
+  res.json({ data: await issueStreamTicket(req.userId!) });
 });
 
 // Nhận Bearer hoặc ?ticket= (EventSource không đặt được header).
@@ -49,9 +50,9 @@ messagesRouter.get('/messages/stream', async (req, res) => {
   const header = req.headers.authorization;
   const bearer = header?.startsWith('Bearer ') ? (await authenticateAccessToken(header.slice(7)))?.userId : undefined;
   const ticket = typeof req.query.ticket === 'string' ? req.query.ticket : undefined;
-  const userId = bearer ?? (ticket ? consumeStreamTicket(ticket) : null);
+  const userId = bearer ?? (ticket ? await consumeStreamTicket(ticket) : null);
   if (!userId) throw HttpError.unauthorized();
-  streamHub.attach(userId, res);
+  await streamHub.attach(userId, res);
 });
 
 messagesRouter.post('/users/:id/block', requireAuth, async (req, res) => {

@@ -1,6 +1,6 @@
 import type { ErrorRequestHandler, RequestHandler } from 'express';
 import { z } from 'zod';
-import { isProd } from '../config/env.js';
+import { isDev } from '../config/env.js';
 import { HttpError } from '../utils/http-error.js';
 
 export const notFoundHandler: RequestHandler = (req, _res, next) => {
@@ -35,7 +35,8 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   res.status(500).json({
     error: {
       code: 'INTERNAL_ERROR',
-      message: isProd ? 'Lỗi hệ thống' : err instanceof Error ? err.message : 'Lỗi hệ thống',
+      // Chỉ lộ err.message khi NODE_ENV=development tường minh (test/production luôn trả thông điệp chung).
+      message: isDev && err instanceof Error ? err.message : 'Lỗi hệ thống',
     },
   });
 };

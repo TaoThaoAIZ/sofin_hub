@@ -4,7 +4,7 @@ import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { useClickOutside } from '../../../lib/useClickOutside';
 import { useIsPlatformAdmin } from '../../admin/queries';
 import { useAuth } from '../../auth/AuthContext';
-import { useCourseDetail } from '../../courses/queries';
+import { useCommunityDetail } from '../../courses/queries';
 import { MessagesButton } from '../../messages/components/MessagesButton';
 import { NotificationBell } from '../../notifications/components/NotificationBell';
 import { SearchBox } from '../../search/components/SearchBox';
@@ -19,7 +19,7 @@ export function CommunityTopbar({ courseId }: { courseId: string }) {
   const [menuOpen, setMenuOpen] = useState(false);
   useClickOutside(menuRef, () => setMenuOpen(false));
   const { isAdmin } = useIsPlatformAdmin();
-  const { data: course } = useCourseDetail(courseId);
+  const { data: course } = useCommunityDetail(courseId);
   const canSeeRevenue = course?.viewerRole === 'owner' || course?.viewerRole === 'platform_admin';
 
   const initials = user ? `${user.firstName.charAt(0)}${user.lastName?.charAt(0) ?? ''}`.toUpperCase() : '?';
@@ -71,7 +71,7 @@ export function CommunityTopbar({ courseId }: { courseId: string }) {
                 Gói & thanh toán
               </Link>
               {canSeeRevenue && (
-                <Link to={`/courses/${courseId}/revenue-dashboard`} onClick={close} className={MENU_ITEM}>
+                <Link to={`/communities/${courseId}/revenue-dashboard`} onClick={close} className={MENU_ITEM}>
                   Doanh thu & rút tiền
                 </Link>
               )}

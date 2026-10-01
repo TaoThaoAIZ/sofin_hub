@@ -149,7 +149,7 @@ def load(add):
       "Không có thông báo post_liked mới cho member3; unread-count giữ nguyên.")
     n(F, "Cache tùy chọn 5 giây: đổi tùy chọn có hiệu lực (giá trị tạm)", "Tích hợp", "Thấp",
       "member1 vừa bật/tắt post_liked; member2 sẵn sàng thích bài", ["member1 tắt post_liked", "Ngay lập tức member2 thích bài (< 5s)", "Chờ > 5s, thích lại sau khi bỏ thích rồi thích"],
-      "Cache preference 5s", "Sau PUT, notify() dùng lại tùy chọn mới (cache được làm mới/khả năng lệch tối đa 5s giữa các instance; 1 instance dev thì có hiệu lực ngay). Ghi nhận thực tế nếu lệch (giá trị tạm / chưa chốt).", pw=PART)
+      "Cache preference 5s", "Sau PUT, notify() dùng tùy chọn mới: cache 5s được vô hiệu qua pub/sub kênh notif:prefs (Redis khi có REDIS_URL, in-memory khi 1 instance) nên thường có hiệu lực ngay; chỉ khi pub/sub chậm/mất mới lệch tối đa 5s (backend/docs/api/notifications.md 'Giới hạn hiện tại'). Ghi nhận thực tế nếu lệch (giá trị tạm / chưa chốt).", pw=PART)
 
     F = "Chuông & trang /notifications (UI)"
     n(F, "Chuông member1: badge 4, dropdown tối đa 10, mục chưa đọc nền cam + chấm", "Giao diện", "Cao", SEED_N,
@@ -233,7 +233,7 @@ def load(add):
       ["Đăng nhập member1, mở DevTools Network", "Xác nhận có request /notifications/stream", "Đăng xuất từ menu avatar", "Quan sát Network 30 giây"], "-",
       "Sau đăng xuất kết nối stream đóng và không tự nối lại (không request stream mới); localStorage không còn token.", pw=PART)
     n(F, "Token bị thu hồi (đăng xuất/đổi mật khẩu): dùng token cũ mở stream mới -> 401", "Bảo mật", "Cao", SEED_N,
-      ["Lưu accessToken cũ của member1", "POST /api/auth/logout", "GET /api/notifications/stream?access_token=<token cũ>"], "token đã thu hồi",
+      ["Lưu accessToken cũ của member1", "POST /api/auth/logout", "fetch GET /api/notifications/stream với header Authorization: Bearer <token cũ> (cách ?access_token= đã bỏ - luôn 401 kể cả token còn hạn)"], "token đã thu hồi",
       E401 + ". Ghi chú: server KHÔNG chủ động ngắt luồng SSE đang mở khi token bị thu hồi (listener chỉ gỡ khi client ngắt); FE phải tự đóng (chưa chốt).")
     n(F, "Không có replay: thông báo phát sinh lúc mất kết nối phải bù bằng GET", "Tích hợp", "Trung bình", SEED_N + "; member2 đăng nhập",
       ["member1 mở stream rồi ngắt (tắt mạng/đóng tab)", "member2 thích bài của member1 trong lúc đó", "member1 kết nối lại bằng vé mới"], "-",
@@ -432,7 +432,7 @@ def load(add):
       ["member1 gửi tin cho member2", "Quan sát stream của member3"], "-", "Stream member3 không nhận event message (chỉ ping); event chỉ gửi tới người gửi và người nhận.", pw=PART)
     n(F, "Người nhận offline nhận thông báo message_received (gộp 1/5 phút)", "Tích hợp", "Cao", SEED_C + "; member2 KHÔNG mở tab nào (không kết nối SSE)",
       ["member1 gửi tin \"A\" vào " + CONV, "member1 gửi tiếp tin \"B\" ngay sau đó", "member2: GET /api/notifications"], "2 tin trong < 5 phút",
-      "member2 có đúng 1 thông báo type=message_received, title \"<tên member1> đã gửi tin nhắn cho bạn\", body=nội dung tin \"A\" (cắt ~80 ký tự + \"...\"), link /messages/" + CONV + "; tin \"B\" không tạo thêm thông báo (throttle 5 phút, bộ nhớ).")
+      "member2 có đúng 1 thông báo type=message_received, title \"<tên member1> đã gửi tin nhắn cho bạn\", body=nội dung tin \"A\" (cắt ~80 ký tự + \"...\"), link /messages/" + CONV + "; tin \"B\" không tạo thêm thông báo (gộp tối đa 1 thông báo/cuộc/người nhận/5 phút bằng khóa SET NX PX ở state chia sẻ - Redis hoặc in-memory). Thông báo luôn được lưu, không phụ thuộc online/offline (messages.md Thông báo).")
     n(F, "Người nhận đang online chỉ nhận realtime, không tạo thông báo", "Tích hợp", "Trung bình", SEED_C + "; member2 mở app (có SSE tin nhắn)",
       ["member2 ghi unread-count thông báo", "member1 gửi tin", "member2: GET /api/notifications/unread-count"], "-", "Số thông báo chưa đọc của member2 không đổi (không có message_received).", pw=PART)
     n(F, "Heartbeat \": ping\" mỗi 25 giây trên stream tin nhắn", "Tích hợp", "Thấp", SEED_C, ["Mở stream tin nhắn", "Đọc trong 60 giây"], "-", "Có ít nhất 2 dòng \": ping\"; kết nối không bị đóng.")
@@ -459,16 +459,16 @@ def load(add):
     F = "Tìm kiếm API: cơ bản"
     s(F, "Tìm \"nhiếp ảnh\" trả kết quả nhóm khóa học, thành viên, bài viết + counts", "Chức năng", "Cao", S0,
       ["GET /api/search?q=nhiếp ảnh"], "q=nhiếp ảnh",
-      "200; data xếp theo thứ tự khóa học -> thành viên -> bài viết (mới nhất trước); meta {page:1, limit:10, total, totalPages}; counts {courses, members, posts} đúng tổng theo loại; mỗi phần tử có trường type và link.")
+      "200; data xếp theo thứ tự khóa học -> thành viên -> bài viết (trong nhóm xếp theo độ liên quan ts_rank/điểm tên, rồi mới nhất - Postgres full-text, search.md); meta {page:1, limit:10, total, totalPages}; counts {courses, members, posts} đúng tổng theo loại; mỗi phần tử có trường type và link.")
     s(F, "type=courses chỉ trả khóa học công khai (title/description khớp)", "Chức năng", "Cao", S0,
       ["GET /api/search?q=nhiếp ảnh&type=courses"], "type=courses",
       "Mọi phần tử type=\"course\" có {id, title: Segment[], snippet: Segment[], link:\"/courses/<id>\"}; counts.members=0 và counts.posts=0.")
     s(F, "type=posts chỉ trả bài viết trong cộng đồng của user", "Chức năng", "Cao", S0,
       ["GET /api/search?q=chân dung&type=posts"], "q=chân dung",
-      "Mọi phần tử type=\"post\" {id, courseId, courseTitle, author, snippet, createdAt, link:\"/courses/<cid>/community?post=<id>\"}; sắp mới nhất trước; snippet có ít nhất 1 segment match=true.")
+      "Mọi phần tử type=\"post\" {id, courseId, courseTitle, author, snippet, createdAt, link:\"/courses/<cid>/community?post=<id>\"}; sắp theo độ liên quan (ts_rank) rồi mới nhất; snippet có ít nhất 1 segment match=true.")
     s(F, "type=members trả thành viên khớp tên/handle trong cộng đồng của user", "Chức năng", "Cao", S0,
       ["GET /api/search?q=member2&type=members"], "q=member2",
-      "Phần tử type=\"member\" {id, courseId, courseTitle, name: Segment[], handle, role: admin|member, link}; chỉ thuộc cộng đồng member1 tham gia (photo); khớp cả theo handle.")
+      "Phần tử type=\"member\" {id, courseId, courseTitle, name: Segment[], handle, role: admin|member, link}; chỉ thuộc cộng đồng member1 tham gia (photo); khớp theo họ tên ('Mai Member2', tiền tố từng từ); handle (slug-NNNN) chỉ khớp phần slug khi q có dấu '-' (vd q=mai-member2), không tra phần số đuôi.")
     s(F, "Không dấu / hoa thường: \"NHIEP ANH\" khớp \"Nhiếp ảnh\"", "Chức năng", "Cao", S0,
       ["GET /api/search?q=nhiep anh", "GET /api/search?q=NHIEP ANH", "GET /api/search?q=nhiếp ảnh"], "3 biến thể",
       "Ba request trả cùng tập kết quả/counts; segment match=true bọc đúng đoạn chữ gốc CÓ dấu (\"Nhiếp ảnh\").")
@@ -567,7 +567,7 @@ def load(add):
       "Snippet hiển thị dạng chữ (\"<img src=x ...>\" thấy nguyên văn hoặc bị lược theo quy tắc bài viết); không có request tới x; không alert.", pw=PART)
     s(F, "Ký tự regex/SQL trong q được coi là chuỗi thường", "Bảo mật", "Cao", S0,
       ["GET /api/search?q=(.*)", "GET /api/search?q=' OR '1'='1", "GET /api/search?q=%25%25"], "3 payload",
-      "200 (không 500), khớp chuỗi con nguyên văn (thường 0 kết quả); không lỗi cú pháp regex/SQL.")
+      "200 (không 500), không phải ký tự đặc biệt: %, _, \ được escape cho LIKE và q được làm sạch trước khi tạo tsquery (thường 0 kết quả); không lỗi cú pháp regex/SQL/tsquery.")
     s(F, "Tôn trọng riêng tư sau khi rời cộng đồng: hết thấy bài của cộng đồng đó", "Bảo mật", "Cao", "member3 đang ở photo và thấy bài ảnh chân dung qua tìm kiếm",
       ["member3: GET /api/search?q=chân dung&type=posts (ghi số bài)", "member3 rời cộng đồng photo", "Tìm lại cùng truy vấn"], "-", "Sau khi rời: posts=0 và members=0 cho photo (tìm kiếm chỉ trong cộng đồng đang là thành viên).")
 
@@ -669,8 +669,8 @@ def load(add):
     F = "Phục vụ file /api/files/:key"
     u(F, "Phục vụ ảnh: Content-Type đúng + header bảo mật + cache", "Bảo mật", "Cao", U0 + "; đã upload 1 PNG (purpose post_image)",
       ["GET /api/files/<key>.png (không token)"], "png", "200; Content-Type image/png; X-Content-Type-Options: nosniff; Content-Security-Policy \"default-src 'none'; sandbox\"; Cross-Origin-Resource-Policy cross-origin; Cache-Control \"public, max-age=31536000, immutable\"; không có Content-Disposition attachment (hiển thị inline).")
-    u(F, "Phục vụ file tài liệu: attachment + cache riêng tư", "Bảo mật", "Cao", U0 + "; đã upload 1 PDF (post_file) filename \"Giáo trình.pdf\"", ["GET /api/files/<key>.pdf"], "pdf",
-      "200; Content-Type application/pdf; Content-Disposition: attachment; filename=\"download\"; filename*=UTF-8''Gi%C3%A1o%20tr%C3%ACnh.pdf; Cache-Control \"private, max-age=3600\"; nosniff.")
+    u(F, "Phục vụ file tài liệu: attachment + cache riêng tư", "Bảo mật", "Cao", U0 + "; đã upload 1 PDF (post_file) filename \"Giáo trình.pdf\"", ["GET /api/files/<key>.pdf KHÔNG token (ẩn danh)", "GET /api/files/<key>.pdf kèm Authorization: Bearer <token member1> (chủ file)", "POST /api/files/<key>/url (Bearer) rồi GET URL ký nhận được"], "pdf",
+      "Bước 1: 401 \"Cần đăng nhập hoặc URL ký còn hạn để xem file này\" (post_file là file RIÊNG TƯ, chỉ ảnh avatar/cover/post_image công khai). Bước 2 và 3: 200; Content-Type application/pdf; Content-Disposition: attachment; filename=\"download\"; filename*=UTF-8''Gi%C3%A1o%20tr%C3%ACnh.pdf; Cache-Control \"private, no-store\" (không còn max-age=3600); nosniff; CSP default-src 'none'; sandbox. URL ký hạn 300s (uploads.routes.ts, uploads.md).")
     u(F, "Content-Type suy từ đuôi key, không tin metadata client", "Bảo mật", "Cao", U0, ["Presign image/png tên \"a.html\" rồi PUT PNG thật", "GET /api/files/<key>"], "filename a.html", "Content-Type image/png (theo đuôi .png), không phải text/html; nosniff.")
     u(F, "File không tồn tại hoặc key sai định dạng -> 404", "Chức năng", "Trung bình", "Không cần đăng nhập",
       ["GET /api/files/00000000000000000000000000000000.png", "GET /api/files/abc.png", "GET /api/files/<32 hex>.exe", "GET /api/files/<32 hex>.svg"], "4 key", "Cả bốn 404 NOT_FOUND, message \"Không tìm thấy file\".")

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
-import { makeClient, startTestServer, type TestServer } from './helpers.js';
+import { mainCourseId, makeClient, startTestServer, type TestServer } from './helpers.js';
 
 /** Lớp học: quản lý nội dung (mod+), khóa module, player, tiến độ, chứng nhận. Các `it` chạy tuần tự và dùng chung trạng thái. */
 describe('lớp học', () => {
@@ -51,7 +51,7 @@ describe('lớp học', () => {
     const first = await countRows();
     await seedClassroom(ctx);
     assert.deepEqual(await countRows(), first, 'chạy lại seed không nhân đôi');
-    assert.ok(first.m >= 21 * 2 && first.cert === 1);
+    assert.ok(first.m >= 21 * 2 && first.cert === 2); // 2 chứng nhận: fin (khóa mặc định) + photo "Chỉnh sửa ảnh nâng cao"
 
     const { member1, member2, member3 } = seedUsers as Record<string, { token: string; id: string }>;
     const photo1 = await c.call('GET', '/courses/photo/modules', { token: member1!.token });
@@ -233,7 +233,7 @@ describe('lớp học', () => {
     assert.equal(p0.status, 200);
     assert.deepEqual(
       { ...p0.body.data, lastLessonId: undefined },
-      { percent: 50, completedLessons: 2, totalLessons: 4, completedModules: 1, lastLessonId: undefined, nextLesson: { id: l2a, title: 'M2', moduleId: m2 } },
+      { learningCourseId: mainCourseId(COURSE), percent: 50, completedLessons: 2, totalLessons: 4, completedModules: 1, lastLessonId: undefined, nextLesson: { id: l2a, title: 'M2', moduleId: m2 } },
     );
     assert.equal(p0.body.data.lastLessonId, l1b);
     assert.equal((await c.call('GET', `${base}/progress`)).status, 401);
@@ -315,7 +315,7 @@ describe('lớp học', () => {
     const rs = await Promise.all(Array.from({ length: 6 }, () => c.call('GET', `${base}/certificate`, { token: u.token })));
     assert.ok(rs.every((r) => r.status === 200));
     assert.equal(new Set(rs.map((r) => r.body.data.code)).size, 1);
-    assert.equal(await prisma.certificate.count({ where: { userId: u.id, courseId: COURSE } }), 1);
+    assert.equal(await prisma.certificate.count({ where: { userId: u.id, communityId: COURSE } }), 1);
     await c.call('PATCH', `${base}/classroom-settings`, { token: admin.token, body: { certificatesEnabled: false } });
     assert.equal((await c.call('GET', `${base}/certificate`, { token: u.token })).status, 403);
     assert.equal((await c.call('GET', `/certificates/${rs[0]!.body.data.code}`)).status, 200);
@@ -331,7 +331,7 @@ describe('lớp học', () => {
 
     const mods = await Promise.all(Array.from({ length: 4 }, (_, i) => post('/modules', mod.token, { title: `Đồng thời ${i}`, description: '' })));
     const extra = mods.map((r) => r.body.data.id as string);
-    const seq = async () => (await prisma.classroomModule.findMany({ where: { courseId: COURSE }, orderBy: { index: 'asc' } })).map((m) => m.index);
+    const seq = async () => (await prisma.classroomModule.findMany({ where: { learningCourseId: mainCourseId(COURSE) }, orderBy: { index: 'asc' } })).map((m) => m.index); // thứ tự theo TỪNG khóa học (seed thêm khóa 2 cho photo)
     const all = await seq();
     assert.deepEqual(all, all.map((_, i) => i + 1));
 
@@ -352,9 +352,9 @@ describe('lớp học', () => {
 
   it('hiệu năng: khóa 400 bài vẫn phản hồi nhanh (không N+1)', async () => {
     const { prisma } = await import('../src/db/prisma.js');
-    await prisma.classroomModule.create({ data: { id: 'perf-mod', courseId: 'yt', index: 99, title: 'Perf', description: '' } });
+    await prisma.classroomModule.create({ data: { id: 'perf-mod', communityId: 'yt', learningCourseId: mainCourseId('yt'), index: 99, title: 'Perf', description: '' } });
     await prisma.classroomLesson.createMany({
-      data: Array.from({ length: 400 }, (_, i) => ({ id: `perf-l-${i}`, moduleId: 'perf-mod', courseId: 'yt', index: i + 1, title: `L${i}` })),
+      data: Array.from({ length: 400 }, (_, i) => ({ id: `perf-l-${i}`, moduleId: 'perf-mod', communityId: 'yt', index: i + 1, title: `L${i}` })),
     });
     const u = seedUsers.member1!;
     const t0 = Date.now();

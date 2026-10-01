@@ -3,6 +3,7 @@ import { prisma } from '../../db/prisma.js';
 import { Prisma } from '../../generated/prisma/client.js';
 import { HttpError } from '../../utils/http-error.js';
 import { notify } from '../notifications/notifications.service.js';
+import { paymentsService } from '../payments/payments.service.js';
 import { auditService } from './admin-audit.service.js';
 import { caseInclude, toCaseViews } from './admin-cases.view.js';
 import { durationFields, enumList, iso, likeEscape, noteField, pageMeta, pageQuery, reasonField, resolveUntil, type PageQuery } from './admin.common.js';
@@ -113,20 +114,20 @@ const hoursSince = (d: Date) => Math.max(0, Math.floor((Date.now() - d.getTime()
 const personName = (u: { firstName: string; lastName: string }) => `${u.firstName} ${u.lastName}`.trim();
 
 /* -------------------------------------------------------------------------------- transitions */
-type Patch = Prisma.CourseUpdateManyMutationInput;
+type Patch = Prisma.CommunityUpdateManyMutationInput;
 
 /** Chuyển trạng thái nguyên tử: chỉ ghi khi hàng còn ở trạng thái xuất phát (tránh 2 admin xử lý song song). */
-async function transition(id: string, where: Prisma.CourseWhereInput, data: Patch, conflictMsg: string): Promise<void> {
-  const r = await prisma.course.updateMany({ where: { id, deletedAt: null, ...where }, data });
+async function transition(id: string, where: Prisma.CommunityWhereInput, data: Patch, conflictMsg: string): Promise<void> {
+  const r = await prisma.community.updateMany({ where: { id, deletedAt: null, ...where }, data });
   if (r.count > 0) return;
-  const exists = await prisma.course.findUnique({ where: { id }, select: { deletedAt: true } });
+  const exists = await prisma.community.findUnique({ where: { id }, select: { deletedAt: true } });
   if (!exists) throw HttpError.notFound('Không tìm thấy cộng đồng');
   throw HttpError.conflict(exists.deletedAt ? 'Cộng đồng đã bị xóa — hãy khôi phục trước' : conflictMsg);
 }
 
 async function notifyOwner(id: string, title: string, body: string) {
-  const c = await prisma.course.findUnique({ where: { id }, select: { ownerId: true } });
-  if (c?.ownerId) notify({ userId: c.ownerId, type: 'system', title, body, courseId: id });
+  const c = await prisma.community.findUnique({ where: { id }, select: { ownerId: true } });
+  if (c?.ownerId) notify({ userId: c.ownerId, type: 'system', title, body, communityId: id });
 }
 
 async function finish(actorId: string, id: string, action: string, extra: { reason?: string | null; note?: string | null; metadata?: Record<string, unknown> }) {
@@ -149,7 +150,7 @@ export const adminCommunitiesService = {
   async summary() {
     const [rows, paid] = await Promise.all([
       prisma.$queryRaw<{ s: string; n: number }[]>(Prisma.sql`SELECT ${STATUS_EXPR} AS s, COUNT(*)::int AS n FROM "Course" c GROUP BY 1`),
-      prisma.course.count({ where: { deletedAt: null, pricing: { not: 'free' } } }),
+      prisma.community.count({ where: { deletedAt: null, pricing: { not: 'free' } } }),
     ]);
     const by = (s: CommunityStatus) => rows.find((r) => r.s === s)?.n ?? 0;
     return {
@@ -201,7 +202,7 @@ export const adminCommunitiesService = {
         const ownerUser = r.ownerId ? await prisma.user.findUnique({ where: { id: r.ownerId }, select: { createdAt: true } }) : null;
         const [ownerCommunities, violations] = r.ownerId
           ? await Promise.all([
-              prisma.course.count({ where: { ownerId: r.ownerId, deletedAt: null } }),
+              prisma.community.count({ where: { ownerId: r.ownerId, deletedAt: null } }),
               prisma.report.count({
                 where: { targetUserId: r.ownerId, status: 'resolved', NOT: { action: { in: ['none', 'dismiss'] } }, resolvedAt: { gte: new Date(Date.now() - 90 * DAY) } },
               }),
@@ -226,19 +227,19 @@ export const adminCommunitiesService = {
   },
 
   async trash(q: z.infer<typeof trashQuery>) {
-    const where: Prisma.CourseWhereInput = {
+    const where: Prisma.CommunityWhereInput = {
       deletedAt: { not: null },
       ...(q.q ? { OR: [{ title: { contains: q.q, mode: 'insensitive' } }, { id: { contains: q.q, mode: 'insensitive' } }] } : {}),
     };
     const [rows, total] = await Promise.all([
-      prisma.course.findMany({
+      prisma.community.findMany({
         where,
         orderBy: { deletedAt: 'desc' },
         skip: (q.page - 1) * q.limit,
         take: q.limit,
         include: { owner: { select: { id: true, firstName: true, lastName: true } } },
       }),
-      prisma.course.count({ where }),
+      prisma.community.count({ where }),
     ]);
     const deleters = await prisma.user.findMany({
       where: { id: { in: rows.map((r) => r.deletedById).filter((x): x is string => !!x) } },
@@ -268,36 +269,36 @@ export const adminCommunitiesService = {
 
   async detail(id: string) {
     const row = await getRow(id);
-    const course = await prisma.course.findUniqueOrThrow({ where: { id }, select: { deleteReason: true, deletedById: true, deletedAt: true } });
+    const community = await prisma.community.findUniqueOrThrow({ where: { id }, select: { deleteReason: true, deletedById: true, deletedAt: true } });
     const since30 = new Date(Date.now() - 30 * DAY);
-    const notBanned = { NOT: { user: { bansReceived: { some: { courseId: id } } } } };
+    const notBanned = { NOT: { user: { bansReceived: { some: { communityId: id } } } } };
     const paid = ['succeeded', 'refunded'] as ('succeeded' | 'refunded')[];
     const [ownerUser, ownedCount, active30, new30, banned, posts, comments, hiddenPosts, events, subs, rev, reports30, openReports, recent, history, deleter] = await Promise.all([
       row.ownerId ? prisma.user.findUnique({ where: { id: row.ownerId } }) : null,
-      row.ownerId ? prisma.course.count({ where: { ownerId: row.ownerId, deletedAt: null } }) : 0,
-      prisma.enrollment.count({ where: { courseId: id, lastActiveAt: { gte: since30 }, ...notBanned } }),
-      prisma.enrollment.count({ where: { courseId: id, enrolledAt: { gte: since30 }, ...notBanned } }),
-      prisma.communityBan.count({ where: { courseId: id } }),
-      prisma.post.count({ where: { courseId: id } }),
-      prisma.postComment.count({ where: { post: { courseId: id } } }),
-      prisma.post.count({ where: { courseId: id, hidden: true } }),
-      prisma.communityEvent.count({ where: { courseId: id } }),
-      prisma.subscription.count({ where: { courseId: id, status: 'active' } }),
-      prisma.payment.aggregate({ where: { courseId: id, status: { in: paid } }, _sum: { amountCents: true, refundedCents: true } }),
-      prisma.report.count({ where: { courseId: id, createdAt: { gte: since30 } } }),
-      prisma.report.count({ where: { courseId: id, status: { in: ['open', 'under_review'] } } }),
-      prisma.report.findMany({ where: { courseId: id }, orderBy: { createdAt: 'desc' }, take: 5, include: caseInclude }),
+      row.ownerId ? prisma.community.count({ where: { ownerId: row.ownerId, deletedAt: null } }) : 0,
+      prisma.enrollment.count({ where: { communityId: id, lastActiveAt: { gte: since30 }, ...notBanned } }),
+      prisma.enrollment.count({ where: { communityId: id, enrolledAt: { gte: since30 }, ...notBanned } }),
+      prisma.communityBan.count({ where: { communityId: id } }),
+      prisma.post.count({ where: { communityId: id } }),
+      prisma.postComment.count({ where: { post: { communityId: id } } }),
+      prisma.post.count({ where: { communityId: id, hidden: true } }),
+      prisma.communityEvent.count({ where: { communityId: id } }),
+      prisma.subscription.count({ where: { communityId: id, status: 'active' } }),
+      prisma.payment.aggregate({ where: { communityId: id, status: { in: paid } }, _sum: { amountCents: true, refundedCents: true } }),
+      prisma.report.count({ where: { communityId: id, createdAt: { gte: since30 } } }),
+      prisma.report.count({ where: { communityId: id, status: { in: ['open', 'under_review'] } } }),
+      prisma.report.findMany({ where: { communityId: id }, orderBy: { createdAt: 'desc' }, take: 5, include: caseInclude }),
       auditService.forTarget('community', id, 10),
-      course.deletedById ? prisma.user.findUnique({ where: { id: course.deletedById }, select: { id: true, firstName: true, lastName: true } }) : null,
+      community.deletedById ? prisma.user.findUnique({ where: { id: community.deletedById }, select: { id: true, firstName: true, lastName: true } }) : null,
     ]);
     return {
       ...toItem(row),
       description: row.description,
       language: row.language,
       lessons: row.lessons,
-      deleteReason: course.deleteReason,
+      deleteReason: community.deleteReason,
       deletedBy: deleter ? { id: deleter.id, name: personName(deleter) } : null,
-      purgeAt: course.deletedAt ? new Date(course.deletedAt.getTime() + RETENTION_DAYS * DAY).toISOString() : null,
+      purgeAt: community.deletedAt ? new Date(community.deletedAt.getTime() + RETENTION_DAYS * DAY).toISOString() : null,
       owner: ownerUser
         ? {
             id: ownerUser.id,
@@ -332,7 +333,7 @@ export const adminCommunitiesService = {
   async members(id: string, q: z.infer<typeof membersQuery>) {
     await getRow(id);
     const where: Prisma.EnrollmentWhereInput = {
-      courseId: id,
+      communityId: id,
       ...(q.role ? { role: q.role } : {}),
       ...(q.q
         ? { user: { OR: [{ firstName: { contains: q.q, mode: 'insensitive' } }, { lastName: { contains: q.q, mode: 'insensitive' } }, { email: { contains: q.q, mode: 'insensitive' } }] } }
@@ -350,8 +351,8 @@ export const adminCommunitiesService = {
     ]);
     const ids = rows.map((r) => r.userId);
     const [postCounts, bans] = await Promise.all([
-      prisma.post.groupBy({ by: ['authorId'], where: { courseId: id, authorId: { in: ids } }, _count: { _all: true } }),
-      prisma.communityBan.findMany({ where: { courseId: id, userId: { in: ids } }, select: { userId: true } }),
+      prisma.post.groupBy({ by: ['authorId'], where: { communityId: id, authorId: { in: ids } }, _count: { _all: true } }),
+      prisma.communityBan.findMany({ where: { communityId: id, userId: { in: ids } }, select: { userId: true } }),
     ]);
     const pc = new Map(postCounts.map((p) => [p.authorId, p._count._all]));
     const banned = new Set(bans.map((b) => b.userId));
@@ -374,8 +375,8 @@ export const adminCommunitiesService = {
   async reports(id: string, q: PageQuery) {
     await getRow(id);
     const [rows, total] = await Promise.all([
-      prisma.report.findMany({ where: { courseId: id }, orderBy: { createdAt: 'desc' }, skip: (q.page - 1) * q.limit, take: q.limit, include: caseInclude }),
-      prisma.report.count({ where: { courseId: id } }),
+      prisma.report.findMany({ where: { communityId: id }, orderBy: { createdAt: 'desc' }, skip: (q.page - 1) * q.limit, take: q.limit, include: caseInclude }),
+      prisma.report.count({ where: { communityId: id } }),
     ]);
     return { data: await toCaseViews(rows), meta: pageMeta(q.page, q.limit, total) };
   },
@@ -408,6 +409,8 @@ export const adminCommunitiesService = {
       stamp(actorId, { moderationStatus: 'suspended', moderationReason: body.reason, moderationNote: body.note ?? null, moderationUntil: until, locked: true, lockReason: body.reason }),
       'Chỉ đình chỉ được cộng đồng đang hoạt động',
     );
+    // Đình chỉ: dừng gia hạn mọi gói (hủy cuối kỳ) — không trừ tiền cộng đồng đang bị đình chỉ.
+    await paymentsService.endAllForCommunity(id, 'cancel_at_period_end', 'Cộng đồng đang bị đình chỉ nên gói thành viên của bạn sẽ không được gia hạn.');
     await notifyOwner(id, 'Cộng đồng bị đình chỉ', `Cộng đồng của bạn bị đình chỉ. Lý do: ${body.reason}`);
     return finish(actorId, id, 'community.suspend', { reason: body.reason, note: body.note, metadata: { until: iso(until) } });
   },
@@ -424,7 +427,7 @@ export const adminCommunitiesService = {
   },
 
   async remove(actorId: string, id: string, body: z.infer<typeof deleteCommunityBody>) {
-    const cur = await prisma.course.findUnique({ where: { id }, select: { moderationStatus: true, deletedAt: true, title: true } });
+    const cur = await prisma.community.findUnique({ where: { id }, select: { moderationStatus: true, deletedAt: true, title: true } });
     if (!cur) throw HttpError.notFound('Không tìm thấy cộng đồng');
     if (cur.deletedAt) throw HttpError.conflict('Cộng đồng đã bị xóa');
     await transition(
@@ -433,19 +436,21 @@ export const adminCommunitiesService = {
       stamp(actorId, { moderationStatus: 'deleted', preDeleteStatus: cur.moderationStatus, deletedAt: new Date(), deletedById: actorId, deleteReason: body.reason, moderationNote: body.note ?? null }),
       'Trạng thái cộng đồng vừa thay đổi, hãy thử lại',
     );
+    // Xóa: kết thúc mọi gói ngay (không trừ tiền cộng đồng đã xóa), có thông báo cho từng thành viên trả phí.
+    await paymentsService.endAllForCommunity(id, 'end_now', `Cộng đồng "${cur.title}" đã bị xóa nên gói thành viên của bạn đã được hủy và sẽ không bị tính phí thêm.`);
     await notifyOwner(id, 'Cộng đồng đã bị xóa', `Cộng đồng "${cur.title}" đã bị xóa. Lý do: ${body.reason}. Dữ liệu được giữ ${RETENTION_DAYS} ngày.`);
     return finish(actorId, id, 'community.delete', { reason: body.reason, note: body.note });
   },
 
   async undelete(actorId: string, id: string, body: z.infer<typeof restoreBody>) {
-    const cur = await prisma.course.findUnique({ where: { id }, select: { moderationStatus: true, preDeleteStatus: true, deletedAt: true } });
+    const cur = await prisma.community.findUnique({ where: { id }, select: { moderationStatus: true, preDeleteStatus: true, deletedAt: true } });
     if (!cur) throw HttpError.notFound('Không tìm thấy cộng đồng');
     if (!cur.deletedAt) throw HttpError.conflict('Cộng đồng chưa bị xóa');
     if (Date.now() - cur.deletedAt.getTime() > RETENTION_DAYS * DAY) {
       throw HttpError.coded(409, 'RETENTION_EXPIRED', `Đã quá ${RETENTION_DAYS} ngày lưu giữ, không thể khôi phục`);
     }
     const back: CommunityStatus = cur.preDeleteStatus ?? (cur.moderationStatus === 'deleted' ? 'active' : cur.moderationStatus);
-    const r = await prisma.course.updateMany({
+    const r = await prisma.community.updateMany({
       where: { id, deletedAt: { not: null } },
       data: stamp(actorId, { deletedAt: null, deletedById: null, deleteReason: null, preDeleteStatus: null, moderationStatus: back, moderationNote: body.note ?? null }),
     });
@@ -456,9 +461,9 @@ export const adminCommunitiesService = {
 };
 
 /** Cho communities.service (khóa/mở khóa kiểu cũ): mở khóa thì đồng bộ luôn moderationStatus suspended -> active. */
-export async function clearModerationSuspension(courseId: string): Promise<void> {
-  await prisma.course.updateMany({
-    where: { id: courseId, moderationStatus: 'suspended' },
+export async function clearModerationSuspension(communityId: string): Promise<void> {
+  await prisma.community.updateMany({
+    where: { id: communityId, moderationStatus: 'suspended' },
     data: { moderationStatus: 'active', moderationReason: null, moderationUntil: null },
   });
 }

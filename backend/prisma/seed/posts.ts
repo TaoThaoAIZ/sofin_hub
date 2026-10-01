@@ -11,7 +11,7 @@ import { DEMO_NAMES, demoUserId } from './demo-ids.js';
  * 2) Riêng `photo`: kịch bản test thủ công gắn với các tài khoản test (member1..3, mod, owner) — xem `seedPhotoScenario`.
  *
  * Idempotent: id xác định (`seed-post-...`) + createMany(skipDuplicates); chạy lại không nhân đôi và không ghi đè dữ liệu người dùng đã sửa.
- * Yêu cầu seedDemoMembers đã chạy trước (User `demo-<courseId>-<i>` + Enrollment).
+ * Yêu cầu seedDemoMembers đã chạy trước (User `demo-<communityId>-<i>` + Enrollment).
  */
 const N = DEMO_NAMES.length;
 const HOUR = 3_600_000;
@@ -20,7 +20,7 @@ const ahead = (hours: number) => new Date(Date.now() + hours * HOUR);
 
 interface PostRow {
   id: string;
-  courseId: string;
+  communityId: string;
   authorId: string;
   content: string;
   category: PostCategory;
@@ -51,8 +51,8 @@ const COMMENT_TEXTS = (instructor: string) => [
 ];
 
 /** Bài minh họa của 1 cộng đồng: [tác giả (chỉ số thành viên minh họa), nội dung, thể loại, thẻ, ghim, số like, số bình luận]. */
-function demoPosts(courseId: string, title: string, instructor: string) {
-  const author = (i: number) => demoUserId(courseId, i % N);
+function demoPosts(communityId: string, title: string, instructor: string) {
+  const author = (i: number) => demoUserId(communityId, i % N);
   const specs: { i: number; content: string; category: PostCategory; tags: string[]; pinned: boolean; likes: number; comments: number }[] = [
     {
       i: 0,
@@ -95,12 +95,12 @@ function demoPosts(courseId: string, title: string, instructor: string) {
   const comments: CommentRow[] = [];
   const likes: LikeRow[] = [];
   specs.forEach((s, k) => {
-    const id = `seed-post-${courseId}-${k}`;
-    posts.push({ id, courseId, authorId: author(s.i), content: s.content, category: s.category, tags: s.tags, pinned: s.pinned, createdAt: ago((k + 1) * 7) });
+    const id = `seed-post-${communityId}-${k}`;
+    posts.push({ id, communityId, authorId: author(s.i), content: s.content, category: s.category, tags: s.tags, pinned: s.pinned, createdAt: ago((k + 1) * 7) });
     for (let j = 0; j < s.likes; j++) likes.push({ postId: id, userId: author(s.i + 1 + j) });
     const texts = COMMENT_TEXTS(instructor);
     for (let j = 0; j < Math.min(s.comments, texts.length); j++) {
-      comments.push({ id: `seed-comment-${courseId}-${k}-${j}`, postId: id, authorId: author(s.i + 4 + j), content: texts[j]!, createdAt: ago(j + 1) });
+      comments.push({ id: `seed-comment-${communityId}-${k}-${j}`, postId: id, authorId: author(s.i + 4 + j), content: texts[j]!, createdAt: ago(j + 1) });
     }
   });
   return { posts, comments, likes };
@@ -108,8 +108,8 @@ function demoPosts(courseId: string, title: string, instructor: string) {
 
 /** Kịch bản thủ công ở `photo` (tài khoản test). Trả về các bản ghi cần chèn. */
 function photoScenario(u: SeedContext['userIds']) {
-  const courseId = 'photo';
-  const demo = (i: number) => demoUserId(courseId, i);
+  const communityId = 'photo';
+  const demo = (i: number) => demoUserId(communityId, i);
   const posts: PostRow[] = [];
   const comments: CommentRow[] = [];
   const likes: LikeRow[] = [];
@@ -120,7 +120,7 @@ function photoScenario(u: SeedContext['userIds']) {
   const image = 'seed-post-photo-m1-image';
   posts.push({
     id: image,
-    courseId,
+    communityId,
     authorId: u.member1,
     content: 'Mình vừa chụp bộ ảnh hoàng hôn ở Đà Nẵng bằng khẩu 50mm f/1.8. Mọi người góp ý bố cục giúp mình nhé!',
     category: 'case_study',
@@ -138,7 +138,7 @@ function photoScenario(u: SeedContext['userIds']) {
   const poll = 'seed-post-photo-m1-poll';
   posts.push({
     id: poll,
-    courseId,
+    communityId,
     authorId: u.member1,
     content: 'Cuối tuần này cả nhóm đi chụp ở đâu? Bình chọn giúp mình nhé.',
     category: 'general',
@@ -165,7 +165,7 @@ function photoScenario(u: SeedContext['userIds']) {
   const hidden = 'seed-post-photo-m1-hidden';
   posts.push({
     id: hidden,
-    courseId,
+    communityId,
     authorId: u.member1,
     content: 'Mua ngay khóa học chụp ảnh giá rẻ tại link này, giảm 90% chỉ hôm nay!!!',
     category: 'general',
@@ -175,7 +175,7 @@ function photoScenario(u: SeedContext['userIds']) {
   });
   reports.push({
     id: 'seed-report-photo-resolved',
-    courseId,
+    communityId: communityId,
     targetType: 'post',
     targetId: hidden,
     targetUserId: u.member1,
@@ -195,7 +195,7 @@ function photoScenario(u: SeedContext['userIds']) {
   const pinned = 'seed-post-photo-owner-pinned';
   posts.push({
     id: pinned,
-    courseId,
+    communityId,
     authorId: u.owner,
     content: 'Nội quy cộng đồng Nhiếp ảnh: tôn trọng nhau, không quảng cáo, gắn thẻ đúng chủ đề. Vi phạm sẽ bị ẩn bài hoặc cấm.',
     category: 'announcement',
@@ -208,7 +208,7 @@ function photoScenario(u: SeedContext['userIds']) {
   // 5) Báo cáo ĐANG CHỜ (member3 báo cáo bài ảnh của member1).
   reports.push({
     id: 'seed-report-photo-open',
-    courseId,
+    communityId: communityId,
     targetType: 'post',
     targetId: image,
     targetUserId: u.member1,
@@ -225,7 +225,7 @@ function photoScenario(u: SeedContext['userIds']) {
 
 export async function seedPosts(ctx: SeedContext): Promise<void> {
   const { db } = ctx;
-  const courses = await db.course.findMany({ where: { deletedAt: null }, select: { id: true, title: true, instructorName: true } });
+  const courses = await db.community.findMany({ where: { deletedAt: null }, select: { id: true, title: true, instructorName: true } });
 
   const posts: PostRow[] = [];
   const comments: CommentRow[] = [];
@@ -262,7 +262,7 @@ export async function seedPosts(ctx: SeedContext): Promise<void> {
     db.post.createMany({
       data: chunk.map((p) => ({
         id: p.id,
-        courseId: p.courseId,
+        communityId: p.communityId,
         authorId: p.authorId,
         content: p.content,
         category: p.category,

@@ -55,6 +55,7 @@ export interface ClassroomModule {
   thumbnail?: string;
   requiredLevel?: number;
   lockReason?: 'previous_module' | 'level' | null;
+  learningCourseId?: string;
 }
 
 export interface ClassroomLesson {
@@ -236,6 +237,7 @@ export interface LessonDetail extends ClassroomLesson {
   moduleId: string;
   moduleTitle: string;
   moduleIndex: number;
+  learningCourseId?: string;
   prevLessonId: string | null;
   nextLessonId: string | null;
 }
@@ -254,6 +256,7 @@ export interface Certificate {
   holderName: string;
   courseTitle: string;
   completedAt: string;
+  learningCourseId?: string;
   issuedAt: string;
 }
 
@@ -278,4 +281,33 @@ export interface LessonInput {
   body: string;
   videoUrl?: string | null;
   attachments?: LessonAttachment[];
+}
+
+// ---- Khóa học (Course) nằm trong cộng đồng ----
+export type CoursePublishStatus = 'published' | 'draft' | 'archived';
+
+export interface LearningCourse {
+  id: string;
+  communityId: string;
+  title: string;
+  description: string;
+  thumbnailUrl: string | null;
+  position: number;
+  publishStatus: CoursePublishStatus;
+  /** Override theo khóa; null = kế thừa cài đặt mặc định của cộng đồng. */
+  certificatesEnabled: boolean | null;
+  certificatesEffective: boolean;
+  isDefault: boolean;
+  modulesCount: number;
+  lessonsCount: number;
+  progress: { percent: number; completedLessons: number; totalLessons: number };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CourseInput {
+  title: string;
+  description?: string;
+  thumbnailUrl?: string | null;
+  publishStatus?: 'published' | 'draft';
 }

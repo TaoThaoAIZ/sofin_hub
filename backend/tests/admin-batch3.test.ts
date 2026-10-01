@@ -490,11 +490,11 @@ describe('admin đợt 3', () => {
         com: (await GET('/analytics/communities?range=7')).body.data,
       };
       const u = await c.registerUser('anl');
-      const com = await db.prisma.course.create({
+      const com = await db.prisma.community.create({
         data: { id: `anl-${Date.now()}`, title: 'Analytics community', description: 'Mô tả đủ dài cho cộng đồng thử nghiệm analytics.', category: 'tech', thumbnail: '/x.webp', instructorName: 'A', instructorRole: 'B', priceCents: 1000, pricing: 'paid' },
       });
-      await db.prisma.enrollment.create({ data: { userId: u.id, courseId: com.id, role: 'member' } });
-      const post = await db.prisma.post.create({ data: { courseId: com.id, authorId: u.id, content: 'hello analytics' } });
+      await db.prisma.enrollment.create({ data: { userId: u.id, communityId: com.id, role: 'member' } });
+      const post = await db.prisma.post.create({ data: { communityId: com.id, authorId: u.id, content: 'hello analytics' } });
       await db.prisma.postComment.create({ data: { postId: post.id, authorId: u.id, content: 'cmt' } });
       await db.prisma.postLike.create({ data: { postId: post.id, userId: u.id } });
       const after = {
@@ -524,19 +524,19 @@ describe('admin đợt 3', () => {
       const b = (await GET('/analytics/revenue?range=7')).body.data;
       const bc = (await GET('/analytics/conversion?range=7')).body.data;
       const u = await c.registerUser('rev');
-      const com = await db.prisma.course.create({
+      const com = await db.prisma.community.create({
         data: { id: `rev-${Date.now()}`, title: 'Revenue community', description: 'Mô tả đủ dài cho cộng đồng thử nghiệm doanh thu.', category: 'finance', thumbnail: '/x.webp', instructorName: 'A', instructorRole: 'B', priceCents: 2000, pricing: 'paid' },
       });
-      await db.prisma.enrollment.create({ data: { userId: u.id, courseId: com.id, role: 'member' } });
+      await db.prisma.enrollment.create({ data: { userId: u.id, communityId: com.id, role: 'member' } });
       const now = new Date();
       const sub = await db.prisma.subscription.create({
-        data: { userId: u.id, courseId: com.id, status: 'active', priceCents: 2000, currentPeriodStart: now, currentPeriodEnd: new Date(now.getTime() + 30 * 86_400_000), trialEndsAt: new Date(now.getTime() - 1000) },
+        data: { userId: u.id, communityId: com.id, status: 'active', priceCents: 2000, currentPeriodStart: now, currentPeriodEnd: new Date(now.getTime() + 30 * 86_400_000), trialEndsAt: new Date(now.getTime() - 1000) },
       });
       const pay = await db.prisma.payment.create({
-        data: { courseId: com.id, userId: u.id, method: 'stripe', amountCents: 2000, status: 'succeeded', kind: 'initial', subscriptionId: sub.id, confirmedAt: now },
+        data: { communityId: com.id, userId: u.id, method: 'stripe', amountCents: 2000, status: 'succeeded', kind: 'initial', subscriptionId: sub.id, confirmedAt: now },
       });
-      await db.prisma.payment.create({ data: { courseId: com.id, userId: u.id, method: 'stripe', amountCents: 2000, status: 'succeeded', kind: 'renewal', subscriptionId: sub.id, confirmedAt: now } });
-      await db.prisma.refundRequest.create({ data: { paymentId: pay.id, courseId: com.id, userId: u.id, amountCents: 500, status: 'approved', resolvedAt: now } });
+      await db.prisma.payment.create({ data: { communityId: com.id, userId: u.id, method: 'stripe', amountCents: 2000, status: 'succeeded', kind: 'renewal', subscriptionId: sub.id, confirmedAt: now } });
+      await db.prisma.refundRequest.create({ data: { paymentId: pay.id, communityId: com.id, userId: u.id, amountCents: 500, status: 'approved', resolvedAt: now } });
       const a = (await GET('/analytics/revenue?range=7')).body.data;
       assert.equal(a.kpis.grossCents.value, b.kpis.grossCents.value + 4000);
       assert.equal(a.kpis.refundsCents.value, b.kpis.refundsCents.value + 500);
@@ -704,10 +704,10 @@ describe('admin đợt 3', () => {
       const u1 = await c.registerUser('bc1');
       const u2 = await c.registerUser('bc2');
       const u3 = await c.registerUser('bc3');
-      const com = await db.prisma.course.create({
+      const com = await db.prisma.community.create({
         data: { id: `bc-${Date.now()}`, title: 'Broadcast community', description: 'Mô tả đủ dài cho cộng đồng thử nghiệm broadcast.', category: 'tech', thumbnail: '/x.webp', instructorName: 'A', instructorRole: 'B' },
       });
-      await db.prisma.enrollment.createMany({ data: [{ userId: u1.id, courseId: com.id }, { userId: u2.id, courseId: com.id }] });
+      await db.prisma.enrollment.createMany({ data: [{ userId: u1.id, communityId: com.id }, { userId: u2.id, communityId: com.id }] });
 
       assert.equal((await A('POST', '/system/notifications/preview', { audience: { type: 'community', courseId: com.id } })).body.data.recipientCount, 2);
       assert.equal((await A('POST', '/system/notifications/preview', { audience: { type: 'users', userIds: [u1.id, u3.id, 'khong-co'] } })).body.data.recipientCount, 2);

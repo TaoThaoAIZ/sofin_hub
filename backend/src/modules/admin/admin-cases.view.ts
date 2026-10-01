@@ -5,7 +5,7 @@ import type { Prisma, ReportRisk } from '../../generated/prisma/client.js';
 export const caseInclude = {
   reporter: { select: { id: true, firstName: true, lastName: true } },
   targetUser: { select: { id: true, firstName: true, lastName: true } },
-  course: { select: { id: true, title: true } },
+  community: { select: { id: true, title: true } },
   assignedTo: { select: { id: true, firstName: true, lastName: true } },
 } satisfies Prisma.ReportInclude;
 
@@ -63,7 +63,7 @@ export async function toCaseViews(rows: CaseRow[]) {
       type: r.targetType,
       id: r.targetId,
       title: r.targetExcerpt ?? (r.targetType === 'member' ? name(r.targetUser) : ''),
-      community: { id: r.course.id, name: r.course.title },
+      community: { id: r.community.id, name: r.community.title },
     },
     reportedUser: { id: r.targetUser.id, name: name(r.targetUser) },
     reporter: { id: r.reporter.id, name: name(r.reporter) },

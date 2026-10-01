@@ -11,7 +11,7 @@ Danh sách này gom từ cả ba đợt Admin và các đợt trước. Mỗi m�
 | A3 | Mức rút tiền tối thiểu | $50 | Cài đặt chung (`PAYOUT_MIN_USD`) |
 | A4 | Cổng thanh toán: Stripe hay PayOS/VNPay/MoMo | `MockGateway` (giả lập) | code, `payments.gateway.ts` |
 | A5 | Kick/ban thành viên đã trả tiền có hoàn tiền không | chưa quy định | code |
-| A6 | Xác thực realtime (SSE): vé một lần ngắn hạn hay cookie; có bỏ `?access_token=` không | đang cho cả hai | code |
+| A6 | Xác thực realtime (SSE): vé một lần ngắn hạn hay cookie | đã bỏ `?access_token=`; còn Bearer + vé một lần | code |
 | A7 | Cộng đồng user mới tạo có phải qua admin duyệt trước khi hiển thị không | tạo xong là `active` ngay (hàng chờ duyệt chỉ có dữ liệu seed) | code, PLAN câu #7 |
 | A8 | Khi cộng đồng bị tạm ngưng hoặc xóa: gói đăng ký đang chạy xử lý thế nào (hủy, hoàn tiền, giữ) | không làm gì | code |
 | A9 | Tạm ngưng cộng đồng có tự hết hạn không; xóa mềm 30 ngày có xóa vĩnh viễn tự động không | chưa có job nào | code |
@@ -64,3 +64,9 @@ Phát hiện khi viết test case ADM2 và ADM3.
 
 - Xem giao diện admin trên trình duyệt và gửi ảnh chỗ lệch mockup (chưa ai xem).
 - Dữ liệu thử còn sót trong DB dev: ticket T-2001 (đóng rồi, không xóa được). `npm run db:reset` dọn sạch.
+
+## E. Đã chốt (không cần hỏi lại)
+
+| # | Nội dung | Kết quả |
+|---|---|---|
+| E1 | **Tách Community / Course** (audit §2.1, bước 6) | ✅ Đã làm theo hướng **đổi tên + entity Khóa học**: Prisma `Course`→`Community` (bảng `Course` giữ nguyên) và thêm entity `Course` mới (bảng `LearningCourse`) — một cộng đồng có nhiều khóa học, module/chứng nhận gắn theo khóa. API cũ `/courses/:id/*` giữ nguyên + route chuẩn `/communities/:id/*`. `SofinHub-BRD.docx` mục 5.2/6 đã ghi "một cộng đồng có nhiều khóa học" — nay đúng với code. Chi tiết: `backend/docs/api/communities-courses.md`, `backend/docs/DATABASE.md`. Việc còn lại: FE chuyển dần sang `/communities` + `communityId`; bỏ alias `courseId` khi FE đã đổi. |

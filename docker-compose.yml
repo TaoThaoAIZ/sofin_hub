@@ -23,5 +23,20 @@ services:
       timeout: 3s
       retries: 20
 
+  # Redis cho state chia sẻ giữa các instance (SSE pub/sub, vé, rate limit...). TUỲ CHỌN: bỏ trống REDIS_URL thì backend dùng in-memory.
+  # Cổng 6380 (tránh đụng Redis 6379 trên máy). Dùng: `docker compose up -d redis`, rồi REDIS_URL=redis://localhost:6380 trong backend/.env.
+  redis:
+    image: redis:7-alpine
+    container_name: sofinhub-redis
+    restart: unless-stopped
+    command: ['redis-server', '--save', '', '--appendonly', 'no'] # chỉ cache/pubsub tạm thời, không cần bền
+    ports:
+      - '${REDIS_PORT:-6380}:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
 volumes:
   sofinhub_pgdata:

@@ -93,6 +93,8 @@ enum PointReason {
   like_received
   lesson_complete
   event_rsvp
+  /// Điểm âm bù khi xóa bài/sự kiện đã sinh điểm (cùng transaction với việc xóa).
+  revoked
 }
 
 enum LessonType {
@@ -214,8 +216,25 @@ enum SubscriptionStatus {
 
 enum RefundStatus {
   pending
+  /// Đang hoàn tiền: đã khóa yêu cầu + gọi cổng (ngoài transaction). Kẹt ở đây ⇒ job đối soát `reconcileStuckRefunds`.
+  refunding
   approved
   rejected
+}
+
+/// Trạng thái xử lý webhook: received (mới nhận) -> processing -> done | failed. Chỉ `done` (hoặc đang processing còn mới) mới coi là trùng.
+enum WebhookStatus {
+  received
+  processing
+  done
+  failed
+}
+
+/// Sổ nợ/điều chỉnh số dư Owner (append-only). amountCents < 0 = nợ phát sinh (vd. hoàn tiền sau khi đã chi payout).
+enum OwnerLedgerKind {
+  refund_after_payout
+  chargeback_after_payout
+  adjustment
 }
 
 enum PayoutStatus {
@@ -320,12 +339,12 @@ model User {
 
   sessions            Session[]
   oneTimeTokens       OneTimeToken[]
-  ownedCourses        Course[]                @relation("CourseOwner")
+  ownedCommunities    Community[]              @relation("CourseOwner")
   enrollments         Enrollment[]
-  bansReceived        CommunityBan[]          @relation("BanTarget")
-  bansIssued          CommunityBan[]          @relation("BanIssuer")
-  joinRequests        JoinRequest[]           @relation("JoinRequester")
-  joinRequestsDecided JoinRequest[]           @relation("JoinDecider")
+  bansReceived        CommunityBan[]           @relation("BanTarget")
+  bansIssued          CommunityBan[]           @relation("BanIssuer")
+  joinRequests        JoinRequest[]            @relation("JoinRequester")
+  joinRequestsDecided JoinRequest[]            @relation("JoinDecider")
   invitesCreated      Invite[]
   reviews             Review[]
   posts               Post[]
@@ -340,31 +359,34 @@ model User {
   certificates        Certificate[]
   notifications       Notification[]
   notificationPrefs   NotificationPreference?
-  conversationsAsA    Conversation[]          @relation("ConversationUserA")
-  conversationsAsB    Conversation[]          @relation("ConversationUserB")
+  conversationsAsA    Conversation[]           @relation("ConversationUserA")
+  conversationsAsB    Conversation[]           @relation("ConversationUserB")
   messagesSent        Message[]
-  blocksMade          UserBlock[]             @relation("Blocker")
-  blocksReceived      UserBlock[]             @relation("BlockTarget")
-  reportsFiled        Report[]                @relation("ReportReporter")
-  reportsAgainst      Report[]                @relation("ReportTargetUser")
-  reportsResolved     Report[]                @relation("ReportResolver")
-  reportsAssigned     Report[]                @relation("ReportAssignee")
+  blocksMade          UserBlock[]              @relation("Blocker")
+  blocksReceived      UserBlock[]              @relation("BlockTarget")
+  reportsFiled        Report[]                 @relation("ReportReporter")
+  reportsAgainst      Report[]                 @relation("ReportTargetUser")
+  reportsResolved     Report[]                 @relation("ReportResolver")
+  reportsAssigned     Report[]                 @relation("ReportAssignee")
   reportEvents        ReportEvent[]
-  auditLogs           AdminAuditLog[]         @relation("AuditActor")
+  auditLogs           AdminAuditLog[]          @relation("AuditActor")
   payments            Payment[]
   subscriptions       Subscription[]
-  refundRequests      RefundRequest[]         @relation("RefundRequester")
-  refundsResolved     RefundRequest[]         @relation("RefundResolver")
+  refundRequests      RefundRequest[]          @relation("RefundRequester")
+  refundsResolved     RefundRequest[]          @relation("RefundResolver")
   payouts             Payout[]
   chargebacks         Chargeback[]
   idempotencyKeys     IdempotencyKey[]
   uploads             Upload[]
-  ticketsRequested    SupportTicket[]         @relation("TicketRequester")
-  ticketsAssigned     SupportTicket[]         @relation("TicketAssignee")
-  adminAccount        AdminAccount?           @relation("AdminAccountUser")
+  ticketsRequested    SupportTicket[]          @relation("TicketRequester")
+  ticketsAssigned     SupportTicket[]          @relation("TicketAssignee")
+  adminAccount        AdminAccount?            @relation("AdminAccountUser")
+  /// Cột GENERATED ALWAYS (họ tên đã gập dấu).
+  searchVector        Unsupported("tsvector")?
 
   @@index([isDemo])
   @@index([status])
+  @@index([searchVector], type: Gin)
 }
 
 /// Phiên đăng nhập = 1 chuỗi refresh token xoay vòng (rotation). id chính là `sid` trong JWT refresh.
@@ -405,7 +427,7 @@ model OneTimeToken {
 // ============================================================================
 
 /// Cộng đồng/khóa học. `id` là slug chuỗi ('photo'), do seed hoặc service sinh.
-model Course {
+model Community {
   id                   String               @id
   title                String
   description          String
@@ -466,6 +488,7 @@ model Course {
   posts             Post[]
   events            CommunityEvent[]
   pointEvents       PointEvent[]
+  learningCourses   Course[]
   modules           ClassroomModule[]
   lessonsList       ClassroomLesson[]
   classroomSettings ClassroomSettings?
@@ -479,49 +502,57 @@ model Course {
   uploads           Upload[]
   chargebacks       Chargeback[]
   discoveryFeatures DiscoveryFeature[]
+  ownerLedger       OwnerBalanceLedger[]
+  /// Cột GENERATED ALWAYS (title A + description B, đã gập dấu).
+  searchVector      Unsupported("tsvector")?
 
   @@index([category])
   @@index([ownerId])
   @@index([deletedAt, locked])
   @@index([moderationStatus])
   @@index([createdAt])
+  @@index([searchVector], type: Gin)
+  /// Bảng DB giữ tên cũ "Course" (đổi tên domain, không di chuyển dữ liệu).
+  @@map("Course")
 }
 
 /// Thành viên của cộng đồng (khóa chính ghép user+course). Bị ban -> có dòng CommunityBan, KHÔNG còn được coi là đã tham gia.
 model Enrollment {
   userId       String
-  courseId     String
+  communityId  String     @map("courseId")
   role         MemberRole @default(member)
   enrolledAt   DateTime   @default(now())
   lastActiveAt DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
 
-  @@id([userId, courseId])
-  @@index([courseId, role])
+  @@id([userId, communityId])
+  @@index([communityId, role])
 }
 
 /// Bản ghi cấm. Tồn tại (courseId,userId) = đang bị cấm (thay cho set `banned` + `BanRecord` trong bộ nhớ).
 model CommunityBan {
-  courseId   String
-  userId     String
-  reason     String   @default("")
-  bannedById String?
-  bannedAt   DateTime @default(now())
+  communityId String   @map("courseId")
+  userId      String
+  reason      String   @default("")
+  bannedById  String?
+  bannedAt    DateTime @default(now())
 
-  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  user     User   @relation("BanTarget", fields: [userId], references: [id], onDelete: Cascade)
-  bannedBy User?  @relation("BanIssuer", fields: [bannedById], references: [id], onDelete: SetNull)
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  user      User      @relation("BanTarget", fields: [userId], references: [id], onDelete: Cascade)
+  bannedBy  User?     @relation("BanIssuer", fields: [bannedById], references: [id], onDelete: SetNull)
 
-  @@id([courseId, userId])
+  @@id([communityId, userId])
+  @@index([userId])
+  @@index([bannedById])
 }
 
 /// Yêu cầu tham gia cộng đồng riêng tư. Ràng buộc "mỗi user chỉ 1 yêu cầu pending / cộng đồng" do service kiểm tra.
 model JoinRequest {
   id          String            @id @default(uuid())
-  courseId    String
+  communityId String            @map("courseId")
   userId      String
   message     String            @default("")
   status      JoinRequestStatus @default(pending)
@@ -529,17 +560,18 @@ model JoinRequest {
   decidedAt   DateTime?
   createdAt   DateTime          @default(now())
 
-  course    Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  user      User   @relation("JoinRequester", fields: [userId], references: [id], onDelete: Cascade)
-  decidedBy User?  @relation("JoinDecider", fields: [decidedById], references: [id], onDelete: SetNull)
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  user      User      @relation("JoinRequester", fields: [userId], references: [id], onDelete: Cascade)
+  decidedBy User?     @relation("JoinDecider", fields: [decidedById], references: [id], onDelete: SetNull)
 
-  @@index([courseId, status, createdAt])
-  @@index([userId, courseId])
+  @@index([communityId, status, createdAt])
+  @@index([userId, communityId])
+  @@index([decidedById])
 }
 
 model Invite {
   code        String    @id
-  courseId    String
+  communityId String    @map("courseId")
   createdById String
   /// null = không giới hạn.
   maxUses     Int?
@@ -548,26 +580,28 @@ model Invite {
   revokedAt   DateTime?
   createdAt   DateTime  @default(now())
 
-  course    Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  createdBy User   @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  createdBy User      @relation(fields: [createdById], references: [id], onDelete: Cascade)
 
-  @@index([courseId, createdAt])
+  @@index([communityId, createdAt])
+  @@index([createdById])
 }
 
 model Review {
-  id        String   @id @default(uuid())
-  courseId  String
-  userId    String
-  rating    Int
-  text      String   @default("")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(uuid())
+  communityId String   @map("courseId")
+  userId      String
+  rating      Int
+  text        String   @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([courseId, userId])
-  @@index([courseId, updatedAt])
+  @@unique([communityId, userId])
+  @@index([communityId, updatedAt])
+  @@index([userId])
 }
 
 // ============================================================================
@@ -576,7 +610,7 @@ model Review {
 
 model Post {
   id            String       @id @default(uuid())
-  courseId      String
+  communityId   String       @map("courseId")
   authorId      String
   content       String
   category      PostCategory @default(general)
@@ -599,16 +633,21 @@ model Post {
   editedAt      DateTime?
   updatedAt     DateTime     @updatedAt
 
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  author User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
-  comments    PostComment[]
-  likes       PostLike[]
-  likeNotices PostLikeNotice[]
-  pollVotes   PollVote[]
+  comments     PostComment[]
+  likes        PostLike[]
+  likeNotices  PostLikeNotice[]
+  pollVotes    PollVote[]
+  /// Cột GENERATED ALWAYS (migration 20261005100000_search_fulltext): chỉ đọc bằng SQL thô; Prisma bỏ qua khi ghi.
+  searchVector Unsupported("tsvector")?
 
-  @@index([courseId, pinned, createdAt])
+  @@index([communityId, pinned, createdAt])
   @@index([authorId])
+  @@index([communityId, pinned, likesCount, createdAt])
+  @@index([communityId, category, createdAt])
+  @@index([searchVector], type: Gin)
 }
 
 model PostComment {
@@ -654,6 +693,7 @@ model PostLikeNotice {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([postId, userId])
+  @@index([userId])
 }
 
 /// Phiếu bình chọn: 1 dòng cho mỗi (bài, user, đáp án). optionId trỏ tới options[].id trong Post.poll.
@@ -668,6 +708,7 @@ model PollVote {
 
   @@id([postId, userId, optionId])
   @@index([postId, optionId])
+  @@index([userId])
 }
 
 // ============================================================================
@@ -676,7 +717,7 @@ model PollVote {
 
 model CommunityEvent {
   id           String    @id @default(uuid())
-  courseId     String
+  communityId  String    @map("courseId")
   hostId       String
   title        String
   description  String    @default("")
@@ -694,13 +735,14 @@ model CommunityEvent {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  host   User   @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  host      User      @relation(fields: [hostId], references: [id], onDelete: Cascade)
 
   rsvps EventRsvp[]
 
-  @@index([courseId, startAt])
+  @@index([communityId, startAt])
   @@index([startAt])
+  @@index([hostId])
 }
 
 model EventRsvp {
@@ -723,54 +765,95 @@ model EventRsvp {
 
 /// Sổ cái điểm (append-only). Bảng xếp hạng = SUM theo cửa sổ thời gian.
 model PointEvent {
-  id        String      @id @default(uuid())
-  userId    String
-  courseId  String
-  points    Int
-  reason    PointReason
-  createdAt DateTime    @default(now())
+  id          String      @id @default(uuid())
+  userId      String
+  communityId String      @map("courseId")
+  points      Int
+  reason      PointReason
+  /// Khóa nghiệp vụ chống cộng điểm lặp: (user, reason, sourceType, sourceId). Dòng cũ (trước migration) có thể null.
+  /// post: sourceType='post', sourceId=postId · like_received: 'post_like', `${postId}:${likerId}` · lesson_complete: 'lesson', lessonId
+  /// event_rsvp: 'event', eventId · revoked (bù trừ): 'post'|'event', id nguồn.
+  sourceType  String?
+  sourceId    String?
+  createdAt   DateTime    @default(now())
 
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
 
-  @@index([courseId, createdAt])
-  @@index([userId, courseId])
+  @@unique([userId, reason, sourceType, sourceId])
+  @@index([communityId, createdAt])
+  @@index([userId, communityId])
+  @@index([sourceType, sourceId])
 }
 
 // ============================================================================
 // LỚP HỌC
 // ============================================================================
 
+/// Khóa học (Khóa học) — một cộng đồng có NHIỀU khóa học; mỗi khóa chứa nhiều module/bài. Bảng "LearningCourse"
+/// (tên Prisma `Course` vì đây là "khóa học" theo BRD; cộng đồng là `Community` map bảng "Course").
+model Course {
+  id                  String               @id @default(uuid())
+  communityId         String
+  title               String
+  description         String               @default("")
+  thumbnailUrl        String?
+  /// Thứ tự hiển thị 1..n trong cộng đồng (service đánh lại khi thêm/xóa/sắp xếp).
+  position            Int
+  /// Xuất bản (cùng ngữ nghĩa ClassroomModule đợt 2). Thành viên thường chỉ thấy published; mod+ thấy cả nháp/lưu trữ.
+  publishStatus       ContentPublishStatus @default(published)
+  /// Ghi đè cờ ClassroomSettings.certificatesEnabled của cộng đồng; null = kế thừa.
+  certificatesEnabled Boolean?
+  /// Admin đợt 2: gỡ bởi Platform Admin.
+  removedAt           DateTime?
+  modReason           String?
+  modAt               DateTime?
+  modById             String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  community    Community         @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  modules      ClassroomModule[]
+  certificates Certificate[]
+
+  @@index([communityId, position])
+  @@map("LearningCourse")
+}
+
 model ClassroomModule {
-  id            String               @id @default(uuid())
-  courseId      String
+  id               String               @id @default(uuid())
+  communityId      String               @map("courseId")
+  /// Khóa học (entity `Course`, bảng LearningCourse) chứa module. Cột DB `learningCourseId` (cột `courseId` cũ = id cộng đồng, field `communityId`).
+  learningCourseId String
   /// Thứ tự hiển thị 1..n trong khóa (service đánh lại khi thêm/xóa/sắp xếp; không đặt unique để đổi chỗ trong 1 transaction).
-  index         Int
-  title         String
-  description   String               @default("")
-  thumbnail     String?
+  index            Int
+  title            String
+  description      String               @default("")
+  thumbnail        String?
   /// Cấp độ (1..9) tối thiểu để mở khóa; null = không yêu cầu.
-  requiredLevel Int?
+  requiredLevel    Int?
   /// Admin đợt 2: xuất bản + gỡ. Thành viên chỉ thấy module published và chưa bị gỡ.
-  publishStatus ContentPublishStatus @default(published)
-  removedAt     DateTime?
-  modReason     String?
-  modAt         DateTime?
-  modById       String?
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
+  publishStatus    ContentPublishStatus @default(published)
+  removedAt        DateTime?
+  modReason        String?
+  modAt            DateTime?
+  modById          String?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
 
-  course  Course            @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  lessons ClassroomLesson[]
+  community Community         @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  course    Course            @relation(fields: [learningCourseId], references: [id], onDelete: Cascade)
+  lessons   ClassroomLesson[]
 
-  @@index([courseId, index])
+  @@index([communityId, index])
+  @@index([learningCourseId, index])
 }
 
 model ClassroomLesson {
   id          String     @id @default(uuid())
   moduleId    String
   /// Phi chuẩn hóa để truy vấn theo khóa nhanh (luôn bằng module.courseId).
-  courseId    String
+  communityId String     @map("courseId")
   index       Int
   title       String
   type        LessonType @default(video)
@@ -789,12 +872,12 @@ model ClassroomLesson {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
-  module   ClassroomModule  @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  course   Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  progress LessonProgress[]
+  module    ClassroomModule  @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  community Community        @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  progress  LessonProgress[]
 
   @@index([moduleId, index])
-  @@index([courseId])
+  @@index([communityId])
 }
 
 /// Tiến độ học. Có dòng = ĐÃ TỪNG hoàn thành (để chỉ cộng điểm 1 lần); completedAt=null nghĩa là đã bỏ đánh dấu.
@@ -812,26 +895,31 @@ model LessonProgress {
 }
 
 model ClassroomSettings {
-  courseId            String  @id
+  communityId         String  @id @map("courseId")
   certificatesEnabled Boolean @default(false)
 
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
 }
 
 model Certificate {
   /// Mã xác minh công khai.
-  code        String   @id
-  userId      String
-  courseId    String
-  holderName  String
-  courseTitle String
-  completedAt DateTime
-  issuedAt    DateTime @default(now())
+  code             String   @id
+  userId           String
+  communityId      String   @map("courseId")
+  /// Khóa học được chứng nhận.
+  learningCourseId String
+  holderName       String
+  courseTitle      String
+  completedAt      DateTime
+  issuedAt         DateTime @default(now())
 
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  course    Course    @relation(fields: [learningCourseId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, courseId])
+  @@unique([userId, learningCourseId])
+  @@index([communityId])
+  @@index([learningCourseId])
 }
 
 // ============================================================================
@@ -839,22 +927,23 @@ model Certificate {
 // ============================================================================
 
 model Notification {
-  id        String           @id @default(uuid())
-  userId    String
-  type      NotificationType
-  title     String
-  body      String
+  id          String           @id @default(uuid())
+  userId      String
+  type        NotificationType
+  title       String
+  body        String
   /// Đường dẫn FE, vd. `/courses/photo/community`.
-  link      String?
-  courseId  String?
-  readAt    DateTime?
-  createdAt DateTime         @default(now())
+  link        String?
+  communityId String?          @map("courseId")
+  readAt      DateTime?
+  createdAt   DateTime         @default(now())
 
-  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course Course? @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  community Community? @relation(fields: [communityId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt])
   @@index([userId, readAt])
+  @@index([communityId])
 }
 
 model NotificationPreference {
@@ -930,7 +1019,7 @@ model UserBlock {
 
 model Report {
   id            String           @id @default(uuid())
-  courseId      String
+  communityId   String           @map("courseId")
   targetType    ReportTargetType
   /// postId | commentId | userId tùy targetType (không FK vì nội dung có thể bị xóa; đã có targetExcerpt).
   targetId      String
@@ -953,16 +1042,18 @@ model Report {
 
   events     ReportEvent[]
   assignedTo User?         @relation("ReportAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
-  course     Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  community  Community     @relation(fields: [communityId], references: [id], onDelete: Cascade)
   reporter   User          @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
   targetUser User          @relation("ReportTargetUser", fields: [targetUserId], references: [id], onDelete: Cascade)
   resolvedBy User?         @relation("ReportResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
 
   @@unique([reporterId, targetType, targetId])
-  @@index([courseId, status, createdAt])
+  @@index([communityId, status, createdAt])
   @@index([status, risk, createdAt])
   @@index([targetUserId])
   @@index([targetType, targetId])
+  @@index([resolvedById])
+  @@index([assignedToId])
 }
 
 /// Lịch sử xử lý 1 case (giao việc, cảnh cáo, gỡ nội dung...). Append-only.
@@ -980,6 +1071,7 @@ model ReportEvent {
   actor  User?  @relation(fields: [actorId], references: [id], onDelete: SetNull)
 
   @@index([reportId, createdAt])
+  @@index([actorId])
 }
 
 /// Nhật ký hành động của Platform Admin (append-only). actorName/targetLabel là ảnh chụp tại thời điểm làm.
@@ -1016,7 +1108,7 @@ model AdminAuditLog {
 /// Domain `PaymentIntent`. Tiền: amountCents / refundedCents (Int). `amountUsd` = amountCents / 100.
 model Payment {
   id              String        @id @default(uuid())
-  courseId        String
+  communityId     String        @map("courseId")
   userId          String
   method          PaymentMethod
   amountCents     Int
@@ -1037,7 +1129,7 @@ model Payment {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
-  course       Course        @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  community    Community     @relation(fields: [communityId], references: [id], onDelete: Restrict)
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
 
@@ -1045,16 +1137,18 @@ model Payment {
   chargebacks Chargeback[]
 
   @@index([userId, createdAt])
-  @@index([courseId, createdAt])
+  @@index([communityId, createdAt])
   @@index([subscriptionId])
   @@index([status])
 }
 
 /// Gói thành viên. active + cancelAtPeriodEnd=true = "đã hủy, còn truy cập tới hết kỳ".
+/// Ràng buộc KHÔNG khai báo được trong Prisma (index riêng trong migration money_lifecycle):
+///   CREATE UNIQUE INDEX "Subscription_one_live_per_user_course" ON "Subscription"("userId","courseId") WHERE "status" IN ('trialing','active')
 model Subscription {
   id                 String             @id @default(uuid())
   userId             String
-  courseId           String
+  communityId        String             @map("courseId")
   status             SubscriptionStatus
   priceCents         Int
   currentPeriodStart DateTime
@@ -1066,45 +1160,51 @@ model Subscription {
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course Course @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  community Community @relation(fields: [communityId], references: [id], onDelete: Restrict)
 
   payments Payment[]
 
-  @@index([userId, courseId, createdAt])
-  @@index([courseId])
+  @@index([userId, communityId, createdAt])
+  @@index([communityId])
   @@index([status, currentPeriodEnd])
 }
 
 model RefundRequest {
-  id           String       @id @default(uuid())
-  paymentId    String
-  courseId     String
-  userId       String
-  amountCents  Int
-  reason       String       @default("")
-  status       RefundStatus @default(pending)
+  id              String       @id @default(uuid())
+  paymentId       String
+  communityId     String       @map("courseId")
+  userId          String
+  amountCents     Int
+  reason          String       @default("")
+  status          RefundStatus @default(pending)
   /// Hệ thống tự duyệt vì nằm trong cửa sổ hoàn tiền.
-  auto         Boolean      @default(false)
-  note         String?
-  resolvedById String?
-  createdAt    DateTime     @default(now())
-  resolvedAt   DateTime?
+  auto            Boolean      @default(false)
+  note            String?
+  resolvedById    String?
+  createdAt       DateTime     @default(now())
+  resolvedAt      DateTime?
+  /// Khóa idempotency gửi cổng khi hoàn tiền = id của yêu cầu này. Lưu mã hoàn của cổng sau khi cổng xác nhận.
+  gatewayRefundId String?
+  /// Thời điểm chuyển sang `refunding` (job đối soát tìm các yêu cầu kẹt quá lâu).
+  refundingAt     DateTime?
 
-  payment    Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
-  course     Course  @relation(fields: [courseId], references: [id], onDelete: Restrict)
-  user       User    @relation("RefundRequester", fields: [userId], references: [id], onDelete: Cascade)
-  resolvedBy User?   @relation("RefundResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+  payment    Payment   @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  community  Community @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  user       User      @relation("RefundRequester", fields: [userId], references: [id], onDelete: Cascade)
+  resolvedBy User?     @relation("RefundResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
 
   @@index([paymentId, status])
   @@index([status, createdAt])
-  @@index([courseId])
+  @@index([communityId])
+  @@index([userId])
+  @@index([resolvedById])
 }
 
 /// Yêu cầu rút tiền của chủ cộng đồng. Chỉ lưu 4 số cuối tài khoản.
 model Payout {
   id             String        @id @default(uuid())
-  courseId       String
+  communityId    String        @map("courseId")
   ownerId        String
   amountCents    Int
   /// method.type luôn là 'bank' (chưa có kiểu khác) nên không có cột riêng.
@@ -1119,10 +1219,10 @@ model Payout {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
-  course Course @relation(fields: [courseId], references: [id], onDelete: Restrict)
-  owner  User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  community Community @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  owner     User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
-  @@index([courseId, status])
+  @@index([communityId, status])
   @@index([status, createdAt])
   @@index([ownerId])
 }
@@ -1133,7 +1233,7 @@ model Chargeback {
   /// Mã hiển thị CB-00771.
   caseNo              Int              @unique @default(autoincrement())
   paymentId           String
-  courseId            String
+  communityId         String           @map("courseId")
   userId              String
   amountCents         Int
   reason              ChargebackReason
@@ -1148,13 +1248,14 @@ model Chargeback {
   openedAt            DateTime         @default(now())
   resolvedAt          DateTime?
 
-  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
-  course  Course  @relation(fields: [courseId], references: [id], onDelete: Restrict)
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payment   Payment   @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  community Community @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([status, deadlineAt])
   @@index([paymentId])
-  @@index([courseId])
+  @@index([communityId])
+  @@index([userId])
 }
 
 /// Bộ đếm số hóa đơn theo năm. Tăng nguyên tử: UPDATE ... SET lastNumber = lastNumber + 1 RETURNING (upsert trong transaction).
@@ -1175,10 +1276,40 @@ model IdempotencyKey {
   @@id([userId, key])
 }
 
-/// Sự kiện webhook đã xử lý (chống xử lý lặp). claim = INSERT, trùng khóa -> đã thấy; release = DELETE.
+/// Webhook của cổng thanh toán: lưu cả type + payload để điều tra/replay. claim = INSERT (trùng khóa -> xem status);
+/// `done` hoặc đang `processing` còn mới = trùng; `failed`/`received`/`processing` quá hạn được xử lý lại (reaper).
 model WebhookEvent {
-  eventId    String   @id
-  receivedAt DateTime @default(now())
+  eventId      String        @id
+  type         String?
+  payload      Json?
+  status       WebhookStatus @default(received)
+  attempts     Int           @default(0)
+  lastError    String?
+  receivedAt   DateTime      @default(now())
+  processingAt DateTime?
+  processedAt  DateTime?
+  updatedAt    DateTime      @default(now()) @updatedAt
+
+  @@index([status, updatedAt])
+}
+
+/// Sổ cái nợ của Owner (append-only): ghi khi hoàn tiền/chargeback xảy ra SAU khi tiền đã được rút → số dư ròng âm. amountCents < 0 = nợ.
+/// Số dư có thể rút = tiền đã qua cửa sổ hoàn tiền/tranh chấp, trừ reserve, trừ payout đã yêu cầu, trừ nợ; âm ⇒ chặn payout.
+model OwnerBalanceLedger {
+  id          String          @id @default(uuid())
+  communityId String          @map("courseId")
+  ownerId     String?
+  kind        OwnerLedgerKind
+  amountCents Int
+  paymentId   String?
+  refundId    String?
+  note        String?
+  createdAt   DateTime        @default(now())
+
+  community Community @relation(fields: [communityId], references: [id], onDelete: Restrict)
+
+  @@index([communityId, createdAt])
+  @@index([ownerId])
 }
 
 // ============================================================================
@@ -1194,7 +1325,7 @@ model Upload {
   /// Byte. Ghi đè bằng dung lượng thật sau khi PUT xong.
   size        Int
   purpose     UploadPurpose
-  courseId    String?
+  communityId String?       @map("courseId")
   status      UploadStatus  @default(pending)
   /// Admin đợt 2: gắn cờ để xem xét / gỡ (file không còn được phục vụ công khai).
   flagged     Boolean       @default(false)
@@ -1205,10 +1336,11 @@ model Upload {
   modById     String?
   createdAt   DateTime      @default(now())
 
-  owner  User    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  course Course? @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  owner     User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  community Community? @relation(fields: [communityId], references: [id], onDelete: SetNull)
 
   @@index([ownerId, createdAt])
+  @@index([communityId])
 }
 
 model NewsletterSubscriber {
@@ -1239,17 +1371,18 @@ model DiscoveryCategory {
 model DiscoveryFeature {
   id          String    @id @default(uuid())
   section     String
-  courseId    String
+  communityId String    @map("courseId")
   position    Int
   startsAt    DateTime?
   endsAt      DateTime?
   createdAt   DateTime  @default(now())
   createdById String?
 
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
 
-  @@unique([section, courseId])
+  @@unique([section, communityId])
   @@index([section, position])
+  @@index([communityId])
 }
 
 /// Cấu hình key-value của nền tảng (hiện dùng: `discovery.rankingWeights`).

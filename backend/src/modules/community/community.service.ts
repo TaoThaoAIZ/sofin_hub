@@ -36,10 +36,10 @@ export function createCommunityService(repo = communityRepository) {
   };
 
   return {
-    async listMembers(courseId: string, query: ListMembersQuery) {
+    async listMembers(communityId: string, query: ListMembersQuery) {
       const now = Date.now();
       const onlineSince = new Date(now - ONLINE_WINDOW_MS);
-      const counts = await repo.memberCounts(courseId, onlineSince);
+      const counts = await repo.memberCounts(communityId, onlineSince);
       const opts = { filter: query.filter, sort: query.sort };
 
       let views: MemberView[];
@@ -47,14 +47,14 @@ export function createCommunityService(repo = communityRepository) {
       if (query.q) {
         // Tìm theo tên + handle: handle là giá trị tính khi đọc (không có cột) nên lọc ở service trên tập đã lọc/sắp xếp bởi DB.
         const q = query.q.toLowerCase();
-        const matched = (await repo.allMembers(courseId, onlineSince, opts))
+        const matched = (await repo.allMembers(communityId, onlineSince, opts))
           .map((m) => toView(m, now))
           .filter((m) => m.name.toLowerCase().includes(q) || m.handle.includes(q));
         total = matched.length;
         const start = (query.page - 1) * query.limit;
         views = matched.slice(start, start + query.limit);
       } else {
-        const { rows, total: t } = await repo.listMembers(courseId, onlineSince, {
+        const { rows, total: t } = await repo.listMembers(communityId, onlineSince, {
           ...opts,
           skip: (query.page - 1) * query.limit,
           take: query.limit,
@@ -69,19 +69,19 @@ export function createCommunityService(repo = communityRepository) {
       };
     },
 
-    async leaderboard(courseId: string, window: LeaderboardWindow) {
-      const rows = await pointsService.leaderboard(courseId, window, 10);
+    async leaderboard(communityId: string, window: LeaderboardWindow) {
+      const rows = await pointsService.leaderboard(communityId, window, 10);
       const names = await repo.namesOf(rows.map((r) => r.userId));
       return rows.map((r) => ({ userId: r.userId, name: names.get(r.userId) ?? '', points: r.points, rank: r.rank }));
     },
 
     /** Hành trình thăng cấp: danh sách cấp + % thành viên ở mỗi cấp + vị trí/điểm của người đang xem. */
-    async levels(courseId: string, viewerId: string) {
+    async levels(communityId: string, viewerId: string) {
       const [dist, points, rank, counts] = await Promise.all([
-        repo.levelDistribution(courseId),
-        pointsService.totalFor(courseId, viewerId, 'all'),
-        repo.rankOf(courseId, viewerId, 'all'),
-        repo.memberCounts(courseId, new Date()),
+        repo.levelDistribution(communityId),
+        pointsService.totalFor(communityId, viewerId, 'all'),
+        repo.rankOf(communityId, viewerId, 'all'),
+        repo.memberCounts(communityId, new Date()),
       ]);
       const cur = levelFor(points);
       const next = LEVELS.find((l) => l.level === cur.level + 1);

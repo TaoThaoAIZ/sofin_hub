@@ -10,19 +10,20 @@ import {
   useLessons,
   useReorderLessons,
   useReorderModules,
-  useUpdateClassroomSettings,
+  useUpdateCourse,
   useUpdateLesson,
   useUpdateModule,
 } from '../queries';
-import type { ClassroomLesson, ClassroomModule, LessonAttachment } from '../types';
+import type { ClassroomLesson, ClassroomModule, LearningCourse, LessonAttachment } from '../types';
+import { CertModeSelect } from './CourseManager';
 import { absoluteUrl, areaCls, ConfirmDialog, Dialog, errText, ErrorNote, ghostBtn, inputCls, primaryBtn, toast } from './contentUi';
 
 const iconBtn = 'grid size-8 place-items-center rounded-lg text-stone-500 hover:bg-stone-100 disabled:opacity-30';
 
 // ---------------------------------------------------------------- Form module
-function ModuleFormDialog({ courseId, module, onClose }: { courseId: string; module?: ClassroomModule; onClose: () => void }) {
-  const create = useCreateModule(courseId);
-  const update = useUpdateModule(courseId);
+function ModuleFormDialog({ communityId, courseId, module, onClose }: { communityId: string; courseId: string; module?: ClassroomModule; onClose: () => void }) {
+  const create = useCreateModule(communityId, courseId);
+  const update = useUpdateModule(communityId, courseId);
   const { upload, uploading, error: uploadError } = useUpload();
   const fileRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState(module?.title ?? '');
@@ -107,9 +108,9 @@ function ModuleFormDialog({ courseId, module, onClose }: { courseId: string; mod
 }
 
 // ---------------------------------------------------------------- Form bài học
-function LessonFormDialog({ courseId, moduleId, lesson, onClose }: { courseId: string; moduleId: string; lesson?: ClassroomLesson; onClose: () => void }) {
-  const create = useCreateLesson(courseId);
-  const update = useUpdateLesson(courseId);
+function LessonFormDialog({ communityId, courseId, moduleId, lesson, onClose }: { communityId: string; courseId: string; moduleId: string; lesson?: ClassroomLesson; onClose: () => void }) {
+  const create = useCreateLesson(communityId, courseId);
+  const update = useUpdateLesson(communityId);
   const { upload, uploading, error: uploadError } = useUpload();
   const fileRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState(lesson?.title ?? '');
@@ -196,7 +197,7 @@ function LessonFormDialog({ courseId, moduleId, lesson, onClose }: { courseId: s
                 e.target.value = '';
                 if (!f) return;
                 try {
-                  const up = await upload(f, { purpose: 'lesson_attachment', courseId });
+                  const up = await upload(f, { purpose: 'lesson_attachment', courseId: communityId });
                   setAttachments((cur) => [...cur, { name: up.name, url: absoluteUrl(up.url), size: up.size }]);
                 } catch {
                   /* lỗi hiển thị qua uploadError */
@@ -230,6 +231,7 @@ function LessonFormDialog({ courseId, moduleId, lesson, onClose }: { courseId: s
 
 // ---------------------------------------------------------------- Một module trong trình soạn
 function ModuleRow({
+  communityId,
   courseId,
   module,
   index,
@@ -238,6 +240,7 @@ function ModuleRow({
   onEdit,
   onDelete,
 }: {
+  communityId: string;
   courseId: string;
   module: ClassroomModule;
   index: number;
@@ -247,9 +250,9 @@ function ModuleRow({
   onDelete: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const lessons = useLessons(courseId, open ? module.id : null);
-  const reorder = useReorderLessons(courseId);
-  const removeLesson = useDeleteLesson(courseId);
+  const lessons = useLessons(communityId, courseId, open ? module.id : null);
+  const reorder = useReorderLessons(communityId, courseId);
+  const removeLesson = useDeleteLesson(communityId);
   const [editingLesson, setEditingLesson] = useState<ClassroomLesson | 'new' | null>(null);
   const [deleting, setDeleting] = useState<ClassroomLesson | null>(null);
 
@@ -320,7 +323,7 @@ function ModuleRow({
         </div>
       )}
       {editingLesson && (
-        <LessonFormDialog courseId={courseId} moduleId={module.id} lesson={editingLesson === 'new' ? undefined : editingLesson} onClose={() => setEditingLesson(null)} />
+        <LessonFormDialog communityId={communityId} courseId={courseId} moduleId={module.id} lesson={editingLesson === 'new' ? undefined : editingLesson} onClose={() => setEditingLesson(null)} />
       )}
       {deleting && (
         <ConfirmDialog
@@ -338,11 +341,11 @@ function ModuleRow({
 }
 
 // ---------------------------------------------------------------- Trình soạn
-export function ClassroomEditor({ courseId, modules, isAdmin }: { courseId: string; modules: ClassroomModule[]; isAdmin: boolean }) {
-  const reorder = useReorderModules(courseId);
-  const removeModule = useDeleteModule(courseId);
-  const settings = useClassroomSettings(courseId);
-  const updateSettings = useUpdateClassroomSettings(courseId);
+export function ClassroomEditor({ communityId, course, modules, isAdmin }: { communityId: string; course: LearningCourse; modules: ClassroomModule[]; isAdmin: boolean }) {
+  const reorder = useReorderModules(communityId, course.id);
+  const removeModule = useDeleteModule(communityId, course.id);
+  const settings = useClassroomSettings(communityId);
+  const updateCourse = useUpdateCourse(communityId);
   const [editing, setEditing] = useState<ClassroomModule | 'new' | null>(null);
   const [deleting, setDeleting] = useState<ClassroomModule | null>(null);
 
@@ -357,22 +360,19 @@ export function ClassroomEditor({ courseId, modules, isAdmin }: { courseId: stri
   return (
     <section className="glass flex flex-col gap-3 rounded-3xl p-4" aria-label="Chỉnh sửa lớp học">
       <div className="flex flex-wrap items-center gap-3">
-        <h2 className="m-0 flex-1 text-[17px] font-extrabold">Chỉnh sửa lớp học</h2>
+        <h2 className="m-0 flex-1 text-[17px] font-extrabold">Chỉnh sửa: {course.title}</h2>
         {isAdmin && (
-          <label className="flex items-center gap-2 text-[13.5px] font-medium">
-            <input
-              type="checkbox"
-              checked={!!settings.data?.certificatesEnabled}
-              disabled={settings.isPending || updateSettings.isPending}
-              onChange={(e) =>
-                updateSettings.mutate(e.target.checked, {
-                  onSuccess: () => toast(e.target.checked ? 'Đã bật chứng nhận hoàn thành' : 'Đã tắt chứng nhận hoàn thành'),
-                  onError: (er) => toast(errText(er), 'error'),
-                })
-              }
-            />
-            Cấp chứng nhận khi hoàn thành 100%
-          </label>
+          <CertModeSelect
+            value={course.certificatesEnabled}
+            communityDefault={settings.data?.certificatesEnabled}
+            disabled={updateCourse.isPending}
+            onChange={(v) =>
+              updateCourse.mutate(
+                { courseId: course.id, body: { certificatesEnabled: v } },
+                { onSuccess: () => toast('Đã cập nhật chứng nhận của khóa học'), onError: (er) => toast(errText(er), 'error') },
+              )
+            }
+          />
         )}
         <button type="button" onClick={() => setEditing('new')} className={primaryBtn}>
           <MaterialIcon name="add" size={19} color="#fff" /> Thêm module
@@ -380,10 +380,10 @@ export function ClassroomEditor({ courseId, modules, isAdmin }: { courseId: stri
       </div>
       {modules.length === 0 && <p className="m-0 py-4 text-center text-sm text-stone-500">Lớp học chưa có module nào. Hãy thêm module đầu tiên.</p>}
       {modules.map((m, i) => (
-        <ModuleRow key={m.id} courseId={courseId} module={m} index={i} total={modules.length} onMove={(d) => move(i, d)} onEdit={() => setEditing(m)} onDelete={() => setDeleting(m)} />
+        <ModuleRow key={m.id} communityId={communityId} courseId={course.id} module={m} index={i} total={modules.length} onMove={(d) => move(i, d)} onEdit={() => setEditing(m)} onDelete={() => setDeleting(m)} />
       ))}
       <p className="m-0 text-[12px] text-stone-400">Mod trở lên không bị khóa module khi xem để duyệt nội dung. Học viên vẫn bị khóa theo thứ tự module và cấp độ.</p>
-      {editing && <ModuleFormDialog courseId={courseId} module={editing === 'new' ? undefined : editing} onClose={() => setEditing(null)} />}
+      {editing && <ModuleFormDialog communityId={communityId} courseId={course.id} module={editing === 'new' ? undefined : editing} onClose={() => setEditing(null)} />}
       {deleting && (
         <ConfirmDialog
           title="Xóa module?"

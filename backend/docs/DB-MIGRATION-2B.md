@@ -1,6 +1,6 @@
 # Giai đoạn 2B — chuyển các module còn lại sang Postgres (quy tắc chung cho các agent)
 
-Đọc trước: `DATABASE.md` (đặc biệt "điều agent sau cần biết"), `CONVENTIONS.md`, `API.md`, `prisma/schema.prisma`, `tests/helpers.ts`, và repository đã chuyển xong làm mẫu: `src/modules/auth/auth.repository.ts`, `src/modules/courses/courses.repository.ts`, `src/modules/enrollments/enrollments.repository.ts`.
+Đọc trước: `DATABASE.md` (đặc biệt "điều agent sau cần biết"), `CONVENTIONS.md`, `API.md`, `prisma/schema.prisma`, `tests/helpers.ts`, và repository đã chuyển xong làm mẫu: `src/modules/auth/auth.repository.ts`, `src/modules/catalog/catalog.repository.ts`, `src/modules/enrollments/enrollments.repository.ts`.
 
 ## Mục tiêu
 Thay `inMemory...Repository` của các module được giao bằng hiện thực Prisma của CÙNG interface (đổi interface khi thật cần, nhưng KHÔNG đổi hình dạng response API và hành vi đã có test). Dữ liệu minh họa được sinh lười khi mở cộng đồng (`ensureSeeded`, `*.seed.ts`) → chuyển thành **seed vào DB** (`prisma/seed/<module>.ts`, idempotent) và bỏ hành vi sinh lười khỏi runtime. Test của module phải chạy với DB thật (mặc định) và xanh.

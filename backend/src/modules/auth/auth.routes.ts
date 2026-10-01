@@ -1,7 +1,7 @@
 import { Router, type Request } from 'express';
 import rateLimit from 'express-rate-limit';
 import { requireAuth } from '../../middlewares/auth.js';
-import { isProd } from '../../config/env.js';
+import { isDev, isProd } from '../../config/env.js';
 import { HttpError } from '../../utils/http-error.js';
 import {
   changePasswordBody,
@@ -32,7 +32,8 @@ function setRefreshCookie(res: import('express').Response, token: string) {
     httpOnly: true,
     // Production: FE và BE gần như luôn ở khác domain (vd. FE Vercel, BE Render) → cookie phải
     // SameSite=None (bắt buộc kèm Secure) mới được trình duyệt gửi kèm request cross-site.
-    secure: isProd,
+    // Secure ở mọi môi trường trừ development (localhost http); SameSite=None chỉ ở production.
+    secure: !isDev,
     sameSite: isProd ? 'none' : 'lax',
     maxAge: REFRESH_COOKIE_MAX_AGE_MS,
     path: '/api/auth',

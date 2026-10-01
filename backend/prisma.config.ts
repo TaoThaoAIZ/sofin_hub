@@ -6,7 +6,7 @@ export default defineConfig({
   schema: 'prisma/schema.prisma',
   migrations: {
     path: 'prisma/migrations',
-    seed: 'tsx prisma/seed.ts',
+    seed: 'cross-env NODE_ENV=development tsx prisma/seed.ts',
   },
   datasource: {
     url: process.env.DATABASE_URL ?? 'postgresql://sofinhub:sofinhub@localhost:5435/sofinhub?schema=public',

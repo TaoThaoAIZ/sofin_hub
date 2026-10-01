@@ -2,6 +2,7 @@ import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClie
 import { useAuth } from '../auth/AuthContext';
 import * as api from './api';
 import type {
+  CourseInput,
   CreatePostInput,
   LeaderboardWindow,
   LessonInput,
@@ -19,8 +20,6 @@ import type {
 const keys = {
   posts: (courseId: string, query: object) => ['community', courseId, 'posts', query] as const,
   comments: (postId: string) => ['community', 'comments', postId] as const,
-  modules: (courseId: string) => ['community', courseId, 'modules'] as const,
-  lessons: (courseId: string, moduleId: string) => ['community', courseId, 'modules', moduleId, 'lessons'] as const,
   events: (courseId: string) => ['community', courseId, 'events'] as const,
   members: (courseId: string, query: object) => ['community', courseId, 'members', query] as const,
   leaderboard: (courseId: string, window: LeaderboardWindow) => ['community', courseId, 'leaderboard', window] as const,
@@ -98,40 +97,6 @@ export const useCreateComment = (courseId: string, postId: string) => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: keys.comments(postId) });
       qc.invalidateQueries({ queryKey: ['community', courseId, 'posts'] });
-    },
-  });
-};
-
-// ---- Lớp học ----
-export const useModules = (courseId: string) => {
-  const { accessToken, status } = useAuth();
-  return useQuery({
-    queryKey: keys.modules(courseId),
-    queryFn: ({ signal }) => api.fetchModules(courseId, accessToken!, signal),
-    enabled: status === 'authenticated',
-  });
-};
-
-export const useLessons = (courseId: string, moduleId: string | null) => {
-  const { accessToken } = useAuth();
-  return useQuery({
-    queryKey: keys.lessons(courseId, moduleId ?? ''),
-    queryFn: ({ signal }) => api.fetchLessons(courseId, moduleId!, accessToken!, signal),
-    enabled: !!moduleId && !!accessToken,
-  });
-};
-
-export const useToggleLessonComplete = (courseId: string, moduleId: string | null) => {
-  const token = useToken();
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (lessonId: string) => api.toggleLessonComplete(courseId, lessonId, token),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: keys.modules(courseId) });
-      if (moduleId) qc.invalidateQueries({ queryKey: keys.lessons(courseId, moduleId) });
-      qc.invalidateQueries({ queryKey: ['community', courseId, 'progress'] });
-      qc.invalidateQueries({ queryKey: ['community', courseId, 'lesson'] });
-      qc.invalidateQueries({ queryKey: ['community', courseId, 'leaderboard'] });
     },
   });
 };
@@ -361,76 +326,6 @@ export const useDownloadIcs = () => {
   });
 };
 
-// ---- Lớp học mở rộng ----
-export const useLesson = (courseId: string, lessonId: string) => {
-  const { accessToken } = useAuth();
-  return useQuery({
-    queryKey: ['community', courseId, 'lesson', lessonId] as const,
-    queryFn: ({ signal }) => api.fetchLesson(courseId, lessonId, accessToken!, signal),
-    enabled: !!accessToken && !!lessonId,
-    retry: false,
-  });
-};
-
-export const useProgress = (courseId: string) => {
-  const { accessToken, status } = useAuth();
-  return useQuery({
-    queryKey: ['community', courseId, 'progress'] as const,
-    queryFn: ({ signal }) => api.fetchProgress(courseId, accessToken!, signal),
-    enabled: status === 'authenticated',
-  });
-};
-
-export const useClassroomSettings = (courseId: string) => {
-  const { accessToken, status } = useAuth();
-  return useQuery({
-    queryKey: ['community', courseId, 'classroom-settings'] as const,
-    queryFn: ({ signal }) => api.fetchClassroomSettings(courseId, accessToken!, signal),
-    enabled: status === 'authenticated',
-  });
-};
-
-export const useUpdateClassroomSettings = (courseId: string) => {
-  const token = useToken();
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (certificatesEnabled: boolean) => api.updateClassroomSettings(courseId, { certificatesEnabled }, token),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['community', courseId, 'classroom-settings'] }),
-  });
-};
-
-export const useClaimCertificate = (courseId: string) => {
-  const token = useToken();
-  return useMutation({ mutationFn: () => api.fetchCertificate(courseId, token) });
-};
-
-/** Mọi thay đổi nội dung lớp học: làm mới danh sách module/bài, chi tiết bài và tiến độ. */
-function useClassroomMutation<V, R>(courseId: string, fn: (vars: V, token: string) => Promise<R>) {
-  const token = useToken();
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (vars: V) => fn(vars, token),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['community', courseId] }),
-  });
-}
-
-export const useCreateModule = (courseId: string) =>
-  useClassroomMutation(courseId, (v: ModuleInput, t) => api.createModule(courseId, v, t));
-export const useUpdateModule = (courseId: string) =>
-  useClassroomMutation(courseId, (v: { moduleId: string; body: Partial<ModuleInput> }, t) => api.updateModule(courseId, v.moduleId, v.body, t));
-export const useDeleteModule = (courseId: string) =>
-  useClassroomMutation(courseId, (moduleId: string, t) => api.deleteModule(courseId, moduleId, t));
-export const useReorderModules = (courseId: string) =>
-  useClassroomMutation(courseId, (ids: string[], t) => api.reorderModules(courseId, ids, t));
-export const useCreateLesson = (courseId: string) =>
-  useClassroomMutation(courseId, (v: { moduleId: string; body: LessonInput }, t) => api.createLesson(courseId, v.moduleId, v.body, t));
-export const useUpdateLesson = (courseId: string) =>
-  useClassroomMutation(courseId, (v: { lessonId: string; body: Partial<LessonInput> }, t) => api.updateLesson(courseId, v.lessonId, v.body, t));
-export const useDeleteLesson = (courseId: string) =>
-  useClassroomMutation(courseId, (lessonId: string, t) => api.deleteLesson(courseId, lessonId, t));
-export const useReorderLessons = (courseId: string) =>
-  useClassroomMutation(courseId, (v: { moduleId: string; ids: string[] }, t) => api.reorderLessons(courseId, v.moduleId, v.ids, t));
-
 /** Xác minh chứng nhận công khai — không cần đăng nhập. */
 export const useVerifyCertificate = (code: string) =>
   useQuery({
@@ -439,3 +334,133 @@ export const useVerifyCertificate = (code: string) =>
     enabled: !!code,
     retry: false,
   });
+
+// ---- Lớp học: khóa học trong cộng đồng ----
+// cid = id cộng đồng; courseId = id khóa học (uuid). Mọi key nằm dưới ['community', cid] nên đổi cộng đồng là tách cache.
+const ck = {
+  courses: (cid: string) => ['community', cid, 'courses'] as const,
+  modules: (cid: string, courseId: string) => ['community', cid, 'classroom', courseId, 'modules'] as const,
+  lessons: (cid: string, courseId: string, moduleId: string) => ['community', cid, 'classroom', courseId, 'modules', moduleId, 'lessons'] as const,
+  progress: (cid: string, courseId: string) => ['community', cid, 'classroom', courseId, 'progress'] as const,
+};
+
+export const useCourseList = (cid: string) => {
+  const { accessToken, status } = useAuth();
+  return useQuery({
+    queryKey: ck.courses(cid),
+    queryFn: ({ signal }) => api.fetchCourseList(cid, accessToken!, signal),
+    enabled: status === 'authenticated',
+  });
+};
+
+export const useModules = (cid: string, courseId: string | null) => {
+  const { accessToken } = useAuth();
+  return useQuery({
+    queryKey: ck.modules(cid, courseId ?? ''),
+    queryFn: ({ signal }) => api.fetchModules(cid, courseId!, accessToken!, signal),
+    enabled: !!courseId && !!accessToken,
+  });
+};
+
+export const useLessons = (cid: string, courseId: string | null, moduleId: string | null) => {
+  const { accessToken } = useAuth();
+  return useQuery({
+    queryKey: ck.lessons(cid, courseId ?? '', moduleId ?? ''),
+    queryFn: ({ signal }) => api.fetchLessons(cid, courseId!, moduleId!, accessToken!, signal),
+    enabled: !!courseId && !!moduleId && !!accessToken,
+  });
+};
+
+export const useLesson = (cid: string, lessonId: string) => {
+  const { accessToken } = useAuth();
+  return useQuery({
+    queryKey: ['community', cid, 'lesson', lessonId] as const,
+    queryFn: ({ signal }) => api.fetchLesson(cid, lessonId, accessToken!, signal),
+    enabled: !!accessToken && !!lessonId,
+    retry: false,
+  });
+};
+
+export const useProgress = (cid: string, courseId: string | null) => {
+  const { accessToken } = useAuth();
+  return useQuery({
+    queryKey: ck.progress(cid, courseId ?? ''),
+    queryFn: ({ signal }) => api.fetchProgress(cid, courseId!, accessToken!, signal),
+    enabled: !!courseId && !!accessToken,
+  });
+};
+
+export const useToggleLessonComplete = (cid: string) => {
+  const token = useToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (lessonId: string) => api.toggleLessonComplete(cid, lessonId, token),
+    onSuccess: () => {
+      // Tiến độ nằm theo khóa: làm mới toàn bộ nhánh lớp học + danh sách khóa (progress từng khóa) + bảng xếp hạng.
+      qc.invalidateQueries({ queryKey: ['community', cid, 'classroom'] });
+      qc.invalidateQueries({ queryKey: ck.courses(cid) });
+      qc.invalidateQueries({ queryKey: ['community', cid, 'lesson'] });
+      qc.invalidateQueries({ queryKey: ['community', cid, 'leaderboard'] });
+    },
+  });
+};
+
+export const useClassroomSettings = (cid: string) => {
+  const { accessToken, status } = useAuth();
+  return useQuery({
+    queryKey: ['community', cid, 'classroom-settings'] as const,
+    queryFn: ({ signal }) => api.fetchClassroomSettings(cid, accessToken!, signal),
+    enabled: status === 'authenticated',
+  });
+};
+
+export const useUpdateClassroomSettings = (cid: string) => {
+  const token = useToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (certificatesEnabled: boolean) => api.updateClassroomSettings(cid, { certificatesEnabled }, token),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['community', cid, 'classroom-settings'] });
+      qc.invalidateQueries({ queryKey: ck.courses(cid) });
+    },
+  });
+};
+
+export const useClaimCertificate = (cid: string, courseId: string) => {
+  const token = useToken();
+  return useMutation({ mutationFn: () => api.fetchCertificate(cid, courseId, token) });
+};
+
+/** Mọi thay đổi nội dung/khóa học: làm mới toàn bộ cache của cộng đồng (khóa, module, bài, tiến độ). */
+function useClassroomMutation<V, R>(cid: string, fn: (vars: V, token: string) => Promise<R>) {
+  const token = useToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: V) => fn(vars, token),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['community', cid] }),
+  });
+}
+
+export const useCreateCourse = (cid: string) => useClassroomMutation(cid, (v: CourseInput, t) => api.createCourse(cid, v, t));
+export const useUpdateCourse = (cid: string) =>
+  useClassroomMutation(cid, (v: { courseId: string; body: Partial<CourseInput> & { certificatesEnabled?: boolean | null } }, t) => api.updateCourse(cid, v.courseId, v.body, t));
+export const useArchiveCourse = (cid: string) => useClassroomMutation(cid, (courseId: string, t) => api.archiveCourse(cid, courseId, t));
+export const useDeleteCourse = (cid: string) => useClassroomMutation(cid, (courseId: string, t) => api.deleteCourse(cid, courseId, t));
+export const useReorderCourses = (cid: string) => useClassroomMutation(cid, (ids: string[], t) => api.reorderCourses(cid, ids, t));
+
+export const useCreateModule = (cid: string, courseId: string) =>
+  useClassroomMutation(cid, (v: ModuleInput, t) => api.createModule(cid, courseId, v, t));
+export const useUpdateModule = (cid: string, courseId: string) =>
+  useClassroomMutation(cid, (v: { moduleId: string; body: Partial<ModuleInput> }, t) => api.updateModule(cid, courseId, v.moduleId, v.body, t));
+export const useDeleteModule = (cid: string, courseId: string) =>
+  useClassroomMutation(cid, (moduleId: string, t) => api.deleteModule(cid, courseId, moduleId, t));
+export const useReorderModules = (cid: string, courseId: string) =>
+  useClassroomMutation(cid, (ids: string[], t) => api.reorderModules(cid, courseId, ids, t));
+export const useCreateLesson = (cid: string, courseId: string) =>
+  useClassroomMutation(cid, (v: { moduleId: string; body: LessonInput }, t) => api.createLesson(cid, courseId, v.moduleId, v.body, t));
+export const useUpdateLesson = (cid: string) =>
+  useClassroomMutation(cid, (v: { lessonId: string; body: Partial<LessonInput> }, t) => api.updateLesson(cid, v.lessonId, v.body, t));
+export const useDeleteLesson = (cid: string) =>
+  useClassroomMutation(cid, (lessonId: string, t) => api.deleteLesson(cid, lessonId, t));
+export const useReorderLessons = (cid: string, courseId: string) =>
+  useClassroomMutation(cid, (v: { moduleId: string; ids: string[] }, t) => api.reorderLessons(cid, courseId, v.moduleId, v.ids, t));

@@ -11,6 +11,8 @@ import type { PrismaClient } from '../src/generated/prisma/client.js';
  * Mọi test chạy trên Postgres THẬT trong schema tạm riêng (không đụng DB dev): user/phiên/khóa học/ghi danh đều ở DB.
  */
 process.env.NODE_ENV = 'test';
+// Hộp thư dev (GET /api/dev/outbox) chỉ mount khi bật tường minh; test cần nó để lấy token reset/verify.
+process.env.ENABLE_DEV_OUTBOX = '1';
 
 /* ------------------------------------------------------------------------------------------------
  * DB thật (Postgres) cho test. Xem backend/docs/DATABASE.md, mục "Viết test với DB thật".
@@ -38,7 +40,7 @@ export interface TestDb {
   prisma: PrismaClient;
   /** Xóa sạch dữ liệu mọi bảng (giữ cấu trúc, KHÔNG nạp lại dữ liệu nền). Thường dùng `resetDb()` để có lại Course nền. */
   reset(): Promise<void>;
-  /** Nạp dữ liệu nền: Course từ courses.seed.ts (bulk createMany, idempotent). */
+  /** Nạp dữ liệu nền: cộng đồng (Community) từ catalog.seed.ts + 1 khóa học mặc định mỗi cộng đồng (bulk createMany, idempotent). */
   seedBase(): Promise<void>;
   /** Đóng kết nối + DROP schema. startTestServer().close() tự gọi khi TEST_DB=1. */
   drop(): Promise<void>;
@@ -95,7 +97,13 @@ async function provision(): Promise<TestDb> {
     },
     async seedBase() {
       const { courseSeedRows } = await import('../prisma/seed-courses.js');
-      await prisma.course.createMany({ data: courseSeedRows(), skipDuplicates: true });
+      const rows = courseSeedRows();
+      await prisma.community.createMany({ data: rows, skipDuplicates: true });
+      // Mỗi cộng đồng nền có 1 khóa học mặc định (id xác định `course-<id>-main`, tên = tên cộng đồng) — như migration backfill/tạo cộng đồng.
+      await prisma.course.createMany({
+        data: rows.map((r) => ({ id: `course-${r.id}-main`, communityId: r.id, title: r.title, description: r.description, position: 1 })),
+        skipDuplicates: true,
+      });
     },
     async drop() {
       await disconnectPrisma();
@@ -142,6 +150,7 @@ export async function startTestServer(): Promise<TestServer> {
     baseUrl: `http://127.0.0.1:${port}/api`,
     close: async () => {
       await new Promise<void>((resolve) => server.close(() => resolve()));
+      await (await import('../src/infra/shared.js')).closeShared(); // đóng kết nối Redis (nếu REDIS_URL được đặt) để process test thoát
       await db.drop();
     },
   };
@@ -190,4 +199,14 @@ export function makeClient(baseUrl: string) {
   }
 
   return { call, registerUser };
+}
+
+/** Id khóa học mặc định của cộng đồng nền (xem seedBase) — dùng khi test tạo module bằng Prisma trực tiếp. */
+export const mainCourseId = (communityId: string) => `course-${communityId}-main`;
+
+/** Tạo khóa học mặc định cho cộng đồng test tự tạo bằng Prisma (idempotent) và trả về id. */
+export async function ensureMainCourse(prisma: PrismaClient, communityId: string): Promise<string> {
+  const id = mainCourseId(communityId);
+  await prisma.course.upsert({ where: { id }, create: { id, communityId, title: communityId, position: 1 }, update: {} });
+  return id;
 }

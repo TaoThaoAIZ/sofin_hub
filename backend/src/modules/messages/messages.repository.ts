@@ -1,6 +1,7 @@
 import { Prisma } from '../../generated/prisma/client.js';
 import type { Conversation as ConversationRow, Message as MessageRow } from '../../generated/prisma/client.js';
 import { prisma } from '../../db/prisma.js';
+import { DELETED_USER_NAME } from '../auth/user-view.js';
 import type { Attachment, Conversation, MessageRecord } from './messages.types.js';
 
 /**
@@ -12,6 +13,11 @@ export interface MessageRepository {
   getConversation(id: string): Promise<Conversation | undefined>;
   createConversation(a: string, b: string): Promise<Conversation>;
   listConversations(userId: string): Promise<Conversation[]>;
+  /**
+   * Danh sách hội thoại + người kia + tin cuối + số chưa đọc + trạng thái chặn trong MỘT truy vấn (không N+1), phân trang keyset
+   * theo (lastMessageAt, createdAt, id) giảm dần. Trả tối đa `limit` dòng và cờ còn trang sau.
+   */
+  listConversationSummaries(userId: string, opts: { limit: number; cursor?: ConversationCursor }): Promise<{ items: ConversationSummary[]; hasMore: boolean }>;
   addMessage(conv: Conversation, senderId: string, content: string, attachments: Attachment[]): Promise<MessageRecord>;
   getMessage(id: string): Promise<MessageRecord | undefined>;
   /** Trả tối đa `limit` tin MỚI NHẤT có seq < beforeSeq, theo thứ tự cũ → mới; kèm cờ còn tin cũ hơn. */
@@ -26,6 +32,20 @@ export interface MessageRepository {
   unblock(blockerId: string, targetId: string): Promise<void>;
   listBlocks(blockerId: string): Promise<{ userId: string; blockedAt: string }[]>;
   isBlocked(blockerId: string, targetId: string): Promise<boolean>;
+}
+
+export interface ConversationCursor {
+  lastMessageAt: string;
+  createdAt: string;
+  id: string;
+}
+export interface ConversationSummary {
+  conversation: Conversation;
+  other: { id: string; name: string };
+  lastMessage: MessageRecord | null;
+  unreadCount: number;
+  blockedByMe: boolean;
+  cursor: ConversationCursor;
 }
 
 const toConversation = (c: ConversationRow): Conversation => ({
@@ -46,6 +66,29 @@ const toMessage = (m: MessageRow): MessageRecord => ({
   createdAt: m.createdAt.toISOString(),
   deletedAt: m.deletedAt ? m.deletedAt.toISOString() : null,
 });
+
+interface SummaryRow {
+  id: string;
+  userAId: string;
+  userBId: string;
+  createdAt: Date;
+  lastMessageAt: Date;
+  readSeqA: number;
+  readSeqB: number;
+  otherId: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  otherDeletedAt: Date | null;
+  lmId: string | null;
+  lmSeq: number | null;
+  lmSenderId: string | null;
+  lmContent: string | null;
+  lmAttachments: unknown;
+  lmCreatedAt: Date | null;
+  lmDeletedAt: Date | null;
+  unread: number;
+  blocked: boolean;
+}
 
 /**
  * Sắp cặp theo đúng so sánh của Postgres (CHECK "userAId" < "userBId" dùng collation của DB, có thể khác `Array.sort` của JS).
@@ -87,6 +130,47 @@ export const prismaMessageRepository: MessageRepository = {
       orderBy: [{ lastMessageAt: 'desc' }, { createdAt: 'desc' }],
     });
     return rows.map(toConversation);
+  },
+
+  async listConversationSummaries(userId, { limit, cursor }) {
+    const after = cursor
+      ? Prisma.sql`AND (c."lastMessageAt", c."createdAt", c."id") < (${cursor.lastMessageAt}::timestamp, ${cursor.createdAt}::timestamp, ${cursor.id}::text)`
+      : Prisma.empty;
+    const rows = await prisma.$queryRaw<SummaryRow[]>`
+      SELECT c."id", c."userAId", c."userBId", c."createdAt", c."lastMessageAt", c."readSeqA", c."readSeqB",
+             o."id" AS "otherId", o."firstName", o."lastName", o."deletedAt" AS "otherDeletedAt",
+             lm."id" AS "lmId", lm."seq" AS "lmSeq", lm."senderId" AS "lmSenderId", lm."content" AS "lmContent",
+             lm."attachments" AS "lmAttachments", lm."createdAt" AS "lmCreatedAt", lm."deletedAt" AS "lmDeletedAt",
+             (SELECT COUNT(*)::int FROM "Message" m
+               WHERE m."conversationId" = c."id" AND m."senderId" <> ${userId} AND m."deletedAt" IS NULL
+                 AND m."seq" > CASE WHEN c."userAId" = ${userId} THEN c."readSeqA" ELSE c."readSeqB" END) AS "unread",
+             EXISTS (SELECT 1 FROM "UserBlock" b WHERE b."blockerId" = ${userId} AND b."targetId" = o."id") AS "blocked"
+      FROM "Conversation" c
+      LEFT JOIN "User" o ON o."id" = CASE WHEN c."userAId" = ${userId} THEN c."userBId" ELSE c."userAId" END
+      LEFT JOIN LATERAL (SELECT * FROM "Message" m WHERE m."conversationId" = c."id" ORDER BY m."seq" DESC LIMIT 1) lm ON true
+      WHERE (c."userAId" = ${userId} OR c."userBId" = ${userId}) ${after}
+      ORDER BY c."lastMessageAt" DESC, c."createdAt" DESC, c."id" DESC
+      LIMIT ${limit + 1}`;
+    const items = rows.slice(0, limit).map((r): ConversationSummary => ({
+      conversation: toConversation({ id: r.id, userAId: r.userAId, userBId: r.userBId, createdAt: r.createdAt, lastMessageAt: r.lastMessageAt, readSeqA: r.readSeqA, readSeqB: r.readSeqB }),
+      other: { id: r.otherId ?? (r.userAId === userId ? r.userBId : r.userAId), name: r.otherId && !r.otherDeletedAt ? `${r.firstName} ${r.lastName}` : DELETED_USER_NAME },
+      lastMessage: r.lmId
+        ? {
+            id: r.lmId,
+            seq: r.lmSeq!,
+            conversationId: r.id,
+            senderId: r.lmSenderId!,
+            content: r.lmContent!,
+            attachments: (r.lmAttachments ?? []) as unknown as Attachment[],
+            createdAt: r.lmCreatedAt!.toISOString(),
+            deletedAt: r.lmDeletedAt ? r.lmDeletedAt.toISOString() : null,
+          }
+        : null,
+      unreadCount: r.unread,
+      blockedByMe: r.blocked,
+      cursor: { lastMessageAt: r.lastMessageAt.toISOString(), createdAt: r.createdAt.toISOString(), id: r.id },
+    }));
+    return { items, hasMore: rows.length > limit };
   },
 
   async addMessage(conv, senderId, content, attachments) {

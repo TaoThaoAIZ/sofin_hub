@@ -68,10 +68,10 @@ add(M, MN, "Lọc theo danh mục", "Lọc theo nhiều danh mục cùng lúc",
     "Danh mục: Kinh doanh, Tài chính",
     "Hiển thị khóa học thuộc 1 trong 2 danh mục đã chọn (logic OR)")
 add(M, MN, "Bộ lọc nâng cao", "Lọc theo khoảng giá",
-    "Chức năng", "Cao", DONE, "Có khóa học với nhiều mức giá khác nhau",
-    ["Vào trang khám phá", "Mở bộ lọc nâng cao", "Chọn khoảng giá cụ thể (VD 0-500k)"],
-    "Khoảng giá: 0 - 500,000đ",
-    "Chỉ hiển thị khóa học có giá nằm trong khoảng đã chọn")
+    "Chức năng", "Cao", DONE, 'Có cộng đồng miễn phí và có phí trong dữ liệu (seed: photo, fit miễn phí; còn lại $5-$15/tháng)',
+    ['Vào trang khám phá', "Bấm dropdown 'Giá' trên thanh bộ lọc (UI chỉ có 3 lựa chọn theo LOẠI GIÁ; KHÔNG có ô nhập khoảng giá min-max)", "Lần lượt chọn 'Có phí', 'Miễn phí', 'Dùng thử miễn phí'"],
+    'pricing=paid | free | trial (GET /api/courses?pricing=...)',
+    "Mỗi lựa chọn chỉ hiển thị cộng đồng đúng loại giá (Có phí: giá > 0; Miễn phí: giá = 0; Dùng thử: có dùng thử miễn phí); số 'Tìm thấy N khóa học' khớp; chọn lại mục đang chọn sẽ bỏ lọc")
 add(M, MN, "Bộ lọc nâng cao", "Lọc theo loại công khai/riêng tư",
     "Chức năng", "Trung bình", DONE, "Có cả khóa học công khai và riêng tư trong dữ liệu",
     ["Vào trang khám phá", "Mở bộ lọc nâng cao", "Chọn loại 'Riêng tư'"],
@@ -86,9 +86,9 @@ add(M, MN, "Bộ lọc nâng cao", "Lọc theo ngôn ngữ",
     "Ngôn ngữ: Tiếng Việt", "Chỉ hiển thị khóa học có ngôn ngữ giảng dạy là Tiếng Việt")
 add(M, MN, "Bộ lọc nâng cao", "Kết hợp nhiều bộ lọc cùng lúc (danh mục + giá + loại)",
     "Chức năng", "Cao", DONE, "Dữ liệu đa dạng danh mục/giá/loại",
-    ["Vào trang khám phá", "Chọn danh mục, khoảng giá và loại công khai/riêng tư cùng lúc"],
-    "Danh mục=Công nghệ; Giá=0-1tr; Loại=Công khai",
-    "Kết quả thỏa mãn đồng thời tất cả điều kiện lọc (logic AND giữa các nhóm filter)")
+    ['Vào trang khám phá', "Chọn tab danh mục 'Công nghệ', dropdown 'Giá' = 'Có phí' và dropdown 'Loại' = 'Công khai' cùng lúc"],
+    'Danh mục=Công nghệ; Giá=Có phí; Loại=Công khai',
+    "Kết quả thỏa mãn đồng thời tất cả điều kiện lọc (logic AND giữa các nhóm filter), số 'Tìm thấy N' cập nhật, về trang 1")
 add(M, MN, "Bộ lọc nâng cao", "Xóa/reset toàn bộ bộ lọc",
     "Chức năng", "Trung bình", DONE, "Đã áp dụng ít nhất 1 bộ lọc",
     ["Áp dụng vài bộ lọc", "Bấm nút 'Xóa bộ lọc' / 'Reset'"],
@@ -118,9 +118,10 @@ add(M, MN, "Phân trang", "Quay lại trang trước đó",
     ["Từ trang 2, bấm 'Trang trước' / số trang 1"], "-",
     "Quay về đúng dữ liệu trang 1")
 add(M, MN, "Số liệu nổi bật (hero)", "Kiểm tra số liệu tổng học viên/khóa học/đánh giá hiển thị đúng",
-    "Chức năng", "Trung bình", DONE, "Có dữ liệu thống kê trên hệ thống",
-    ["Vào trang chủ", "Đối chiếu số liệu hiển thị ở khu vực hero với dữ liệu thực tế trong hệ thống"],
-    "-", "Số liệu hiển thị khớp với dữ liệu thực tế (hoặc dữ liệu mẫu đã khai báo)")
+    "Chức năng", "Trung bình", DONE, 'Có dữ liệu trong DB (đã chạy seed)',
+    ['Vào trang chủ', 'Đối chiếu 4 số liệu ở khu vực hero (học viên, cộng đồng, chủ cộng đồng, điểm đánh giá trung bình) với GET /api/stats và với SQL trong DB'],
+    "-",
+    "Số liệu khớp GET /api/stats (tính từ DB: người dùng thật, cộng đồng đang liệt kê, chủ cộng đồng, trung bình review thật); khi chưa có đánh giá thật hiển thị '–' (rating = null), không còn số bịa")
 add(M, MN, "Câu chuyện cộng đồng", "Hiển thị đánh giá/phản hồi nổi bật trên trang chủ",
     "Giao diện", "Thấp", DONE, "Trang chủ đã tải xong", ["Vào trang chủ", "Cuộn tới khu vực câu chuyện cộng đồng"],
     "-", "Hiển thị đầy đủ nội dung, tên, avatar (dữ liệu minh họa) không bị vỡ layout")
@@ -136,8 +137,9 @@ add(M, MN, "Tìm kiếm khóa học", "Tìm kiếm với khoảng trắng thừa
     "Hệ thống tự trim khoảng trắng, trả về kết quả đúng như không có khoảng trắng thừa")
 add(M, MN, "Tìm kiếm khóa học", "Tìm kiếm không dấu vẫn ra kết quả có dấu tiếng Việt",
     "Chức năng", "Trung bình", DONE, "-",
-    ["Nhập từ khóa không dấu (VD: 'ke toan')", "Bấm tìm kiếm"], "'ke toan' cho khóa học 'Kế toán'",
-    "Trả về đúng khóa học có dấu tương ứng nếu hệ thống hỗ trợ tìm không dấu; nếu không hỗ trợ cần thống nhất hành vi mong đợi với BA")
+    ['Vào trang khám phá', "Nhập từ khóa không dấu (VD: 'dau tu')", 'Bấm tìm kiếm'],
+    "'dau tu' cho cộng đồng 'Đầu tư cho người mới' (seed fin)",
+    'Trả về đúng cộng đồng có dấu tương ứng: tìm không dấu ĐÃ được hỗ trợ (Postgres full-text gập dấu bằng sf_fold(), đ -> d; GET /courses?q dùng cùng bộ khớp - backend/docs/api/search.md)')
 add(M, MN, "Bộ lọc nâng cao", "Lọc theo giá với giá trị Min > Max",
     "Chức năng", "Trung bình", DONE, "-",
     ["Mở bộ lọc nâng cao", "Nhập Giá từ = 1,000,000đ và Giá đến = 100,000đ", "Áp dụng"],
@@ -233,10 +235,10 @@ add(M, MN, "Đăng nhập", "Đăng nhập với email không tồn tại",
     ["Vào trang Đăng nhập", "Nhập email chưa từng đăng ký", "Bấm Đăng nhập"],
     "Email không tồn tại", "Hiển thị lỗi chung (không tiết lộ email có tồn tại hay không), không cho vào hệ thống")
 add(M, MN, "Đăng nhập", "Giới hạn số lần đăng nhập sai liên tiếp (chống dò mật khẩu)",
-    "Bảo mật", "Cao", DONE, "Tài khoản đã tồn tại",
-    ["Vào trang Đăng nhập", "Nhập sai mật khẩu liên tục nhiều lần trong thời gian ngắn (VD 5-10 lần)"],
-    "Mật khẩu sai lặp lại",
-    "Sau ngưỡng quy định, hệ thống tạm khóa đăng nhập / yêu cầu xác minh thêm (captcha, chờ...), không cho brute-force vô hạn")
+    "Bảo mật", "Cao", DONE, 'Tài khoản đã tồn tại. Nên chạy CUỐI phiên test: case làm cạn quota đăng nhập sai của IP máy test (10 lần SAI/15 phút/IP, bộ đếm theo từng instance BE) nên các test đăng nhập khác sẽ bị 429 tới khi restart BE hoặc hết 15 phút',
+    ['Vào trang Đăng nhập (hoặc gọi POST /api/auth/login)', 'Nhập sai mật khẩu liên tục tới khi bị chặn (tối đa ~11 lần)'],
+    'Mật khẩu sai lặp lại (> 10 lần/15 phút từ cùng IP)',
+    "Từ lần SAI thứ 11 trong cửa sổ 15 phút (sớm hơn nếu IP đã có lần sai trước đó) API trả 429 TOO_MANY_REQUESTS 'Đăng nhập sai quá nhiều lần, vui lòng thử lại sau ít phút' và FE hiển thị lỗi; chỉ đếm lần đăng nhập THẤT BẠI (loginLimiter trong auth.routes.ts)")
 add(M, MN, "Phiên đăng nhập", "Phiên đăng nhập được giữ khi tải lại trang (F5)",
     "Chức năng", "Cao", DONE, "Đã đăng nhập thành công",
     ["Đăng nhập vào hệ thống", "Nhấn F5 để tải lại trang"], "-",
@@ -250,13 +252,15 @@ add(M, MN, "Đăng xuất", "Sau khi đăng xuất, không thể truy cập lạ
     ["Đăng xuất khỏi hệ thống", "Bấm nút Back của trình duyệt để quay lại trang yêu cầu đăng nhập"],
     "-", "Hệ thống yêu cầu đăng nhập lại, không hiển thị lại nội dung đã cache của phiên cũ")
 add(M, MN, "Đăng nhập mạng xã hội", "Đăng nhập bằng Google",
-    "Chức năng", "Trung bình", PLAN, "Tính năng đang ở giai đoạn Kế hoạch — nút hiển thị nhưng chưa xử lý thật",
+    "Chức năng", "Trung bình", PLAN, "Chưa làm (Kế hoạch): nút Google ở /login chỉ hiện 'Tính năng sắp ra mắt' và chưa gọi API (xem TC-AUTH-069)",
     ["Vào trang Đăng nhập", "Bấm nút Đăng nhập bằng Google", "Chọn tài khoản Google"],
-    "Tài khoản Google hợp lệ", "Đăng nhập/tạo tài khoản thành công liên kết với Google")
+    "Tài khoản Google hợp lệ",
+    "Đăng nhập/tạo tài khoản thành công liên kết với Google")
 add(M, MN, "Đăng nhập mạng xã hội", "Đăng nhập bằng Facebook",
-    "Chức năng", "Trung bình", PLAN, "Tính năng đang ở giai đoạn Kế hoạch",
+    "Chức năng", "Trung bình", PLAN, "Chưa làm (Kế hoạch): nút Facebook ở /login chỉ hiện 'Tính năng sắp ra mắt' và chưa gọi API (xem TC-AUTH-069)",
     ["Vào trang Đăng nhập", "Bấm nút Đăng nhập bằng Facebook", "Xác nhận quyền truy cập"],
-    "Tài khoản Facebook hợp lệ", "Đăng nhập/tạo tài khoản thành công liên kết với Facebook")
+    "Tài khoản Facebook hợp lệ",
+    "Đăng nhập/tạo tài khoản thành công liên kết với Facebook")
 add(M, MN, "Quên mật khẩu", "Gửi yêu cầu khôi phục mật khẩu qua email",
     "Chức năng", "Cao", PLAN, "Tính năng đang ở giai đoạn Kế hoạch",
     ["Vào trang Đăng nhập", "Bấm 'Quên mật khẩu'", "Nhập email đã đăng ký", "Bấm gửi yêu cầu"],
@@ -270,9 +274,10 @@ add(M, MN, "Hồ sơ cá nhân", "Xem và cập nhật hồ sơ cá nhân (ảnh
     ["Vào trang Hồ sơ cá nhân", "Cập nhật ảnh đại diện và tiểu sử", "Lưu"],
     "-", "Thông tin được lưu và hiển thị đúng ở các nơi khác (bài viết, bình luận...)")
 add(M, MN, "Xác thực 2 lớp (2FA)", "Bật 2FA cho tài khoản Owner/Admin",
-    "Bảo mật", "Trung bình", PLAN, "Tính năng đang ở giai đoạn Kế hoạch",
+    "Bảo mật", "Trung bình", PLAN, 'Chưa làm (Kế hoạch): chưa có 2FA cho người dùng/Owner; 2FA của nhân viên admin chỉ lưu cấu hình, chưa thực thi (docs/OPEN_DECISIONS A14; xem TC-AUTH-071)',
     ["Vào Cài đặt bảo mật tài khoản", "Bật 2FA", "Quét mã QR bằng app xác thực", "Nhập mã xác nhận"],
-    "-", "2FA được kích hoạt, lần đăng nhập tiếp theo yêu cầu nhập mã OTP")
+    "-",
+    "2FA được kích hoạt, lần đăng nhập tiếp theo yêu cầu nhập mã OTP")
 
 add(M, MN, "Đăng ký", "Mật khẩu đúng đủ 8 ký tự (giá trị biên) được chấp nhận",
     "Chức năng", "Trung bình", DONE, "-",
@@ -291,9 +296,10 @@ add(M, MN, "Đăng ký", "Mật khẩu chứa khoảng trắng ở giữa",
     ["Nhập mật khẩu có khoảng trắng ở giữa", "Bấm Đăng ký"], "'Ab@12 34'",
     "Hệ thống chấp nhận hoặc từ chối rõ ràng theo quy tắc đã định nghĩa, hành vi nhất quán giữa FE và BE")
 add(M, MN, "Đăng nhập", "Tài khoản bị tạm khóa do đăng nhập sai nhiều lần vẫn từ chối dù nhập đúng mật khẩu",
-    "Bảo mật", "Cao", DONE, "Tài khoản vừa bị khóa tạm thời do vượt ngưỡng đăng nhập sai",
-    ["Đăng nhập sai đủ số lần để bị khóa tạm thời", "Ngay sau đó đăng nhập lại với email/mật khẩu ĐÚNG"],
-    "-", "Vẫn bị từ chối đăng nhập với thông báo tài khoản đang tạm khóa, cho tới khi hết thời gian khóa")
+    "Bảo mật", "Cao", DONE, 'Vừa vượt ngưỡng 10 lần đăng nhập sai/15 phút từ cùng IP (đây là giới hạn THEO IP, không phải khóa riêng tài khoản)',
+    ['Đăng nhập sai đủ số lần để nhận 429', 'Ngay sau đó đăng nhập với email/mật khẩu ĐÚNG của cùng tài khoản'],
+    "-",
+    "Vẫn 429 (bị chặn dù mật khẩu đúng) cho tới khi hết cửa sổ 15 phút. Lưu ý đây là rate limit theo IP chứ không phải khóa tài khoản (xem case 'Giới hạn đăng nhập sai tính theo IP...' cuối module)")
 add(M, MN, "Đăng nhập", "Đăng nhập đồng thời trên nhiều thiết bị khác nhau không bị đá nhau",
     "Chức năng", "Trung bình", DONE, "-",
     ["Đăng nhập tài khoản A trên trình duyệt 1", "Đăng nhập cùng tài khoản A trên trình duyệt 2",
@@ -323,7 +329,8 @@ add(M, MN, "Đăng ký", "Trường mật khẩu không hiển thị dạng plai
 add(M, MN, "Đăng xuất", "API từ chối request dùng access token cũ ngay sau khi đăng xuất",
     "Bảo mật", "Cao", DONE, "Đã đăng nhập, có access token còn hiệu lực",
     ["Lấy access token hiện tại", "Đăng xuất", "Ngay lập tức gọi API cần xác thực bằng access token vừa lấy"],
-    "-", "API từ chối truy cập ngay, không cần chờ tới khi access token tự hết hạn")
+    "-",
+    "API từ chối ngay bằng 401, không chờ access token hết hạn. LỖI CŨ ĐÃ SỬA: access token mang sid + tv, requireAuth/optionalAuth tra phiên và User.tokenVersion trong DB mỗi request (backend/docs/api/identity.md 'Thu hồi access token có hiệu lực NGAY'; tests/token-revocation.test.ts). Kết quả Fail trước đây là của bản cũ - CẦN CHẠY LẠI Test 1")
 
 # ============================= 3. CỘNG ĐỒNG ==================================
 M, MN = "COMM", "Cộng đồng"
@@ -365,7 +372,9 @@ add(M, MN, "Trang cộng đồng", "Tab Thành viên hiển thị danh sách th�
     ["Vào trang cộng đồng", "Chọn tab Thành viên"], "-", "Hiển thị danh sách thành viên kèm vai trò trong cộng đồng")
 add(M, MN, "Trang cộng đồng", "Tab Giới thiệu hiển thị đúng thông tin cộng đồng",
     "Giao diện", "Thấp", PLAN, "-",
-    ["Vào trang cộng đồng", "Chọn tab Giới thiệu"], "-", "Hiển thị mô tả, quy tắc, thông tin Owner đúng như đã cấu hình")
+    ['Vào /communities/:id/community', "Chọn mục 'Giới thiệu' ở thanh bên (/communities/:id/community/gioi-thieu)"],
+    "-",
+    'Hiển thị thông tin chung (công khai/riêng tư, số thành viên, giá), mô tả, khối nội dung/lớp học và thông tin chủ cộng đồng đúng như đã cấu hình (dữ liệu thật từ API, không còn mẫu)')
 add(M, MN, "Tham gia cộng đồng", "Tham gia cộng đồng Công khai + Miễn phí",
     "Chức năng", "Cao", PLAN, "Có cộng đồng công khai miễn phí, đã đăng nhập",
     ["Vào trang cộng đồng công khai miễn phí", "Bấm 'Tham gia ngay'"], "-",
@@ -429,8 +438,9 @@ add(M, MN, "Quản lý cộng đồng", "Owner xóa cộng đồng",
     "-", "Cộng đồng và toàn bộ dữ liệu liên quan bị vô hiệu hóa/xóa đúng theo chính sách, thành viên mất quyền truy cập")
 add(M, MN, "Tham gia cộng đồng", "Thành viên từng bị loại khỏi cộng đồng riêng tư gửi lại yêu cầu tham gia",
     "Chức năng", "Trung bình", PLAN, "Thành viên đã từng bị Owner loại khỏi cộng đồng riêng tư",
-    ["Thành viên đã bị loại trước đó vào lại trang cộng đồng riêng tư", "Gửi yêu cầu tham gia lại"], "-",
-    "Yêu cầu được gửi tới Owner như bình thường (hoặc bị chặn nếu có chính sách cấm riêng — cần xác nhận với BA)")
+    ["Thành viên đã bị loại trước đó vào lại trang cộng đồng riêng tư", "Gửi yêu cầu tham gia lại"],
+    "-",
+    "Yêu cầu mới được tạo bình thường (201, chờ duyệt): kick KHÔNG phải cấm - kick xóa ghi danh và thu hồi các yêu cầu 'approved' cũ (communities.service.kick). Nếu người đó bị CẤM (ban) thì 403 'Bạn đã bị cấm khỏi cộng đồng này' (xem TC-COMM-090)")
 add(M, MN, "Phân quyền", "Owner chuyển giao quyền sở hữu (Owner) cộng đồng cho thành viên khác",
     "Chức năng", "Cao", PLAN, "Owner có 1 cộng đồng, có 1 Admin đáng tin cậy",
     ["Owner vào quản lý thành viên", "Chọn 'Chuyển quyền sở hữu' cho 1 Admin", "Xác nhận"], "-",
@@ -449,8 +459,9 @@ add(M, MN, "Mời thành viên", "Liên kết mời dùng được đúng số l
     "Lần 1 thành công; lần 2 bị từ chối do liên kết đã được sử dụng (nếu cấu hình giới hạn 1 lần)")
 add(M, MN, "Khám phá cộng đồng", "Cộng đồng riêng tư không hiển thị đầy đủ trên trang khám phá công khai",
     "Bảo mật", "Trung bình", PLAN, "Có cả cộng đồng công khai và riêng tư",
-    ["Vào trang khám phá cộng đồng ở chế độ Khách/chưa tham gia"], "-",
-    "Cộng đồng riêng tư không hiển thị đầy đủ chi tiết, tuân đúng quy tắc hiển thị theo chế độ Riêng tư")
+    ["Vào trang khám phá cộng đồng ở chế độ Khách/chưa tham gia"],
+    "-",
+    "Cộng đồng riêng tư vẫn xuất hiện trong danh sách Khám phá (có thể lọc 'Loại: Riêng tư' - quyết định A12 trong docs/OPEN_DECISIONS.md chưa chốt) nhưng người chưa được duyệt chỉ thấy trang giới thiệu /communities/:id với nút 'Gửi yêu cầu tham gia'; nội dung các tab bị chặn (API 403, FE chuyển về trang giới thiệu). [PHỤ THUỘC QUYẾT ĐỊNH CHƯA CHỐT]")
 add(M, MN, "Rời cộng đồng", "Owner không thể tự rời cộng đồng khi chưa chuyển giao quyền sở hữu",
     "Chức năng", "Trung bình", PLAN, "Owner đang sở hữu 1 cộng đồng, chưa chuyển giao",
     ["Owner vào cài đặt cộng đồng", "Thử bấm 'Rời cộng đồng'"], "-",
@@ -532,9 +543,10 @@ add(M, MN, "Thanh toán", "Không cho checkout khóa học miễn phí",
     "Chức năng", "Trung bình", DONE, "Khóa học priceUsd = 0",
     ["Gọi POST /api/courses/:id/checkout cho khóa miễn phí"], "-", "Trả về 400 'Khóa học này miễn phí, không cần thanh toán'")
 add(M, MN, "Thanh toán", "Chặn truy cập nội dung cộng đồng trước khi xác nhận thanh toán",
-    "Bảo mật", "Cao", DONE, "Đã checkout (PaymentIntent pending) nhưng CHƯA confirm",
-    ["Gọi GET /api/courses/:id/posts ngay sau khi checkout, trước khi confirm"], "-",
-    "Trả về 403 — đã verify: nội dung chỉ mở sau khi confirm thành công, không tin trạng thái 'pending' là đã có quyền")
+    "Bảo mật", "Cao", DONE, 'Đã đăng nhập, CHƯA tham gia cộng đồng có phí (vd. paid-demo $19/tháng); đã checkout nhưng CHƯA confirm',
+    ['POST /api/courses/:id/checkout (tạo intent pending)', 'Trước khi POST /api/payments/:id/confirm, gọi GET /api/communities/:id/posts (hoặc /api/courses/:id/posts) và mở /communities/:id/community'],
+    "-",
+    'API 403 (requireMembership), FE chuyển về /communities/:id; intent pending KHÔNG cấp quyền - chỉ sau confirm thành công (hoặc bắt đầu dùng thử) mới vào được (xem TC-PAY-043)')
 add(M, MN, "Thanh toán", "Xác nhận thanh toán cấp quyền truy cập thật ngay lập tức",
     "Chức năng", "Cao", DONE, "Có PaymentIntent đang pending",
     ["Gọi POST /api/payments/:id/confirm"], "-",
@@ -548,12 +560,14 @@ add(M, MN, "Thanh toán", "Không cho checkout lại khi đã tham gia khóa h�
     ["Gọi lại POST /api/courses/:id/checkout cho khóa đã tham gia"], "-", "Trả về 409 'Bạn đã tham gia khóa học này rồi'")
 add(M, MN, "Điều hướng", "Vào thẳng URL /courses/:id/community khi chưa tham gia sẽ bị chuyển hướng",
     "Chức năng", "Trung bình", DONE, "Chưa tham gia khóa học",
-    ["Gõ thẳng URL /courses/:id/community khi chưa enroll"], "-",
-    "FE tự redirect về /courses/:id (chặn UX sớm); quyền thật vẫn do từng API con tự xác thực lại ở server, không tin riêng cờ viewerEnrolled ở FE")
+    ['Gõ thẳng URL /communities/:id/community (hoặc URL cũ /courses/:id/community) khi chưa tham gia'],
+    "-",
+    'FE (CommunityPage) <Navigate> về /communities/:id (URL cũ /courses/:id/* qua LegacyCourseRedirect rồi cũng bị chuyển); quyền thật vẫn do từng API con tự kiểm ở server (403), không tin riêng cờ viewerEnrolled ở FE')
 add(M, MN, "Điều hướng", "Bấm 'Tham gia ngay' trên khóa có phí hiện dialog xác nhận trước khi sang trang thanh toán",
     "Chức năng", "Cao", DONE, "Khóa học có phí, chưa tham gia, đã đăng nhập",
-    ["Bấm 'Tham gia ngay'"], "-",
-    "Hiện dialog thông báo giá + thông tin dùng thử, có nút 'Đi tới thanh toán' → điều hướng /courses/:id/checkout. Khóa miễn phí thì bỏ qua dialog, vào thẳng /courses/:id/community")
+    ["Bấm 'Tham gia ngay'"],
+    "-",
+    "Hiện hộp thoại 'Khóa học có phí' nêu giá ($x/tháng) + ghi chú dùng thử (nếu có), nút 'Đi tới thanh toán' -> /communities/:id/checkout và nút 'Để sau' đóng hộp thoại. Cộng đồng miễn phí bỏ qua hộp thoại, vào thẳng /communities/:id/community; cộng đồng riêng tư dùng luồng 'Gửi yêu cầu tham gia'")
 
 # ============================= 4. KHÓA HỌC / LỚP HỌC =========================
 M, MN = "COURSE", "Khóa học / Lớp học"
@@ -621,11 +635,13 @@ add(M, MN, "Nhúng video bài giảng", "Nhúng và phát video từ Vimeo",
 add(M, MN, "Trang chi tiết khóa học", "Giao diện khác nhau giữa người đã tham gia và chưa tham gia khóa học",
     "Giao diện", "Trung bình", DONE, "Có 2 tài khoản: 1 đã tham gia, 1 chưa tham gia",
     ["Đăng nhập tài khoản đã tham gia, xem trang chi tiết khóa học", "Đăng nhập tài khoản chưa tham gia, xem cùng khóa học"],
-    "-", "Tài khoản đã tham gia thấy nút/khu vực 'Vào học'; tài khoản chưa tham gia thấy nút 'Tham gia ngay', không lẫn lộn")
+    "-",
+    "Tài khoản đã tham gia thấy nút xanh 'Đã tham gia' (bấm lại sẽ rời cộng đồng) và vào được /communities/:id/community; tài khoản chưa tham gia thấy 'Tham gia ngay' (riêng tư: 'Gửi yêu cầu tham gia'; đã gửi: 'Đã gửi yêu cầu - chờ duyệt'), không lẫn lộn")
 add(M, MN, "Trang chi tiết khóa học", "Khóa học chưa có đánh giá nào vẫn hiển thị đúng, không lỗi",
-    "Chức năng", "Thấp", DONE, "Có khóa học mới chưa có review/rating",
-    ["Mở trang chi tiết 1 khóa học chưa có đánh giá"], "-",
-    "Khu vực đánh giá hiển thị trạng thái rỗng hợp lý, không lỗi giao diện/số liệu NaN")
+    "Chức năng", "Thấp", DONE, 'Cộng đồng mới tạo qua POST /communities (rating 0, ratingCount 0; cộng đồng seed đều có điểm nền nên không dùng được); review bịa đã bị gỡ',
+    ["Mở trang chi tiết 1 khóa học chưa có đánh giá"],
+    "-",
+    "Khu vực 'Đánh giá' hiển thị trạng thái rỗng (reviews = []), điểm trung bình không hiện NaN, thành viên có thể là người đánh giá đầu tiên")
 add(M, MN, "Tham gia khóa học", "Bấm 'Tham gia ngay' nhiều lần liên tiếp (double click) không tạo bản ghi trùng",
     "Chức năng", "Cao", DONE, "Đã đăng nhập, khóa học chưa tham gia",
     ["Vào trang chi tiết khóa học", "Bấm rất nhanh 2-3 lần liên tiếp vào nút 'Tham gia ngay'"], "-",
@@ -650,8 +666,9 @@ add(M, MN, "Đăng bài", "Đăng bài viết kèm ảnh",
     ["Tạo bài viết mới", "Đính kèm 1 hoặc nhiều ảnh", "Đăng"], "Ảnh JPG/PNG hợp lệ",
     "Bài viết hiển thị kèm ảnh đúng, ảnh load được, không vỡ layout")
 add(M, MN, "Đăng bài", "Đăng bài viết kèm video",
-    "Chức năng", "Trung bình", PLAN, "Là thành viên của cộng đồng",
-    ["Tạo bài viết mới", "Đính kèm video", "Đăng"], "Video hợp lệ",
+    "Chức năng", "Trung bình", PLAN, "Là thành viên của cộng đồng. CHƯA LÀM (Kế hoạch): bài viết chỉ hỗ trợ 1 ảnh (imageUrl) + poll, chưa có video/tệp đính kèm (backend/docs/API.md 'Thiếu ở BE')",
+    ["Tạo bài viết mới", "Đính kèm video", "Đăng"],
+    "Video hợp lệ",
     "Bài viết hiển thị kèm video, phát được trực tiếp trên bảng tin")
 add(M, MN, "Đăng bài", "Gắn danh mục cho bài viết",
     "Chức năng", "Thấp", PLAN, "Là thành viên của cộng đồng",
@@ -682,8 +699,9 @@ add(M, MN, "Ghim bài viết", "Bỏ ghim bài viết",
     ["Mở bài viết đang ghim", "Bấm 'Bỏ ghim'"], "-",
     "Bài viết trở lại vị trí theo thứ tự thời gian bình thường")
 add(M, MN, "Bảng tin cuộn vô hạn", "Tự động tải thêm bài viết khi cuộn xuống cuối trang",
-    "Hiệu năng", "Trung bình", PLAN, "Cộng đồng có nhiều bài viết (vượt quá 1 trang tải ban đầu)",
-    ["Vào bảng tin cộng đồng", "Cuộn chuột xuống cuối danh sách bài viết hiện có"], "-",
+    "Hiệu năng", "Trung bình", PLAN, "Cộng đồng có nhiều bài (> 10). HIỆN TẠI là nút 'Tải thêm bài viết (đã hiện/tổng)' (FeedTab.tsx, phân trang cursor keyset) - CHƯA có tự tải khi cuộn (nút hiện có được kiểm ở TC-FEED-132)",
+    ["Vào bảng tin cộng đồng", "Cuộn chuột xuống cuối danh sách bài viết hiện có"],
+    "-",
     "Hệ thống tự động tải thêm bài viết tiếp theo, không cần bấm nút, không load trùng bài đã có")
 
 add(M, MN, "Đăng bài", "Chỉnh sửa bài viết đã đăng",
@@ -785,8 +803,9 @@ add(M, MN, "RSVP", "Hủy đăng ký tham dự sự kiện",
     ["Mở trang sự kiện đã đăng ký", "Bấm 'Hủy tham dự'"], "-",
     "Trạng thái tham dự bị gỡ, chỗ trống được giải phóng nếu sự kiện có giới hạn số lượng")
 add(M, MN, "Đồng bộ lịch", "Thêm sự kiện vào Google Calendar",
-    "Tích hợp", "Thấp", PLAN, "Đã đăng ký tham dự sự kiện",
-    ["Mở trang sự kiện", "Bấm 'Thêm vào Google Calendar'"], "-",
+    "Tích hợp", "Thấp", PLAN, "Chưa làm (Kế hoạch): chỉ có tải .ics (một sự kiện hoặc cả cộng đồng, nhập được vào Google/Apple/Outlook); chưa có nút 'Thêm vào Google Calendar'",
+    ["Mở trang sự kiện", "Bấm 'Thêm vào Google Calendar'"],
+    "-",
     "Mở đúng luồng thêm sự kiện vào Google Calendar với đầy đủ thông tin thời gian/liên kết")
 add(M, MN, "Đồng bộ lịch", "Xuất file .ics của sự kiện",
     "Tích hợp", "Thấp", PLAN, "Đã đăng ký tham dự sự kiện",
@@ -829,8 +848,9 @@ add(M, MN, "Chuông thông báo", "Nhận thông báo khi bài viết/bình lu�
     ["Người dùng B thích bài viết/bình luận của A", "Kiểm tra chuông thông báo của A"], "-",
     "A nhận được thông báo về lượt thích mới")
 add(M, MN, "Chuông thông báo", "Nhận thông báo khi được mời vào cộng đồng",
-    "Chức năng", "Trung bình", PLAN, "Owner gửi lời mời tới người dùng A",
-    ["Owner mời A vào cộng đồng riêng tư", "Kiểm tra chuông thông báo của A"], "-",
+    "Chức năng", "Trung bình", PLAN, "Chưa thiết kế (Kế hoạch): lời mời hiện là LIÊN KẾT/mã mời (POST /courses/:id/invites, /invite/:code) do Owner/Admin chia sẻ, không có lời mời gửi trực tiếp tới 1 user nên không có loại thông báo 'lời mời' (notifications.types.ts). Cần quyết định nghiệp vụ",
+    ["Owner mời A vào cộng đồng riêng tư", "Kiểm tra chuông thông báo của A"],
+    "-",
     "A nhận được thông báo lời mời kèm hành động chấp nhận/từ chối")
 add(M, MN, "Tin nhắn trực tiếp", "Gửi tin nhắn 1-1 tới thành viên khác",
     "Chức năng", "Trung bình", PLAN, "2 tài khoản cùng ở chung 1 cộng đồng",
@@ -841,8 +861,9 @@ add(M, MN, "Tin nhắn trực tiếp", "Nhận tin nhắn trực tiếp theo th�
     ["Người A gửi tin nhắn cho người B đang online", "Quan sát màn hình của B"], "-",
     "B nhận được tin nhắn ngay không cần tải lại trang (real-time)")
 add(M, MN, "Email giao dịch", "Gửi email xác nhận khi đăng ký tài khoản/tham gia thành công",
-    "Tích hợp", "Trung bình", PLAN, "Vừa đăng ký tài khoản hoặc tham gia gói trả phí",
-    ["Hoàn tất đăng ký/tham gia", "Kiểm tra hộp thư email đã đăng ký"], "-",
+    "Tích hợp", "Trung bình", PLAN, 'Chưa làm (Kế hoạch): POST /auth/register không gửi email xác nhận; thư xác thực chỉ gửi khi người dùng bấm gửi, vào outbox dev, chưa có SES/SMTP (backend/docs/api/identity.md)',
+    ["Hoàn tất đăng ký/tham gia", "Kiểm tra hộp thư email đã đăng ký"],
+    "-",
     "Nhận được email xác nhận đúng nội dung, đúng thời gian hợp lý (vài phút)")
 add(M, MN, "Email giao dịch", "Gửi email hóa đơn sau khi thanh toán thành công",
     "Tích hợp", "Trung bình", PLAN, "Vừa thanh toán thành công 1 gói",
@@ -866,9 +887,10 @@ add(M, MN, "Tin nhắn trực tiếp", "Không thể nhắn tin cho người kh�
     ["Thử mở khung chat/nhắn tin tới 1 tài khoản không cùng cộng đồng nào với mình"], "-",
     "Bị chặn hoặc không có tùy chọn nhắn tin, tuân theo đúng quy tắc quyền riêng tư")
 add(M, MN, "Email giao dịch", "Email giao dịch gửi đúng ngôn ngữ theo cài đặt tài khoản",
-    "Tích hợp", "Thấp", PLAN, "Tài khoản đã chọn ngôn ngữ English",
+    "Tích hợp", "Thấp", PLAN, 'Chưa làm (Kế hoạch): chưa có cài đặt ngôn ngữ tài khoản/giao diện English và chưa có nhà cung cấp email thật',
     ["Đổi ngôn ngữ tài khoản sang English", "Kích hoạt 1 sự kiện gửi email giao dịch (VD đăng ký thành công)",
-     "Kiểm tra nội dung email"], "-",
+     "Kiểm tra nội dung email"],
+    "-",
     "Email nhận được có nội dung bằng tiếng Anh, đúng theo cài đặt ngôn ngữ tài khoản")
 
 # ============================= 9. THANH TOÁN & GÓI THÀNH VIÊN =================
@@ -922,8 +944,9 @@ add(M, MN, "Quản lý gói của tôi", "Xem thông tin gói hiện tại (giá
     "Chức năng", "Trung bình", PLAN, "Đang có gói active",
     ["Vào 'Gói của tôi'"], "-", "Hiển thị chính xác gói đang dùng, giá, chu kỳ, ngày gia hạn tiếp theo")
 add(M, MN, "Quản lý gói của tôi", "Đổi phương thức thanh toán",
-    "Chức năng", "Trung bình", PLAN, "Đang có gói active",
-    ["Vào 'Gói của tôi'", "Chọn 'Đổi phương thức thanh toán'", "Nhập phương thức mới", "Lưu"], "-",
+    "Chức năng", "Trung bình", PLAN, 'Chưa làm (Kế hoạch): chưa có trang/endpoint đổi phương thức thanh toán (MockGateway); đang có gói active',
+    ["Vào 'Gói của tôi'", "Chọn 'Đổi phương thức thanh toán'", "Nhập phương thức mới", "Lưu"],
+    "-",
     "Phương thức thanh toán mới được lưu, áp dụng cho lần thu phí tiếp theo")
 add(M, MN, "Trang doanh thu Owner", "Trang 'Doanh thu của tôi' hiển thị đúng số dư, lịch sử giao dịch",
     "Chức năng", "Cao", PLAN, "Owner có giao dịch phát sinh từ cộng đồng",
@@ -947,9 +970,10 @@ add(M, MN, "Webhook thanh toán", "Từ chối webhook có chữ ký không hợ
     "Hệ thống từ chối xử lý, không cấp quyền truy cập, ghi log cảnh báo bất thường")
 
 add(M, MN, "Đổi gói", "Owner đổi giá cộng đồng — thành viên hiện tại được xử lý đúng theo chính sách đã chốt",
-    "Chức năng", "Cao", PLAN, "Cộng đồng có thành viên đang trả phí ở mức giá cũ, Owner đổi sang giá mới",
+    "Chức năng", "Cao", PLAN, 'Chưa chốt chính sách (Kế hoạch). HIỆN TẠI đổi giá KHÔNG ảnh hưởng gói đang chạy (gói giữ priceCents lúc đăng ký - payments.md; xem TC-PAY-216 và TC-COMM-059)',
     ["Owner đổi giá cộng đồng từ 99k lên 149k/tháng", "Kiểm tra chu kỳ gia hạn tiếp theo của thành viên đã tham gia trước đó"],
-    "-", "Áp dụng đúng theo chính sách đã chốt với BA (giữ giá cũ tới khi hủy, hay áp giá mới ngay từ chu kỳ sau)")
+    "-",
+    "Áp dụng đúng theo chính sách đã chốt với BA (giữ giá cũ tới khi hủy, hay áp giá mới ngay từ chu kỳ sau)")
 add(M, MN, "Hoàn tiền", "Platform Admin thực hiện hoàn tiền cho trường hợp đặc biệt",
     "Chức năng", "Trung bình", PLAN, "Có giao dịch đã thanh toán, Platform Admin xét duyệt hoàn tiền",
     ["Platform Admin vào quản lý giao dịch", "Chọn 1 giao dịch, thực hiện hoàn tiền có ghi lý do"], "-",
@@ -1002,8 +1026,9 @@ add(M, MN, "Tìm kiếm toàn nền tảng", "Tìm kiếm đồng thời khóa h
     ["Vào ô tìm kiếm toàn nền tảng (header)", "Nhập từ khóa khớp cả 3 loại dữ liệu"], "-",
     "Kết quả trả về gộp cả khóa học, cộng đồng, bài viết liên quan, phân nhóm rõ ràng")
 add(M, MN, "Đa ngôn ngữ", "Chuyển đổi giao diện giữa Tiếng Việt và Tiếng Anh",
-    "Chức năng", "Trung bình", PLAN, "Tính năng đang ở giai đoạn Kế hoạch — nút chọn đã có trên giao diện nhưng chưa hoạt động",
-    ["Bấm nút chọn ngôn ngữ trên header", "Chọn English"], "-",
+    "Chức năng", "Trung bình", PLAN, "Chưa làm (Kế hoạch): chưa có công tắc ngôn ngữ giao diện; topbar cộng đồng chỉ có nhãn tĩnh 'VI' (xem TC-ADMIN-077)",
+    ["Bấm nút chọn ngôn ngữ trên header", "Chọn English"],
+    "-",
     "Toàn bộ giao diện chuyển sang tiếng Anh, không còn text tiếng Việt sót lại")
 add(M, MN, "Trang quản trị nội bộ", "Platform Admin theo dõi tổng quan hoạt động toàn nền tảng",
     "Chức năng", "Trung bình", PLAN, "Đăng nhập Platform Admin",
@@ -1027,8 +1052,9 @@ add(M, MN, "Trang quản trị nội bộ", "Chỉ Platform Admin mới truy c�
     ["Đăng nhập tài khoản Owner (không phải Platform Admin)", "Truy cập trực tiếp URL trang quản trị nội bộ hệ thống"],
     "-", "Bị từ chối truy cập/chuyển hướng, không vào được trang quản trị nội bộ")
 add(M, MN, "Đa ngôn ngữ", "Ngôn ngữ đã chọn được ghi nhớ giữa các lần truy cập",
-    "Chức năng", "Thấp", PLAN, "-",
-    ["Chọn ngôn ngữ English", "Đăng xuất rồi đăng nhập lại (hoặc đóng mở lại trình duyệt)"], "-",
+    "Chức năng", "Thấp", PLAN, 'Chưa làm (Kế hoạch): phụ thuộc tính năng đổi ngôn ngữ giao diện (xem TC-ADMIN-006)',
+    ["Chọn ngôn ngữ English", "Đăng xuất rồi đăng nhập lại (hoặc đóng mở lại trình duyệt)"],
+    "-",
     "Giao diện vẫn giữ ngôn ngữ English đã chọn trước đó, không tự reset về mặc định")
 
 # ============================= 11. QUY TẮC NGHIỆP VỤ & PHI CHỨC NĂNG ==========
@@ -1051,18 +1077,20 @@ add(M, MN, "Phiên đăng nhập", "Đăng xuất vô hiệu hóa toàn bộ phi
      "Thử thao tác cần xác thực ở trình duyệt 2"], "-",
     "Phiên ở trình duyệt 2 cũng bị vô hiệu hóa, yêu cầu đăng nhập lại")
 add(M, MN, "Ràng buộc dữ liệu", "Một khóa học luôn thuộc đúng một cộng đồng",
-    "Chức năng", "Trung bình", PLAN, "-",
-    ["Kiểm tra dữ liệu/API tạo khóa học", "Thử tạo hoặc gán 1 khóa học không thuộc cộng đồng nào, hoặc thuộc 2 cộng đồng"],
-    "-", "Hệ thống từ chối, mỗi khóa học bắt buộc gắn với đúng 1 cộng đồng duy nhất")
+    "Chức năng", "Trung bình", PLAN, 'Dữ liệu đã tách Community/Khóa học: bảng LearningCourse có communityId bắt buộc (FK -> Community, migration 20261006100000); API khóa học nằm dưới /communities/:id/courses',
+    ['Gọi POST /api/communities/<id không tồn tại>/courses', 'Kiểm tra schema/DB: LearningCourse.communityId NOT NULL và có FK', 'Thử tạo khóa học mà không đi qua một cộng đồng cụ thể'],
+    "-",
+    'Không có cách tạo/gán khóa học không thuộc cộng đồng nào (404 với cộng đồng lạ; communityId bắt buộc); mỗi khóa học thuộc đúng 1 cộng đồng, còn 1 cộng đồng có NHIỀU khóa học (backend/docs/api/communities-courses.md)')
 add(M, MN, "Phân quyền theo cộng đồng", "Một người là Owner ở cộng đồng A nhưng chỉ là Thành viên ở cộng đồng B",
     "Bảo mật", "Cao", PLAN, "Tài khoản là Owner của cộng đồng A, đồng thời là Member của cộng đồng B",
     ["Đăng nhập tài khoản đó", "Vào cộng đồng A, thực hiện thao tác quyền Owner (VD sửa khóa học)",
      "Vào cộng đồng B, thử thực hiện thao tác quyền Owner tương tự"], "-",
     "Thao tác thành công ở cộng đồng A, nhưng bị từ chối ở cộng đồng B (chỉ có quyền Thành viên thường)")
 add(M, MN, "Kết nối an toàn", "Toàn bộ kết nối sử dụng HTTPS",
-    "Bảo mật", "Cao", DONE, "-",
-    ["Truy cập domain của hệ thống qua trình duyệt", "Kiểm tra giao thức và chứng chỉ SSL"], "-",
-    "Kết nối bắt buộc qua HTTPS, HTTP tự động chuyển hướng sang HTTPS, chứng chỉ hợp lệ")
+    "Bảo mật", "Cao", DONE, 'Môi trường production/staging có TLS (reverse proxy/ALB). Cookie refresh luôn Secure trừ development (auth.routes.ts setRefreshCookie), production cấm secret dev (env-guard)',
+    ["Truy cập domain của hệ thống qua trình duyệt", "Kiểm tra giao thức và chứng chỉ SSL"],
+    "-",
+    'Kết nối bắt buộc qua HTTPS, HTTP tự chuyển hướng sang HTTPS, chứng chỉ hợp lệ; cookie refresh_token có cờ Secure + SameSite=None ở production')
 add(M, MN, "Hiệu năng", "Trang khám phá tải nhanh và ổn định với lượng dữ liệu lớn",
     "Hiệu năng", "Trung bình", DONE, "Dữ liệu khóa học đủ lớn (hoặc giả lập)",
     ["Vào trang khám phá với bộ dữ liệu lớn", "Đo thời gian tải trang và phân trang"], "-",
@@ -1186,12 +1214,14 @@ add(M, MN, "Idempotency", "Submit form tạo cộng đồng 2 lần do double-cl
     ["Điền form tạo cộng đồng", "Bấm nút Tạo 2 lần liên tiếp thật nhanh (double-click) hoặc submit lại sau khi mạng chập chờn"],
     "-", "Chỉ tạo đúng 1 cộng đồng, không tạo bản ghi trùng lặp")
 add(M, MN, "Bên thứ 3 lỗi", "Cổng thanh toán gián đoạn — người dùng nhận lỗi rõ ràng, không bị trừ tiền mà không rõ trạng thái",
-    "Tích hợp", "Cao", PLAN, "Giả lập cổng thanh toán trả lỗi/timeout",
-    ["Kích hoạt thanh toán trong lúc giả lập cổng thanh toán không phản hồi/lỗi"], "-",
+    "Tích hợp", "Cao", PLAN, 'Giả lập cổng thanh toán trả lỗi/timeout. MockGateway chỉ có failFor(userId) để giả lập TỪ CHỐI (xem TC-PAY-050); timeout/gián đoạn thật chỉ kiểm được với cổng thật hoặc stub riêng; charge xong settle lỗi đã có TC-MONEY-109',
+    ["Kích hoạt thanh toán trong lúc giả lập cổng thanh toán không phản hồi/lỗi"],
+    "-",
     "Hiển thị thông báo lỗi rõ ràng, giao dịch ở trạng thái thất bại/chưa xác định được xử lý minh bạch (không cấp quyền khi chưa có xác nhận thành công)")
 add(M, MN, "Bên thứ 3 lỗi", "Dịch vụ gửi email lỗi không làm gián đoạn luồng nghiệp vụ chính",
-    "Tích hợp", "Trung bình", PLAN, "Giả lập dịch vụ email tạm thời lỗi",
-    ["Giả lập email service lỗi/timeout", "Thực hiện đăng ký tài khoản hoặc thanh toán thành công"], "-",
+    "Tích hợp", "Trung bình", PLAN, 'Giả lập dịch vụ email tạm thời lỗi. HIỆN TẠI lỗi gửi mail chỉ bị nuốt + log (mail.service), CHƯA có hàng đợi thử gửi lại (backend/docs/api/identity.md)',
+    ["Giả lập email service lỗi/timeout", "Thực hiện đăng ký tài khoản hoặc thanh toán thành công"],
+    "-",
     "Đăng ký/thanh toán vẫn hoàn tất thành công, email được đưa vào hàng đợi thử gửi lại sau, không chặn luồng chính")
 add(M, MN, "Real-time", "Tin nhắn/thông báo real-time tự kết nối lại sau khi mất mạng tạm thời",
     "Tích hợp", "Trung bình", PLAN, "Đang mở kết nối real-time (WebSocket) cho chat/thông báo",
@@ -1211,9 +1241,10 @@ add(M, MN, "Hiệu năng tải cao", "Hệ thống ổn định khi nhiều ngư
     ["Dùng công cụ load test giả lập ~100-200 người dùng đồng thời gọi API tìm kiếm/trang khám phá trong vài phút"],
     "~100-200 concurrent users", "Thời gian phản hồi vẫn ở mức chấp nhận được, không có lỗi 5xx hàng loạt, hệ thống không sập")
 add(M, MN, "Đối soát dữ liệu", "Số liệu doanh thu Owner khớp với tổng giao dịch thực tế ghi nhận ở cổng thanh toán",
-    "Tích hợp", "Cao", PLAN, "Có nhiều giao dịch đã phát sinh trong kỳ",
+    "Tích hợp", "Cao", PLAN, 'Có nhiều giao dịch đã phát sinh trong kỳ. Chỉ kiểm được khi có cổng thật (hiện là MockGateway)',
     ["Lấy báo cáo giao dịch từ cổng thanh toán trong 1 khoảng thời gian", "Đối chiếu với số liệu hiển thị ở trang Doanh thu của Owner tương ứng"],
-    "-", "Số liệu khớp nhau (sau khi trừ đúng hoa hồng/phí cổng thanh toán theo công thức đã định), không lệch số")
+    "-",
+    "Số liệu khớp nhau (sau khi trừ đúng hoa hồng/phí cổng thanh toán theo công thức đã định), không lệch số")
 
 # ===========================================================================
 # ĐỢT 2026-09-30 — backend Postgres thật + frontend đã nối
@@ -1237,19 +1268,11 @@ STILL_PLAN_OLD = [
     ("FEED", "Tự động tải thêm bài viết khi cuộn"),               # hiện là nút 'Tải thêm bài viết', chưa auto-scroll
     ("EVENT", "Thêm sự kiện vào Google Calendar"),                 # chỉ có .ics
     ("NOTI", "Gửi email xác nhận khi đăng ký"),                    # email chưa gửi thật (outbox dev)
-    ("NOTI", "Gửi email hóa đơn"), ("NOTI", "Gửi email nhắc gia hạn"), ("NOTI", "Email giao dịch gửi đúng ngôn ngữ"),
-    ("PAY", "Thanh toán thành công qua cổng nội địa"), ("PAY", "Thanh toán thành công qua Stripe"),
-    ("PAY", "Thanh toán thất bại do thẻ hết hạn"), ("PAY", "Thanh toán thất bại do không đủ số dư"),
-    ("PAY", "Hệ thống tự động thử lại khi thanh toán định kỳ"), ("PAY", "Tạm khóa quyền truy cập sau X lần"),
-    ("PAY", "Đổi phương thức thanh toán"), ("PAY", "Hiển thị đúng đơn vị tiền tệ"),
+    ("NOTI", "Email giao dịch gửi đúng ngôn ngữ"), ("NOTI", "Nhận thông báo khi được mời vào cộng đồng"),  # lời mời hiện là liên kết, chưa có thông báo lời mời
+    ("PAY", "Đổi phương thức thanh toán"),
     ("PAY", "Owner đổi giá cộng đồng — thành viên hiện tại"),     # chưa chốt chính sách
-    ("COMM", "Owner đổi mức giá cộng đồng từ Miễn phí sang Có phí"),  # chưa chốt chính sách thành viên hiện tại
     ("ADMIN", "Chuyển đổi giao diện giữa Tiếng Việt và Tiếng Anh"), ("ADMIN", "Ngôn ngữ đã chọn được ghi nhớ"),
-    ("ADMIN", "Ghi log đầy đủ hành động kiểm duyệt"),             # chưa có audit log riêng
-    ("ROLE", "Các API thay đổi trạng thái (POST/PUT/DELETE) được bảo vệ chống CSRF"),  # dùng Bearer token, chưa có cơ chế CSRF riêng
-    ("INTEG", "Thanh toán thành công nhưng cấp quyền truy cập thất bại"),
-    ("INTEG", "Cổng thanh toán gián đoạn"), ("INTEG", "Dịch vụ gửi email lỗi"),
-    ("INTEG", "Tin nhắn/thông báo real-time tự kết nối lại"), ("INTEG", "Hệ thống ổn định khi nhiều người dùng tìm kiếm"),
+        ("INTEG", "Cổng thanh toán gián đoạn"), ("INTEG", "Dịch vụ gửi email lỗi"),
     ("INTEG", "Số liệu doanh thu Owner khớp với tổng giao dịch thực tế ghi nhận ở cổng"),
 ]
 FLIPPED = 0
@@ -1261,7 +1284,8 @@ STILL_PLAN_OLD_COUNT = sum(1 for _r in rows if _r[6] == PLAN)
 
 # Nạp testcase mới từ qa/cases_*.py (mỗi file có hàm load(add)).
 CASE_MODULES = ["cases_auth", "cases_community", "cases_content", "cases_classroom",
-                "cases_payments", "cases_comms", "cases_platform", "cases_admin", "cases_admin2", "cases_admin3"]
+                "cases_payments", "cases_comms", "cases_platform", "cases_admin", "cases_admin2", "cases_admin3",
+                "cases_audit_secx", "cases_audit_money", "cases_audit_game", "cases_audit_infra", "cases_audit_perf", "cases_audit_split"]
 for _m in CASE_MODULES:
     try:
         _mod = importlib.import_module(_m)
@@ -1273,6 +1297,46 @@ for _m in CASE_MODULES:
     _before = len(rows)
     _mod.load(add)
     print(f"[cases] {_m}: +{len(rows) - _before}")
+
+# ---- Case THAY THẾ sau đợt rà soát case cũ (qa/review_notes/part1.md): thêm CUỐI từng module (sau khi nạp cases_*.py) để mã TC các
+# case khác không đổi. Case cũ tương ứng nằm trong qa/retired_part_1.py.
+_MN = {_r[0]: _r[1] for _r in rows}
+_n_before_repl = len(rows)
+add("HOME", _MN["HOME"], "Danh mục", "Chọn lần lượt các danh mục: mỗi lúc chỉ một danh mục được chọn, 'Tất cả' để bỏ lọc",
+    "Chức năng", "Trung bình", DONE, "Có cộng đồng thuộc nhiều danh mục khác nhau",
+    ["Vào trang khám phá", "Bấm tab danh mục 'Công nghệ', rồi bấm tab 'Kinh doanh'", "Bấm tab 'Tất cả'"],
+    "Danh mục: Công nghệ -> Kinh doanh -> Tất cả",
+    "Mỗi lúc chỉ MỘT danh mục được chọn (tab chuyển trạng thái, KHÔNG cộng dồn nhiều danh mục); danh sách và số 'Tìm thấy N' đổi theo danh mục vừa chọn, về trang 1; 'Tất cả' bỏ lọc danh mục")
+add("HOME", _MN["HOME"], "Phân trang", "Nút 'Trang sau' bị vô hiệu hóa ở trang kết quả cuối cùng",
+    "Chức năng", "Thấp", DONE, "Số lượng cộng đồng vượt 1 trang (12/trang)",
+    ["Vào trang khám phá", "Bấm 'Trang sau' liên tục tới trang cuối"],
+    "-", "Ở trang cuối nút 'Trang sau' bị disabled (Pagination: disabled khi page = totalPages), không gọi thêm API, không lỗi. Phân trang là state cục bộ, KHÔNG nằm trên URL")
+add("HOME", _MN["HOME"], "Phân trang", "Nút 'Trang trước' bị vô hiệu hóa ở trang 1",
+    "Chức năng", "Thấp", DONE, "Đang ở trang 1 của danh sách khám phá",
+    ["Vào trang khám phá (trang 1)", "Quan sát nút 'Trang trước'"],
+    "-", "Nút 'Trang trước' bị disabled ở trang 1 (disabled khi page = 1)")
+add("HOME", _MN["HOME"], "Phân trang", "API GET /api/courses kiểm tra tham số phân trang: page=0/-1/1001 bị 400, trang vượt tổng trả danh sách rỗng",
+    "Chức năng", "Thấp", DONE, "Backend đang chạy",
+    ["Gọi GET /api/courses?page=0 và ?page=-1", "Gọi GET /api/courses?page=1001", "Gọi GET /api/courses?page=999 (hợp lệ nhưng vượt tổng số trang)"],
+    "page=0 / -1 / 1001 / 999",
+    "page=0, -1, 1001: 400 VALIDATION_ERROR (page min 1, trần MAX_PAGE=1000 - catalog.schema.ts); page=999: 200 với data rỗng và meta.totalPages đúng, không lỗi 500. FE không đồng bộ trang lên URL nên chỉ kiểm bằng API",
+    pw="Không")
+add("AUTH", _MN["AUTH"], "Giới hạn đăng nhập sai", "Giới hạn đăng nhập sai tính theo IP: tài khoản khác dùng chung IP cũng bị 429 (hành vi hiện tại, cần chốt nghiệp vụ)",
+    "Bảo mật", "Trung bình", DONE, "IP máy test đã vượt 10 lần đăng nhập sai/15 phút (làm cạn quota)",
+    ["Từ IP máy test, đăng nhập SAI tài khoản B liên tiếp tới khi nhận 429", "Cùng IP, đăng nhập ĐÚNG tài khoản C khác"],
+    "Tài khoản B (đăng nhập sai), tài khoản C (mật khẩu đúng)",
+    "HIỆN TẠI: C cũng nhận 429 vì loginLimiter đếm theo IP (không có keyGenerator theo tài khoản; xem TC-AUTH-063, TC-SEC-039/055), ảnh hưởng người dùng chung IP/NAT. [PHỤ THUỘC QUYẾT ĐỊNH CHƯA CHỐT] có đổi sang giới hạn theo (IP + email) hay khóa tài khoản hay không")
+add("COURSE", _MN["COURSE"], "Chi tiết cộng đồng", "Trang chi tiết cộng đồng /communities/:id hiển thị dữ liệu thật: mô tả, thống kê, giá, đánh giá thật (không có review/module/FAQ minh họa)",
+    "Chức năng", "Cao", DONE, "Có cộng đồng seed (vd photo) và 1 cộng đồng mới tạo",
+    ["Vào trang khám phá và mở 1 cộng đồng", "Xem các tab Tổng quan / Nội dung / Đánh giá (tab Câu hỏi thường gặp chỉ hiện khi có dữ liệu)", "Đối chiếu số liệu với GET /api/courses/:id (facts, stats, reviews, priceNotes)"],
+    "-",
+    "Hiển thị mô tả, chủ cộng đồng, số thành viên/bài học thật từ DB, giá ($/tháng hoặc Miễn phí) và ghi chú 'Miễn phí dùng thử N ngày' lấy từ Cài đặt chung; tab Đánh giá chỉ gồm review thật (rỗng nếu chưa có); KHÔNG còn review/module/FAQ/highlights minh họa (highlights, gains, faqs = [] ở cộng đồng mới); không thiếu khu vực, không NaN")
+add("COURSE", _MN["COURSE"], "Tham gia cộng đồng", "Bấm lại nút 'Đã tham gia' là rời cộng đồng (toggle); cộng đồng có phí hiện hộp xác nhận trước khi rời",
+    "Chức năng", "Trung bình", DONE, "Đã tham gia 1 cộng đồng miễn phí và 1 cộng đồng có phí",
+    ["Mở trang chi tiết cộng đồng miễn phí đã tham gia", "Bấm nút 'Đã tham gia'", "Lặp lại với cộng đồng có phí (xác nhận hộp thoại)"],
+    "-",
+    "Miễn phí: rời ngay (POST /enroll toggle), nút trở lại 'Tham gia ngay', không có bước xác nhận. Có phí: hộp xác nhận nêu mất quyền ngay, gói hủy cuối kỳ, kỳ đã trả không hoàn; vào lại trong kỳ đã trả không phải trả tiền (payments.md mục 3.3). Owner không rời được (409)")
+print(f"[review] thêm {len(rows) - _n_before_repl} case thay thế cuối module (HOME/AUTH/COURSE)")
 
 # Kiểm tra: trùng tiêu đề trong cùng module, giá trị enum hợp lệ.
 _seen, _errs = set(), []
@@ -1294,6 +1358,35 @@ for _r in rows:
 if _errs:
     print("\n".join(_errs))
     raise SystemExit(f"{len(_errs)} lỗi dữ liệu testcase — dừng.")
+
+# ---- Loại bỏ testcase lỗi thời (qa/retired_cases.py): case bị loại VẪN chiếm số thứ tự của nó để mã TC-xxx-nnn của các case khác
+# không đổi (kết quả đã nhập được khôi phục theo mã + tiêu đề). Case bị loại được lưu vào qa/archive/retired_cases.csv kèm lý do.
+ROW_IDS = []
+_cnt = {}
+for _r in rows:
+    _cnt[_r[0]] = _cnt.get(_r[0], 0) + 1
+    ROW_IDS.append(f"TC-{_r[0]}-{_cnt[_r[0]]:03d}")
+try:
+    from retired_cases import RETIRED
+except ModuleNotFoundError:
+    RETIRED = {}
+_unknown = [k for k in RETIRED if k not in set(ROW_IDS)]
+if _unknown:
+    raise SystemExit(f"retired_cases.py có mã không tồn tại: {_unknown[:10]}")
+if RETIRED:
+    import csv
+    _arch = os.path.join(os.path.dirname(os.path.abspath(__file__)), "archive")
+    os.makedirs(_arch, exist_ok=True)
+    with open(os.path.join(_arch, "retired_cases.csv"), "w", newline="", encoding="utf-8-sig") as _f:
+        _w = csv.writer(_f)
+        _w.writerow(["Mã TC", "Module", "Chức năng", "Tiêu đề", "Loại", "Ưu tiên", "Tiền điều kiện", "Các bước", "Dữ liệu", "Kết quả mong đợi", "Lý do loại bỏ"])
+        for _id, _r in zip(ROW_IDS, rows):
+            if _id in RETIRED:
+                _w.writerow([_id, _r[1], _r[2], _r[3], _r[4], _r[5], _r[7], _r[8], _r[9], _r[10], RETIRED[_id]])
+    _keep = [(i, r) for i, r in zip(ROW_IDS, rows) if i not in RETIRED]
+    print(f"[retired] loại {len(RETIRED)} case lỗi thời (lưu ở qa/archive/retired_cases.csv)")
+    ROW_IDS = [i for i, _ in _keep]
+    rows = [r for _, r in _keep]
 
 print(f"TOTAL_ROWS={len(rows)} (cũ {OLD_TOTAL}, chuyển Kế hoạch->Đã hoàn thiện: {FLIPPED}, còn Kế hoạch: {sum(1 for _r in rows if _r[6] == PLAN)})")
 
@@ -1353,7 +1446,7 @@ info = [
     ("Dự án", "SofinHub — Nền tảng Cộng đồng & Khóa học trực tuyến"),
     ("Nguồn tài liệu", "SofinHub-BRD.docx (BRD v1.0, 28/09/2026) + backend/docs/API.md, backend/docs/api/*.md, docs/features/*.md, backend/docs/DATABASE.md, backend/prisma/seed* (đợt 30/09/2026), backend/docs/api/admin.md + docs/features/admin-batch1.md (đợt 01/10/2026)"),
     ("Ngày tạo bộ test case", "29/09/2026 — cập nhật đợt backend Postgres + frontend 30/09/2026 và đợt Admin console 01/10/2026 (xem sheet 'Nhật ký thay đổi')"),
-    ("Cách xem testcase", "MỖI MODULE MỘT SHEET (20 sheet, tên dạng 'MÃ - Tên': HOME, AUTH, COMM, COURSE, FEED, PAY, ADM, ADM2, ADM3, ROLE...). Bấm tên module ở bảng 'Thống kê theo Module' bên dưới để nhảy tới sheet; mỗi sheet có sẵn bộ lọc theo Chức năng/Loại test/Ưu tiên/Phù hợp Playwright và cột Mã TC + Chức năng được cố định khi cuộn ngang. Cột tiến độ Test 1/Test 2 (Pass/Fail/Chưa test) ở bảng thống kê tự cập nhật khi tester điền kết quả."),
+    ("Cách xem testcase", "MỖI MODULE MỘT SHEET (26 sheet, tên dạng 'MÃ - Tên': HOME, AUTH, COMM, COURSE, FEED, PAY, ADM, ADM2, ADM3, SECX, MONEY, GAME, INFRA, PERF, SPLIT, ROLE...). Bấm tên module ở bảng 'Thống kê theo Module' bên dưới để nhảy tới sheet; mỗi sheet có sẵn bộ lọc theo Chức năng/Loại test/Ưu tiên/Phù hợp Playwright và cột Mã TC + Chức năng được cố định khi cuộn ngang. Cột tiến độ Test 1/Test 2 (Pass/Fail/Chưa test) ở bảng thống kê tự cập nhật khi tester điền kết quả."),
     ("Sheet phụ", "'Tài khoản & dữ liệu test' (tài khoản/dữ liệu seed, cách dựng môi trường) · 'Nhật ký thay đổi' · 'Bằng chứng (ảnh)' (ảnh Playwright)"),
     ("Người soạn thảo", "QA/Tester"),
     ("Tổng số test case", len(rows)),
@@ -1538,8 +1631,7 @@ pw_fill = {
 
 for ridx, row in enumerate(rows, start=2):
     code, mname, feature, title, ttype, priority, status, precond, steps_txt, data, expected, pw_override = row
-    id_counter[code] = id_counter.get(code, 0) + 1
-    tc_id = f"TC-{code}-{id_counter[code]:03d}"
+    tc_id = ROW_IDS[ridx - 2]
     pw_fit = pw_override or classify_playwright(ttype, feature, title, expected)
 
     values = [code, mname, feature, title, ttype, priority, status, pw_fit, precond,

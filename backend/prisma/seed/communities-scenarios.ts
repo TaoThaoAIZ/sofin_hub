@@ -32,10 +32,10 @@ export async function seedCommunityScenarios(ctx: SeedContext, phase: 'courses' 
     ];
     for (const d of defs) {
       const { id, ...rest } = d;
-      await db.course.upsert({ where: { id }, create: { id, ...common, ...rest, tag: 'new' }, update: {} });
+      await db.community.upsert({ where: { id }, create: { id, ...common, ...rest, tag: 'new' }, update: {} });
       await db.enrollment.upsert({
-        where: { userId_courseId: { userId: userIds.owner, courseId: id } },
-        create: { userId: userIds.owner, courseId: id, role: 'owner' },
+        where: { userId_communityId: { userId: userIds.owner, communityId: id } },
+        create: { userId: userIds.owner, communityId: id, role: 'owner' },
         update: { role: 'owner' },
       });
     }
@@ -51,7 +51,7 @@ export async function seedCommunityScenarios(ctx: SeedContext, phase: 'courses' 
     const userId = userIds[key];
     await db.joinRequest.upsert({
       where: { id: `seed-jr-private-demo-${key}` },
-      create: { id: `seed-jr-private-demo-${key}`, courseId: 'private-demo', userId, message: msg, status: 'pending', createdAt: new Date(now - ago * DAY) },
+      create: { id: `seed-jr-private-demo-${key}`, communityId: 'private-demo', userId, message: msg, status: 'pending', createdAt: new Date(now - ago * DAY) },
       update: {},
     });
   }
@@ -59,11 +59,11 @@ export async function seedCommunityScenarios(ctx: SeedContext, phase: 'courses' 
   // Lời mời (mã cố định dễ nhớ).
   const owner = userIds.owner;
   const invites = [
-    { code: 'DEMO-VALID', courseId: 'private-demo', maxUses: 5, usedCount: 0, expiresAt: new Date(now + 30 * DAY), revokedAt: null },
-    { code: 'DEMO-EXPIRED', courseId: 'private-demo', maxUses: null, usedCount: 0, expiresAt: new Date(now - 2 * DAY), revokedAt: null },
-    { code: 'DEMO-REVOKED', courseId: 'private-demo', maxUses: null, usedCount: 0, expiresAt: null, revokedAt: new Date(now - DAY) },
-    { code: 'DEMO-USED', courseId: 'private-demo', maxUses: 1, usedCount: 1, expiresAt: null, revokedAt: null },
-    { code: 'DEMO-PAID', courseId: 'paid-demo', maxUses: null, usedCount: 0, expiresAt: null, revokedAt: null },
+    { code: 'DEMO-VALID', communityId: 'private-demo', maxUses: 5, usedCount: 0, expiresAt: new Date(now + 30 * DAY), revokedAt: null },
+    { code: 'DEMO-EXPIRED', communityId: 'private-demo', maxUses: null, usedCount: 0, expiresAt: new Date(now - 2 * DAY), revokedAt: null },
+    { code: 'DEMO-REVOKED', communityId: 'private-demo', maxUses: null, usedCount: 0, expiresAt: null, revokedAt: new Date(now - DAY) },
+    { code: 'DEMO-USED', communityId: 'private-demo', maxUses: 1, usedCount: 1, expiresAt: null, revokedAt: null },
+    { code: 'DEMO-PAID', communityId: 'paid-demo', maxUses: null, usedCount: 0, expiresAt: null, revokedAt: null },
   ];
   for (const i of invites) {
     await db.invite.upsert({ where: { code: i.code }, create: { ...i, createdById: owner }, update: {} });
@@ -77,8 +77,8 @@ export async function seedCommunityScenarios(ctx: SeedContext, phase: 'courses' 
   ] as const) {
     const userId = userIds[key];
     await db.review.upsert({
-      where: { courseId_userId: { courseId: 'photo', userId } },
-      create: { courseId: 'photo', userId, rating, text },
+      where: { communityId_userId: { communityId: 'photo', userId } },
+      create: { communityId: 'photo', userId, rating, text },
       update: {},
     });
   }

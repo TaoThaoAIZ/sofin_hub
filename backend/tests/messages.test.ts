@@ -278,7 +278,33 @@ describe('tin nhắn 1-1', () => {
     }
   });
 
-  it('SSE: vé dùng 1 lần, nhận event message realtime, người online không bị tạo thông báo', async () => {
+  it('đang xem (vừa mở/tải tin của chính cuộc trò chuyện trong 30s) thì không tạo thông báo; đọc xong thì tin kế tiếp được báo lại', async () => {
+    const { notificationStore } = await import('../src/modules/notifications/notifications.service.js');
+    const { a, b } = await pair();
+    const conv = (await open(a.token, b.id)).body.data.id as string;
+    const count = () => notificationStore.all().filter((n) => n.userId === b.id && n.type === 'message_received').length;
+
+    await c.call('GET', `/conversations/${conv}/messages`, { token: b.token }); // b chủ động mở cuộc trò chuyện
+    await send(a.token, conv, 'b đang xem');
+    assert.equal(count(), 0, 'đang xem => không cần thông báo (tin tới qua SSE/tải lại, unread vẫn ở DB)');
+    assert.equal((await c.call('GET', '/messages/unread-count', { token: b.token })).body.data.unreadCount, 1, 'unread luôn ở DB');
+
+    // Hết "đang xem" (xóa khóa active) => tin sau đó được báo.
+    const { shared } = await import('../src/infra/shared.js');
+    await shared().kv.del(`dm:active:${conv}:${b.id}`);
+    await send(a.token, conv, 'b đã rời đi');
+    assert.equal(count(), 1);
+    // Throttle 5 phút: tin tiếp theo không báo thêm...
+    await send(a.token, conv, 'tiếp');
+    assert.equal(count(), 1);
+    // ...cho tới khi b đọc cuộc trò chuyện (xóa throttle) rồi rời đi.
+    await c.call('POST', `/conversations/${conv}/read`, { token: b.token });
+    await shared().kv.del(`dm:active:${conv}:${b.id}`);
+    await send(a.token, conv, 'sau khi đã đọc');
+    assert.equal(count(), 2);
+  });
+
+  it('SSE: vé dùng 1 lần, nhận event message realtime; SSE chỉ là best-effort nên vẫn LUÔN lưu thông báo (kết nối xác sống không nuốt tin)', async () => {
     const { notificationStore } = await import('../src/modules/notifications/notifications.service.js');
     const { a, b } = await pair();
     const conv = (await open(a.token, b.id)).body.data.id as string;
@@ -309,7 +335,8 @@ describe('tin nhắn 1-1', () => {
     await send(a.token, conv, 'realtime nhé');
     assert.ok(await readUntil('event: message'));
     assert.ok(buf.includes('realtime nhé'));
-    assert.equal(notificationStore.all().filter((n) => n.userId === b.id && n.type === 'message_received').length, 0);
+    // Trước đây `push() > 0` bị coi là "online" => không thông báo (sai với kết nối SSE xác sống). Giờ: không chủ động xem => vẫn có thông báo.
+    assert.equal(notificationStore.all().filter((n) => n.userId === b.id && n.type === 'message_received').length, 1);
 
     // Bearer trực tiếp cũng được
     const ac2 = new AbortController();

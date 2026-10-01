@@ -1,6 +1,8 @@
 export interface CommunityEvent {
   id: string;
-  courseId: string;
+  communityId: string;
+  /** @deprecated alias của communityId (tương thích JSON cũ) — repository luôn điền. */
+  courseId?: string;
   hostId: string;
   title: string;
   description: string;
