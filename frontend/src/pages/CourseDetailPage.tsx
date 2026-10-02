@@ -12,11 +12,13 @@ import { useCategories, useCommunityDetail, useToggleEnrollment } from '../featu
 import type { CommunityDetail, CourseFaq, CourseHighlight } from '../features/courses/types';
 import { ApiError } from '../lib/api';
 import { formatCompact } from '../lib/format';
+import { JoinDialog } from '../features/payments/components/JoinDialog';
 import { JoinRequestDialog, loadPendingRequestId, savePendingRequestId } from '../features/communities/components/JoinRequestDialog';
 import { errorText } from '../features/communities/components/Modal';
 import { ReviewsSection } from '../features/communities/components/ReviewsSection';
 import { useCancelJoinRequest } from '../features/communities/queries';
 import { isAtLeast } from '../features/communities/types';
+import { usePopup } from '../components/ui/usePopup';
 
 type TabKey = 'overview' | 'content' | 'faq';
 const TABS: { key: TabKey | 'reviews'; label: string }[] = [
@@ -39,6 +41,7 @@ function sidebarPerks(course: CommunityDetail): string[] {
 export function CourseDetailPage() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
+  const { confirm } = usePopup();
   const { status } = useAuth();
   const { data: categories = [] } = useCategories();
   const { data: course, isPending, error } = useCommunityDetail(id);
@@ -96,7 +99,6 @@ export function CourseDetailPage() {
   const scrollToReviews = () =>
     reviewsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-  const trialNote = course.priceNotes.find((n) => n.startsWith('Miễn phí dùng thử'));
   const isPrivate = course.visibility === 'private';
   const canJoinFlow = !course.viewerEnrolled;
   const hasPendingRequest = canJoinFlow && pendingRequest !== null;
@@ -120,7 +122,7 @@ export function CourseDetailPage() {
     setJoinNotice(errorText(err)); // gồm cả 403 "bị cấm khỏi cộng đồng"
   };
 
-  const handleJoin = () => {
+  const handleJoin = async () => {
     setJoinNotice(null);
     if (status !== 'authenticated') {
       navigate('/login', { state: { from: `/communities/${id}` } });
@@ -131,7 +133,14 @@ export function CourseDetailPage() {
       // Cộng đồng có phí: rời = mất quyền truy cập ngay và gói bị hủy vào cuối kỳ (không bị trừ kỳ sau, tiền kỳ đã trả không hoàn).
       if (
         course.priceUsd > 0 &&
-        !window.confirm('Rời cộng đồng có phí này? Bạn sẽ mất quyền truy cập ngay, gói thành viên sẽ bị hủy vào cuối kỳ hiện tại (không bị tính phí kỳ sau) và khoản đã thanh toán cho kỳ này không được hoàn lại. Bạn có thể vào lại miễn phí trong kỳ đã trả.')
+        !(await confirm({
+          title: 'Rời cộng đồng có phí này?',
+          tone: 'warning',
+          confirmText: 'Rời cộng đồng',
+          cancelText: 'Ở lại',
+          message:
+            'Bạn sẽ mất quyền truy cập ngay, gói thành viên sẽ bị hủy vào cuối kỳ hiện tại (không bị tính phí kỳ sau) và khoản đã thanh toán cho kỳ này không được hoàn lại. Bạn có thể vào lại miễn phí trong kỳ đã trả.',
+        }))
       )
         return;
       enroll.mutate(undefined, { onError: (e) => setJoinNotice(errorText(e)) });
@@ -296,6 +305,12 @@ export function CourseDetailPage() {
                   Cộng đồng này đang bị khóa bởi quản trị nền tảng.
                 </p>
               )}
+              {course.viewerEnrolled && !isLocked && (
+                <ButtonLink to={`/communities/${id}/community`} className="h-[52px] gap-2.5 rounded-2xl text-base font-bold">
+                  Vào cộng đồng
+                  <MaterialIcon name="arrow_forward" size={20} color="#fff" />
+                </ButtonLink>
+              )}
               <Button
                 onClick={handleJoin}
                 disabled={enroll.isPending || hasPendingRequest}
@@ -412,29 +427,18 @@ export function CourseDetailPage() {
       )}
 
       {showPaidDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowPaidDialog(false)}>
-          <div className="w-full max-w-[420px] rounded-3xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="grid size-14 place-items-center rounded-2xl bg-brand/10">
-              <MaterialIcon name="payments" size={26} color="#f26a1b" />
-            </div>
-            <h2 className="mt-4 text-lg font-extrabold">Khóa học có phí</h2>
-            <p className="mt-2 text-sm leading-relaxed text-stone-600">
-              "{course.title}" có phí <b>${course.priceUsd}/tháng</b>. Bạn sẽ được chuyển tới trang thanh toán để hoàn tất tham gia
-              {trialNote ? `(${trialNote.toLowerCase()}, hủy bất cứ lúc nào).` : '(hủy bất cứ lúc nào).'}
-            </p>
-            <div className="mt-5 flex gap-3">
-              <button
-                onClick={() => setShowPaidDialog(false)}
-                className="h-11 flex-1 rounded-xl border border-[rgba(120,60,20,.15)] text-sm font-semibold text-stone-700"
-              >
-                Để sau
-              </button>
-              <Button onClick={() => navigate(`/communities/${id}/checkout`)} className="h-11 flex-1 rounded-xl text-sm font-bold">
-                Đi tới thanh toán
-              </Button>
-            </div>
-          </div>
-        </div>
+        <JoinDialog
+          course={course}
+          onClose={() => setShowPaidDialog(false)}
+          onDone={() => {
+            setShowPaidDialog(false);
+            navigate(`/communities/${id}/community`);
+          }}
+          onNeedRequest={() => {
+            setShowPaidDialog(false);
+            if (pendingRequest === null) setShowRequestDialog(true);
+          }}
+        />
       )}
     </div>
   );

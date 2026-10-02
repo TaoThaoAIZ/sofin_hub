@@ -20,11 +20,31 @@ import type { PaymentIntent, PaymentStatus, Payout, RefundRequest, Subscription 
  * Tính đúng đắn dưới đồng thời dựa vào DB (không dùng lock trong bộ nhớ): transition có điều kiện (`updateMany where status in`),
  * unique (P2002) cho idempotency/webhook, `InvoiceSequence` upsert-increment atomic, `FOR UPDATE` (Course) và `FOR UPDATE SKIP LOCKED` (Subscription).
  */
-export type NewPayment = Omit<PaymentIntent, 'id' | 'status' | 'createdAt' | 'confirmedAt' | 'refundedCents' | 'currency' | 'kind'> &
-  Partial<Pick<PaymentIntent, 'kind' | 'status' | 'confirmedAt'>>;
+export type NewPayment = Omit<PaymentIntent, 'id' | 'status' | 'createdAt' | 'confirmedAt' | 'refundedCents' | 'currency' | 'kind' | 'interval' | 'paymentCardId'> &
+  Partial<Pick<PaymentIntent, 'kind' | 'status' | 'confirmedAt' | 'interval' | 'paymentCardId'>>;
 
 export type PaymentPatch = Partial<Omit<PaymentIntent, 'id'>>;
-export type SubscriptionPatch = Partial<Omit<Subscription, 'id' | 'canceledAt'>> & { canceledAt?: string | null };
+export type SubscriptionPatch = Partial<Omit<Subscription, 'id' | 'canceledAt' | 'paymentCardId'>> & { canceledAt?: string | null; paymentCardId?: string | null };
+export type NewSubscription = Omit<Subscription, 'id' | 'createdAt' | 'interval' | 'paymentCardId' | 'trialReminderSentAt'> & Partial<Pick<Subscription, 'interval' | 'paymentCardId'>>;
+
+/** Thẻ đã tokenize (có token cổng — chỉ dùng nội bộ để gọi cổng, KHÔNG ra API). */
+export interface StoredCard {
+  id: string;
+  userId: string;
+  gatewayToken: string;
+  brand: string;
+  last4: string;
+  expMonth: number;
+  expYear: number;
+  createdAt: string;
+}
+export interface CardInput {
+  token: string;
+  brand: string;
+  last4: string;
+  expMonth: number;
+  expYear: number;
+}
 export type RefundPatch = Partial<Pick<RefundRequest, 'status' | 'note' | 'resolvedBy' | 'resolvedAt' | 'amountCents'>> & {
   gatewayRefundId?: string;
   /** Thời điểm vào trạng thái `refunding` (ISO). */
@@ -121,7 +141,7 @@ export interface PaymentsOps {
   listReclaimableWebhooks(staleBefore: Date, maxAttempts: number, limit: number): Promise<StoredWebhook[]>;
 
   // --- subscriptions
-  createSubscription(data: Omit<Subscription, 'id' | 'createdAt'>): Promise<Subscription>;
+  createSubscription(data: NewSubscription): Promise<Subscription>;
   findSubscription(id: string): Promise<Subscription | undefined>;
   /** Gói mới nhất của user ở cộng đồng (mọi trạng thái). */
   findSubscriptionFor(userId: string, communityId: string): Promise<Subscription | undefined>;
@@ -137,8 +157,22 @@ export interface PaymentsOps {
   /** Gói đang sống (trialing|active) của (user, community), khóa FOR UPDATE — luôn gọi TRƯỚC khi ghi bất kỳ thứ gì khác (thứ tự khóa: Subscription → ... → số hóa đơn). */
   lockLiveSubscription(userId: string, communityId: string): Promise<Subscription | undefined>;
   listLiveSubscriptionsForCourse(communityId: string): Promise<Subscription[]>;
-  /** Intent `initial` đang pending, tạo từ `since` trở lại đây (mới nhất) — checkout tái dùng thay vì tạo thêm. */
-  findReusablePending(userId: string, communityId: string, since: Date): Promise<PaymentIntent | undefined>;
+  /** Intent `initial` đang pending, tạo từ `since` trở lại đây (mới nhất) CÙNG chu kỳ + số tiền — checkout tái dùng thay vì tạo thêm. */
+  findReusablePending(userId: string, communityId: string, since: Date, match?: { interval: 'monthly' | 'annual'; amountCents: number }): Promise<PaymentIntent | undefined>;
+
+  /** Tài khoản nhận tiền đã khai báo của cộng đồng (wizard); undefined = chưa từng khai báo (cộng đồng tạo kiểu cũ). */
+  findPayoutAccount(communityId: string): Promise<{ status: 'connected' | 'skipped'; bankName?: string; accountHolder?: string; accountLast4?: string } | undefined>;
+
+  // --- thẻ (chỉ brand/last4/hạn + token cổng; không PAN/CVC)
+  /** Lưu thẻ (idempotent theo userId+token). */
+  upsertCard(userId: string, card: CardInput): Promise<StoredCard>;
+  findCard(id: string): Promise<StoredCard | undefined>;
+  listCards(userId: string): Promise<StoredCard[]>;
+  /**
+   * Nhắc dùng thử: gói trialing có thẻ, chưa hủy, chưa nhắc, còn trong cửa sổ `remindBefore` ngày trước khi trừ tiền. Claim nguyên tử
+   * (UPDATE ... trialReminderSentAt IS NULL) nên chạy song song/lặp lại vẫn mỗi gói chỉ được trả về ĐÚNG MỘT lần.
+   */
+  claimTrialReminders(now: Date, remindBeforeDays: number, limit: number): Promise<Subscription[]>;
   /** Giao dịch pending đã có gatewayChargeId (cổng đã trừ tiền nhưng chưa settle) quá `olderThan`. */
   listUnsettledCharges(olderThan: Date, limit: number): Promise<PaymentIntent[]>;
   /** Khoản trừ trùng đã bị void nhưng chưa hoàn tiền xong (failed + failureReason duplicate_charge + refundedCents=0). */
@@ -213,6 +247,8 @@ function toPayment(r: PaymentRow): PaymentIntent {
     amountCents: r.amountCents,
     currency: 'usd',
     trialDays: r.trialDays,
+    interval: r.interval,
+    paymentCardId: r.paymentCardId ?? undefined,
     status: r.status,
     kind: r.kind,
     subscriptionId: r.subscriptionId ?? undefined,
@@ -235,6 +271,9 @@ function toSubscription(r: SubscriptionRow): Subscription {
   courseId: r.communityId,
     status: r.status,
     priceCents: r.priceCents,
+    interval: r.interval,
+    paymentCardId: r.paymentCardId ?? undefined,
+    trialReminderSentAt: iso(r.trialReminderSentAt),
     currentPeriodStart: r.currentPeriodStart.toISOString(),
     currentPeriodEnd: r.currentPeriodEnd.toISOString(),
     cancelAtPeriodEnd: r.cancelAtPeriodEnd,
@@ -242,6 +281,10 @@ function toSubscription(r: SubscriptionRow): Subscription {
     canceledAt: iso(r.canceledAt),
     createdAt: r.createdAt.toISOString(),
   };
+}
+
+function toCard(r: { id: string; userId: string; gatewayToken: string; brand: string; last4: string; expMonth: number; expYear: number; createdAt: Date }): StoredCard {
+  return { id: r.id, userId: r.userId, gatewayToken: r.gatewayToken, brand: r.brand, last4: r.last4, expMonth: r.expMonth, expYear: r.expYear, createdAt: r.createdAt.toISOString() };
 }
 
 function toRefund(r: RefundRow): RefundRequest {
@@ -310,11 +353,14 @@ function makeOps(db: Db): PaymentsOps {
           method: data.method,
           amountCents: data.amountCents,
           trialDays: data.trialDays,
+          interval: data.interval ?? 'monthly',
+          paymentCardId: data.paymentCardId,
           status: data.status ?? 'pending',
           kind: data.kind ?? 'initial',
           subscriptionId: data.subscriptionId,
           invoiceNumber: data.invoiceNumber,
           gatewayChargeId: data.gatewayChargeId,
+          failureReason: data.failureReason,
           periodStart: data.periodStart ? new Date(data.periodStart) : undefined,
           periodEnd: data.periodEnd ? new Date(data.periodEnd) : undefined,
           confirmedAt: data.confirmedAt ? new Date(data.confirmedAt) : undefined,
@@ -410,6 +456,8 @@ function makeOps(db: Db): PaymentsOps {
           communityId: data.communityId,
           status: data.status,
           priceCents: data.priceCents,
+          interval: data.interval ?? 'monthly',
+          paymentCardId: data.paymentCardId,
           currentPeriodStart: new Date(data.currentPeriodStart),
           currentPeriodEnd: new Date(data.currentPeriodEnd),
           cancelAtPeriodEnd: data.cancelAtPeriodEnd,
@@ -433,6 +481,8 @@ function makeOps(db: Db): PaymentsOps {
         data: {
           status: patch.status,
           priceCents: patch.priceCents,
+          interval: patch.interval,
+          paymentCardId: patch.paymentCardId,
           currentPeriodStart: dateOrUndef(patch.currentPeriodStart) ?? undefined,
           currentPeriodEnd: dateOrUndef(patch.currentPeriodEnd) ?? undefined,
           cancelAtPeriodEnd: patch.cancelAtPeriodEnd,
@@ -471,9 +521,47 @@ function makeOps(db: Db): PaymentsOps {
       const rows = await db.subscription.findMany({ where: { communityId, status: { in: ['trialing', 'active'] } }, orderBy: { createdAt: 'asc' } });
       return rows.map(toSubscription);
     },
-    async findReusablePending(userId, communityId, since) {
+    async findPayoutAccount(communityId) {
+      const row = await db.payoutAccount.findUnique({ where: { communityId } });
+      return row ? { status: row.status, bankName: row.bankName ?? undefined, accountHolder: row.accountHolder ?? undefined, accountLast4: row.accountLast4 ?? undefined } : undefined;
+    },
+    async upsertCard(userId, card) {
+      const row = await db.paymentCard.upsert({
+        where: { userId_gatewayToken: { userId, gatewayToken: card.token } },
+        create: { userId, gatewayToken: card.token, brand: card.brand, last4: card.last4, expMonth: card.expMonth, expYear: card.expYear },
+        update: { brand: card.brand, last4: card.last4, expMonth: card.expMonth, expYear: card.expYear },
+      });
+      return toCard(row);
+    },
+    async findCard(id) {
+      const row = await db.paymentCard.findUnique({ where: { id } });
+      return row ? toCard(row) : undefined;
+    },
+    async listCards(userId) {
+      const rows = await db.paymentCard.findMany({ where: { userId }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }] });
+      return rows.map(toCard);
+    },
+    async claimTrialReminders(now, remindBeforeDays, limit) {
+      // Một câu UPDATE ... RETURNING: chỉ gói còn chưa nhắc mới được "claim" ⇒ không bao giờ trả cùng một gói 2 lần (kể cả nhiều instance).
+      const rows = await db.$queryRaw<{ id: string }[]>`
+        UPDATE "Subscription" SET "trialReminderSentAt" = ${ts(now)}
+        WHERE "id" IN (
+          SELECT s."id" FROM "Subscription" s
+          WHERE s."status" = 'trialing' AND s."paymentCardId" IS NOT NULL AND NOT s."cancelAtPeriodEnd" AND s."trialReminderSentAt" IS NULL
+            AND s."currentPeriodEnd" > ${ts(now)}
+            AND s."currentPeriodEnd" <= ${ts(new Date(now.getTime() + remindBeforeDays * 86_400_000))}
+          ORDER BY s."currentPeriodEnd" LIMIT ${limit} FOR UPDATE SKIP LOCKED)
+        RETURNING "id"`;
+      const out: Subscription[] = [];
+      for (const r of rows) {
+        const sub = await ops.findSubscription(r.id);
+        if (sub) out.push(sub);
+      }
+      return out;
+    },
+    async findReusablePending(userId, communityId, since, match) {
       const row = await db.payment.findFirst({
-        where: { userId, communityId, status: 'pending', kind: 'initial', createdAt: { gte: since } },
+        where: { userId, communityId, status: 'pending', kind: 'initial', createdAt: { gte: since }, ...(match ? { interval: match.interval, amountCents: match.amountCents } : {}) },
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       });
       return row ? toPayment(row) : undefined;
@@ -661,7 +749,7 @@ function makeOps(db: Db): PaymentsOps {
       const [r] = await db.$queryRaw<{ active: bigint; trialing: bigint; mrr: bigint }[]>`
         SELECT COUNT(*) FILTER (WHERE "status" = 'active')::bigint AS active,
                COUNT(*) FILTER (WHERE "status" = 'trialing')::bigint AS trialing,
-               COALESCE(SUM("priceCents") FILTER (WHERE "status" = 'active' AND NOT "cancelAtPeriodEnd"), 0)::bigint AS mrr
+               COALESCE(SUM(CASE WHEN "interval" = 'annual' THEN "priceCents" / 12 ELSE "priceCents" END) FILTER (WHERE "status" = 'active' AND NOT "cancelAtPeriodEnd"), 0)::bigint AS mrr
         FROM "Subscription" WHERE "courseId" = ${communityId}`;
       return { active: num(r?.active), trialing: num(r?.trialing), mrrCents: num(r?.mrr) };
     },

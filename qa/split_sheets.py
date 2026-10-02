@@ -45,13 +45,15 @@ SHORT_NAMES = {
     "INFRA": "Hạ tầng vận hành",
     "PERF": "Tìm kiếm & hiệu năng",
     "SPLIT": "Cộng đồng & Khóa học",
+    "WIZ": "Tạo cộng đồng (wizard)",
+    "ANN": "Gói năm & dialog tham gia",
     "ROLE": "Ma trận phân quyền",
     "SEC": "Bảo mật & Phi chức năng",
     "INTEG": "API & Concurrency",
 }
 # Thứ tự hiển thị các sheet module (theo luồng người dùng); mã không có trong danh sách xếp cuối theo thứ tự xuất hiện.
 ORDER = ["HOME", "AUTH", "COMM", "COMMVP", "COURSE", "CERT", "FEED", "MEMBER", "EVENT", "NOTI", "SEARCH", "UPLOAD",
-         "PAY", "ADMIN", "ADM", "ADM2", "ADM3", "SECX", "MONEY", "GAME", "INFRA", "PERF", "SPLIT", "ROLE", "SEC", "INTEG"]
+         "PAY", "ADMIN", "ADM", "ADM2", "ADM3", "SECX", "MONEY", "GAME", "INFRA", "PERF", "SPLIT", "WIZ", "ANN", "ROLE", "SEC", "INTEG"]
 
 _BAD = set('[]:*?/\\')
 

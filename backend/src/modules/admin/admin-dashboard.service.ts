@@ -115,7 +115,7 @@ export const adminDashboardService = {
       prisma.community.count({ where: { deletedAt: null, moderationStatus: 'active', locked: false, createdAt: { lt: since }, pricing: { not: 'free' } } }),
       prisma.adminAuditLog.findMany({ orderBy: { createdAt: 'desc' }, take: 6 }),
       prisma.user.findMany({ where: realUsers, orderBy: { createdAt: 'desc' }, take: 6, select: { id: true, firstName: true, lastName: true, createdAt: true } }),
-      prisma.community.findMany({ where: { deletedAt: null }, orderBy: { createdAt: 'desc' }, take: 6, select: { id: true, title: true, createdAt: true, owner: { select: { id: true, firstName: true, lastName: true } } } }),
+      prisma.community.findMany({ where: { deletedAt: null, moderationStatus: { not: 'draft' } }, orderBy: { createdAt: 'desc' }, take: 6, select: { id: true, title: true, createdAt: true, owner: { select: { id: true, firstName: true, lastName: true } } } }),
     ]);
 
     // ---- chuỗi theo ngày (đủ `range` điểm, ngày trống = 0)

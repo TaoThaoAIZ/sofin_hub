@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requireAuth } from '../../middlewares/auth.js';
+import { optionalAuth, requireAuth } from '../../middlewares/auth.js';
 import { HttpError } from '../../utils/http-error.js';
 import { auditService } from '../admin/admin-audit.service.js';
 import { adminOnly } from '../admin/admin.common.js';
@@ -7,6 +7,8 @@ import { WEBHOOK_SIGNATURE_HEADER } from './payments.gateway.js';
 import {
   cancelSubscriptionBody,
   createCheckoutBody,
+  quoteQuery,
+  startTrialBody,
   createPayoutBody,
   listPayoutsQuery,
   listRefundsQuery,
@@ -25,11 +27,21 @@ const id = (v: unknown) => v as string;
 paymentsRouter.post('/courses/:id/checkout', requireAuth, async (req, res) => {
   const body = createCheckoutBody.parse(req.body);
   const key = req.header('idempotency-key')?.trim().slice(0, 200) || undefined;
-  res.status(201).json({ data: await paymentsService.checkout(id(req.params.id), req.userId!, body.method, key) });
+  res.status(201).json({ data: await paymentsService.checkout(id(req.params.id), req.userId!, body.method, key, { interval: body.interval, paymentMethod: body.paymentMethod }) });
 });
 
 paymentsRouter.get('/courses/:id/subscription', requireAuth, async (req, res) => {
   res.json({ data: await paymentsService.statusFor(id(req.params.id), req.userId!) });
+});
+
+// Báo giá cho hộp thoại tham gia (đăng nhập tùy chọn: có thì tính đúng quyền dùng thử).
+paymentsRouter.get('/courses/:id/checkout-quote', optionalAuth, async (req, res) => {
+  const q = quoteQuery.parse(req.query);
+  res.json({ data: await paymentsService.quote(id(req.params.id), req.userId, q.interval) });
+});
+
+paymentsRouter.get('/me/payment-methods', requireAuth, async (req, res) => {
+  res.json({ data: await paymentsService.myCards(req.userId!) });
 });
 
 paymentsRouter.post('/payments/:paymentIntentId/confirm', requireAuth, async (req, res) => {
@@ -51,7 +63,8 @@ paymentsRouter.get('/me/subscriptions', requireAuth, async (req, res) => {
 });
 
 paymentsRouter.post('/courses/:id/trial', requireAuth, async (req, res) => {
-  res.status(201).json({ data: await paymentsService.startTrial(id(req.params.id), req.userId!) });
+  const body = startTrialBody.parse(req.body ?? {});
+  res.status(201).json({ data: await paymentsService.startTrial(id(req.params.id), req.userId!, new Date(), body) });
 });
 
 // ---- lịch sử & hóa đơn

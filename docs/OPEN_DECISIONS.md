@@ -21,6 +21,7 @@ Danh sách này gom từ cả ba đợt Admin và các đợt trước. Mỗi m�
 | A13 | Công thức điểm chất lượng (qualityScore) | công thức tạm | code |
 | A14 | Làm 2FA thật cho admin ở MVP không; có bắt buộc 2FA, hạn phiên, tiền tệ, tự động chi trả, múi giờ | chỉ lưu cấu hình, chưa thực thi | code |
 | A15 | Backend có tự chặn tính năng theo feature flag không; frontend người dùng có đọc cờ bảo trì không | chưa | code + FE |
+| A16 | **Gói hosting của owner** (mockup "Chọn gói & dùng thử"): ngoài hoa hồng %, owner có trả phí nền tảng theo gói không? Gói Khởi đầu 0đ (phí giao dịch 10%) vs Chuyên nghiệp 299.000đ/tháng hoặc 2.990.000đ/năm (phí 2,9%), dùng thử 14 ngày, nhắc trước 3 ngày, bắt buộc thẻ cho gói trả phí không; có bắt buộc chọn gói mới được ra mắt không; đơn vị tiền gói (VND) có khác tiền gói thành viên (USD) không; điều kiện "được đề xuất ở Khám phá" (10 thành viên, có bài 7 ngày) có thật sự lọc danh sách không | MÔ PHỎNG: lưu lựa chọn + dùng thử, KHÔNG trừ tiền khi hết thử, kế toán vẫn dùng hoa hồng `payments.commissionPct`; không bắt buộc (`owner.requirePlan=false`); điều kiện Khám phá chỉ hiển thị | Cài đặt chung `owner.*` (`requirePlan`, `trialDays`, `currency`, `proMonthlyPrice`, `proAnnualPrice`, `startFeePct`, `proFeePct`), code `modules/community-wizard/owner-plan.service.ts` |
 
 ## B. Lỗi / điểm lệch cần sửa (không cần quyết định, chờ làm)
 
@@ -50,6 +51,19 @@ Phát hiện khi viết test case ADM2 và ADM3.
 19. Tạm khóa hoặc gỡ nhân viên chỉ chặn `/admin`, không thu hồi phiên đăng nhập thường. Super Admin vẫn gán được `super_admin` cho người khác. Trả lời ticket với trạng thái mặc định sẽ mở lại ticket đã Resolved.
 20. Tab ticket không có số đếm và không có tab "Đã đóng".
 21. Chưa ẩn nút theo quyền (Support vẫn thấy nút Cấm người dùng; backend trả 403).
+
+**Wizard tạo cộng đồng + gói năm (phát hiện khi viết case WIZ/ANN, 2026-10-07)**
+22. `JoinRequestDialog` chỉ có ô Lời nhắn, không có câu hỏi/nội quy: cộng đồng riêng tư có câu hỏi gia nhập sẽ trả 400 `JOIN_ANSWERS_REQUIRED` nên người dùng KHÔNG gửi được yêu cầu bằng giao diện; giao diện admin cũng chưa hiện câu trả lời. (lỗi thật, nên sửa trước)
+23. `/billing` hiện gói năm là "$48/tháng"; `admin-payments.service` gán cứng `billingCycle:'monthly'` nên Admin → Gói đăng ký luôn ghi "Hàng tháng"; trang chi tiết và thẻ Khám phá chưa hiện giá năm.
+24. Checkbox "Cho thành viên mới dùng thử 7 ngày" lấy ngày từ `draft.members.trialDays` (BE trả 0 khi giá 0/tắt thử) nên có thể không hiện ở lần đầu vào bước 4 (suy từ code, cần xác minh khi chạy).
+25. Cài đặt chung (admin) chưa có ô `owner.*`, `payments.annualPeriodDays`, `trialReminderDays`; ô dùng thử cho nhập 0 trong khi BE tối thiểu 1.
+26. `requireRulesAgreement` mới ép ở join-request, chưa ép ở checkout / trial / tham gia miễn phí.
+27. Giao diện không giả lập được thẻ bị từ chối (FE luôn sinh token `tok_mock_<hex>` ngẫu nhiên); `tok_mock_declined` chỉ gửi được bằng API.
+28. Idempotency-Key replay trả lại intent cũ bất kể `interval`; giá đổi khi hộp thoại đang mở thì server tính giá mới nhưng giao diện không báo.
+29. Định dạng ngày wizard (dd/M) khác hộp thoại tham gia (d/M); `/categories` sau seed trả 11 mục (marketing/design có trong enum nhưng chưa bật); xem trước wizard chỉ có bước 1 và 3; tên wizard tối đa 30 ký tự trong khi `POST /communities` một phát cho tới 80; link chia sẻ thật là `<origin>/communities/<slug>` (mockup `sofinhub.com/<slug>`, chưa có route rút gọn).
+30. Dùng thử gói chủ cộng đồng là 14 ngày theo mockup (không phải 7); gói chủ tính VND còn gói thành viên tính USD (xem A16).
+
+**Dọn testcase 2026-10-06:** 9 case có kết quả Test 1 bị loại (HOME-008/022/026/027/028/029, AUTH-034, COURSE-001/005) → cần anh/chị duyệt; TC-AUTH-036 còn kết quả Fail cũ dù lỗi đã sửa → chạy lại. Lưu vết ở qa/retired_cases.py, qa/archive/retired_cases.csv, qa/review_notes/part1..5.md. Lỗi thật phát hiện lúc rà: seed `admin-batch2.ts:441` ghi sai id đích audit `course.remove`; `transferOwnership` không kiểm `isDemo`; email trong `PLATFORM_ADMIN_EMAILS` chưa có tài khoản → ai đăng ký trước thành Platform Admin; thông báo/link còn dùng "khóa học" và `/courses/...`; tài liệu lỗi thời (DEPLOY.md dòng 14, content.md, communities.md, identity.md, ADMIN_BACKEND_GAPS.md).
 
 ## C. Chưa làm (đã biết, chờ ưu tiên)
 

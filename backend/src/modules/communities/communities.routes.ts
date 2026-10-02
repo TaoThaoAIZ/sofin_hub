@@ -48,8 +48,8 @@ communitiesRouter.post('/admin/courses/:id/unlock', requireAuth, async (req, res
 
 // ---- yêu cầu tham gia ----
 communitiesRouter.post('/courses/:id/join-requests', requireAuth, async (req, res) => {
-  const { message } = joinRequestBody.parse(req.body ?? {});
-  res.status(201).json({ data: await svc.createJoinRequest(req.userId!, p(req.params.id), message) });
+  const { message, answers, acceptRules } = joinRequestBody.parse(req.body ?? {});
+  res.status(201).json({ data: await svc.createJoinRequest(req.userId!, p(req.params.id), message, { answers, acceptRules }) });
 });
 
 communitiesRouter.get('/courses/:id/join-requests', requireAuth, async (req, res) => {

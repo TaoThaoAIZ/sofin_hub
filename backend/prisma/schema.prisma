@@ -36,6 +36,10 @@ enum CourseCategory {
   /// Thêm bởi Admin đợt 2 (danh mục Discovery): chỉ dùng được sau khi admin tạo trong DiscoveryCategory.
   marketing
   design
+  /// Wizard tạo cộng đồng: danh mục theo mockup.
+  music
+  sports
+  spirituality
 }
 
 enum CourseTag {
@@ -178,12 +182,36 @@ enum UserStatus {
 
 /// Trạng thái kiểm duyệt cộng đồng (tách khỏi Course.status = open/soon/completed).
 enum CommunityModeration {
+  /// Bản nháp của wizard tạo cộng đồng: chỉ chủ thấy, không hiện công khai/Khám phá/tìm kiếm.
+  draft
   pending_review
   changes_requested
   rejected
   active
   suspended
   deleted
+}
+
+/// Chu kỳ thanh toán của gói thành viên (và của gói hosting owner).
+enum BillingInterval {
+  monthly
+  annual
+}
+
+enum HostingPlanKey {
+  start
+  pro
+}
+
+enum HostingPlanStatus {
+  trialing
+  active
+  canceled
+}
+
+enum PayoutAccountStatus {
+  connected
+  skipped
 }
 
 enum PaymentMethod {
@@ -371,6 +399,8 @@ model User {
   reportEvents        ReportEvent[]
   auditLogs           AdminAuditLog[]          @relation("AuditActor")
   payments            Payment[]
+  paymentCards        PaymentCard[]
+  payoutAccountsOwned PayoutAccount[]
   subscriptions       Subscription[]
   refundRequests      RefundRequest[]          @relation("RefundRequester")
   refundsResolved     RefundRequest[]          @relation("RefundResolver")
@@ -445,6 +475,24 @@ model Community {
   ratingCount          Int                  @default(0)
   /// Giá theo tháng, cent (domain `priceUsd` = priceCents / 100).
   priceCents           Int                  @default(0)
+  /// Giá theo năm (cent), null = không bán gói năm. Phải <= 12 x priceCents.
+  priceAnnualCents     Int?
+  /// Wizard tạo cộng đồng: nhận diện & giới thiệu.
+  logoUrl              String?
+  coverUrl             String?
+  brandColor           String?
+  promise              String?
+  benefits             String[]             @default([])
+  introVideoUrl        String?
+  /// Nội quy có thứ tự: [{ title, body }].
+  rules                Json                 @default("[]")
+  /// Câu hỏi khi xin gia nhập (tối đa 3).
+  joinQuestions        String[]             @default([])
+  memberTrialEnabled   Boolean              @default(true)
+  requireRulesAgreement Boolean             @default(false)
+  autoApprovePaid      Boolean              @default(false)
+  /// Các bước wizard đã lưu (basics|plan|identity|members) khi còn là bản nháp.
+  draftSteps           String[]             @default([])
   pricing              Pricing              @default(paid)
   visibility           Visibility           @default(public)
   status               CourseStatus         @default(open)
@@ -503,6 +551,8 @@ model Community {
   chargebacks       Chargeback[]
   discoveryFeatures DiscoveryFeature[]
   ownerLedger       OwnerBalanceLedger[]
+  hostingPlan       HostingPlan?
+  payoutAccount     PayoutAccount?
   /// Cột GENERATED ALWAYS (title A + description B, đã gập dấu).
   searchVector      Unsupported("tsvector")?
 
@@ -555,6 +605,9 @@ model JoinRequest {
   communityId String            @map("courseId")
   userId      String
   message     String            @default("")
+  /// Bản chụp câu hỏi + câu trả lời lúc gửi yêu cầu: [{ question, answer }].
+  answers     Json              @default("[]")
+  rulesAcceptedAt DateTime?
   status      JoinRequestStatus @default(pending)
   decidedById String?
   decidedAt   DateTime?
@@ -1114,6 +1167,9 @@ model Payment {
   amountCents     Int
   currency        String        @default("usd")
   trialDays       Int           @default(0)
+  interval        BillingInterval @default(monthly)
+  /// Thẻ (chỉ brand/last4/hạn + token cổng) dùng cho giao dịch này.
+  paymentCardId   String?
   status          PaymentStatus @default(pending)
   kind            PaymentKind   @default(initial)
   subscriptionId  String?
@@ -1132,6 +1188,7 @@ model Payment {
   community    Community     @relation(fields: [communityId], references: [id], onDelete: Restrict)
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  paymentCard  PaymentCard?  @relation(fields: [paymentCardId], references: [id], onDelete: SetNull)
 
   refunds     RefundRequest[]
   chargebacks Chargeback[]
@@ -1139,6 +1196,7 @@ model Payment {
   @@index([userId, createdAt])
   @@index([communityId, createdAt])
   @@index([subscriptionId])
+  @@index([paymentCardId])
   @@index([status])
 }
 
@@ -1151,6 +1209,12 @@ model Subscription {
   communityId        String             @map("courseId")
   status             SubscriptionStatus
   priceCents         Int
+  /// Chu kỳ: monthly (subscriptionPeriodDays) | annual (annualPeriodDays). priceCents = số tiền MỖI KỲ.
+  interval           BillingInterval    @default(monthly)
+  /// Thẻ lưu cho gia hạn / trừ tiền cuối kỳ dùng thử (null = dùng thử không thẻ, hết thử là hết quyền).
+  paymentCardId      String?
+  /// Đã gửi email nhắc trước ngày trừ tiền đầu tiên (claim idempotent).
+  trialReminderSentAt DateTime?
   currentPeriodStart DateTime
   currentPeriodEnd   DateTime
   cancelAtPeriodEnd  Boolean            @default(false)
@@ -1161,12 +1225,14 @@ model Subscription {
   updatedAt          DateTime           @updatedAt
 
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  community Community @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  community   Community    @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  paymentCard PaymentCard? @relation(fields: [paymentCardId], references: [id], onDelete: SetNull)
 
   payments Payment[]
 
   @@index([userId, communityId, createdAt])
   @@index([communityId])
+  @@index([paymentCardId])
   @@index([status, currentPeriodEnd])
 }
 
@@ -1565,4 +1631,72 @@ model PlatformBroadcast {
   createdAt      DateTime @default(now())
 
   @@index([createdAt])
+}
+
+
+// ============================================================================
+// WIZARD TẠO CỘNG ĐỒNG: thẻ, gói hosting owner, tài khoản nhận tiền
+// ============================================================================
+
+/// Thẻ thanh toán đã tokenize phía client. KHÔNG BAO GIỜ lưu số thẻ đầy đủ hay CVC: chỉ brand/last4/hạn + token cổng (mock `tok_mock_*`).
+model PaymentCard {
+  id        String   @id @default(uuid())
+  userId    String
+  gatewayToken String
+  brand     String
+  last4     String
+  expMonth  Int
+  expYear   Int
+  createdAt DateTime @default(now())
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments      Payment[]
+  subscriptions Subscription[]
+  hostingPlans  HostingPlan[]
+
+  @@unique([userId, gatewayToken])
+  @@index([userId])
+}
+
+/// MÔ PHỎNG (A16 chưa chốt): gói hosting của owner cho 1 cộng đồng. Chưa có job/cổng trừ tiền khi hết dùng thử.
+model HostingPlan {
+  id              String            @id @default(uuid())
+  communityId     String            @unique @map("courseId")
+  ownerId         String
+  planKey         HostingPlanKey
+  cycle           BillingInterval   @default(monthly)
+  /// Giá chụp lúc chọn (đơn vị nhỏ nhất của `currency`, VND không có phần thập phân).
+  priceAmount     Int
+  currency        String
+  status          HostingPlanStatus
+  trialStartedAt  DateTime?
+  trialEndsAt     DateTime?
+  paymentCardId   String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  community   Community    @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  paymentCard PaymentCard? @relation(fields: [paymentCardId], references: [id], onDelete: SetNull)
+
+  @@index([ownerId])
+  @@index([paymentCardId])
+}
+
+/// MÔ PHỎNG: tài khoản nhận tiền của cộng đồng (chỉ 4 số cuối). `skipped` = chưa kết nối (chặn rút tiền, cho phép publish).
+model PayoutAccount {
+  id            String              @id @default(uuid())
+  communityId   String              @unique @map("courseId")
+  ownerId       String
+  status        PayoutAccountStatus
+  bankName      String?
+  accountHolder String?
+  accountLast4  String?
+  connectedAt   DateTime?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  owner     User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId])
 }

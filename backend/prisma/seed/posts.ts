@@ -225,7 +225,7 @@ function photoScenario(u: SeedContext['userIds']) {
 
 export async function seedPosts(ctx: SeedContext): Promise<void> {
   const { db } = ctx;
-  const courses = await db.community.findMany({ where: { deletedAt: null }, select: { id: true, title: true, instructorName: true } });
+  const courses = await db.community.findMany({ where: { deletedAt: null, moderationStatus: { not: 'draft' } }, select: { id: true, title: true, instructorName: true } });
 
   const posts: PostRow[] = [];
   const comments: CommentRow[] = [];

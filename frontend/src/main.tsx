@@ -4,6 +4,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
+import { PopupProvider } from './components/ui/PopupProvider';
 import { AuthProvider } from './features/auth/AuthContext';
 import './index.css';
 
@@ -18,7 +19,9 @@ createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
-          <App />
+          <PopupProvider>
+            <App />
+          </PopupProvider>
         </AuthProvider>
       </BrowserRouter>
       <ReactQueryDevtools initialIsOpen={false} />

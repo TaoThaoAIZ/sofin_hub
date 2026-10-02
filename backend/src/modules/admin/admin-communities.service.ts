@@ -149,8 +149,8 @@ const stamp = (actorId: string, extra: Patch = {}): Patch => ({ moderatedById: a
 export const adminCommunitiesService = {
   async summary() {
     const [rows, paid] = await Promise.all([
-      prisma.$queryRaw<{ s: string; n: number }[]>(Prisma.sql`SELECT ${STATUS_EXPR} AS s, COUNT(*)::int AS n FROM "Course" c GROUP BY 1`),
-      prisma.community.count({ where: { deletedAt: null, pricing: { not: 'free' } } }),
+      prisma.$queryRaw<{ s: string; n: number }[]>(Prisma.sql`SELECT ${STATUS_EXPR} AS s, COUNT(*)::int AS n FROM "Course" c WHERE c."moderationStatus"::text <> 'draft' GROUP BY 1`),
+      prisma.community.count({ where: { deletedAt: null, pricing: { not: 'free' }, moderationStatus: { not: 'draft' } } }),
     ]);
     const by = (s: CommunityStatus) => rows.find((r) => r.s === s)?.n ?? 0;
     return {
@@ -167,7 +167,7 @@ export const adminCommunitiesService = {
 
   async list(q: ListCommunitiesQuery) {
     const statuses = enumList(q.status, STATUSES, 'status');
-    const conds: Prisma.Sql[] = [];
+    const conds: Prisma.Sql[] = [Prisma.sql`c."moderationStatus"::text <> 'draft'`]; // nháp wizard chưa ra mắt: admin không thấy
     conds.push(statuses.length ? Prisma.sql`${STATUS_EXPR} = ANY(${statuses})` : Prisma.sql`${STATUS_EXPR} <> 'deleted'`);
     if (q.category) conds.push(Prisma.sql`c."category"::text = ${q.category}`);
     if (q.pricing) conds.push(Prisma.sql`c."pricing"::text = ${q.pricing}`);
@@ -449,7 +449,8 @@ export const adminCommunitiesService = {
     if (Date.now() - cur.deletedAt.getTime() > RETENTION_DAYS * DAY) {
       throw HttpError.coded(409, 'RETENTION_EXPIRED', `Đã quá ${RETENTION_DAYS} ngày lưu giữ, không thể khôi phục`);
     }
-    const back: CommunityStatus = cur.preDeleteStatus ?? (cur.moderationStatus === 'deleted' ? 'active' : cur.moderationStatus);
+    const prev = cur.preDeleteStatus ?? cur.moderationStatus;
+    const back: CommunityStatus = prev === 'deleted' || prev === 'draft' ? 'active' : prev;
     const r = await prisma.community.updateMany({
       where: { id, deletedAt: { not: null } },
       data: stamp(actorId, { deletedAt: null, deletedById: null, deleteReason: null, preDeleteStatus: null, moderationStatus: back, moderationNote: body.note ?? null }),

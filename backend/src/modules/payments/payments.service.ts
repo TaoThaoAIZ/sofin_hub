@@ -3,7 +3,9 @@ import { assertUserCan } from '../auth/user-status.js';
 import { fileUserRepository } from '../auth/auth.repository.js';
 import { catalogService } from '../catalog/catalog.service.js';
 import { enrollmentService } from '../enrollments/enrollments.service.js';
+import { mailService } from '../mail/mail.service.js';
 import { notify } from '../notifications/notifications.service.js';
+import { annualSavingsPct, type Community } from '../catalog/community.types.js';
 import { getRole, atLeast, isCommunityOwner, requireRole, requireStaff } from '../permissions/policy.js';
 import { paymentGateway, type PaymentGateway } from './payments.gateway.js';
 import {
@@ -14,10 +16,11 @@ import {
   type PaymentsOps,
   type PaymentsRepository,
   type RevenueRates,
+  type StoredCard,
 } from './payments.repository.js';
 import { cfg } from '../settings/settings.service.js';
-import { webhookEventBody } from './payments.schema.js';
-import type { PaymentIntent, PaymentMethod, Payout, RefundRequest, Subscription } from './payments.types.js';
+import { webhookEventBody, type PaymentMethodInput } from './payments.schema.js';
+import type { BillingInterval, PaymentCardView, PaymentIntent, PaymentMethod, Payout, RefundRequest, Subscription } from './payments.types.js';
 
 const DAY_MS = 86_400_000;
 const MIN_MS = 60_000;
@@ -33,6 +36,21 @@ export const WEBHOOK_PROCESSING_STALE_MS = 2 * MIN_MS;
 const WEBHOOK_MAX_ATTEMPTS = 8;
 /** Mặc định: yêu cầu hoàn tiền kẹt `refunding` / charge chưa settle quá lâu mới đối soát (tránh giẫm chân request đang chạy). */
 const RECONCILE_AFTER_MS = 5 * MIN_MS;
+
+/** Độ dài kỳ (ngày) theo chu kỳ: monthly = subscriptionPeriodDays, annual = annualPeriodDays (Global Settings). */
+export const periodDaysFor = (interval: BillingInterval) => (interval === 'annual' ? cfg().payments.annualPeriodDays : cfg().payments.subscriptionPeriodDays);
+
+/** Giá (cent) của 1 chu kỳ do SERVER quyết định; cộng đồng không bán gói năm thì 400. */
+export function intervalPriceCents(course: Pick<Community, 'priceUsd' | 'priceAnnualUsd'>, interval: BillingInterval): number {
+  if (interval === 'annual') {
+    if (course.priceAnnualUsd == null) throw HttpError.coded(400, 'INTERVAL_UNAVAILABLE', 'Cộng đồng này không bán gói năm');
+    return toCents(course.priceAnnualUsd);
+  }
+  return toCents(course.priceUsd);
+}
+
+export const cardView = (c: StoredCard | undefined | null): PaymentCardView | null =>
+  c ? { id: c.id, brand: c.brand, last4: c.last4, expMonth: c.expMonth, expYear: c.expYear, createdAt: c.createdAt } : null;
 
 const revenueRates = (): RevenueRates => ({
   commissionBp: bp(cfg().payments.commissionPct),
@@ -117,8 +135,9 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
   const inflightConfirm = new Map<string, Promise<PaymentIntent>>();
 
   /** Cộng đồng riêng tư: chỉ người đã được duyệt (join request approved / lời mời đã chấp nhận) hoặc đang là thành viên mới được mua/dùng thử. */
-  async function assertMayPurchase(userId: string, communityId: string, visibility: 'public' | 'private') {
+  async function assertMayPurchase(userId: string, communityId: string, visibility: 'public' | 'private', autoApprovePaid = false) {
     if (visibility !== 'private') return;
+    if (autoApprovePaid) return; // chủ bật "Tự duyệt người trả phí": thanh toán/dùng thử thay cho bước duyệt
     if (await enrollmentService.isEnrolled(userId, communityId)) return; // dùng thử → trả phí
     if (await repo.hasApprovedJoinRequest(userId, communityId)) return;
     throw HttpError.coded(403, 'JOIN_REQUEST_REQUIRED', 'Cộng đồng riêng tư: hãy gửi yêu cầu tham gia (được duyệt) hoặc dùng lời mời trước khi thanh toán');
@@ -151,12 +170,14 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
       const done = await ops.transition(intent.id, ['pending'], { status: 'succeeded', confirmedAt: at.toISOString(), gatewayChargeId: chargeId });
       if (!done) return { payment: (await ops.findById(intent.id))!, voided: false };
 
-      const periodEnd = addDays(at, cfg().payments.subscriptionPeriodDays);
+      const periodEnd = addDays(at, periodDaysFor(intent.interval));
       if (sub) {
         // Chuyển từ dùng thử sang trả phí: bắt đầu kỳ mới từ bây giờ.
         sub = await ops.updateSubscription(sub.id, {
           status: 'active',
           priceCents: intent.amountCents,
+          interval: intent.interval,
+          paymentCardId: intent.paymentCardId ?? sub.paymentCardId ?? null,
           currentPeriodStart: at.toISOString(),
           currentPeriodEnd: periodEnd.toISOString(),
           cancelAtPeriodEnd: false,
@@ -167,6 +188,8 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
           communityId: intent.communityId,
           status: 'active',
           priceCents: intent.amountCents,
+          interval: intent.interval,
+          paymentCardId: intent.paymentCardId,
           currentPeriodStart: at.toISOString(),
           currentPeriodEnd: periodEnd.toISOString(),
           cancelAtPeriodEnd: false,
@@ -236,9 +259,9 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
   }
 
   /** Tạo giao dịch gia hạn đã thành công (scheduler sau khi cổng trừ tiền OK, hoặc webhook subscription.renewed). Chạy trong transaction của caller (đã khóa Subscription). */
-  async function recordRenewal(ops: PaymentsOps, after: After, sub: Subscription, chargeId: string, at: Date) {
+  async function recordRenewal(ops: PaymentsOps, after: After, sub: Subscription, chargeId: string, at: Date, kind: 'renewal' | 'initial' = 'renewal') {
     const start = new Date(sub.currentPeriodEnd);
-    const end = addDays(start, cfg().payments.subscriptionPeriodDays);
+    const end = addDays(start, periodDaysFor(sub.interval));
     let payment = await ops.create({
       communityId: sub.communityId,
       userId: sub.userId,
@@ -246,7 +269,9 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
       amountUsd: sub.priceCents / 100,
       amountCents: sub.priceCents,
       trialDays: 0,
-      kind: 'renewal',
+      interval: sub.interval,
+      paymentCardId: sub.paymentCardId,
+      kind,
       status: 'succeeded',
       confirmedAt: at.toISOString(),
       subscriptionId: sub.id,
@@ -267,8 +292,10 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
     later(after, {
       userId: sub.userId,
       type: 'payment_succeeded',
-      title: 'Gia hạn gói thành công',
-      body: `Gói của bạn được gia hạn đến ${end.toISOString().slice(0, 10)}. Hóa đơn ${invoiceNumber}.`,
+      title: kind === 'initial' ? 'Đã bắt đầu gói thành viên' : 'Gia hạn gói thành công',
+      body: kind === 'initial'
+        ? `Hết dùng thử, bạn đã được trừ ${(sub.priceCents / 100).toFixed(2)} USD. Gói có hiệu lực đến ${end.toISOString().slice(0, 10)}. Hóa đơn ${invoiceNumber}.`
+        : `Gói của bạn được gia hạn đến ${end.toISOString().slice(0, 10)}. Hóa đơn ${invoiceNumber}.`,
       link: `/courses/${sub.communityId}/community`,
       communityId: sub.communityId,
     });
@@ -508,11 +535,13 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
 
   const service = {
     // ----------------------------------------------------------------- checkout (giữ tương thích FE cũ)
-    async checkout(communityId: string, userId: string, method: PaymentMethod, idempotencyKey?: string) {
+    async checkout(communityId: string, userId: string, method: PaymentMethod, idempotencyKey?: string, opts: { interval?: BillingInterval; paymentMethod?: PaymentMethodInput } = {}) {
       await assertUserCan(userId, 'purchase');
       const course = await catalogService.getById(communityId);
       if (course.locked) throw locked();
       if (course.priceUsd <= 0) throw HttpError.badRequest('Khóa học này miễn phí, không cần thanh toán');
+      const interval = opts.interval ?? 'monthly';
+      const amountCents = intervalPriceCents(course, interval); // giá do server quyết định theo chu kỳ
 
       // Cùng Idempotency-Key → trả lại đúng giao dịch cũ, không tạo giao dịch thứ hai.
       if (idempotencyKey) {
@@ -526,7 +555,8 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
         throw HttpError.conflict('Bạn đang có gói thành viên còn hiệu lực ở cộng đồng này — hãy vào lại cộng đồng, không cần thanh toán lại');
       }
       if ((await enrollmentService.isEnrolled(userId, communityId)) && !trialing) throw HttpError.conflict('Bạn đã tham gia khóa học này rồi');
-      await assertMayPurchase(userId, communityId, course.visibility);
+      await assertMayPurchase(userId, communityId, course.visibility, course.autoApprovePaid);
+      const card = opts.paymentMethod ? await repo.upsertCard(userId, opts.paymentMethod) : undefined; // chỉ brand/last4/hạn + token
 
       try {
         // Giá luôn lấy từ server, không nhận số tiền từ client. Giao dịch + khóa idempotency cùng commit: 2 request song song
@@ -534,16 +564,18 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
         // Khóa cố vấn (user, course): 2 checkout song song của cùng người tái dùng CÙNG 1 intent pending thay vì tạo 2 intent.
         return await repo.transaction(async (ops) => {
           await ops.advisoryLock(`checkout:${userId}:${communityId}`);
-          const reusable = await ops.findReusablePending(userId, communityId, new Date(Date.now() - PENDING_INTENT_TTL_MS));
+          const reusable = await ops.findReusablePending(userId, communityId, new Date(Date.now() - PENDING_INTENT_TTL_MS), { interval, amountCents });
           const intent =
             reusable ??
             (await ops.create({
               communityId,
               userId,
               method,
-              amountUsd: course.priceUsd,
-              amountCents: toCents(course.priceUsd),
+              amountUsd: amountCents / 100,
+              amountCents,
               trialDays: cfg().payments.trialDays,
+              interval,
+              paymentCardId: card?.id,
             }));
           if (idempotencyKey) await ops.saveIdempotent(userId, idempotencyKey, intent.id);
           return intent;
@@ -585,12 +617,14 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
         if (live?.status === 'active' || ((await enrollmentService.isEnrolled(userId, intent.communityId)) && live?.status !== 'trialing')) {
           throw HttpError.conflict('Bạn đã tham gia khóa học này rồi');
         }
+        const card = intent.paymentCardId ? await repo.findCard(intent.paymentCardId) : undefined;
         const charge = await gateway.createCharge({
           amountCents: intent.amountCents,
           currency: 'usd',
           description: `Gói thành viên ${course.title}`,
           customerId: userId,
           idempotencyKey: intent.id,
+          paymentToken: card?.gatewayToken,
         });
         if (!charge.ok) {
           await failPayment(intent, charge.failureReason ?? 'declined');
@@ -607,7 +641,86 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
       const enrolled = await enrollmentService.isEnrolled(userId, communityId);
       const latest = await repo.findLatestForUser(communityId, userId);
       const sub = await repo.findSubscriptionFor(userId, communityId);
-      return { enrolled, latestPayment: latest, subscription: sub ? subscriptionView(sub) : null };
+      const card = sub?.paymentCardId ? await repo.findCard(sub.paymentCardId) : undefined;
+      return { enrolled, latestPayment: latest, subscription: sub ? { ...subscriptionView(sub), paymentMethod: cardView(card) } : null };
+    },
+
+    // ----------------------------------------------------------------- báo giá cho hộp thoại tham gia
+    /**
+     * Mọi con số/ngày của hộp thoại "Chọn gói thành viên" đều do server tính (FE không tự cộng ngày/tiền). `userId` (nếu có) dùng để
+     * biết người này đã dùng thử rồi hay đã là thành viên (khi đó không còn dùng thử).
+     */
+    async quote(communityId: string, userId: string | undefined, interval: BillingInterval = 'monthly', now = new Date()) {
+      const course = await catalogService.getById(communityId);
+      if (course.priceUsd <= 0) throw HttpError.coded(400, 'COMMUNITY_FREE', 'Cộng đồng này miễn phí, không cần thanh toán');
+      const selectedCents = intervalPriceCents(course, interval); // 400 INTERVAL_UNAVAILABLE nếu không bán gói năm
+      const plans = [
+        { interval: 'monthly' as const, label: 'Hàng tháng', priceUsd: course.priceUsd, billedUsd: course.priceUsd, perMonthUsd: course.priceUsd, savingsPct: 0, popular: true, periodDays: periodDaysFor('monthly') },
+        ...(course.priceAnnualUsd == null
+          ? []
+          : [{
+              interval: 'annual' as const,
+              label: 'Hàng năm',
+              priceUsd: course.priceAnnualUsd,
+              billedUsd: course.priceAnnualUsd,
+              perMonthUsd: Math.round((course.priceAnnualUsd / 12) * 100) / 100,
+              savingsPct: annualSavingsPct(course.priceUsd, course.priceAnnualUsd),
+              popular: false,
+              periodDays: periodDaysFor('annual'),
+            }]),
+      ];
+      const trialAllowed =
+        course.memberTrialEnabled && !(userId && ((await repo.hasHadTrial(userId, communityId)) || (await enrollmentService.isEnrolled(userId, communityId))));
+      const trialDays = trialAllowed ? cfg().payments.trialDays : 0;
+      const firstCharge = addDays(now, trialDays);
+      const remindDays = cfg().payments.trialReminderDays;
+      return {
+        communityId,
+        currency: 'USD',
+        paid: true,
+        plans,
+        selected: interval,
+        trialDays,
+        trialEligible: trialDays > 0,
+        startsAt: now.toISOString(),
+        firstChargeDate: firstCharge.toISOString(),
+        firstChargeAmountUsd: selectedCents / 100,
+        firstChargeAmountCents: selectedCents,
+        dueTodayUsd: trialDays > 0 ? 0 : selectedCents / 100,
+        remindDaysBefore: remindDays,
+        remindAt: trialDays > 0 ? new Date(Math.max(now.getTime(), firstCharge.getTime() - remindDays * DAY_MS)).toISOString() : null,
+        cancelAnytime: true,
+        provider: 'stripe',
+      };
+    },
+
+    /** Thẻ đã lưu của user (chỉ brand/last4/hạn dùng). */
+    async myCards(userId: string) {
+      return (await repo.listCards(userId)).map((c) => cardView(c)!);
+    },
+
+    /**
+     * Job nhắc trước ngày trừ tiền đầu tiên (hết dùng thử có thẻ). `claimTrialReminders` đánh dấu nguyên tử trong DB TRƯỚC khi gửi ⇒ mỗi gói nhắc đúng 1 lần
+     * dù job chạy lặp/song song nhiều instance (đổi lại: mail lỗi thì không gửi lại — mailService đã nuốt lỗi gửi).
+     */
+    async sendTrialReminders(now = new Date()) {
+      const days = cfg().payments.trialReminderDays;
+      if (days <= 0) return { sent: 0 };
+      let sent = 0;
+      for (const sub of await repo.claimTrialReminders(now, days, 200)) {
+        try {
+          const [user, card, title] = await Promise.all([fileUserRepository.findById(sub.userId), sub.paymentCardId ? repo.findCard(sub.paymentCardId) : undefined, courseTitle(sub.communityId)]);
+          const when = sub.currentPeriodEnd.slice(0, 10);
+          const amount = (sub.priceCents / 100).toFixed(2);
+          const text = `Dùng thử "${title}" của bạn kết thúc vào ngày ${when}. Lần thanh toán đầu tiên ${amount} USD${card ? ` (thẻ •••• ${card.last4})` : ''} sẽ diễn ra vào ngày đó. Bạn có thể hủy bất cứ lúc nào chỉ với 1 lần bấm trước ngày ${when} để không bị trừ tiền.`;
+          if (user?.email) await mailService.send({ to: user.email, subject: `Dùng thử "${title}" sắp kết thúc`, text });
+          notify({ userId: sub.userId, type: 'system', title: 'Dùng thử sắp kết thúc', body: text, link: `/courses/${sub.communityId}`, communityId: sub.communityId });
+          sent++;
+        } catch (err) {
+          console.error('sendTrialReminders: bỏ qua 1 gói do lỗi:', err);
+        }
+      }
+      return { sent };
     },
 
     // ----------------------------------------------------------------- gói thành viên
@@ -616,14 +729,18 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
       return Promise.all(subs.map(async (s) => subscriptionView(s, await courseTitle(s.communityId))));
     },
 
-    async startTrial(communityId: string, userId: string, at = new Date()) {
+    async startTrial(communityId: string, userId: string, at = new Date(), opts: { interval?: BillingInterval; paymentMethod?: PaymentMethodInput } = {}) {
       const course = await catalogService.getById(communityId);
       if (course.locked) throw locked();
       if (course.priceUsd <= 0) throw HttpError.badRequest('Cộng đồng miễn phí không có dùng thử');
+      if (!course.memberTrialEnabled) throw HttpError.coded(400, 'TRIAL_NOT_AVAILABLE', 'Cộng đồng này không có dùng thử miễn phí');
+      const interval = opts.interval ?? 'monthly';
+      const priceCents = intervalPriceCents(course, interval);
       if (await enrollmentService.isEnrolled(userId, communityId)) throw HttpError.conflict('Bạn đã tham gia cộng đồng này rồi');
       if (await repo.hasHadTrial(userId, communityId)) throw HttpError.conflict('Bạn đã dùng thử cộng đồng này rồi');
-      await assertMayPurchase(userId, communityId, course.visibility);
+      await assertMayPurchase(userId, communityId, course.visibility, course.autoApprovePaid);
       const end = addDays(at, cfg().payments.trialDays);
+      const card = opts.paymentMethod ? await repo.upsertCard(userId, opts.paymentMethod) : undefined; // chỉ brand/last4/hạn + token
       const sub = await inTx(async (ops, after) => {
         await ops.advisoryLock(`sub:${userId}:${communityId}`);
         if (await ops.lockLiveSubscription(userId, communityId)) throw HttpError.conflict('Bạn đang có gói thành viên còn hiệu lực ở cộng đồng này');
@@ -632,7 +749,9 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
           userId,
           communityId,
           status: 'trialing',
-          priceCents: toCents(course.priceUsd),
+          priceCents,
+          interval,
+          paymentCardId: card?.id,
           currentPeriodStart: at.toISOString(),
           currentPeriodEnd: end.toISOString(),
           cancelAtPeriodEnd: false,
@@ -643,13 +762,15 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
           userId,
           type: 'system',
           title: 'Bắt đầu dùng thử',
-          body: `Bạn được dùng thử "${course.title}" đến ${end.toISOString().slice(0, 10)}.`,
+          body: card
+            ? `Bạn được dùng thử "${course.title}" đến ${end.toISOString().slice(0, 10)}. Sau đó thẻ •••• ${card.last4} sẽ bị trừ ${(priceCents / 100).toFixed(2)} USD, trừ khi bạn hủy trước.`
+            : `Bạn được dùng thử "${course.title}" đến ${end.toISOString().slice(0, 10)}.`,
           link: `/courses/${communityId}/community`,
           communityId,
         });
         return created;
       });
-      return subscriptionView(sub, course.title);
+      return { ...subscriptionView(sub, course.title), paymentMethod: cardView(card), nextChargeAmountCents: card ? priceCents : null };
     },
 
     async cancelSubscription(communityId: string, userId: string, atPeriodEnd: boolean, at = new Date()) {
@@ -719,7 +840,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
      * Lỗi ở một gói (vd. cổng lỗi mạng) chỉ rollback gói đó, các gói khác vẫn được xử lý; lần chạy sau thử lại.
      */
     async processDueSubscriptions(now = new Date()) {
-      const result = { renewed: 0, renewalFailed: 0, trialsExpired: 0, ended: 0 };
+      const result = { renewed: 0, renewalFailed: 0, trialsExpired: 0, trialsConverted: 0, ended: 0 };
       const seen: string[] = [];
       for (;;) {
         const st: { outcome?: keyof typeof result; more: boolean } = { more: true };
@@ -735,6 +856,34 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
             if (state.deleted) {
               await endSubscription(ops, after, sub, 'canceled', now, 'Cộng đồng đã bị xóa nên gói thành viên của bạn đã được hủy và sẽ không bị tính phí thêm.');
               st.outcome = 'ended';
+            } else if (sub.status === 'trialing' && sub.paymentCardId && !sub.cancelAtPeriodEnd && !(await ops.isBanned(sub.userId, sub.communityId)) && (await ops.isEnrolled(sub.userId, sub.communityId))) {
+              // Hết dùng thử CÓ THẺ: trừ tiền lần đầu (cổng giả lập) rồi chuyển active; thất bại ⇒ expired. Khóa idempotency cố định theo gói.
+              const card = await ops.findCard(sub.paymentCardId);
+              const charge = await gateway.createCharge({
+                amountCents: sub.priceCents,
+                currency: 'usd',
+                description: `Bắt đầu gói ${sub.communityId}`,
+                customerId: sub.userId,
+                idempotencyKey: `${sub.id}:trial-end`,
+                paymentToken: card?.gatewayToken,
+              });
+              if (charge.ok) {
+                await recordRenewal(ops, after, sub, charge.chargeId, now, 'initial');
+                st.outcome = 'trialsConverted';
+              } else {
+                await ops.create({
+                  communityId: sub.communityId, userId: sub.userId, method: 'stripe', amountUsd: sub.priceCents / 100, amountCents: sub.priceCents,
+                  trialDays: 0, interval: sub.interval, paymentCardId: sub.paymentCardId, kind: 'initial', status: 'failed', subscriptionId: sub.id,
+                  failureReason: charge.failureReason ?? 'declined',
+                });
+                await endSubscription(ops, after, sub, 'expired', now);
+                later(after, {
+                  userId: sub.userId, type: 'payment_failed', title: 'Không trừ được tiền sau dùng thử',
+                  body: 'Thẻ của bạn bị từ chối khi bắt đầu gói trả phí nên quyền truy cập đã kết thúc. Hãy đăng ký lại bằng thẻ khác.',
+                  link: `/courses/${sub.communityId}`, communityId: sub.communityId,
+                });
+                st.outcome = 'renewalFailed';
+              }
             } else if (sub.status === 'trialing') {
               await endSubscription(ops, after, sub, 'expired', now, 'Thời gian dùng thử đã kết thúc. Hãy đăng ký gói để tiếp tục truy cập.');
               st.outcome = 'trialsExpired';
@@ -752,6 +901,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
                 description: `Gia hạn gói ${sub.communityId}`,
                 customerId: sub.userId,
                 idempotencyKey: `${sub.id}:${sub.currentPeriodEnd}`,
+                paymentToken: sub.paymentCardId ? (await ops.findCard(sub.paymentCardId))?.gatewayToken : undefined,
               });
               if (charge.ok) {
                 await recordRenewal(ops, after, sub, charge.chargeId, now);
@@ -764,6 +914,8 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
                   amountUsd: sub.priceCents / 100,
                   amountCents: sub.priceCents,
                   trialDays: 0,
+                  interval: sub.interval,
+                  paymentCardId: sub.paymentCardId,
                   kind: 'renewal',
                   status: 'failed',
                   subscriptionId: sub.id,
@@ -1067,7 +1219,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
             await ops.updateSubscription(sub.id, {
               status: 'active',
               cancelAtPeriodEnd: false,
-              ...(expired ? { currentPeriodStart: now.toISOString(), currentPeriodEnd: addDays(now, cfg().payments.subscriptionPeriodDays).toISOString() } : {}),
+              ...(expired ? { currentPeriodStart: now.toISOString(), currentPeriodEnd: addDays(now, periodDaysFor(sub.interval)).toISOString() } : {}),
             });
             await ops.grantAccess(sub.userId, sub.communityId);
             tell('Gói thành viên đã hoạt động lại', `Gói của bạn ở ${title} đã được kích hoạt lại.`);
@@ -1178,11 +1330,22 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
       };
     },
 
-    async requestPayout(communityId: string, userId: string, body: { amountCents: number; method: { type: 'bank'; bankName: string; accountNumber: string; accountHolder: string } }) {
+    async requestPayout(communityId: string, userId: string, body: { amountCents: number; method?: { type: 'bank'; bankName: string; accountNumber: string; accountHolder: string } }) {
       await catalogService.getById(communityId);
       // Chỉ chính Owner mới đặt lệnh rút (Platform Admin không tạo lệnh rút thay Owner).
       if (!(await isCommunityOwner(userId, communityId))) throw HttpError.forbidden('Chỉ chủ cộng đồng mới được yêu cầu rút tiền');
       if ((await repo.courseState(communityId)).locked) throw locked(); // cộng đồng bị khóa: owner không được rút tiền
+      // Wizard: "Bỏ qua, làm sau" cho phép publish nhưng chặn rút tiền cho tới khi kết nối tài khoản. Cộng đồng tạo kiểu cũ (không có bản ghi) giữ luồng cũ.
+      const account = await repo.findPayoutAccount(communityId);
+      if (account?.status === 'skipped') {
+        throw HttpError.coded(400, 'PAYOUT_ACCOUNT_REQUIRED', 'Hãy kết nối tài khoản nhận tiền (Cài đặt › Thanh toán) trước khi rút tiền');
+      }
+      const target = body.method
+        ? { bankName: body.method.bankName, accountHolder: body.method.accountHolder, accountLast4: body.method.accountNumber.slice(-4) }
+        : account?.status === 'connected' && account.bankName && account.accountHolder && account.accountLast4
+          ? { bankName: account.bankName, accountHolder: account.accountHolder, accountLast4: account.accountLast4 }
+          : undefined;
+      if (!target) throw HttpError.coded(400, 'PAYOUT_ACCOUNT_REQUIRED', 'Thiếu thông tin tài khoản nhận tiền');
       const minCents = toCents(cfg().payments.payoutMinUsd);
       if (body.amountCents < minCents) throw HttpError.badRequest(`Số tiền rút tối thiểu là ${(minCents / 100).toFixed(2)} USD`);
 
@@ -1206,12 +1369,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
           communityId,
           ownerId: userId,
           amountCents: body.amountCents,
-          method: {
-            type: 'bank',
-            bankName: body.method.bankName,
-            accountHolder: body.method.accountHolder,
-            accountLast4: body.method.accountNumber.slice(-4),
-          },
+          method: { type: 'bank', ...target },
           status: 'requested',
         });
       });

@@ -24,6 +24,6 @@ export async function ensureDefaultCourse(db: Db, communityId: string, title?: s
 
 /** Khóa học mặc định cho MỌI cộng đồng chưa có khóa nào (gọi sau khi mọi seed tạo cộng đồng; an toàn chạy lại). */
 export async function ensureAllDefaultCourses(db: Db): Promise<void> {
-  const missing = await db.community.findMany({ where: { learningCourses: { none: {} } }, select: { id: true } });
+  const missing = await db.community.findMany({ where: { learningCourses: { none: {} }, moderationStatus: { not: 'draft' } }, select: { id: true } });
   for (const { id } of missing) await ensureDefaultCourse(db, id);
 }

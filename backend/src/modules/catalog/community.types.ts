@@ -10,8 +10,23 @@ export const CATEGORY_IDS = [
   // Admin đợt 2: chỉ dùng được sau khi admin thêm trong Discovery > Categories.
   'marketing',
   'design',
+  // Wizard tạo cộng đồng (mockup): danh mục thêm.
+  'music',
+  'sports',
+  'spirituality',
 ] as const;
 export type CategoryId = (typeof CATEGORY_IDS)[number];
+
+export interface CommunityRule {
+  title: string;
+  body: string;
+}
+
+/** Tiết kiệm (%) của gói năm so với 12 tháng gói tháng; 0 nếu không có gói năm. */
+export function annualSavingsPct(priceUsd: number, priceAnnualUsd: number | null | undefined): number {
+  if (!priceAnnualUsd || priceUsd <= 0) return 0;
+  return Math.max(0, Math.round((1 - priceAnnualUsd / (12 * priceUsd)) * 100));
+}
 
 export const COURSE_TAGS = ['hot', 'bestseller', 'new'] as const;
 export type CourseTag = (typeof COURSE_TAGS)[number];
@@ -46,6 +61,23 @@ export interface Community {
   ratingCount: number;
   /** Giá theo tháng (USD). 0 = miễn phí. */
   priceUsd: number;
+  /** Giá theo năm (USD) — null = không bán gói năm. Luôn <= 12 x priceUsd. */
+  priceAnnualUsd: number | null;
+  /** % tiết kiệm của gói năm (server tính), 0 nếu không có. */
+  annualSavingsPct: number;
+  /** Cho thành viên mới dùng thử (số ngày = Global Settings payments.trialDays). */
+  memberTrialEnabled: boolean;
+  /** Nhận diện & giới thiệu (wizard). */
+  logoUrl: string | null;
+  coverUrl: string | null;
+  brandColor: string | null;
+  promise: string | null;
+  benefits: string[];
+  introVideoUrl: string | null;
+  rules: CommunityRule[];
+  joinQuestions: string[];
+  requireRulesAgreement: boolean;
+  autoApprovePaid: boolean;
   pricing: Pricing;
   visibility: Visibility;
   status: CourseStatus;
@@ -60,6 +92,12 @@ export interface Community {
   /** Xóa mềm: ẩn hoàn toàn (findById trả undefined). */
   deletedAt?: string;
 }
+
+/** Các trường wizard — tùy chọn khi TẠO (có mặc định), luôn có mặt khi ĐỌC. */
+type WizardKeys =
+  | 'priceAnnualUsd' | 'annualSavingsPct' | 'memberTrialEnabled' | 'logoUrl' | 'coverUrl' | 'brandColor' | 'promise' | 'benefits'
+  | 'introVideoUrl' | 'rules' | 'joinQuestions' | 'requireRulesAgreement' | 'autoApprovePaid';
+export type NewCommunity = Omit<Community, WizardKeys> & Partial<Pick<Community, WizardKeys>>;
 
 /** Patch cho catalogService.update: mọi trường của Community + `lockReason` (không nằm trong Community để không lộ ra API). */
 export type CommunityPatch = Partial<Community> & { lockReason?: string | null };

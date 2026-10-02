@@ -5,6 +5,7 @@ import { ApiError } from '../../../lib/api';
 import { useAuth } from '../../auth/AuthContext';
 import { useLogoutAll, useRevokeSession, useSessions } from '../queries';
 import { Alert } from './Field';
+import { usePopup } from '../../../components/ui/usePopup';
 
 const fmt = (iso: string) => new Date(iso).toLocaleString('vi-VN');
 
@@ -18,6 +19,7 @@ function deviceLabel(ua: string | null) {
 export function SessionsPanel() {
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const { confirm } = usePopup();
   const { data, isPending, error, refetch } = useSessions();
   const revoke = useRevokeSession();
   const logoutAll = useLogoutAll();
@@ -36,7 +38,7 @@ export function SessionsPanel() {
   };
 
   const doLogoutAll = async () => {
-    if (!window.confirm('Đăng xuất khỏi tất cả thiết bị, kể cả thiết bị này?')) return;
+    if (!(await confirm({ title: 'Đăng xuất khỏi tất cả thiết bị?', message: 'Kể cả thiết bị này.', confirmText: 'Đăng xuất tất cả' }))) return;
     setErr(null);
     try {
       await logoutAll.mutateAsync();

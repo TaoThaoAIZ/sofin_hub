@@ -1,6 +1,6 @@
 import { prisma, type Tx } from '../../db/prisma.js';
 import { HttpError } from '../../utils/http-error.js';
-import type { Invite as DbInvite, JoinRequest as DbJoinRequest, Review as DbReview } from '../../generated/prisma/client.js';
+import type { Prisma, Invite as DbInvite, JoinRequest as DbJoinRequest, Review as DbReview } from '../../generated/prisma/client.js';
 import { seedCommunities } from '../catalog/catalog.seed.js';
 import type { BanRecord, Invite, JoinRequest, JoinRequestStatus, Review } from './communities.types.js';
 
@@ -59,6 +59,8 @@ const toJoinRequest = (r: DbJoinRequest): JoinRequest => ({
   courseId: r.communityId,
   userId: r.userId,
   message: r.message,
+  answers: Array.isArray(r.answers) ? (r.answers as unknown as JoinRequest['answers']) : [],
+  rulesAcceptedAt: r.rulesAcceptedAt?.toISOString(),
   status: r.status,
   createdAt: iso(r.createdAt),
   ...(r.decidedById ? { decidedBy: r.decidedById } : {}),
@@ -120,7 +122,7 @@ export const communitiesRepository: CommunitiesRepository = {
       const dup = await tx.joinRequest.findFirst({ where: { communityId: r.communityId, userId: r.userId, status: 'pending' } });
       if (dup) return undefined;
       const row = await tx.joinRequest.create({
-        data: { id: r.id, communityId: r.communityId, userId: r.userId, message: r.message, status: 'pending', createdAt: new Date(r.createdAt) },
+        data: { id: r.id, communityId: r.communityId, userId: r.userId, message: r.message, answers: r.answers as unknown as Prisma.InputJsonValue, rulesAcceptedAt: r.rulesAcceptedAt ? new Date(r.rulesAcceptedAt) : null, status: 'pending', createdAt: new Date(r.createdAt) },
       });
       return toJoinRequest(row);
     });

@@ -115,7 +115,7 @@ function photoEvents(u: SeedContext['userIds']): EventRow[] {
 
 export async function seedEvents(ctx: SeedContext): Promise<void> {
   const { db } = ctx;
-  const courses = await db.community.findMany({ where: { deletedAt: null }, select: { id: true, instructorName: true } });
+  const courses = await db.community.findMany({ where: { deletedAt: null, moderationStatus: { not: 'draft' } }, select: { id: true, instructorName: true } });
   const events: EventRow[] = [];
   for (const c of courses) events.push(...demoEvents(c.id, c.instructorName));
   if (courses.some((c) => c.id === 'photo')) events.push(...photoEvents(ctx.userIds));

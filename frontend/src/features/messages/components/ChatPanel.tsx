@@ -7,6 +7,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { useUpload, type UploadedFile } from '../../uploads/useUpload';
 import { messageErrorText, useBlockToggle, useMarkConversationRead, useRecallMessage, useSendMessage, useThread } from '../queries';
 import type { ConversationView, MessageView } from '../types';
+import { usePopup } from '../../../components/ui/usePopup';
 
 function formatSize(bytes: number) {
   return bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)}MB` : `${Math.max(1, Math.round(bytes / 1024))}KB`;
@@ -67,6 +68,7 @@ function Bubble({ m, mine, onRecall, recalling }: { m: MessageView; mine: boolea
 }
 
 export function ChatPanel({ conversationId, conversation, onBack }: { conversationId: string; conversation?: ConversationView; onBack: () => void }) {
+  const { confirm } = usePopup();
   const { user } = useAuth();
   const thread = useThread(conversationId);
   const send = useSendMessage(conversationId);
@@ -152,8 +154,8 @@ export function ChatPanel({ conversationId, conversation, onBack }: { conversati
           <button
             type="button"
             disabled={blockToggle.isPending}
-            onClick={() => {
-              if (!blocked && !window.confirm(`Chặn ${conversation.other.name}? Hai bên sẽ không nhắn tin cho nhau được nữa.`)) return;
+            onClick={async () => {
+              if (!blocked && !(await confirm({ title: `Chặn ${conversation.other.name}?`, message: 'Hai bên sẽ không nhắn tin cho nhau được nữa.', tone: 'danger', confirmText: 'Chặn' }))) return;
               setError(null);
               blockToggle.mutate({ userId: conversation.other.id, block: !blocked }, { onError: (e) => setError(messageErrorText(e)) });
             }}
@@ -196,8 +198,8 @@ export function ChatPanel({ conversationId, conversation, onBack }: { conversati
             m={m}
             mine={m.senderId === user?.id}
             recalling={recall.isPending}
-            onRecall={() => {
-              if (window.confirm('Thu hồi tin nhắn này? Nội dung sẽ bị xóa với cả hai bên.')) {
+            onRecall={async () => {
+              if (await confirm({ title: 'Thu hồi tin nhắn này?', message: 'Nội dung sẽ bị xóa với cả hai bên.', tone: 'danger', confirmText: 'Thu hồi' })) {
                 setError(null);
                 recall.mutate(m.id, { onError: (e) => setError(messageErrorText(e)) });
               }

@@ -6,6 +6,8 @@ import { ApiError } from '../lib/api';
 import { RequireAuth } from '../features/auth/RequireAuth';
 import { useMyEnrollments, useMyPoints } from '../features/account/queries';
 import { REASON_LABEL, ROLE_LABEL, formatDate } from '../features/account/roles';
+import { useDeleteDraft, useMyDrafts } from '../features/wizard/queries';
+import { usePopup } from '../components/ui/usePopup';
 
 export function MyCommunitiesPage() {
   return (
@@ -18,8 +20,11 @@ export function MyCommunitiesPage() {
 const errMsg = (e: unknown) => (e instanceof ApiError ? e.message : 'Không tải được dữ liệu, vui lòng thử lại');
 
 function Content() {
+  const { confirm } = usePopup();
   const enrollments = useMyEnrollments();
   const points = useMyPoints();
+  const drafts = useMyDrafts();
+  const deleteDraft = useDeleteDraft();
 
   const titleById = new Map<string, string>();
   for (const e of enrollments.data ?? []) titleById.set(e.course.id, e.course.title);
@@ -36,9 +41,14 @@ function Content() {
           {enrollments.data && enrollments.data.length === 0 && (
             <div className="glass grid place-items-center gap-3 rounded-3xl p-10 text-center">
               <p className="m-0 text-stone-600">Bạn chưa tham gia cộng đồng nào.</p>
-              <ButtonLink to="/" className="h-10 rounded-[14px] px-[18px] text-sm font-semibold">
-                Khám phá cộng đồng
-              </ButtonLink>
+              <div className="flex flex-wrap justify-center gap-3">
+                <ButtonLink to="/" className="h-10 rounded-[14px] px-[18px] text-sm font-semibold">
+                  Khám phá cộng đồng
+                </ButtonLink>
+                <ButtonLink to="/communities/new" className="h-10 rounded-[14px] px-[18px] text-sm font-semibold">
+                  Tạo cộng đồng
+                </ButtonLink>
+              </div>
             </div>
           )}
           {enrollments.data && enrollments.data.length > 0 && (
@@ -71,6 +81,39 @@ function Content() {
             </ul>
           )}
         </section>
+
+        {drafts.data && drafts.data.length > 0 && (
+          <section aria-label="Bản nháp cộng đồng">
+            <h2 className="mb-4 text-2xl font-extrabold tracking-[-.5px]">Bản nháp cộng đồng</h2>
+            <ul className="m-0 flex list-none flex-col gap-3 p-0">
+              {drafts.data.map((d) => (
+                <li key={d.id} className="glass flex flex-wrap items-center gap-3 rounded-2xl p-4">
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-bold">{d.basics.title || 'Chưa đặt tên'}</div>
+                    <div className="mt-0.5 text-[13px] text-stone-500">
+                      Đã hoàn thành {d.completedSteps.length}/4 bước · sửa lần cuối {formatDate(d.updatedAt)}
+                    </div>
+                  </div>
+                  <ButtonLink to={`/communities/new?draft=${encodeURIComponent(d.id)}`} className="h-10 rounded-[14px] px-[18px] text-sm font-semibold">
+                    Tiếp tục tạo
+                  </ButtonLink>
+                  <button
+                    type="button"
+                    disabled={deleteDraft.isPending}
+                    onClick={async () => {
+                      if (await confirm({ title: 'Xóa bản nháp này?', message: 'Hành động này không thể hoàn tác.', tone: 'danger', confirmText: 'Xóa nháp' }))
+                        deleteDraft.mutate(d.id);
+                    }}
+                    className="h-10 rounded-[14px] border border-[rgba(120,60,20,.15)] bg-white px-4 text-sm font-semibold text-stone-700 hover:bg-red-50 hover:text-red-600 disabled:opacity-60"
+                  >
+                    Xóa nháp
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {deleteDraft.isError && <p role="alert" className="mt-2 text-sm font-medium text-red-600">{errMsg(deleteDraft.error)}</p>}
+          </section>
+        )}
 
         <section>
           <h2 className="mb-4 text-2xl font-extrabold tracking-[-.5px]">Điểm của tôi</h2>

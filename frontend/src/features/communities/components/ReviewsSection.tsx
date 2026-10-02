@@ -6,6 +6,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { useDeleteMyReview, useDeleteReview, useReviews, useSaveReview } from '../queries';
 import { isAtLeast, type Review, type ViewerRole } from '../types';
 import { errorText } from './Modal';
+import { usePopup } from '../../../components/ui/usePopup';
 
 const AVATAR_COLORS = ['#fdba74', '#93c5fd', '#86efac', '#c4b5fd', '#fde68a', '#fca5a5', '#a5f3fc'];
 const colorFor = (id: string) => {
@@ -60,6 +61,7 @@ export function ReviewsSection({
   fallbackRating: number;
   fallbackCount: number;
 }) {
+  const { confirm } = usePopup();
   const { user } = useAuth();
   const [page, setPage] = useState(1);
   const reviews = useReviews(courseId, page);
@@ -121,8 +123,8 @@ export function ReviewsSection({
                   title="Xóa đánh giá này"
                   aria-label="Xóa đánh giá này"
                   disabled={removeOther.isPending}
-                  onClick={() => {
-                    if (window.confirm(`Xóa đánh giá của ${r.name}?`)) removeOther.mutate(r.id);
+                  onClick={async () => {
+                    if (await confirm({ title: `Xóa đánh giá của ${r.name}?`, tone: 'danger', confirmText: 'Xóa' })) removeOther.mutate(r.id);
                   }}
                   className="grid size-8 place-items-center rounded-lg text-stone-500 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
                 >
@@ -182,6 +184,7 @@ function ReviewForm({
   deleting: boolean;
   deleteError: string | null;
 }) {
+  const { confirm } = usePopup();
   const [rating, setRating] = useState(mine?.rating ?? 0);
   const [text, setText] = useState(mine?.text ?? '');
   const [localError, setLocalError] = useState<string | null>(null);
@@ -217,8 +220,8 @@ function ReviewForm({
           <button
             type="button"
             disabled={deleting}
-            onClick={() => {
-              if (window.confirm('Xóa đánh giá của bạn?')) onDelete();
+            onClick={async () => {
+              if (await confirm({ title: 'Xóa đánh giá của bạn?', tone: 'danger', confirmText: 'Xóa' })) onDelete();
             }}
             className="h-10 rounded-xl border border-red-200 px-4 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
           >

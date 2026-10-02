@@ -11,6 +11,7 @@ import { seedAdminBatch2 } from './seed/admin-batch2.js';
 import { seedAdminBatch3 } from './seed/admin-batch3.js';
 import { seedClassroom } from './seed/classroom.js';
 import { ensureAllDefaultCourses } from './seed/courses.js';
+import { seedCommunityWizard } from './seed/community-wizard.js';
 import { seedDemoMembers } from './seed/demo-members.js';
 import { seedEvents } from './seed/events.js';
 import { seedMessagesNotifications } from './seed/messages-notifications.js';
@@ -90,5 +91,7 @@ export async function runSeed(db: Db = prisma): Promise<SeedContext> {
   await seedAdminBatch3(ctx);
   // Chốt: mọi cộng đồng (kể cả cộng đồng do seed đợt sau tạo) có >= 1 khóa học.
   await ensureAllDefaultCourses(db);
+  // Sau cùng: bản nháp wizard (không có khóa học/thành viên/bài viết) + danh mục Discovery mới.
+  await seedCommunityWizard(ctx);
   return ctx;
 }

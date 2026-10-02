@@ -1,5 +1,10 @@
 export type JoinRequestStatus = 'pending' | 'approved' | 'rejected';
 
+export interface JoinAnswer {
+  question: string;
+  answer: string;
+}
+
 export interface JoinRequest {
   id: string;
   communityId: string;
@@ -7,6 +12,9 @@ export interface JoinRequest {
   courseId?: string;
   userId: string;
   message: string;
+  /** Bản chụp câu hỏi gia nhập + câu trả lời lúc gửi (rỗng nếu cộng đồng không có câu hỏi). */
+  answers: JoinAnswer[];
+  rulesAcceptedAt?: string;
   status: JoinRequestStatus;
   createdAt: string;
   decidedBy?: string;

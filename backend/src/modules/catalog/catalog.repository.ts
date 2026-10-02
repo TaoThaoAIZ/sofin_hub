@@ -1,9 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { centsToUsd, usdToCents } from '../../db/enums.js';
+import { annualSavingsPct, type CommunityRule } from './community.types.js';
 import { prisma } from '../../db/prisma.js';
 import { Prisma as PrismaNamespace, type Community as DbCommunity, type Prisma } from '../../generated/prisma/client.js';
 import { HttpError } from '../../utils/http-error.js';
-import type { Community, CommunityPatch } from './community.types.js';
+import type { Community, CommunityPatch, NewCommunity } from './community.types.js';
 import { rankedScores } from '../discovery/ranking.js';
 import { matchingCourseIds } from '../search/search.repository.js';
 import type { ListCommunitiesQuery } from './catalog.schema.js';
@@ -37,7 +38,7 @@ export interface CatalogRepository {
   lockState(id: string): Promise<{ locked: boolean } | undefined>;
   countByCategory(): Promise<Record<string, number>>;
   /** Thêm cộng đồng do người dùng tạo. */
-  create(community: Community): Promise<Community>;
+  create(community: NewCommunity): Promise<Community>;
   /** Sửa một phần; trả về bản mới hoặc undefined nếu không có. */
   update(id: string, patch: CommunityPatch): Promise<Community | undefined>;
   /** Slug đã dùng (kể cả cộng đồng đã xóa mềm) — để sinh id duy nhất. */
@@ -49,7 +50,7 @@ export interface CatalogRepository {
    * Tạo cộng đồng + ghi danh Owner + khóa học mặc định trong MỘT transaction; slug `baseSlug`, `baseSlug-2`, ... — va chạm (đua) thì thử slug kế tiếp
    * thay vì lỗi 500. Trả cộng đồng đã tạo và id khóa học mặc định.
    */
-  createWithOwner(community: Omit<Community, 'id'>, baseSlug: string, ownerId: string): Promise<{ community: Community; defaultCourseId: string }>;
+  createWithOwner(community: Omit<NewCommunity, 'id'>, baseSlug: string, ownerId: string): Promise<{ community: Community; defaultCourseId: string }>;
   /** Số bài học thật mà thành viên thấy (module published, chưa gỡ; bài không ẩn/gỡ). */
   lessonCount(id: string): Promise<number>;
   /** Khóa học đang xuất bản của cộng đồng: số lượng + id khóa mặc định (position nhỏ nhất). */
@@ -98,6 +99,12 @@ async function realLessonCounts(ids: string[]): Promise<Map<string, number>> {
   return new Map(rows.map((r) => [r.communityId, r.n]));
 }
 
+/** Cột JSON `rules` → danh sách nội quy hợp lệ (bỏ phần tử sai hình dạng). */
+export function asRules(v: unknown): CommunityRule[] {
+  if (!Array.isArray(v)) return [];
+  return v.flatMap((r) => (r && typeof r === 'object' && typeof (r as CommunityRule).title === 'string' ? [{ title: (r as CommunityRule).title, body: typeof (r as CommunityRule).body === 'string' ? (r as CommunityRule).body : '' }] : []));
+}
+
 /** Cộng đồng seed = có trendingRank (người dùng tạo thì null). */
 const isSeedRow = (row: DbCommunity) => row.trendingRank !== null;
 
@@ -116,6 +123,19 @@ function toCommunity(row: DbCommunity, real: number, lessons: number): Community
     rating: row.rating,
     ratingCount: row.ratingCount,
     priceUsd: centsToUsd(row.priceCents),
+    priceAnnualUsd: row.priceAnnualCents == null ? null : centsToUsd(row.priceAnnualCents),
+    annualSavingsPct: annualSavingsPct(centsToUsd(row.priceCents), row.priceAnnualCents == null ? null : centsToUsd(row.priceAnnualCents)),
+    memberTrialEnabled: row.memberTrialEnabled,
+    logoUrl: row.logoUrl,
+    coverUrl: row.coverUrl,
+    brandColor: row.brandColor,
+    promise: row.promise,
+    benefits: row.benefits,
+    introVideoUrl: row.introVideoUrl,
+    rules: asRules(row.rules),
+    joinQuestions: row.joinQuestions,
+    requireRulesAgreement: row.requireRulesAgreement,
+    autoApprovePaid: row.autoApprovePaid,
     pricing: row.pricing,
     visibility: row.visibility,
     status: row.status,
@@ -167,6 +187,18 @@ function toRowPatch(patch: CommunityPatch): Prisma.CommunityUpdateInput {
   if (patch.rating !== undefined) data.rating = patch.rating;
   if (patch.ratingCount !== undefined) data.ratingCount = patch.ratingCount;
   if (patch.priceUsd !== undefined) data.priceCents = usdToCents(patch.priceUsd);
+  if (patch.priceAnnualUsd !== undefined) data.priceAnnualCents = patch.priceAnnualUsd === null ? null : usdToCents(patch.priceAnnualUsd);
+  if (patch.memberTrialEnabled !== undefined) data.memberTrialEnabled = patch.memberTrialEnabled;
+  if (patch.logoUrl !== undefined) data.logoUrl = patch.logoUrl;
+  if (patch.coverUrl !== undefined) data.coverUrl = patch.coverUrl;
+  if (patch.brandColor !== undefined) data.brandColor = patch.brandColor;
+  if (patch.promise !== undefined) data.promise = patch.promise;
+  if (patch.benefits !== undefined) data.benefits = patch.benefits;
+  if (patch.introVideoUrl !== undefined) data.introVideoUrl = patch.introVideoUrl;
+  if (patch.rules !== undefined) data.rules = patch.rules as unknown as Prisma.InputJsonValue;
+  if (patch.joinQuestions !== undefined) data.joinQuestions = patch.joinQuestions;
+  if (patch.requireRulesAgreement !== undefined) data.requireRulesAgreement = patch.requireRulesAgreement;
+  if (patch.autoApprovePaid !== undefined) data.autoApprovePaid = patch.autoApprovePaid;
   if (patch.pricing !== undefined) data.pricing = patch.pricing;
   if (patch.visibility !== undefined) data.visibility = patch.visibility;
   if (patch.status !== undefined) data.status = patch.status;
@@ -179,7 +211,7 @@ function toRowPatch(patch: CommunityPatch): Prisma.CommunityUpdateInput {
 }
 
 /** Domain -> dữ liệu tạo dòng Community. */
-function toRowCreate(community: Community): Prisma.CommunityUncheckedCreateInput {
+function toRowCreate(community: NewCommunity): Prisma.CommunityUncheckedCreateInput {
   return {
     id: community.id,
     title: community.title,
@@ -195,6 +227,18 @@ function toRowCreate(community: Community): Prisma.CommunityUncheckedCreateInput
     rating: community.rating,
     ratingCount: community.ratingCount,
     priceCents: usdToCents(community.priceUsd),
+    priceAnnualCents: community.priceAnnualUsd == null ? null : usdToCents(community.priceAnnualUsd),
+    memberTrialEnabled: community.memberTrialEnabled ?? true,
+    logoUrl: community.logoUrl ?? null,
+    coverUrl: community.coverUrl ?? null,
+    brandColor: community.brandColor ?? null,
+    promise: community.promise ?? null,
+    benefits: community.benefits ?? [],
+    introVideoUrl: community.introVideoUrl ?? null,
+    rules: (community.rules ?? []) as unknown as Prisma.InputJsonValue,
+    joinQuestions: community.joinQuestions ?? [],
+    requireRulesAgreement: community.requireRulesAgreement ?? false,
+    autoApprovePaid: community.autoApprovePaid ?? false,
     pricing: community.pricing,
     visibility: community.visibility,
     status: community.status,
@@ -245,21 +289,21 @@ export const catalogRepository: CatalogRepository = {
   },
 
   async findById(id) {
-    const row = await prisma.community.findFirst({ where: { id, deletedAt: null } });
+    const row = await prisma.community.findFirst({ where: { id, deletedAt: null, moderationStatus: { not: 'draft' } } });
     return row ? (await withCounts([row]))[0] : undefined;
   },
 
   async findBriefs(ids) {
     if (ids.length === 0) return new Map();
     const rows = await prisma.community.findMany({
-      where: { id: { in: ids }, deletedAt: null },
+      where: { id: { in: ids }, deletedAt: null, moderationStatus: { not: 'draft' } },
       select: { id: true, title: true, thumbnail: true, category: true, visibility: true },
     });
     return new Map(rows.map((r) => [r.id, r]));
   },
 
   async lockState(id) {
-    const row = await prisma.community.findFirst({ where: { id, deletedAt: null }, select: { locked: true } });
+    const row = await prisma.community.findFirst({ where: { id, deletedAt: null, moderationStatus: { not: 'draft' } }, select: { locked: true } });
     return row ? { locked: row.locked } : undefined;
   },
 
@@ -297,7 +341,7 @@ export const catalogRepository: CatalogRepository = {
     try {
       const data = toRowPatch(patch);
       // updateMany-kiểu điều kiện "chưa xóa mềm" qua where kép: update chỉ nhận unique nên kiểm tra trước.
-      const exists = await prisma.community.findFirst({ where: { id, deletedAt: null }, select: { id: true } });
+      const exists = await prisma.community.findFirst({ where: { id, deletedAt: null, moderationStatus: { not: 'draft' } }, select: { id: true } });
       if (!exists) return undefined;
       const row = await prisma.community.update({ where: { id }, data });
       return (await withCounts([row]))[0];

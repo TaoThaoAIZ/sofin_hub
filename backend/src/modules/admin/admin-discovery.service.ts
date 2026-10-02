@@ -79,7 +79,7 @@ async function activeSections(): Promise<Map<string, FeatureSection[]>> {
 }
 
 async function loadCourses(where: Prisma.CommunityWhereInput = {}) {
-  return prisma.community.findMany({ where: { deletedAt: null, ...where }, select: courseSelect });
+  return prisma.community.findMany({ where: { deletedAt: null, AND: [{ moderationStatus: { not: 'draft' } }], ...where }, select: courseSelect });
 }
 
 const ZERO: CommunitySignals = { members: 0, new30d: 0, active30d: 0, growthPct: 0, engagementPct: 0, retentionPct: 0, rating: 0, ratingCount: 0, mrrCents: 0, reports30d: 0, violations: 0, posts30d: 0 };

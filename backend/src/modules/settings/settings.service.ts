@@ -32,8 +32,21 @@ export const SETTING_DEFS = {
   'payments.payoutMinUsd': { schema: z.number().min(0).max(1_000_000), default: () => env.PAYOUT_MIN_USD },
   'payments.trialDays': { schema: z.number().int().min(1).max(365), default: () => env.TRIAL_DAYS },
   'payments.subscriptionPeriodDays': { schema: z.number().int().min(1).max(366), default: () => env.SUBSCRIPTION_PERIOD_DAYS },
+  /** Chu kỳ gói thành viên theo năm (ngày). Gói tháng dùng `subscriptionPeriodDays`. */
+  'payments.annualPeriodDays': { schema: z.number().int().min(1).max(732), default: () => envNum('ANNUAL_PERIOD_DAYS', 365) },
+  /** Gửi email nhắc trước ngày trừ tiền đầu tiên (hết dùng thử có thẻ) bấy nhiêu ngày. */
+  'payments.trialReminderDays': { schema: z.number().int().min(0).max(30), default: () => 3 },
   'payments.currency': { schema: z.enum(['USD', 'VND', 'EUR']), default: () => 'USD' as 'USD' | 'VND' | 'EUR' },
   'payments.autoPayouts': { schema: z.boolean(), default: () => true },
+  /** Gói hosting của owner (A16 CHƯA CHỐT, giá trị lấy từ mockup, MÔ PHỎNG — chưa trừ tiền thật). */
+  'owner.requirePlan': { schema: z.boolean(), default: () => false },
+  'owner.trialDays': { schema: z.number().int().min(1).max(365), default: () => 14 },
+  'owner.currency': { schema: z.enum(['USD', 'VND', 'EUR']), default: () => 'VND' as 'USD' | 'VND' | 'EUR' },
+  'owner.proMonthlyPrice': { schema: z.number().int().min(0).max(1_000_000_000), default: () => 299_000 },
+  'owner.proAnnualPrice': { schema: z.number().int().min(0).max(1_000_000_000), default: () => 2_990_000 },
+  /** Phí giao dịch HIỂN THỊ ở máy tính "Gói nào lợi hơn?" — KHÔNG dùng cho kế toán thật (vẫn là payments.commissionPct). */
+  'owner.startFeePct': { schema: z.number().min(0).max(100), default: () => 10 },
+  'owner.proFeePct': { schema: z.number().min(0).max(100), default: () => 2.9 },
   'security.require2fa': { schema: z.boolean(), default: () => false },
   'security.sessionTimeoutMin': { schema: z.union([z.literal(15), z.literal(30), z.literal(120)]), default: () => 30 as 15 | 30 | 120 },
   'security.maintenanceMode': { schema: z.boolean(), default: () => false },
@@ -53,9 +66,12 @@ export interface PlatformConfig {
     payoutMinUsd: number;
     trialDays: number;
     subscriptionPeriodDays: number;
+    annualPeriodDays: number;
+    trialReminderDays: number;
     currency: 'USD' | 'VND' | 'EUR';
     autoPayouts: boolean;
   };
+  owner: { requirePlan: boolean; trialDays: number; currency: 'USD' | 'VND' | 'EUR'; proMonthlyPrice: number; proAnnualPrice: number; startFeePct: number; proFeePct: number };
   security: { require2fa: boolean; sessionTimeoutMin: 15 | 30 | 120; maintenanceMode: boolean };
 }
 
@@ -63,7 +79,7 @@ export type Overrides = Partial<Record<SettingKey, unknown>>;
 
 /** Gộp mặc định + ghi đè thành cấu trúc lồng nhau. Giá trị ghi đè sai kiểu (DB bị sửa tay) bị bỏ qua. */
 export function buildConfig(overrides: Overrides): PlatformConfig {
-  const out: Record<string, Record<string, unknown>> = { platform: {}, payments: {}, security: {} };
+  const out: Record<string, Record<string, unknown>> = { platform: {}, payments: {}, owner: {}, security: {} };
   for (const key of SETTING_KEYS) {
     const def = SETTING_DEFS[key];
     const [group, name] = key.split('.') as [string, string];

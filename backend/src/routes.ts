@@ -8,6 +8,7 @@ import { ticketsRouter } from './modules/support/tickets.routes.js';
 import { usersRouter } from './modules/users/users.routes.js';
 import { classroomRouter } from './modules/classroom/classroom.routes.js';
 import { communitiesRouter } from './modules/communities/communities.routes.js';
+import { communityWizardRouter } from './modules/community-wizard/wizard.routes.js';
 import { communityRouter } from './modules/community/community.routes.js';
 import { catalogRouter } from './modules/catalog/catalog.routes.js';
 import { eventsRouter } from './modules/events/events.routes.js';
@@ -49,6 +50,8 @@ apiRouter.use('/', searchRouter);
 apiRouter.use('/', uploadsRouter);
 apiRouter.use('/', messagesRouter);
 apiRouter.use('/', communitiesRouter);
+// Wizard tạo cộng đồng + gói hosting owner + payout account (nháp, publish, slug, revenue-estimate).
+apiRouter.use('/', communityWizardRouter);
 // Admin đợt 1 (dashboard/communities/users/moderation/audit). Đăng ký cuối: route /admin/* cũ ở module khác khớp trước.
 apiRouter.use('/', adminRouter);
 // Admin đợt 2 (content / payments / discovery).

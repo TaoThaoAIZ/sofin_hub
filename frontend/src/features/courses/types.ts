@@ -29,6 +29,12 @@ export interface Course {
   rating: number;
   ratingCount: number;
   priceUsd: number;
+  /** Giá năm (USD); null/vắng = không bán gói năm. */
+  priceAnnualUsd?: number | null;
+  annualSavingsPct?: number;
+  memberTrialEnabled?: boolean;
+  logoUrl?: string | null;
+  brandColor?: string | null;
   pricing: Pricing;
   visibility: Visibility;
   status: CourseStatus;

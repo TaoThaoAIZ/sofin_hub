@@ -3,6 +3,20 @@
  * `amountUsd` chỉ giữ để tương thích FE cũ. Cổng thanh toán thật chưa chốt (PLAN.md câu hỏi #2) nên đi qua
  * abstraction `PaymentGateway` (payments.gateway.ts).
  */
+/** Chu kỳ thanh toán gói thành viên. `periodDays` lấy từ Global Settings (monthly = subscriptionPeriodDays, annual = annualPeriodDays). */
+export const BILLING_INTERVALS = ['monthly', 'annual'] as const;
+export type BillingInterval = (typeof BILLING_INTERVALS)[number];
+
+/** Thẻ đã tokenize: CHỈ brand/last4/hạn dùng (+ id nội bộ). Không bao giờ có số thẻ đầy đủ/CVC/token cổng ở view. */
+export interface PaymentCardView {
+  id: string;
+  brand: string;
+  last4: string;
+  expMonth: number;
+  expYear: number;
+  createdAt?: string;
+}
+
 export const PAYMENT_METHODS = ['stripe', 'vnpay', 'momo'] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
@@ -19,6 +33,9 @@ export interface PaymentIntent {
   method: PaymentMethod;
   amountUsd: number;
   trialDays: number;
+  /** Chu kỳ của gói mà giao dịch này mua (amountCents = giá của chu kỳ đó). */
+  interval: BillingInterval;
+  paymentCardId?: string;
   status: PaymentStatus;
   createdAt: string;
   confirmedAt?: string;
@@ -48,7 +65,12 @@ export interface Subscription {
   /** @deprecated alias của communityId (tương thích JSON cũ) — repository luôn điền. */
   courseId?: string;
   status: SubscriptionStatus;
+  /** Số tiền MỖI KỲ (annual = giá cả năm). */
   priceCents: number;
+  interval: BillingInterval;
+  /** Thẻ lưu để gia hạn / trừ tiền cuối dùng thử (không có = dùng thử không thẻ). */
+  paymentCardId?: string;
+  trialReminderSentAt?: string;
   currentPeriodStart: string;
   currentPeriodEnd: string;
   cancelAtPeriodEnd: boolean;

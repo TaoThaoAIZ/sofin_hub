@@ -5,6 +5,8 @@ import { auditService } from '../admin/admin-audit.service.js';
 import { clearModerationSuspension } from '../admin/admin-communities.service.js';
 import { userRepository } from '../auth/auth.repository.js';
 import { userBriefView } from '../auth/user-view.js';
+import { toEmbedUrl } from '../classroom/classroom.schema.js';
+import { priceError } from '../community-wizard/wizard.schema.js';
 import { handleFor } from '../community/community.handle.js';
 import type { Community } from '../catalog/community.types.js';
 import { catalogService } from '../catalog/catalog.service.js';
@@ -106,6 +108,12 @@ export function createCommunitiesService(repo: CommunitiesRepository = communiti
           rating: 0,
           ratingCount: 0,
           priceUsd: input.priceUsd,
+          priceAnnualUsd: input.priceUsd > 0 ? (input.priceAnnualUsd ?? null) : null,
+          memberTrialEnabled: input.memberTrialEnabled,
+          joinQuestions: input.joinQuestions,
+          rules: input.rules,
+          requireRulesAgreement: input.requireRulesAgreement,
+          autoApprovePaid: input.autoApprovePaid,
           pricing: input.priceUsd > 0 ? 'paid' : 'free',
           visibility: input.visibility,
           status: 'open',
@@ -122,10 +130,20 @@ export function createCommunitiesService(repo: CommunitiesRepository = communiti
     async update(userId: string, communityId: string, input: UpdateCommunityBody) {
       const course = await getCourse(communityId);
       await requireRole(userId, communityId, 'admin');
-      const touchesMoney = input.priceUsd !== undefined || input.visibility !== undefined;
+      const touchesMoney = input.priceUsd !== undefined || input.priceAnnualUsd !== undefined || input.visibility !== undefined || input.autoApprovePaid !== undefined || input.memberTrialEnabled !== undefined;
       if (touchesMoney) await requireRole(userId, communityId, 'owner');
 
       const patch: Partial<Community> = { ...input };
+      if (input.priceUsd !== undefined || input.priceAnnualUsd !== undefined) {
+        // Giá tháng/năm phải hợp lệ cùng nhau (sau khi gộp với giá hiện tại); về miễn phí thì bỏ giá năm.
+        const monthly = input.priceUsd ?? course.priceUsd;
+        const annual = monthly <= 0 && input.priceAnnualUsd == null ? null : input.priceAnnualUsd !== undefined ? input.priceAnnualUsd : course.priceAnnualUsd;
+        const err = priceError(monthly, annual);
+        if (err) throw HttpError.coded(400, 'VALIDATION_ERROR', err, { fieldErrors: { priceAnnualUsd: [err] } });
+        patch.priceAnnualUsd = annual;
+      }
+      if (input.introVideoUrl !== undefined) patch.introVideoUrl = input.introVideoUrl ? toEmbedUrl(input.introVideoUrl) : null;
+      if (input.benefits !== undefined) patch.benefits = input.benefits.filter((b) => b.trim());
       if (input.priceUsd !== undefined) {
         // free <-> paid theo giá; giữ nguyên 'trial' nếu vẫn có phí
         patch.pricing = input.priceUsd === 0 ? 'free' : course.pricing === 'free' ? 'paid' : course.pricing;
@@ -190,18 +208,29 @@ export function createCommunitiesService(repo: CommunitiesRepository = communiti
     },
 
     // ---------- yêu cầu tham gia (cộng đồng riêng tư) ----------
-    async createJoinRequest(userId: string, communityId: string, message: string) {
+    async createJoinRequest(userId: string, communityId: string, message: string, extra: { answers?: string[]; acceptRules?: boolean } = {}) {
       const course = await getCourse(communityId);
       assertNotLocked(course);
       if (course.visibility !== 'private') throw HttpError.conflict('Cộng đồng công khai, bạn có thể tham gia trực tiếp');
       if (await enrollmentService.isBanned(userId, communityId)) throw HttpError.forbidden('Bạn đã bị cấm khỏi cộng đồng này');
       if (await enrollmentService.isEnrolled(userId, communityId)) throw HttpError.conflict('Bạn đã là thành viên của cộng đồng này');
+      // Câu hỏi gia nhập: có câu hỏi thì BẮT BUỘC trả lời đủ; lưu bản chụp [{question, answer}] để người duyệt thấy đúng câu hỏi lúc gửi.
+      const questions = course.joinQuestions;
+      const given = (extra.answers ?? []).map((a) => a.trim());
+      if (questions.length > 0 && (given.length !== questions.length || given.some((a) => !a))) {
+        throw HttpError.coded(400, 'JOIN_ANSWERS_REQUIRED', `Vui lòng trả lời đủ ${questions.length} câu hỏi gia nhập`, { questions });
+      }
+      if (course.requireRulesAgreement && course.rules.length > 0 && extra.acceptRules !== true) {
+        throw HttpError.coded(400, 'RULES_NOT_ACCEPTED', 'Vui lòng đồng ý với nội quy cộng đồng để gửi yêu cầu');
+      }
       // 1 yêu cầu pending / (course,user): kiểm tra + ghi trong transaction có khóa ở repository.
       const req = await repo.createPendingJoinRequest({
         id: randomUUID(),
         communityId,
         userId,
         message,
+        answers: questions.map((question, i) => ({ question, answer: given[i]! })),
+        rulesAcceptedAt: course.requireRulesAgreement && course.rules.length > 0 ? new Date().toISOString() : undefined,
         status: 'pending',
         createdAt: new Date().toISOString(),
       });

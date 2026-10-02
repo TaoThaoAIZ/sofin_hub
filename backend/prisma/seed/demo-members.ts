@@ -73,7 +73,7 @@ export async function seedDemoMembers(ctx: SeedContext): Promise<void> {
   // Kịch bản cộng đồng riêng tư / có phí phải có trước để cũng được gắn thành viên minh họa.
   await seedCommunityScenarios(ctx, 'courses');
 
-  const courseIds = (await db.community.findMany({ select: { id: true } })).map((c) => c.id);
+  const courseIds = (await db.community.findMany({ where: { moderationStatus: { not: 'draft' } }, select: { id: true } })).map((c) => c.id);
   const now = Date.now();
   const users: {
     id: string;

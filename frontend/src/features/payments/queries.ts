@@ -1,8 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import * as api from './api';
-import type { PaymentMethod, PayoutInput } from './types';
+import type { PaymentMethodInput } from '../../lib/card';
+import type { PayoutInput } from './types';
 
 export const paymentKeys = {
   subscriptions: ['payments', 'my-subscriptions'] as const,
@@ -16,14 +17,29 @@ export const paymentKeys = {
 // Idempotency-Key cho checkout: 1 uuid mỗi lần mở trang thanh toán của một khóa; bỏ đi khi thanh toán lỗi/xong
 // để lần bấm lại tạo giao dịch mới thay vì nhận lại giao dịch cũ đã thất bại.
 const checkoutKeys = new Map<string, string>();
-const keyFor = (courseId: string) => {
-  let k = checkoutKeys.get(courseId);
+const keyFor = (courseId: string, interval: string) => {
+  // Khác kỳ hạn = giao dịch khác → khóa idempotency riêng theo (cộng đồng, kỳ hạn).
+  const id = `${courseId}:${interval}`;
+  let k = checkoutKeys.get(id);
   if (!k) {
     k = crypto.randomUUID();
-    checkoutKeys.set(courseId, k);
+    checkoutKeys.set(id, k);
   }
   return k;
 };
+const dropKeys = (courseId: string) => {
+  for (const id of [...checkoutKeys.keys()]) if (id.startsWith(`${courseId}:`)) checkoutKeys.delete(id);
+};
+
+export const useCheckoutQuote = (courseId: string, interval: api.BillingInterval, enabled = true) =>
+  useQuery({
+    queryKey: ['payments', courseId, 'checkout-quote', interval],
+    queryFn: ({ signal }) => api.fetchCheckoutQuote(courseId, interval, signal),
+    enabled: enabled && !!courseId,
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
+    retry: false,
+  });
 
 export const useSubscription = (courseId: string) => {
   const { accessToken, status } = useAuth();
@@ -37,14 +53,14 @@ export const useSubscription = (courseId: string) => {
 export const useCheckout = (courseId: string) => {
   const { accessToken } = useAuth();
   useEffect(() => {
-    checkoutKeys.set(courseId, crypto.randomUUID());
+    dropKeys(courseId);
   }, [courseId]);
   return useMutation({
-    mutationFn: (method: PaymentMethod) => {
+    mutationFn: (input: api.CheckoutInput) => {
       if (!accessToken) throw new Error('Bạn cần đăng nhập để thanh toán');
-      return api.checkout(courseId, method, accessToken, keyFor(courseId));
+      return api.checkout(courseId, input, accessToken, keyFor(courseId, input.interval ?? 'monthly'));
     },
-    onError: () => checkoutKeys.delete(courseId),
+    onError: () => dropKeys(courseId),
   });
 };
 
@@ -57,7 +73,7 @@ export const useConfirmPayment = () => {
       return api.confirmPayment(paymentIntentId, accessToken);
     },
     onSuccess: (p) => {
-      checkoutKeys.delete(p.courseId);
+      dropKeys(p.courseId);
       void qc.invalidateQueries({ queryKey: ['payments'] });
     },
     onError: () => checkoutKeys.clear(),
@@ -67,7 +83,7 @@ export const useConfirmPayment = () => {
 export const useStartTrial = (courseId: string) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => api.startTrial(courseId),
+    mutationFn: (input?: { interval?: api.BillingInterval; paymentMethod?: PaymentMethodInput }) => api.startTrial(courseId, input),
     // Dùng thử cấp quyền vào cộng đồng ngay -> làm mới mọi cache phụ thuộc quyền truy cập.
     onSuccess: () => qc.invalidateQueries(),
   });

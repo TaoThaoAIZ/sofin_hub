@@ -113,7 +113,7 @@ export const CERT_CODE_PHOTO_EDITING_MEMBER1 = 'PHOTO-DEMO-CERT-002';
 export async function seedClassroom(ctx: SeedContext): Promise<void> {
   const { db, userIds } = ctx;
   await ensureAllDefaultCourses(db);
-  const courses = await db.community.findMany({ select: { id: true, title: true, lessons: true, durationMinutes: true } });
+  const courses = await db.community.findMany({ where: { moderationStatus: { not: 'draft' } }, select: { id: true, title: true, lessons: true, durationMinutes: true } });
   const mainCourseOf = new Map<string, string>();
   for (const c of await db.course.findMany({ where: { removedAt: null }, orderBy: [{ position: 'asc' }, { createdAt: 'asc' }], select: { id: true, communityId: true, title: true } })) {
     if (!mainCourseOf.has(c.communityId)) {

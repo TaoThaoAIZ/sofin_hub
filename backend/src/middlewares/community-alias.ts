@@ -13,10 +13,12 @@ import type { NextFunction, Request, Response } from 'express';
  */
 const COMMUNITY_PREFIX = /^\/communities(?=\/|\?|$)/;
 const NEW_COURSE_FAMILY = /^\/communities\/[^/?]+\/courses(?=\/|\?|$)/;
+/** Route cố định của wizard tạo cộng đồng (không phải `:id`): giữ nguyên dưới /communities. */
+const WIZARD_FIXED = /^\/communities\/(slug-available|revenue-estimate|rules-template|drafts)(?=\/|\?|$)/;
 
 export function communityAlias(req: Request, _res: Response, next: NextFunction): void {
   const url = req.url;
-  if (COMMUNITY_PREFIX.test(url) && !NEW_COURSE_FAMILY.test(url)) {
+  if (COMMUNITY_PREFIX.test(url) && !NEW_COURSE_FAMILY.test(url) && !WIZARD_FIXED.test(url)) {
     const rest = url.slice('/communities'.length);
     const path = rest.split('?')[0]!;
     // `POST /communities` (tạo cộng đồng) giữ nguyên; mọi thứ khác dưới /communities ánh xạ sang /courses.

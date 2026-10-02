@@ -13,7 +13,7 @@ const CHUNK = 1000;
 export async function seedPoints(ctx: SeedContext): Promise<void> {
   const { db, userIds } = ctx;
   const now = Date.now();
-  const courseIds = (await db.community.findMany({ select: { id: true } })).map((c) => c.id);
+  const courseIds = (await db.community.findMany({ where: { moderationStatus: { not: 'draft' } }, select: { id: true } })).map((c) => c.id);
 
   const data: { id: string; userId: string; communityId: string; points: number; reason: 'post' | 'like_received' | 'lesson_complete'; createdAt: Date }[] = [];
   for (const communityId of courseIds) {

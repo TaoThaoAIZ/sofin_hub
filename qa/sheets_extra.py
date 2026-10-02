@@ -238,6 +238,30 @@ AUDIT_ENV = [
 ]
 
 
+# Wizard "Tạo cộng đồng" + gói năm (2026-10-07): dữ liệu seed và cấu hình dùng trong module WIZ, ANN.
+WIZ_DATA = [
+    ("Nháp wizard của owner", "draft-gom-cuoi-tuan / draft-chay-bo-5k / draft-viet-content",
+     "3 nháp moderationStatus='draft' (id = slug). 'Lớp Gốm Cuối Tuần' (hobby, 1/4 bước, nextStep=plan); 'Chạy Bộ 5K Cho Người Mới' (sports, 3/4 bước basics+plan+identity, màu #16a34a, lời hứa 'Chạy trọn 5K đầu tiên sau 8 tuần', 2 lợi ích, nextStep=members); "
+     "'Viết Content Ra Đơn' (content, 4/4 bước, RIÊNG TƯ, $7/tháng + $48/năm = tiết kiệm 43%, lời hứa 'Viết bài đầu tiên chốt được đơn trong 14 ngày', 2 lợi ích, 2 câu hỏi gia nhập 'Bạn đang bán sản phẩm gì?' / 'Bạn biết đến lớp từ đâu?', 2 nội quy 'Tôn trọng lẫn nhau' + 'Không spam', requireRulesAgreement=true, nextStep=launch). "
+     "Create-only: db:seed không ghi đè nháp đã sửa; ẩn khỏi danh sách công khai/tìm kiếm/admin.", "owner@sofinhub.test (mật khẩu Passw0rd!x) - còn 2 suất nháp (giới hạn 5)"),
+    ("Gói hosting + thẻ mô phỏng (nháp)", "HostingPlan(draft-chay-bo-5k) + PaymentCard token 'tok_mock_seed_owner'",
+     "Gói Chuyên nghiệp theo THÁNG, status trialing 14 ngày từ lúc seed, 299.000 VND, thẻ visa •••• 4242 (hạn 12/(năm hiện tại + 3)); chỉ lưu brand/last4/hạn + token cổng giả lập (không PAN/CVC). Mô phỏng: hết thử KHÔNG trừ tiền.", "owner@"),
+    ("Payout mô phỏng (nháp)", "PayoutAccount(draft-viet-content)", "status 'connected', Vietcombank, chủ OLIVIA OWNER, last4 8812 (hiển thị ****8812). Publish nháp này làm mục 'Kết nối tài khoản nhận tiền' của danh sách ra mắt hoàn thành; nháp khác publish không qua payout -> 'skipped' (chặn rút tiền).", "owner@"),
+    ("Danh mục Khám phá mới", "music 'Âm nhạc', sports 'Thể thao', spirituality 'Tâm linh'",
+     "Thêm sau 8 danh mục cũ (vị trí 9-11) vào DiscoveryCategory; GET /api/categories trả 11 sau seed (DB test chưa seed: 8). 'marketing' (Tiếp thị), 'design' (Thiết kế) có trong enum nhưng chưa bật (admin thêm ở Khám phá > Danh mục). Create-only: không bật lại mục admin đã tắt.", "admin@sofinhub.test (Admin > Khám phá > Danh mục)"),
+    ("Cộng đồng gói năm", "annual-demo", "'Cộng đồng gói năm (demo)', công khai, owner làm chủ, $7/tháng + $48/năm (tiết kiệm 43%, perMonth $4), dùng thử thành viên 7 ngày, brandColor #2563eb, lời hứa 'Học đều mỗi tuần, tiết kiệm 43% khi trả theo năm', lợi ích 'Buổi học trực tiếp mỗi tuần' + 'Thư viện video đầy đủ', nội quy 'Tôn trọng lẫn nhau'. Dùng cho hộp thoại 'Chọn gói thành viên' (module ANN).", "newbie@, member2@, member3@ (chưa tham gia) để thử mua; owner@ là chủ"),
+    ("Cộng đồng có phí chỉ gói tháng", "paid-demo $19 + catalogue ai $7, biz $9, des $10, write $12, mkt $15, py $7, data $5, yoga $8, cook $19", "Không có giá năm -> hộp thoại chỉ 1 thẻ 'Hàng tháng', không nhãn 'Tiết kiệm'. paid-demo có lời mời DEMO-PAID (nhận vẫn 402).", "newbie@"),
+    ("Thẻ test nhập tay (FE)", "4242 4242 4242 4242 Visa · 5555 5555 5555 4444 Mastercard · 3782 822463 10005 Amex (CVC 4 số) · 6011 1111 1111 1117 Discover · 3530 1113 3330 0000 JCB; sai Luhn: 4242 4242 4242 4241",
+     "Hạn: tháng/năm tương lai (vd. 12 / (năm+3)), CVC 123. FE tokenise phía client thành tok_mock_<24 hex ngẫu nhiên> (luôn thành công ở cổng giả lập); chỉ brand/last4/hạn/token được gửi.", "-"),
+    ("Token cổng giả lập", "tok_mock_declined", "Chỉ gửi được bằng API (POST /communities/<id>/trial hoặc checkout với paymentMethod.token = 'tok_mock_declined'): cổng từ chối khi TRỪ TIỀN (cuối dùng thử -> gói 'expired' + Payment 'failed' lý do 'card_declined'). Giao diện không tạo được token này.", "-"),
+    ("Global Settings mới", "owner.requirePlan=false, owner.trialDays=14, owner.currency=VND, owner.proMonthlyPrice=299000, owner.proAnnualPrice=2990000, owner.startFeePct=10, owner.proFeePct=2.9; payments.annualPeriodDays=365, payments.trialReminderDays=3 (payments.trialDays=7 vẫn là thử của THÀNH VIÊN)",
+     "Chỉnh qua PATCH /api/admin/system/settings {\"owner\":{...}} / {\"payments\":{...}}; đặt lại POST /api/admin/system/settings/reset {keys:[...]} hoặc npm run db:reset. Giao diện Cài đặt chung CHƯA có ô owner.*, annualPeriodDays, trialReminderDays.", "admin@"),
+    ("Job nền & mốc thời gian", "payments.subscriptions (5 phút), payments.trialReminders (15 phút)",
+     "Ép thời gian bằng SQL: UPDATE \"Subscription\" SET \"currentPeriodEnd\"=now()-interval '1 minute', \"trialEndsAt\"=now()-interval '1 minute' WHERE \"userId\"='<id>' (hết thử -> tự trừ); SET ... =now()+interval '2.5 days' (vào cửa sổ nhắc 3 ngày). Thư nhắc ở GET /api/dev/outbox?to=<email> (ENABLE_DEV_OUTBOX=1) + thông báo 'Dùng thử sắp kết thúc'.", "người dùng mới"),
+    ("Người dùng mới cho case ghi dữ liệu", "Đăng ký /register hoặc POST /api/auth/register {firstName,lastName,email,password:'Passw0rd!x'}", "Dùng người dùng mới cho mỗi lần chạy case wizard/mua gói để không dính giới hạn 5 nháp và 1 gói sống/(người, cộng đồng). Case MUTATE: npm run db:reset sau khi chạy (db:seed không hoàn tác).", "-"),
+]
+
+
 def build_accounts_sheet(wb):
     ws = wb.create_sheet("Tài khoản & dữ liệu test")
     _title(ws, "TÀI KHOẢN & DỮ LIỆU TEST — SOFINHUB", 6)
@@ -261,6 +285,8 @@ def build_accounts_sheet(wb):
     r = _table(ws, r, ["Nhóm", "Mã / ID", "Mô tả & số liệu", "Tài khoản liên quan"], AUDIT_DATA, code_cols=(2,))
     r = _h2(ws, r, "A8. Môi trường / cấu hình dùng cho case audit (Redis, 2 instance, worker, rate limit, SQL, env production)")
     r = _table(ws, r, ["Chủ đề", "Cấu hình / lệnh", "Cách dùng", "Dùng cho"], AUDIT_ENV, code_cols=(2,))
+    r = _h2(ws, r, "A9. Dữ liệu seed wizard 'Tạo cộng đồng' + gói năm (module WIZ, ANN) - nháp của owner, annual-demo, danh mục mới, thẻ/token test, cài đặt owner.*")
+    r = _table(ws, r, ["Nhóm", "Mã / ID", "Mô tả & số liệu", "Tài khoản liên quan"], WIZ_DATA, code_cols=(2,))
     r = _h2(ws, r, "B. Ma trận thành viên cộng đồng (Enrollment seed)")
     matrix = [
         ("photo", "owner", "cadmin (admin), mod (mod)", "member1, member2, member3", "banned (CommunityBan)", "Chưa: newbie"),
@@ -288,11 +314,11 @@ def build_changelog_sheet(wb, stats):
     stats["adm_count"] = next((nw for (c, n, o, nw) in stats["by_module"] if c == "ADM"), 0)
     stats["adm2_count"] = next((nw for (c, n, o, nw) in stats["by_module"] if c == "ADM2"), 0)
     stats["adm3_count"] = next((nw for (c, n, o, nw) in stats["by_module"] if c == "ADM3"), 0)
-    for _code in ("SECX", "MONEY", "GAME", "INFRA", "PERF", "SPLIT"):
+    for _code in ("SECX", "MONEY", "GAME", "INFRA", "PERF", "SPLIT", "WIZ", "ANN"):
         stats[_code.lower() + "_count"] = next((nw for (c, n, o, nw) in stats["by_module"] if c == _code), 0)
     """stats: dict(old_total, new_total, by_module=[(code,name,old,new)], flipped=int, still_plan=int)"""
     ws = wb.create_sheet("Nhật ký thay đổi")
-    _title(ws, "NHẬT KÝ THAY ĐỔI — 2026-09-30 (BACKEND + FRONTEND) · 2026-10-01 (ADMIN CONSOLE ĐỢT 1) · 2026-10-02 (ADMIN CONSOLE ĐỢT 2) · 2026-10-03 (ADMIN CONSOLE ĐỢT 3) · 2026-10-04..06 (AUDIT BACKEND HARDENING BƯỚC 1-8)", 5)
+    _title(ws, "NHẬT KÝ THAY ĐỔI — 2026-09-30 (BACKEND + FRONTEND) · 2026-10-01 (ADMIN CONSOLE ĐỢT 1) · 2026-10-02 (ADMIN CONSOLE ĐỢT 2) · 2026-10-03 (ADMIN CONSOLE ĐỢT 3) · 2026-10-04..06 (AUDIT BACKEND HARDENING BƯỚC 1-8) · 2026-10-07 (WIZARD TẠO CỘNG ĐỒNG + GÓI NĂM)", 5)
     ws.cell(row=2, column=1, value="Ghi lại theo thứ tự thực hiện những gì đã làm và tác động tới bộ test case.").font = BOLD
     r = 4
     r = _h2(ws, r, "A. Những gì đã làm (theo thứ tự)")
@@ -383,6 +409,31 @@ def build_changelog_sheet(wb, stats):
     ]
     r = _table(ws, r, ["Ngày", "Hạng mục", "Nội dung đã làm", "Tài liệu / nguồn", "Ảnh hưởng tới test case"], audit_log)
 
+    r = _h2(ws, r, "A6. 2026-10-07 - Wizard 'Tạo cộng đồng' 5 bước + hộp thoại 'Chọn gói thành viên' (gói năm, dùng thử có thẻ, nhắc trước 3 ngày)")
+    wiz_log = [
+        ("2026-10-07", "Wizard 'Tạo cộng đồng' 5 bước (BE + FE) - module WIZ",
+         "BE modules/community-wizard: bản nháp (Community.moderationStatus='draft', id=slug, tối đa 5 nháp/owner, đổi slug đổi id), kiểm tra slug (GET /communities/slug-available: định dạng, reserved, trùng, gợi ý), PATCH từng bước basics/plan/identity/members, publish transaction (draft->active + Enrollment owner + khóa học mặc định, bắt buộc acceptTerms), gói hosting owner MÔ PHỎNG (GET /owner-plans, PUT /communities/:id/hosting-plan: Khởi đầu 0đ / Chuyên nghiệp 299.000đ-2.990.000đ, dùng thử 14 ngày, nhắc 3 ngày, không trừ tiền thật), tài khoản nhận tiền MÔ PHỎNG (PUT/skip payout-account + guard PAYOUT_ACCOUNT_REQUIRED khi rút), câu hỏi gia nhập/nội quy/tự duyệt người trả phí (join request có answers/acceptRules), revenue-estimate, rules-template, launch-checklist + điều kiện Khám phá (chỉ hiển thị); Global Settings owner.*; POST /communities một phát giữ nguyên (thêm trường tùy chọn). "
+         "FE: /communities/new (+ ?draft=) bọc RequireAuth, features/wizard (stepper, 5 bước, ImageSlot upload presign, thẻ mock lib/card.ts), /me/communities có mục 'Bản nháp cộng đồng' (Tiếp tục tạo/Xóa nháp); Header/Footer/Home trỏ /communities/new. Seed: 3 nháp của owner, 3 danh mục mới (Âm nhạc, Thể thao, Tâm linh).",
+         "backend/docs/api/community-wizard.md (mục 10 'Sai khác'), docs/features/community-wizard.md, docs/OPEN_DECISIONS.md A16, backend/tests/community-wizard.test.ts, prisma/seed/community-wizard.ts, frontend/src/{pages/CreateCommunityPage,pages/MyCommunitiesPage,features/wizard/*,lib/card.ts}",
+         f"Module mới WIZ ({stats['wiz_count']} case TC-WIZ-001..): khung/stepper, 5 bước (validation, preview, upload, giá, câu hỏi, nội quy, payout), tóm tắt/ra mắt/danh sách ra mắt, vòng đời nháp UI + API (401/404/400/409 từng endpoint), publish, tương thích POST /communities, payout, join request câu hỏi/nội quy/tự duyệt, Global Settings owner.*, bảo mật (không PAN/CVC, IDOR, mass assignment, XSS), seed. Case phụ thuộc A16 và giá trị tiền tạm gắn [PHỤ THUỘC QUYẾT ĐỊNH CHƯA CHỐT]; MUTATE ghi 'npm run db:reset'."),
+        ("2026-10-07", "Hộp thoại 'Chọn gói thành viên' + gói năm + dùng thử có thẻ + nhắc trước 3 ngày - module ANN",
+         "BE payments: giá năm (Community.priceAnnualCents, annualSavingsPct do server tính), GET /communities/:id/checkout-quote (plans[] tháng/năm, perMonth, savingsPct, firstChargeDate, remindAt, trialDays), checkout/trial nhận interval + paymentMethod (STRICT: chỉ token+brand/last4/hạn, không PAN/CVC), kỳ 30/365 ngày (payments.annualPeriodDays), gia hạn/hoàn tiền/rời cộng đồng theo kỳ năm, MRR năm = giá/12, tự trừ cuối dùng thử có thẻ qua MockGateway (tok_mock_declined -> expired), job payments.trialReminders (email + thông báo, idempotent), GET /me/payment-methods. "
+         "FE: features/payments/components/JoinDialog.tsx (JoinDialog + JoinCheckout, dùng lại ở /communities/:id/checkout), components/ui/CardFields.tsx + lib/card.ts (định dạng, Luhn, hạn, CVC, tokenise mock). Seed: cộng đồng annual-demo $7/$48.",
+         "backend/docs/api/community-wizard.md mục 4, backend/docs/api/payments.md, backend/tests/annual-subscription.test.ts, prisma/seed/communities-scenarios.ts, ảnh thiết kế images/3.png (XMAI - AI Heroes Club)",
+         f"Module mới ANN ({stats['ann_count']} case TC-ANN-001..): mở/đóng hộp thoại + header + chip dữ liệu thật, hai thẻ gói, form thẻ (hãng, định dạng, Luhn/hạn/CVC), tóm tắt/CTA/ghi chú dùng thử, luồng tham gia, quote API, checkout tháng vs năm (số tiền server, idempotency, tái dùng intent, chống trừ trùng), trial API, job nền (tự trừ, nhắc 3 ngày, gia hạn, hủy, thẻ bị từ chối), hồi quy và điểm chưa làm."),
+        ("2026-10-07", "Bộ test QA: thêm 2 module WIZ và ANN", f"Thêm qa/cases_wizard.py: WIZ {stats['wiz_count']} + ANN {stats['ann_count']} = {stats['wiz_count'] + stats['ann_count']} case. Workbook từ 26 lên 28 sheet module (WIZ, ANN đặt sau SPLIT). Cột 'Phù hợp Playwright' theo mô hình hai người test: giao diện 'Có', API/job nền/đồng thời 'Không' hoặc 'Một phần' kèm kịch bản thủ công. Test 1/Test 2 của case mới đều 'Chưa test'; Playwright KHÔNG tự chạy.",
+         "qa/cases_wizard.py, qa/gen_testcases.py (CASE_MODULES), qa/split_sheets.py (SHORT_NAMES/ORDER), qa/sheets_extra.py, qa/README.md",
+         "Mã TC các module cũ không đổi; kết quả Pass/Fail cũ giữ nguyên. Sheet 'Tài khoản & dữ liệu test' thêm mục A9; sheet 'Phân quyền' thêm hàng nháp wizard/payout/hosting/câu trả lời join request + quy tắc nháp chỉ chủ thấy."),
+        ("2026-10-07", "Lệch mockup / tài liệu / code / giao diện phát hiện khi viết case (ghi 'HIỆN TẠI'/'KỲ VỌNG', trạng thái 'Kế hoạch')",
+         "(1) Dùng thử OWNER 14 ngày KHỚP mockup ('Thử miễn phí 14 ngày'; 7 ngày chỉ là thử của THÀNH VIÊN; bản đầu hợp đồng BE từng ghi 7 và đã sửa) - không phải lệch so với mockup; (2) tên cộng đồng wizard tối đa 30 (mockup đếm /30) nhưng POST /communities một phát tới 80; (3) tiền tệ lẫn lộn: gói owner VND ('0 ₫', mockup '0đ') và gói thành viên USD ($7/$48 như ảnh 3.png) - A16 chưa chốt; "
+         "(4) link chia sẻ: UI sao chép ${origin}/communities/<slug> (mockup 'sofinhub.com/<slug>', chưa có route rút gọn); (5) nhãn mockup 'Để sau' (payout) vs UI 'Bỏ qua, làm sau'; mockup 'Dùng mẫu' vs UI 'Viết bài'; (6) xem trước chỉ ở bước 1 và 3 (ghi chú/mockup nhắc cả 2, 4); (7) GET /categories: docs ghi 8, sau seed là 11, mockup/enum có thể kỳ vọng 13; "
+         "(8) JoinRequestDialog (FE) chưa hiển thị câu hỏi/nội quy -> cộng đồng riêng tư có câu hỏi không gửi được yêu cầu bằng giao diện (400 JOIN_ANSWERS_REQUIRED) và giao diện admin chưa hiện câu trả lời; (9) /billing hiển thị gói năm '<giá>/tháng'; Admin > Gói đăng ký luôn 'Hàng tháng' (billingCycle cố định); (10) checkbox 'Cho thành viên mới dùng thử' phụ thuộc draft.members.trialDays (=0 khi giá 0/đã tắt) nên có thể không hiện ở lần đầu (cần xác minh khi chạy); "
+         "(11) định dạng ngày wizard dd/M vs hộp thoại d/M; (12) requireRulesAgreement chỉ ép ở join-requests; (13) giá đổi khi hộp thoại đang mở không báo; (14) Idempotency-Key replay không xét interval (FE tách key theo kỳ hạn); (15) Cài đặt chung chưa có ô owner.*/annualPeriodDays/trialReminderDays (và ô dùng thử cho phép 0 trong khi BE min 1).",
+         "docs/features/community-wizard.md, backend/docs/api/community-wizard.md, mockup template.html + images/3.png, frontend/src/{features/wizard,features/payments,pages/BillingPage,features/communities/components/JoinRequestDialog}, backend/src/modules/admin/admin-payments.service.ts",
+         "Mỗi điểm có case tương ứng (WIZ nhóm 'Điểm chưa làm / lệch...', ANN nhóm 'Hồi quy, điểm chưa làm, lệch UI-docs-code') trạng thái 'Kế hoạch', ghi rõ hành vi HIỆN TẠI để tester không báo lỗi trùng."),
+    ]
+    r = _table(ws, r, ["Ngày", "Hạng mục", "Nội dung đã làm", "Tài liệu / nguồn", "Ảnh hưởng tới test case"], wiz_log)
+
     r = _h2(ws, r, "B. Giá trị TẠM chưa chốt (đang dùng cấu hình mặc định, test theo hành vi thực tế)")
     pending = [
         ("Hoa hồng nền tảng", "10% (PLATFORM_COMMISSION_PCT) + phí cổng 2.9% + 30¢ (GATEWAY_FEE_PCT, GATEWAY_FEE_FIXED_CENTS)", "Chờ chốt mô hình doanh thu (PLAN câu hỏi #6)", "PAY: công thức doanh thu ròng/số dư owner"),
@@ -401,6 +452,8 @@ def build_changelog_sheet(wb, stats):
         ("Quy tắc hiển thị Khám phá hidden/unlisted", "hidden (ẩn) vs unlisted (gỡ): cộng đồng riêng tư hiển thị 'Đã ẩn', chưa active hiển thị 'Gỡ khỏi khám phá', nhưng /courses chỉ lọc theo cột discoveryStatus", "Chưa chốt", "ADM2: Cộng đồng hiển thị"),
         ("Các giá trị tiền tạm ở trên (hoa hồng, phí cổng, cửa sổ hoàn tiền, rút tối thiểu, dùng thử, chu kỳ gói)", "Từ 2026-10-03 chỉnh được ở Admin > Hệ thống > Cài đặt chung (PATCH /api/admin/system/settings), mặc định vẫn lấy từ env và Khôi phục được", "Giá trị cuối cùng vẫn chưa chốt", "ADM3: nhóm case 'Cài đặt chung: hiệu lực thật lên thanh toán' + case Kế hoạch 'Giá trị nghiệp vụ tạm...'"),
         ("Công thức điểm chất lượng tìm kiếm", "40×rating/5 + 25×tương tác + 15 (mô tả ≥80 ký tự) + 10 (ảnh bìa) + 10 (bài 30 ngày) − 8×vi phạm", "Chưa chốt", "ADM2: Hiển thị tìm kiếm"),
+        ("Gói hosting của owner (A16)", "Khởi đầu 0đ (phí 10%) vs Chuyên nghiệp 299.000đ/tháng - 2.990.000đ/năm (phí 2,9%), dùng thử 14 ngày, nhắc 3 ngày, tiền tệ VND (owner.*); không bắt buộc (owner.requirePlan=false); điều kiện Khám phá (10 thành viên, bài 7 ngày) chỉ hiển thị", "Chưa chốt (docs/OPEN_DECISIONS.md A16): MÔ PHỎNG, không trừ tiền khi hết thử", "WIZ: nhóm Bước 2, API gói owner, Global Settings owner.*, điểm chưa làm; ANN: tiền tệ lẫn lộn"),
+        ("Gói thành viên theo năm", "Kỳ năm 365 ngày (payments.annualPeriodDays), giá năm <= 12 x giá tháng, savings làm tròn, dùng thử thành viên 7 ngày + nhắc 3 ngày (payments.trialReminderDays), hoàn tiền gói năm trong cửa sổ 7 ngày, 'Phổ biến nhất' cố định ở gói tháng", "Chưa chốt (cùng nhóm giá trị tiền tạm)", "ANN: quote, checkout năm, gia hạn/hoàn tiền, nhắc dùng thử"),
     ]
     r = _table(ws, r, ["Hạng mục", "Giá trị tạm hiện tại", "Trạng thái", "Ảnh hưởng tới test"], pending)
 
@@ -416,6 +469,8 @@ def build_changelog_sheet(wb, stats):
         ("Audit 2026-10-01: điểm chưa xử lý", "Email verification/digest/production mail (chưa gửi thật), drip content, lưu thẻ + dunning + chargeback thật, bình luận lồng/reply, @mention, sự kiện lặp/endAt, chuyển bài học giữa module/trạng thái nháp bài học, tên cấp 7-9, ban toàn nền tảng, 2FA/SSO, OpenAPI.", "Ngoài phạm vi 8 bước; giữ 'Kế hoạch' nếu có case"),
         ("Admin đợt 3 - chưa làm / mô phỏng", "2FA thật (chỉ cờ lưu trữ); require2fa/sessionTimeoutMin/currency/autoPayouts/timezone chỉ lưu cấu hình; job gửi cảnh báo/báo cáo admin chưa có; tích hợp là mô phỏng; cờ tính năng chưa được backend áp dụng và FE người dùng chưa đọc (kể cả maintenance); ticket chưa có SLA/đính kèm/nhận email trả lời; chỉ verify_email & reset_password đọc mẫu từ DB; chưa ẩn nút theo quyền; Phân tích chưa có CSV/khoảng ngày tùy ý/lượt truy cập/nguồn đăng ký; chưa có màn 'Ticket của tôi' cho người dùng."),
         ("Thiếu ở BE mà FE tạm xử lý", "Endpoint 'yêu cầu tham gia của tôi', 'yêu cầu hoàn tiền của tôi', cờ viewerBanned, cờ Platform Admin trong /auth/me, tìm người dùng để bắt đầu chat, Retry-After cho 429, postId trong báo cáo bình luận, trường tệp đính kèm cho bài viết."),
+        ("Wizard 'Tạo cộng đồng' - chưa làm / mô phỏng", "Gói hosting owner không trừ tiền thật khi hết thử (mock:true, chưa có job/cổng/email nhắc cho gói owner); payout là mô phỏng (không KYC); chưa có job dọn nháp bỏ quên; chưa upload logo/ảnh bìa và chưa có giao diện sửa giá năm/câu hỏi/nội quy sau ra mắt; requireRulesAgreement chỉ ép ở join-requests (chưa ép ở checkout/trial/tham gia miễn phí); điều kiện Khám phá chỉ hiển thị; link chia sẻ sofinhub.com/<slug> chưa có route; 'Dùng mẫu' chỉ điều hướng; kéo-thả sắp xếp chỉ hình thức; xem trước chỉ bước 1 và 3; JoinRequestDialog chưa hiển thị câu hỏi/nội quy; admin chưa thấy câu trả lời."),
+        ("Gói năm / dùng thử có thẻ - chưa làm", "Không đổi chu kỳ gói đang sống (tháng <-> năm), không proration; /billing và Admin > Gói đăng ký chưa hiện kỳ năm đúng; chưa có giao diện quản lý thẻ đã lưu; email nhắc chỉ vào outbox dev; trang chi tiết/thẻ Khám phá chưa hiện giá năm; cổng thanh toán thật (Stripe/PayOS) chưa nối - UI không giả lập được thẻ bị từ chối (tok_mock_declined chỉ qua API)."),
     ]
     r = _table(ws, r, ["Hạng mục", "Ghi chú"], todo)
 
@@ -511,6 +566,14 @@ MATRIX = [
     ("Khóa học (đa khóa, audit bước 6)", "Xóa khóa học (không xóa được khóa cuối) và đổi override chứng nhận của khóa (certificatesEnabled)", "N", "N", "N", "Y", "Y", "Y"),
     ("Nền tảng", "Nhân viên Moderator/Support/Finance KHÔNG có quyền ghi đè Owner trong cộng đồng (chỉ Super Admin nguồn env mới có)", "N", "N", "N", "N", "N", "Y"),
     ("Nền tảng", "Truy cập khu /admin: xem tầng NHÂN VIÊN (mục B2) - quyền theo vai trò nhân viên, không còn 'chỉ Platform Admin'", "N", "N", "N", "N", "N", "Y"),
+    ("Wizard tạo cộng đồng", "Tạo / xem / sửa / xóa / ra mắt NHÁP của CHÍNH MÌNH (POST /communities/drafts, /me/community-drafts, /communities/:id/draft*, publish; mọi người dùng đăng nhập, tối đa 5 nháp)", "N", "Y", "Y", "Y", "Y", "Y"),
+    ("Wizard tạo cộng đồng", "Xem / sửa / xóa / ra mắt NHÁP của NGƯỜI KHÁC (kể cả Super Admin và nhân viên /admin: nháp không hiện ở danh sách admin; BE trả 404)", "N", "N", "N", "N", "N", "N"),
+    ("Gói hosting & payout", "Xem/đặt gói hosting của owner và tài khoản nhận tiền (GET/PUT hosting-plan, payout-account, skip) của cộng đồng ĐÃ ra mắt (requireRole owner; nháp: chỉ chủ nháp)", "N", "N", "N", "N", "Y", "Y"),
+    ("Gói hosting & payout", "Rút tiền POST /communities/:id/payouts khi payout 'skipped' -> 400 PAYOUT_ACCOUNT_REQUIRED (guard trên mọi vai trò; cộng đồng cũ không bản ghi giữ luồng cũ)", "N", "N", "N", "N", "Y", "Y"),
+    ("Wizard tạo cộng đồng", "Xem danh sách ra mắt GET /communities/:id/launch-checklist (owner; người khác 403; nháp 409 NOT_PUBLISHED)", "N", "N", "N", "N", "Y", "Y"),
+    ("Yêu cầu tham gia", "Xem CÂU TRẢ LỜI của người xin gia nhập (GET /communities/:id/join-requests -> answers) - admin+ như duyệt yêu cầu; member thường 403", "N", "N", "N", "Y", "Y", "Y"),
+    ("Yêu cầu tham gia", "Gửi yêu cầu tham gia kèm answers/acceptRules (cộng đồng riêng tư có câu hỏi/nội quy bắt buộc); khách 401", "N", "Y", "Y", "Y", "Y", "Y"),
+    ("Gói thành viên", "Mua/dùng thử gói tháng hoặc năm có thẻ (POST /checkout, /trial với interval + paymentMethod); cộng đồng riêng tư cần được duyệt trừ khi autoApprovePaid", "N", "Y", "Y", "Y", "N", "Y"),
 ]
 
 # Ma trận NHÂN VIÊN ADMIN theo nhóm route: (nhóm, hành động / route, khóa quyền, non-staff, super, moderator, support, finance, content_reviewer)
@@ -582,6 +645,10 @@ RULES = [
     ("Trạng thái tài khoản là trục riêng", "Áp lên người dùng bất kể vai trò (Owner bị tạm ngưng vẫn không đăng nhập được); trạng thái nhân viên (active/suspended) là trục thứ ba, chỉ ảnh hưởng /admin."),
     ("Nội dung bị admin tác động (đợt 2)", "Bài viết/bình luận/bài học/sự kiện/tệp bị nhân viên có content.manage GỠ biến mất với mọi người kể cả mod, admin cộng đồng, owner và tác giả (chỉ nhân viên admin còn thấy); bị ẨN thì member thường không thấy nhưng tác giả và mod+ vẫn thấy. Khóa học bị hủy xuất bản/lưu trữ/gỡ cũng ẩn với mod cộng đồng."),
     ("Mod/admin cộng đồng không đảo ngược được thao tác của nhân viên admin", "Mod cộng đồng không khôi phục được nội dung do nhân viên admin gỡ; chỉ khôi phục ở /admin/content/*."),
+    ("Nháp wizard chỉ chủ nháp thấy (từ 2026-10-07)", "Nháp (moderationStatus='draft') chỉ chủ nháp đọc/sửa/xóa/ra mắt được: người khác (kể cả Super Admin và nhân viên admin) nhận 404, không phân biệt với id không tồn tại. Nháp ẩn khỏi danh sách/tìm kiếm/chi tiết công khai và khỏi danh sách, bộ đếm, dashboard, Khám phá, Phân tích của admin. Slug của nháp vẫn bị chiếm với người khác. Mỗi người tối đa 5 nháp."),
+    ("Guard rút tiền theo payout (từ 2026-10-07)", "Cộng đồng có PayoutAccount 'skipped' bị chặn rút (400 PAYOUT_ACCOUNT_REQUIRED) cho tới khi kết nối; 'connected' thì không cần gửi method; cộng đồng tạo kiểu cũ (không bản ghi) giữ luồng cũ. Ra mắt bằng wizard mà không qua bước payout mặc định 'skipped'."),
+    ("Gói hosting của owner & payout là MÔ PHỎNG (A16)", "Chỉ owner (requireRole) đọc/sửa; không trừ tiền thật, không KYC. Cột 'Super Admin' đọc được vì thứ bậc platform_admin > owner."),
+    ("Câu trả lời join request chỉ cho admin+ (từ 2026-10-07)", "Bản chụp [{question, answer}] nằm ở GET /communities/:id/join-requests (admin+, member 403); FE admin hiện chưa hiển thị. requireRulesAgreement chỉ ép ở join-requests (acceptRules)."),
 ]
 
 NOT_BUILT = [
@@ -591,6 +658,7 @@ NOT_BUILT = [
     ("Thu hồi phiên đăng nhập khi tạm khóa/gỡ nhân viên", "Chỉ chặn /admin ở mỗi request; phiên thường vẫn còn (xem case Kế hoạch ADM3)."),
     ("Tách quyền 'xem' và 'ghi' ở mọi nhóm", "Chỉ Người dùng (users.view/user.ban) và Thanh toán (payment.view/refund/manage/payout.approve) được tách; Cộng đồng, Nội dung, Kiểm duyệt, Hỗ trợ dùng 1 khóa cho cả xem và ghi."),
     ("Ticket người dùng ở giao diện", "API /api/support/tickets đã có nhưng frontend người dùng chưa có màn 'Ticket của tôi'."),
+    ("Quyền theo nháp wizard cho nhân viên admin", "Nhân viên /admin không xem/duyệt nháp (chỉ thấy cộng đồng sau khi ra mắt); chưa có luồng duyệt cộng đồng mới trước khi hiển thị (ra mắt = active ngay)."),
 ]
 
 

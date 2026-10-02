@@ -13,6 +13,8 @@ export interface ChargeRequest {
   customerId: string;
   /** Khóa idempotency gửi cổng để không trừ tiền 2 lần khi retry. */
   idempotencyKey: string;
+  /** Token thẻ đã tokenize phía client (mock `tok_mock_*` / Stripe PaymentMethod id). Không bao giờ là số thẻ. */
+  paymentToken?: string;
 }
 export interface ChargeResult {
   ok: boolean;
@@ -48,6 +50,9 @@ export function signWebhookPayload(rawBody: Buffer | string, secret: string, tim
   return `t=${timestampSec},v1=${mac}`;
 }
 
+/** Token thẻ giả lập luôn bị cổng mock từ chối (test thẻ bị decline lúc trừ tiền). */
+export const MOCK_DECLINED_TOKEN = 'tok_mock_declined';
+
 /** Cổng giả lập cho dev/test: luôn thành công trừ user nằm trong `failFor`. */
 export class MockGateway implements PaymentGateway {
   private readonly failing = new Set<string>();
@@ -66,7 +71,7 @@ export class MockGateway implements PaymentGateway {
   async createCharge(req: ChargeRequest): Promise<ChargeResult> {
     const prior = this.charges.get(req.idempotencyKey);
     if (prior) return prior;
-    if (this.failing.has(req.customerId)) return { ok: false, chargeId: `mock_ch_${randomUUID()}`, failureReason: 'card_declined' };
+    if (req.paymentToken === MOCK_DECLINED_TOKEN || this.failing.has(req.customerId)) return { ok: false, chargeId: `mock_ch_${randomUUID()}`, failureReason: 'card_declined' };
     const result: ChargeResult = { ok: true, chargeId: `mock_ch_${randomUUID()}` };
     this.charges.set(req.idempotencyKey, result);
     return result;

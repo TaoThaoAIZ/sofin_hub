@@ -122,7 +122,7 @@ export const adminAnalyticsService = {
   /* ------------------------------------------------------------------ communities */
   async communities(range: 7 | 30 | 90) {
     const w = windowOf(range);
-    const live = { moderationStatus: { not: 'deleted' as const } };
+    const live = { moderationStatus: { notIn: ['deleted', 'draft'] as Array<'deleted' | 'draft'> } };
     const paidWhere = { ...live, pricing: 'paid' as const, priceCents: { gt: 0 } };
     const [total, totalPrev, created, createdPrev, paid, paidPrev, suspended, members, membersPrev] = await Promise.all([
       prisma.community.count({ where: { ...live, createdAt: { lt: w.to } } }),
@@ -138,7 +138,7 @@ export const adminAnalyticsService = {
     const [createdS, activeS, cats, catNames, topRows] = await Promise.all([
       prisma.$queryRaw<Array<{ d: string; n: bigint; p: bigint }>>`
         SELECT ${D} AS d, count(c.id) AS n, count(c.id) FILTER (WHERE c.pricing::text = 'paid' AND c."priceCents" > 0) AS p FROM ${DAYS(w)} AS d(day)
-        LEFT JOIN "Course" c ON c."moderationStatus"::text <> 'deleted' AND c."createdAt" >= d.day AND c."createdAt" < d.day + interval '1 day' GROUP BY 1`,
+        LEFT JOIN "Course" c ON c."moderationStatus"::text NOT IN ('deleted', 'draft') AND c."createdAt" >= d.day AND c."createdAt" < d.day + interval '1 day' GROUP BY 1`,
       prisma.$queryRaw<Array<{ d: string; n: bigint }>>`
         SELECT ${D} AS d, count(DISTINCT x."courseId") AS n FROM ${DAYS(w)} AS d(day)
         LEFT JOIN (SELECT "courseId", "createdAt" AS ts FROM "Post" UNION ALL SELECT "courseId", "enrolledAt" FROM "Enrollment") x
@@ -150,7 +150,7 @@ export const adminAnalyticsService = {
           (SELECT count(*) FROM "Enrollment" e WHERE e."courseId" = c.id AND e."enrolledAt" < ${w.to}) AS members,
           (SELECT count(*) FROM "Enrollment" e WHERE e."courseId" = c.id AND e."enrolledAt" >= ${w.from} AND e."enrolledAt" < ${w.to}) AS new_members,
           COALESCE((SELECT sum(s."priceCents") FROM "Subscription" s WHERE s."courseId" = c.id AND s.status::text IN ('active', 'past_due')), 0) AS mrr
-        FROM "Course" c WHERE c."moderationStatus"::text <> 'deleted' ORDER BY members DESC, c.title ASC LIMIT 10`,
+        FROM "Course" c WHERE c."moderationStatus"::text NOT IN ('deleted', 'draft') ORDER BY members DESC, c.title ASC LIMIT 10`,
     ]);
     const names = new Map(catNames.map((c) => [c.key as string, c.name]));
     const activeBy = dayMap(activeS);

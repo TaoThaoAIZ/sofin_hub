@@ -122,3 +122,28 @@ Mỗi kịch bản 3.x được viết thành test **trước khi sửa** và đ
 - **Deadlock settle ↔ scheduler**: thứ tự khóa thống nhất *advisory → Subscription → Payment → (Subscription/Enrollment) → số hóa đơn (InvoiceSequence) cuối cùng*; scheduler dùng `SKIP LOCKED` nên không chờ settle.
 - **Charge xong settle lỗi**: `gatewayChargeId` được ghi vào Payment ngay sau khi cổng trừ tiền (trước `settle`); `reconcileUnsettledCharges` hoàn tất giao dịch `pending` có `gatewayChargeId`.
 - **Webhook**: `claimWebhookEvent` atomic (`INSERT` hoặc `UPDATE ... WHERE status IN (failed,received) OR processing quá 2 phút`). `duplicate:true` chỉ khi `done` hoặc đang `processing` còn mới; lỗi xử lý → `failed` + `lastError` (không còn xóa/nuốt); `reapStaleWebhooks` replay từ `payload` (tối đa 8 lần).
+
+## Gói năm, báo giá, dùng thử có thẻ, gói hosting owner, payout account (2026-10-07)
+Hợp đồng chi tiết: `docs/api/community-wizard.md` (mục 3–6). Test: `tests/annual-subscription.test.ts`, `tests/community-wizard.test.ts`.
+
+| Method · Path | Auth | Body / Query | Ghi chú |
+|---|---|---|---|
+| `GET /communities/:id/checkout-quote?interval=` | tùy chọn | `interval=monthly\|annual` | Mọi số/ngày do server tính: `plans[]`, `trialDays`, `firstChargeDate/Amount`, `remindAt`, `dueTodayUsd`. 400 `COMMUNITY_FREE`/`INTERVAL_UNAVAILABLE` |
+| `POST /communities/:id/checkout` | login | `{ method?='stripe', interval?='monthly', paymentMethod? }` + `Idempotency-Key` | Số tiền theo `interval` do server quyết; intent pending chỉ được tái dùng khi CÙNG `interval` + số tiền |
+| `POST /communities/:id/trial` | login | `{ interval?, paymentMethod? }` | Có thẻ ⇒ hết thử tự trừ (cổng giả lập) rồi `active`; 400 `TRIAL_NOT_AVAILABLE` nếu cộng đồng tắt thử |
+| `GET /me/payment-methods` | login | | Chỉ `brand/last4/expMonth/expYear` |
+| `GET /owner-plans`, `GET\|PUT /communities/:id/hosting-plan` | — / owner | `{ planKey, cycle?, paymentMethod? }` | **MÔ PHỎNG** (A16) |
+| `GET\|PUT /communities/:id/payout-account`, `POST …/payout-account/skip` | owner | `{ bankName, accountHolder, accountNumber }` | **MÔ PHỎNG**; chỉ lưu 4 số cuối |
+
+Quyết định thiết kế:
+- `Subscription.interval` + `Payment.interval`: `monthly` = `payments.subscriptionPeriodDays` (30), `annual` = `payments.annualPeriodDays` (365). `priceCents` của gói = số tiền MỖI KỲ (gói năm = giá cả năm). Mọi luồng giữ nguyên: unique index "1 gói sống/user/cộng đồng", advisory lock + thứ tự khóa Subscription→Payment→số hóa đơn, chống trừ trùng (void + hoàn), rời cộng đồng = hủy cuối kỳ (vào lại được tới hết năm), hoàn tiền trong cửa sổ (kể cả toàn bộ giá năm) thu hồi quyền. MRR của gói năm = `priceCents / 12`. Hệ thống không có proration (hoàn tiền là cả khoản hoặc admin duyệt một phần) nên chu kỳ không ảnh hưởng tới hoàn tiền.
+- **Thẻ**: client tokenize (mock `tok_mock_*`; sau này Stripe Elements → PaymentMethod id). Body `paymentMethod` là object STRICT (field lạ như `number`/`cvc` ⇒ 400), kiểm brand/last4/hạn dùng. DB chỉ có `PaymentCard{brand,last4,expMonth,expYear,gatewayToken}`; token cổng không ra API. Cổng giả lập: token `tok_mock_declined` luôn bị từ chối (để test).
+- **Dùng thử có thẻ** (`processDueSubscriptions`): hết kỳ thử + có `paymentCardId` + chưa hủy + còn là thành viên ⇒ `createCharge` (idempotencyKey `<subId>:trial-end`) → ghi Payment `initial` + hóa đơn, gói `active` (kỳ theo `interval`, tính từ cuối thử); thẻ bị từ chối ⇒ Payment `failed` + gói `expired` + thu hồi quyền + thông báo. Kết quả job có thêm `trialsConverted`.
+- **Email nhắc trước ngày trừ tiền đầu** (`payments.trialReminderDays`=3): job `payments.trialReminders` (15 phút) → `sendTrialReminders`; claim nguyên tử `UPDATE … trialReminderSentAt IS NULL … FOR UPDATE SKIP LOCKED` TRƯỚC khi gửi ⇒ đúng 1 lần/gói dù chạy lặp/song song (mail lỗi thì không gửi lại). Gửi qua `mailService` (dev: `GET /dev/outbox`) + thông báo trong app. Không nhắc gói đã hủy hoặc không có thẻ.
+- **Payout**: `PayoutAccount.status='skipped'` ⇒ `POST /communities/:id/payouts` trả 400 `PAYOUT_ACCOUNT_REQUIRED`; `connected` ⇒ `method` trong body tùy chọn. Cộng đồng không có bản ghi (tạo kiểu cũ) giữ luồng cũ.
+- **Gói hosting owner**: giá/ngày thử/phí hiển thị ở Global Settings `owner.*`; `HostingPlan` lưu giá chụp + mốc dùng thử (một lần/cộng đồng). **Không có job/cổng trừ tiền khi hết thử** (`mock:true`). `owner.requirePlan` (mặc định false) bắt buộc chọn gói mới publish được.
+- Tiền gói thành viên USD, gói hosting owner theo `owner.currency` (mặc định VND, số nguyên) — chưa thống nhất 1 đơn vị tiền (xem A16).
+
+Chạy test: `npm test` dùng `--test-concurrency=16` vì Postgres local `max_connections=100` — ~38 file test chạy hết song song, mỗi file một pool kết nối, sẽ gặp "too many clients".
+
+Chưa làm / cần quyết định: trừ tiền thật gói owner; đổi chu kỳ (tháng↔năm) của gói đang sống; nâng/hạ cấp có proration; thẻ hết hạn trước ngày gia hạn (chỉ biết khi cổng từ chối); xóa thẻ đã lưu.

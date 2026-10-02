@@ -4,10 +4,12 @@ import { ApiError } from '../../../lib/api';
 import { useAuth } from '../../auth/AuthContext';
 import { useDeleteAccount } from '../queries';
 import { Alert, Field } from './Field';
+import { usePopup } from '../../../components/ui/usePopup';
 
 export function DeleteAccountPanel() {
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const { confirm } = usePopup();
   const del = useDeleteAccount();
   const [password, setPassword] = useState('');
   const [fieldError, setFieldError] = useState<string | undefined>();
@@ -22,7 +24,7 @@ export function DeleteAccountPanel() {
       setFieldError('Vui lòng nhập mật khẩu để xác nhận');
       return;
     }
-    if (!window.confirm('Xóa vĩnh viễn tài khoản? Hành động này không thể hoàn tác.')) return;
+    if (!(await confirm({ title: 'Xóa vĩnh viễn tài khoản?', message: 'Hành động này không thể hoàn tác.', tone: 'danger', confirmText: 'Xóa tài khoản' }))) return;
     try {
       await del.mutateAsync(password);
       await logout(); // xóa phiên FE (BE đã thu hồi; logout bỏ qua lỗi 401)

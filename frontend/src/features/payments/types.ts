@@ -139,3 +139,34 @@ export interface PayoutInput {
   amountCents: number;
   method: { type: 'bank'; bankName: string; accountNumber: string; accountHolder: string };
 }
+
+export interface QuotePlan {
+  interval: 'monthly' | 'annual';
+  label: string;
+  priceUsd: number;
+  billedUsd: number;
+  perMonthUsd: number;
+  savingsPct: number;
+  popular: boolean;
+  periodDays: number;
+}
+
+/** Báo giá từ GET /communities/:id/checkout-quote — mọi con số/ngày trong hộp thoại thanh toán đều lấy từ đây. */
+export interface CheckoutQuote {
+  communityId: string;
+  currency: string;
+  paid: boolean;
+  plans: QuotePlan[];
+  selected: 'monthly' | 'annual';
+  trialDays: number;
+  trialEligible: boolean;
+  startsAt: string;
+  firstChargeDate: string;
+  firstChargeAmountUsd: number;
+  firstChargeAmountCents: number;
+  dueTodayUsd: number;
+  remindDaysBefore: number;
+  remindAt: string | null;
+  cancelAnytime: boolean;
+  provider: string;
+}

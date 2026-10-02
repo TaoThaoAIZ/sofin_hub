@@ -1,5 +1,7 @@
 import { apiGet, apiPost } from '../../lib/api';
+import type { PaymentMethodInput } from '../../lib/card';
 import type {
+  CheckoutQuote,
   Invoice,
   PageMeta,
   PaymentIntent,
@@ -13,10 +15,19 @@ import type {
   SubscriptionStatus,
 } from './types';
 
-export const checkout = (courseId: string, method: PaymentMethod, token: string, idempotencyKey?: string) =>
+export type BillingInterval = 'monthly' | 'annual';
+
+export interface CheckoutInput {
+  method?: PaymentMethod;
+  interval?: BillingInterval;
+  /** Chỉ token + brand/last4/hạn (PaymentMethodInput) — không bao giờ có số thẻ/CVC. */
+  paymentMethod?: PaymentMethodInput;
+}
+
+export const checkout = (courseId: string, input: CheckoutInput, token: string, idempotencyKey?: string) =>
   apiPost<{ data: PaymentIntent }>(
     `/communities/${courseId}/checkout`,
-    { method },
+    { method: input.method ?? 'stripe', interval: input.interval, paymentMethod: input.paymentMethod },
     { token, headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined },
   ).then((r) => r.data);
 
@@ -26,7 +37,11 @@ export const confirmPayment = (paymentIntentId: string, token: string) =>
 export const fetchSubscription = (courseId: string, token: string, signal?: AbortSignal) =>
   apiGet<{ data: SubscriptionStatus }>(`/communities/${courseId}/subscription`, undefined, signal, { token }).then((r) => r.data);
 
-export const startTrial = (courseId: string) => apiPost<{ data: Subscription }>(`/communities/${courseId}/trial`).then((r) => r.data);
+export const startTrial = (courseId: string, input?: { interval?: BillingInterval; paymentMethod?: PaymentMethodInput }) =>
+  apiPost<{ data: Subscription }>(`/communities/${courseId}/trial`, input).then((r) => r.data);
+
+export const fetchCheckoutQuote = (courseId: string, interval: BillingInterval, signal?: AbortSignal) =>
+  apiGet<{ data: CheckoutQuote }>(`/communities/${courseId}/checkout-quote`, { interval }, signal).then((r) => r.data);
 
 export const fetchMySubscriptions = (signal?: AbortSignal) =>
   apiGet<{ data: Subscription[] }>('/me/subscriptions', undefined, signal).then((r) => r.data);

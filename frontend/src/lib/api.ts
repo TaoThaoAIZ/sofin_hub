@@ -5,6 +5,8 @@ export class ApiError extends Error {
     public readonly status: number,
     message: string,
     public readonly code?: string,
+    /** `error.details` của BE (vd. { fieldErrors: { field: [msg] } } khi VALIDATION_ERROR). */
+    public readonly details?: { fieldErrors?: Record<string, string[]>; missing?: unknown[] } & Record<string, unknown>,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -15,8 +17,8 @@ type Params = object;
 type RequestOptions = { signal?: AbortSignal; token?: string; skipAuthRetry?: boolean; headers?: Record<string, string> };
 
 async function parseErrorBody(res: Response): Promise<never> {
-  const body = (await res.json().catch(() => null)) as { error?: { message?: string; code?: string } } | null;
-  throw new ApiError(res.status, body?.error?.message ?? `Yêu cầu thất bại (${res.status})`, body?.error?.code);
+  const body = (await res.json().catch(() => null)) as { error?: { message?: string; code?: string; details?: ApiError['details'] } } | null;
+  throw new ApiError(res.status, body?.error?.message ?? `Yêu cầu thất bại (${res.status})`, body?.error?.code, body?.error?.details);
 }
 
 // ---- Giữ phiên đăng nhập giữa các request ----

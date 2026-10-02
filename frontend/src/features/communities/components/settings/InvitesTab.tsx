@@ -4,6 +4,7 @@ import { MaterialIcon } from '../../../../components/ui/MaterialIcon';
 import { useCreateInvite, useInvites, useRevokeInvite } from '../../queries';
 import type { Invite } from '../../types';
 import { ErrorLine, errorText, INPUT_CLASS } from '../Modal';
+import { usePopup } from '../../../../components/ui/usePopup';
 
 const inviteLink = (code: string) => `${window.location.origin}/invite/${code}`;
 
@@ -15,6 +16,7 @@ function inviteState(i: Invite): { label: string; active: boolean } {
 }
 
 export function InvitesTab({ courseId }: { courseId: string }) {
+  const { confirm } = usePopup();
   const list = useInvites(courseId, true);
   const create = useCreateInvite(courseId);
   const revoke = useRevokeInvite(courseId);
@@ -105,8 +107,9 @@ export function InvitesTab({ courseId }: { courseId: string }) {
                   <button
                     type="button"
                     disabled={revoke.isPending}
-                    onClick={() => {
-                      if (window.confirm('Thu hồi lời mời này? Liên kết sẽ không dùng được nữa.')) revoke.mutate(i.code);
+                    onClick={async () => {
+                      if (await confirm({ title: 'Thu hồi lời mời này?', message: 'Liên kết sẽ không dùng được nữa.', tone: 'danger', confirmText: 'Thu hồi' }))
+                        revoke.mutate(i.code);
                     }}
                     className="h-9 rounded-lg border border-red-200 px-3 text-[13px] font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
                   >

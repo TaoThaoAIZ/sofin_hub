@@ -1,4 +1,4 @@
-import type { Category, CategoryId, Community, CourseStatus, CourseTag, Language, Pricing, Visibility } from './community.types.js';
+import type { Category, CategoryId, NewCommunity, CourseStatus, CourseTag, Language, Pricing, Visibility } from './community.types.js';
 
 export const categories: Category[] = [
   { id: 'business', name: 'Kinh doanh' },
@@ -9,6 +9,9 @@ export const categories: Category[] = [
   { id: 'self', name: 'Phát triển bản thân' },
   { id: 'hobby', name: 'Sở thích' },
   { id: 'relationships', name: 'Mối quan hệ' },
+  { id: 'music', name: 'Âm nhạc' },
+  { id: 'sports', name: 'Thể thao' },
+  { id: 'spirituality', name: 'Tâm linh' },
 ];
 
 type Row = {
@@ -57,7 +60,7 @@ const rows: Row[] = [
 const DAY = 24 * 60 * 60 * 1000;
 const seedEpoch = Date.UTC(2026, 8, 1);
 
-export const seedCommunities: Community[] = rows.map((r, i) => ({
+export const seedCommunities: NewCommunity[] = rows.map((r, i) => ({
   id: r.id,
   title: r.title,
   description: r.description,

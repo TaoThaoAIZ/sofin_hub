@@ -1,7 +1,7 @@
 import { HttpError } from '../../utils/http-error.js';
 import { cfg } from '../settings/settings.service.js';
 import { buildCommunityDetail, type CommunityDetail, type CourseReview } from './community-detail.js';
-import type { Community, CommunityPatch } from './community.types.js';
+import type { Community, CommunityPatch, NewCommunity } from './community.types.js';
 import { catalogRepository, type CatalogRepository } from './catalog.repository.js';
 import type { ListCommunitiesQuery } from './catalog.schema.js';
 
@@ -34,11 +34,11 @@ export function createCatalogService(repo: CatalogRepository = catalogRepository
       const course = await this.getById(id);
       // Mọi số liệu lấy từ DB thật (Enrollment, ClassroomLesson, Global Settings); không sinh nội dung minh họa.
       const [{ online, admins }, lessons, courses] = await Promise.all([repo.memberStats(id), repo.lessonCount(id), repo.courseInfo(id)]);
-      return buildCommunityDetail(course, viewerEnrolled, realReviews, { online, admins, lessons, trialDays: cfg().payments.trialDays, ...courses });
+      return buildCommunityDetail(course, viewerEnrolled, realReviews, { online, admins, lessons, trialDays: course.memberTrialEnabled ? cfg().payments.trialDays : 0, ...courses });
     },
 
-    create: (course: Community) => repo.create(course),
-    createWithOwner: (community: Omit<Community, 'id'>, baseSlug: string, ownerId: string) => repo.createWithOwner(community, baseSlug, ownerId),
+    create: (course: NewCommunity) => repo.create(course),
+    createWithOwner: (community: Omit<NewCommunity, 'id'>, baseSlug: string, ownerId: string) => repo.createWithOwner(community, baseSlug, ownerId),
     idExists: (id: string) => repo.idExists(id),
 
     async update(id: string, patch: CommunityPatch): Promise<Community> {

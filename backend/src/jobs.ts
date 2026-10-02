@@ -10,6 +10,8 @@ export function allJobs(): Job[] {
   return [
     // Gia hạn / hết dùng thử / hết kỳ đã hủy.
     { name: 'payments.subscriptions', intervalMs: 5 * 60_000, run: () => paymentsService.processDueSubscriptions(new Date()) },
+    // Email + thông báo nhắc 3 ngày trước ngày trừ tiền đầu tiên của gói dùng thử có thẻ (claim idempotent trong DB).
+    { name: 'payments.trialReminders', intervalMs: 15 * 60_000, run: () => paymentsService.sendTrialReminders(new Date()) },
     // Đối soát tiền: hoàn tiền kẹt `refunding`, charge đã trừ nhưng chưa settle, khoản trừ trùng chưa hoàn, webhook kẹt/failed (reapStaleWebhooks).
     { name: 'payments.reconcile', intervalMs: 5 * 60_000, run: () => paymentsService.reconcileMoney() },
     // Nhắc lịch sự kiện cho người đã RSVP (còn <= 1 giờ).
