@@ -74,13 +74,10 @@ export function RegisterPage() {
   return (
     <div
       className="relative flex min-h-screen flex-wrap items-center justify-between gap-10 overflow-hidden px-6 py-12 sm:px-10 md:px-[8vw] lg:py-[7vh]"
-      style={{
-        background:
-          'radial-gradient(800px 600px at 10% 80%, rgba(255,160,100,.35), transparent 70%), radial-gradient(700px 500px at 90% 10%, rgba(255,200,160,.3), transparent 70%), linear-gradient(135deg, #fff7f1 0%, #fff 50%, #fff4ec 100%)',
-      }}
+      style={{ background: "url('/images/background_login.png') center / cover no-repeat" }}
     >
       <div className="pointer-events-none relative z-10 flex min-w-0 max-w-[640px] flex-1 basis-[460px] flex-col gap-6 self-start">
-        <Link to="/" className="pointer-events-auto block self-start leading-none">
+        {/* <Link to="/" className="pointer-events-auto block self-start leading-none">
           <img src="/images/logo.png" alt="SofinHub" className="h-9 w-auto" />
         </Link>
         <div>
@@ -92,7 +89,7 @@ export function RegisterPage() {
           <p className="mt-4 max-w-[540px] text-[clamp(16px,1.5vw,24px)] leading-[1.45] text-stone-600 text-pretty">
             Học theo lộ trình, thực hành trên công việc thật và kết nối với những người cùng mục tiêu.
           </p>
-        </div>
+        </div> */}
       </div>
 
       <div className="relative z-10 flex min-w-[min(100%,380px)] flex-1 basis-[630px] flex-col gap-[22px] rounded-[28px] border border-white/95 bg-white/70 p-6 shadow-[0_30px_70px_rgba(120,60,20,.12)] backdrop-blur-[26px] backdrop-saturate-[180%] sm:p-10 md:p-[clamp(28px,4vw,60px)]">

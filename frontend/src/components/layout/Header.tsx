@@ -6,13 +6,13 @@ import { MessagesButton } from '../../features/messages/components/MessagesButto
 import { NotificationBell } from '../../features/notifications/components/NotificationBell';
 import { useClickOutside } from '../../lib/useClickOutside';
 import { ButtonLink } from '../ui/Button';
-import { GlobeIcon, SearchIcon } from '../ui/icons';
+import { GlobeIcon } from '../ui/icons';
 
 // Chỉ giữ các mục có route thật.
 const NAV_ITEMS: { label: string; to: string }[] = [
   { label: 'Khám phá', to: '/' },
   { label: 'Khóa học', to: '/#courses' },
-  { label: 'Cộng đồng', to: '/search' },
+  { label: 'Cộng đồng của tôi', to: '/me/communities' },
 ];
 
 export function Header({ active = 'Khám phá' }: { active?: string }) {
@@ -48,9 +48,6 @@ export function Header({ active = 'Khám phá' }: { active?: string }) {
       </nav>
 
       <div className="ml-auto flex flex-none items-center gap-3 whitespace-nowrap md:ml-0">
-        <Link to="/search" aria-label="Tìm kiếm" className="glass grid size-10 place-items-center rounded-full">
-          <SearchIcon />
-        </Link>
         {status === 'authenticated' && (
           <div className="hidden items-center gap-3 sm:flex">
             <MessagesButton variant="header" />
@@ -75,15 +72,10 @@ export function Header({ active = 'Khám phá' }: { active?: string }) {
               <span className="hidden max-w-[120px] truncate sm:inline">{user.firstName}</span>
             </button>
             {menuOpen && (
-              <div className="glass absolute top-[calc(100%+8px)] right-0 flex w-56 flex-col gap-1 rounded-2xl p-2 text-sm">
+              <div className="absolute top-[calc(100%+8px)] right-0 z-30 flex w-56 flex-col gap-1 rounded-2xl border border-[rgba(120,60,20,.1)] bg-white p-2 text-sm shadow-[0_16px_40px_rgba(120,60,20,.18)]">
                 <div className="truncate px-3 py-1.5 text-stone-500">{user.email}</div>
                 {[
-                  { label: 'Hồ sơ của tôi', to: `/users/${user.id}` },
                   { label: 'Cài đặt hồ sơ', to: '/settings' },
-                  { label: 'Cộng đồng của tôi', to: '/me/communities' },
-                  { label: 'Thông báo', to: '/notifications' },
-                  { label: 'Tin nhắn', to: '/messages' },
-                  { label: 'Gói & thanh toán', to: '/billing' },
                   ...(isAdmin ? [{ label: 'Quản trị', to: '/admin' }] : []),
                 ].map((item) => (
                   <Link

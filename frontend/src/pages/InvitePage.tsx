@@ -24,7 +24,7 @@ function Shell({ children }: { children: ReactNode }) {
           'radial-gradient(700px 500px at 0% 20%, rgba(255,186,140,.3), transparent 70%), radial-gradient(700px 600px at 100% 30%, rgba(251,207,232,.28), transparent 70%), #fff',
       }}
     >
-      <Header active="Cộng đồng" />
+      <Header active="Cộng đồng của tôi" />
       <div className="mx-auto max-w-[520px] px-4 pt-10">{children}</div>
     </div>
   );

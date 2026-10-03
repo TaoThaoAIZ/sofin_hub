@@ -49,7 +49,7 @@ export function CommunitySettingsPage() {
   if (isPending || status === 'loading') {
     return (
       <div className="min-h-screen bg-white">
-        <Header active="Cộng đồng" />
+        <Header active="Cộng đồng của tôi" />
         <p className="py-24 text-center text-stone-500">Đang tải…</p>
       </div>
     );
@@ -57,7 +57,7 @@ export function CommunitySettingsPage() {
   if (error || !course) {
     return (
       <div className="min-h-screen bg-white">
-        <Header active="Cộng đồng" />
+        <Header active="Cộng đồng của tôi" />
         <Notice title="Không tìm thấy cộng đồng" message="Cộng đồng này có thể đã bị xóa hoặc không tồn tại." to="/" />
       </div>
     );
@@ -67,7 +67,7 @@ export function CommunitySettingsPage() {
   if (!role || !isAtLeast(role, 'admin')) {
     return (
       <div className="min-h-screen bg-white">
-        <Header active="Cộng đồng" />
+        <Header active="Cộng đồng của tôi" />
         <Notice
           title="Bạn không có quyền truy cập"
           message="Khu cài đặt chỉ dành cho quản trị viên, chủ cộng đồng hoặc quản trị nền tảng."
@@ -88,7 +88,7 @@ export function CommunitySettingsPage() {
           'radial-gradient(700px 500px at 0% 20%, rgba(255,186,140,.25), transparent 70%), radial-gradient(700px 600px at 100% 30%, rgba(251,207,232,.22), transparent 70%), #fdfbfa',
       }}
     >
-      <Header active="Cộng đồng" />
+      <Header active="Cộng đồng của tôi" />
       <div className="mx-auto max-w-[1000px] px-4 pt-6">
         <Link to={course.viewerEnrolled ? `/communities/${id}/community` : `/communities/${id}`} className="inline-flex items-center gap-1 text-sm font-medium text-stone-600 hover:text-brand">
           <MaterialIcon name="arrow_back" size={18} color="currentColor" />

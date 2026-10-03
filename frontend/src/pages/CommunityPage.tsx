@@ -11,7 +11,7 @@ export function CommunityPage() {
   if (isPending) {
     return (
       <div className="min-h-screen bg-white">
-        <Header active="Cộng đồng" />
+        <Header active="Cộng đồng của tôi" />
         <p className="py-24 text-center text-stone-500">Đang tải cộng đồng…</p>
       </div>
     );

@@ -23,6 +23,7 @@ import { ProfilePage } from './pages/ProfilePage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { SettingsLayout } from './features/settings/SettingsLayout';
 import { BillingTab } from './features/settings/tabs/BillingTab';
+import { MyCommunitiesPage } from './pages/MyCommunitiesPage';
 import { CommunitiesTab } from './features/settings/tabs/CommunitiesTab';
 import { NotifyTab } from './features/settings/tabs/NotifyTab';
 import { ProfileTab } from './features/settings/tabs/ProfileTab';
@@ -88,7 +89,7 @@ export default function App() {
           <Route path="gioi-thieu" element={<ReferralTab />} />
         </Route>
         <Route path="/users/:id" element={<ProfilePage />} />
-        <Route path="/me/communities" element={<Navigate to="/settings/cong-dong" replace />} />
+        <Route path="/me/communities" element={<MyCommunitiesPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/certificates/:code" element={<CertificateVerifyPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
