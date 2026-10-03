@@ -3,10 +3,13 @@ import { env } from '../../config/env.js';
 import { HttpError } from '../../utils/http-error.js';
 import { enrollmentService } from '../enrollments/enrollments.service.js';
 import { mailTemplates } from '../mail/mail-templates.service.js';
+import { referralsService } from '../referrals/referrals.service.js';
 import { userRepository, type UserRepository } from './auth.repository.js';
 import type { LoginBody, RegisterBody, UpdateProfileBody } from './auth.schema.js';
 import { toAuthUser, type AuthUser, type User } from './auth.types.js';
 import { assertCanSignIn, recordLogin } from './user-status.js';
+import { accountService } from './account.service.js';
+import { checkTotpCode, signTwoFactorTicket, verifyTwoFactorTicket } from './two-factor.js';
 import { consumeOneTimeToken, issueOneTimeToken, oneTimeTokenAgeMs, purgeOneTimeTokens } from './one-time-tokens.js';
 import {
   consumeRefreshToken,
@@ -33,6 +36,12 @@ export interface AuthSession {
   refreshToken: string;
 }
 
+/** Đăng nhập đúng mật khẩu nhưng tài khoản bật 2FA: chưa cấp phiên, FE gửi tiếp mã 6 số kèm `ticket` tới /auth/login/2fa. */
+export interface TwoFactorChallenge {
+  twoFactorRequired: true;
+  ticket: string;
+}
+
 export function createAuthService(repo: UserRepository = userRepository) {
   /** Cấp phiên: tạo/xoay Session rồi ký access token mang `sid` + `tv` (để thu hồi tức thì). */
   async function issueSession(user: User, meta?: SessionMeta, sid?: string): Promise<AuthSession> {
@@ -52,7 +61,7 @@ export function createAuthService(repo: UserRepository = userRepository) {
   }
 
   return {
-    async register({ firstName, lastName, email, password }: RegisterBody, meta?: SessionMeta): Promise<AuthSession> {
+    async register({ firstName, lastName, email, password, referralCode }: RegisterBody, meta?: SessionMeta): Promise<AuthSession> {
       if (await repo.findByEmail(email)) throw HttpError.conflict('Email này đã được đăng ký');
       const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
       let user: User;
@@ -63,16 +72,31 @@ export function createAuthService(repo: UserRepository = userRepository) {
         if ((e as { code?: string }).code === 'P2002') throw HttpError.conflict('Email này đã được đăng ký');
         throw e;
       }
+      await referralsService.attribute(user.id, referralCode); // ghi nhận người giới thiệu; không bao giờ làm hỏng đăng ký
       return issueSession(user, meta);
     },
 
-    async login({ email, password }: LoginBody, meta?: SessionMeta): Promise<AuthSession> {
+    async login({ email, password }: LoginBody, meta?: SessionMeta): Promise<AuthSession | TwoFactorChallenge> {
       const user = await repo.findByEmail(email);
       // Thành viên minh họa (isDemo) không bao giờ đăng nhập được.
       if (!user || user.isDemo || user.deletedAt || !(await bcrypt.compare(password, user.passwordHash))) {
         throw HttpError.unauthorized('Email hoặc mật khẩu không đúng');
       }
       // Sau khi mật khẩu đúng mới báo tình trạng tài khoản (không lộ trạng thái cho người đoán mật khẩu).
+      await assertCanSignIn(user.id);
+      if (user.twoFactorEnabled && user.totpSecret) return { twoFactorRequired: true, ticket: signTwoFactorTicket(user.id) };
+      await recordLogin(user.id);
+      return issueSession(user, meta);
+    },
+
+    /** Bước 2 đăng nhập khi bật 2FA: vé từ bước 1 + mã TOTP (chặn thử sai quá nhiều, chặn dùng lại mã). */
+    async loginTwoFactor(ticket: string, code: string, meta?: SessionMeta): Promise<AuthSession> {
+      const userId = verifyTwoFactorTicket(ticket);
+      const user = userId ? await repo.findById(userId) : undefined;
+      if (!user || user.isDemo || user.deletedAt || !user.twoFactorEnabled || !user.totpSecret) {
+        throw HttpError.unauthorized('Phiên xác minh đã hết hạn, vui lòng đăng nhập lại');
+      }
+      if (!(await checkTotpCode(user.id, user.totpSecret, code))) throw HttpError.unauthorized('Mã xác minh không đúng hoặc đã hết hạn');
       await assertCanSignIn(user.id);
       await recordLogin(user.id);
       return issueSession(user, meta);
@@ -105,12 +129,20 @@ export function createAuthService(repo: UserRepository = userRepository) {
     async updateProfile(userId: string, body: UpdateProfileBody): Promise<AuthUser> {
       await requireUser(userId);
       // null (từ chuỗi rỗng) = xóa trường; undefined = giữ nguyên.
-      const patch: Record<string, string | undefined> = {};
+      const patch: Record<string, string | boolean | undefined> = {};
       for (const [key, value] of Object.entries(body)) {
         if (value === undefined) continue;
         patch[key] = value === null ? undefined : value;
       }
-      const updated = await repo.update(userId, patch);
+      if (typeof patch.handle === 'string') await accountService.assertHandleUsable(userId, patch.handle);
+      let updated: User | undefined;
+      try {
+        updated = await repo.update(userId, patch);
+      } catch (e) {
+        // Hai người cùng giành 1 handle: unique index chặn ở DB.
+        if ((e as { code?: string }).code === 'P2002') throw HttpError.conflict('Đường dẫn hồ sơ này đã có người dùng');
+        throw e;
+      }
       if (!updated) throw HttpError.unauthorized();
       return toAuthUser(updated);
     },
@@ -132,7 +164,7 @@ export function createAuthService(repo: UserRepository = userRepository) {
       const userId = await consumeOneTimeToken(token, 'reset-password');
       const user = userId ? await repo.findById(userId) : undefined;
       if (!user) throw HttpError.badRequest('Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn');
-      await repo.update(user.id, { passwordHash: await bcrypt.hash(password, SALT_ROUNDS) });
+      await repo.update(user.id, { passwordHash: await bcrypt.hash(password, SALT_ROUNDS), passwordChangedAt: new Date().toISOString() });
       // Tăng tokenVersion + thu hồi mọi phiên: mọi access/refresh token cũ chết ngay.
       await repo.bumpTokenVersion(user.id);
       await revokeAllSessions(user.id);
@@ -148,7 +180,7 @@ export function createAuthService(repo: UserRepository = userRepository) {
       if (await bcrypt.compare(newPassword, user.passwordHash)) {
         throw HttpError.badRequest('Mật khẩu mới không được trùng mật khẩu hiện tại');
       }
-      await repo.update(userId, { passwordHash: await bcrypt.hash(newPassword, SALT_ROUNDS) });
+      await repo.update(userId, { passwordHash: await bcrypt.hash(newPassword, SALT_ROUNDS), passwordChangedAt: new Date().toISOString() });
       // Giữ phiên hiện tại (response không đổi hình dạng nên không thể cấp lại token); các phiên khác bị thu hồi
       // => access token của chúng chết ngay. Không tăng tokenVersion vì sẽ giết luôn token của phiên hiện tại.
       await revokeOtherSessions(userId, keepSid);
@@ -156,12 +188,14 @@ export function createAuthService(repo: UserRepository = userRepository) {
 
     async sendVerification(userId: string): Promise<void> {
       const user = await requireUser(userId);
-      if (user.emailVerified) throw HttpError.conflict('Email đã được xác thực');
+      // Đang chờ xác nhận email mới: gửi lại link tới email MỚI (không coi là đã xác thực).
+      if (user.emailVerified && !user.pendingEmail) throw HttpError.conflict('Email đã được xác thực');
       // Cooldown dựa vào thời điểm phát hành token verify hiện hành (bền vững qua restart / nhiều instance).
       const age = await oneTimeTokenAgeMs(userId, 'verify-email');
       if (age !== null && age < VERIFY_COOLDOWN_MS) {
         throw HttpError.tooMany('Vui lòng đợi 60 giây trước khi yêu cầu gửi lại email xác thực');
       }
+      if (user.pendingEmail) return accountService.sendPendingEmailLink(user, user.pendingEmail);
       const token = await issueOneTimeToken(userId, 'verify-email', VERIFY_TTL_MS);
       const link = `${env.FRONTEND_URL}/verify-email?token=${encodeURIComponent(token)}`;
       await mailTemplates.send('verify_email', user.email, { name: user.firstName, link }, {
@@ -173,7 +207,15 @@ export function createAuthService(repo: UserRepository = userRepository) {
 
     async verifyEmail(token: string): Promise<AuthUser> {
       const userId = await consumeOneTimeToken(token, 'verify-email');
-      const updated = userId ? await repo.update(userId, { emailVerified: true }) : undefined;
+      let updated: User | undefined;
+      try {
+        // Có pendingEmail => token này xác nhận email MỚI: hoán đổi email (kiểm lại unique ở DB).
+        const cur = userId ? await repo.findById(userId) : undefined;
+        updated = cur?.pendingEmail ? await repo.applyPendingEmail(cur.id) : userId ? await repo.update(userId, { emailVerified: true }) : undefined;
+      } catch (e) {
+        if ((e as { code?: string }).code === 'P2002') throw HttpError.conflict('Email này đã được sử dụng bởi tài khoản khác');
+        throw e;
+      }
       if (!updated) throw HttpError.badRequest('Liên kết xác thực không hợp lệ hoặc đã hết hạn');
       return toAuthUser(updated);
     },
@@ -181,10 +223,11 @@ export function createAuthService(repo: UserRepository = userRepository) {
     async deleteAccount(userId: string, password: string): Promise<void> {
       const user = await requireUser(userId);
       if (!(await bcrypt.compare(password, user.passwordHash))) throw HttpError.badRequest('Mật khẩu không đúng');
-      const memberships = await enrollmentService.listByUser(userId);
-      if (memberships.some((m) => m.role === 'owner')) {
-        throw HttpError.conflict('Bạn đang là chủ của một cộng đồng, hãy chuyển quyền sở hữu trước khi xóa tài khoản');
+      const blockers = await accountService.deleteBlockers(userId);
+      if (blockers.ownedCommunities.length > 0 || blockers.activeSubscriptions > 0) {
+        throw HttpError.coded(409, 'ACCOUNT_DELETE_BLOCKED', 'Hãy chuyển quyền sở hữu cộng đồng và hủy các gói thành viên đang hoạt động trước khi xóa tài khoản', blockers);
       }
+      const memberships = await enrollmentService.listByUser(userId);
       for (const m of memberships) await enrollmentService.remove(userId, m.communityId);
       // Ẩn danh hóa (không xóa hàng User): bài viết, bình luận, điểm, thanh toán được giữ; bài cũ hiển thị "Thành viên đã xóa".
       // Thu hồi trước để access token chết ngay cả khi bước ẩn danh hóa thất bại giữa chừng.
@@ -192,6 +235,11 @@ export function createAuthService(repo: UserRepository = userRepository) {
       await revokeAllSessions(userId);
       await purgeOneTimeTokens(userId);
       await repo.anonymize(userId);
+    },
+
+    /** Đăng xuất mọi thiết bị KHÁC, giữ phiên hiện tại (khác logoutAll thu hồi tất cả). */
+    async logoutOthers(userId: string, keepSid: string): Promise<void> {
+      await revokeOtherSessions(userId, keepSid);
     },
 
     listSessions(userId: string): Promise<SessionInfo[]> {

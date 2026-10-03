@@ -143,7 +143,7 @@ describe('scheduler: nhiều instance, mỗi job chỉ chạy ở 1', () => {
   it('allJobs() khai báo đủ job nền (gia hạn, đối soát, nhắc lịch) với tên duy nhất', async () => {
     const { allJobs } = await import('../src/jobs.js');
     const names = allJobs().map((j) => j.name);
-    assert.deepEqual([...names].sort(), ['events.reminders', 'payments.reconcile', 'payments.subscriptions', 'payments.trialReminders']);
+    assert.deepEqual([...names].sort(), ['events.reminders', 'payments.reconcile', 'payments.subscriptions', 'payments.trialReminders', 'referrals.reconcile']);
     assert.equal(new Set(names).size, names.length);
   });
 });

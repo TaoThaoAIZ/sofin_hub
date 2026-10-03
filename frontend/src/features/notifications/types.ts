@@ -65,7 +65,7 @@ export interface AppNotification {
   createdAt: string;
 }
 
-export type EmailDigest = 'off' | 'daily' | 'weekly';
+export type EmailDigest = 'off' | 'instant' | 'daily' | 'weekly';
 
 export interface NotificationPreferences {
   types: Record<NotificationType, boolean>;

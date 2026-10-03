@@ -2,9 +2,10 @@ import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { LegacyCourseRedirect } from './components/LegacyCourseRedirect';
 import { ScrollToTop } from './components/ScrollToTop';
+import { ReferralCapture } from './features/referral/ReferralCapture';
+import { ReferralLandingPage } from './features/referral/ReferralLandingPage';
 import { MessagesProvider } from './features/messages/MessagesProvider';
 import { NotificationsProvider } from './features/notifications/NotificationsProvider';
-import { BillingPage } from './pages/BillingPage';
 import { MessagesPage } from './pages/MessagesPage';
 import { NotificationsPage } from './pages/NotificationsPage';
 import { RevenuePage } from './pages/RevenuePage';
@@ -18,10 +19,15 @@ import { CourseDetailPage } from './pages/CourseDetailPage';
 import { FaqPage } from './pages/FaqPage';
 import { ContactPage } from './pages/ContactPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
-import { MyCommunitiesPage } from './pages/MyCommunitiesPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
-import { SettingsPage } from './pages/SettingsPage';
+import { SettingsLayout } from './features/settings/SettingsLayout';
+import { BillingTab } from './features/settings/tabs/BillingTab';
+import { CommunitiesTab } from './features/settings/tabs/CommunitiesTab';
+import { NotifyTab } from './features/settings/tabs/NotifyTab';
+import { ProfileTab } from './features/settings/tabs/ProfileTab';
+import { ReferralTab } from './features/settings/tabs/ReferralTab';
+import { SecurityTab } from './features/settings/tabs/SecurityTab';
 import { VerifyEmailPage } from './pages/VerifyEmailPage';
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
@@ -47,6 +53,7 @@ export default function App() {
     <NotificationsProvider>
       <MessagesProvider>
       <ScrollToTop />
+      <ReferralCapture />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
@@ -72,16 +79,24 @@ export default function App() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/settings" element={<SettingsLayout />}>
+          <Route index element={<ProfileTab />} />
+          <Route path="thong-bao" element={<NotifyTab />} />
+          <Route path="bao-mat" element={<SecurityTab />} />
+          <Route path="thanh-toan" element={<BillingTab />} />
+          <Route path="cong-dong" element={<CommunitiesTab />} />
+          <Route path="gioi-thieu" element={<ReferralTab />} />
+        </Route>
         <Route path="/users/:id" element={<ProfilePage />} />
-        <Route path="/me/communities" element={<MyCommunitiesPage />} />
+        <Route path="/me/communities" element={<Navigate to="/settings/cong-dong" replace />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/certificates/:code" element={<CertificateVerifyPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/messages" element={<MessagesPage />} />
         <Route path="/messages/:id" element={<MessagesPage />} />
         <Route path="/search" element={<SearchPage />} />
-        <Route path="/billing" element={<BillingPage />} />
+        <Route path="/billing" element={<Navigate to="/settings/thanh-toan" replace />} />
+        <Route path="/gioi-thieu/:code" element={<ReferralLandingPage />} />
         <Route path="/communities/:id/revenue-dashboard" element={<RevenuePage />} />
         <Route path="/admin/reports" element={<Navigate to="/admin/moderation" replace />} />
         <Route

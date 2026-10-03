@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { setAuthHandlers, setAuthToken } from '../../lib/api';
 import * as authApi from './api';
-import type { AuthSession, AuthUser, LoginInput, RegisterInput } from './types';
+import type { AuthSession, AuthUser, LoginInput, RegisterInput, TwoFactorChallenge } from './types';
 
 type AuthStatus = 'loading' | 'authenticated' | 'guest';
 
@@ -9,7 +9,9 @@ interface AuthContextValue {
   user: AuthUser | null;
   accessToken: string | null;
   status: AuthStatus;
-  login: (input: LoginInput) => Promise<AuthUser>;
+  /** Trả về user, hoặc `TwoFactorChallenge` khi tài khoản bật 2FA (gọi tiếp `completeTwoFactor`). */
+  login: (input: LoginInput) => Promise<AuthUser | TwoFactorChallenge>;
+  completeTwoFactor: (ticket: string, code: string) => Promise<AuthUser>;
   register: (input: RegisterInput) => Promise<AuthUser>;
   logout: () => Promise<void>;
   /** Ghi đè thông tin user hiện tại (sau khi sửa hồ sơ / xác thực email). */
@@ -74,7 +76,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(
     async (input: LoginInput) => {
-      const session = await authApi.login(input);
+      const result = await authApi.login(input);
+      if ('twoFactorRequired' in result) return result;
+      applySession(result);
+      setStatus('authenticated');
+      return result.user;
+    },
+    [applySession],
+  );
+
+  const completeTwoFactor = useCallback(
+    async (ticket: string, code: string) => {
+      const session = await authApi.loginTwoFactor(ticket, code);
       applySession(session);
       setStatus('authenticated');
       return session.user;
@@ -100,7 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updateUser = useCallback((next: AuthUser) => setUser(next), []);
 
   return (
-    <AuthContext.Provider value={{ user, accessToken, status, login, register, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, accessToken, status, login, completeTwoFactor, register, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

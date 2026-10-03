@@ -1285,7 +1285,7 @@ STILL_PLAN_OLD_COUNT = sum(1 for _r in rows if _r[6] == PLAN)
 # Nạp testcase mới từ qa/cases_*.py (mỗi file có hàm load(add)).
 CASE_MODULES = ["cases_auth", "cases_community", "cases_content", "cases_classroom",
                 "cases_payments", "cases_comms", "cases_platform", "cases_admin", "cases_admin2", "cases_admin3",
-                "cases_audit_secx", "cases_audit_money", "cases_audit_game", "cases_audit_infra", "cases_audit_perf", "cases_audit_split", "cases_wizard"]
+                "cases_audit_secx", "cases_audit_money", "cases_audit_game", "cases_audit_infra", "cases_audit_perf", "cases_audit_split", "cases_wizard", "cases_settings"]
 for _m in CASE_MODULES:
     try:
         _mod = importlib.import_module(_m)
@@ -1446,7 +1446,7 @@ info = [
     ("Dự án", "SofinHub — Nền tảng Cộng đồng & Khóa học trực tuyến"),
     ("Nguồn tài liệu", "SofinHub-BRD.docx (BRD v1.0, 28/09/2026) + backend/docs/API.md, backend/docs/api/*.md, docs/features/*.md, backend/docs/DATABASE.md, backend/prisma/seed* (đợt 30/09/2026), backend/docs/api/admin.md + docs/features/admin-batch1.md (đợt 01/10/2026)"),
     ("Ngày tạo bộ test case", "29/09/2026 — cập nhật đợt backend Postgres + frontend 30/09/2026 và đợt Admin console 01/10/2026 (xem sheet 'Nhật ký thay đổi')"),
-    ("Cách xem testcase", "MỖI MODULE MỘT SHEET (28 sheet, tên dạng 'MÃ - Tên': HOME, AUTH, COMM, COURSE, FEED, PAY, ADM, ADM2, ADM3, SECX, MONEY, GAME, INFRA, PERF, SPLIT, WIZ, ANN, ROLE...). Bấm tên module ở bảng 'Thống kê theo Module' bên dưới để nhảy tới sheet; mỗi sheet có sẵn bộ lọc theo Chức năng/Loại test/Ưu tiên/Phù hợp Playwright và cột Mã TC + Chức năng được cố định khi cuộn ngang. Cột tiến độ Test 1/Test 2 (Pass/Fail/Chưa test) ở bảng thống kê tự cập nhật khi tester điền kết quả."),
+    ("Cách xem testcase", "MỖI MODULE MỘT SHEET (34 sheet, tên dạng 'MÃ - Tên': HOME, AUTH, COMM, COURSE, FEED, PAY, ADM, ADM2, ADM3, SECX, MONEY, GAME, INFRA, PERF, SPLIT, WIZ, ANN, SETP, SETS, SETN, SETC, SETB, SETR, ROLE...). Bấm tên module ở bảng 'Thống kê theo Module' bên dưới để nhảy tới sheet; mỗi sheet có sẵn bộ lọc theo Chức năng/Loại test/Ưu tiên/Phù hợp Playwright và cột Mã TC + Chức năng được cố định khi cuộn ngang. Cột tiến độ Test 1/Test 2 (Pass/Fail/Chưa test) ở bảng thống kê tự cập nhật khi tester điền kết quả."),
     ("Sheet phụ", "'Tài khoản & dữ liệu test' (tài khoản/dữ liệu seed, cách dựng môi trường) · 'Nhật ký thay đổi' · 'Bằng chứng (ảnh)' (ảnh Playwright)"),
     ("Người soạn thảo", "QA/Tester"),
     ("Tổng số test case", len(rows)),

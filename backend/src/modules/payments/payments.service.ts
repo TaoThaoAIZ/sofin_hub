@@ -19,6 +19,8 @@ import {
   type StoredCard,
 } from './payments.repository.js';
 import { cfg } from '../settings/settings.service.js';
+import { referralsService } from '../referrals/referrals.service.js';
+import { refundStatuses } from './payments.cards.js';
 import { webhookEventBody, type PaymentMethodInput } from './payments.schema.js';
 import type { BillingInterval, PaymentCardView, PaymentIntent, PaymentMethod, Payout, RefundRequest, Subscription } from './payments.types.js';
 
@@ -97,7 +99,7 @@ function pageMeta(total: number, page: number, limit: number) {
 
 type NotifyInput = Parameters<typeof notify>[0];
 /** Thông báo chỉ phát SAU khi transaction commit (rollback thì không có thông báo "ma"). */
-type After = Array<() => void>;
+type After = Array<() => void | Promise<void>>;
 const later = (after: After, input: NotifyInput) =>
   after.push(() => {
     try {
@@ -114,7 +116,8 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
   async function inTx<T>(fn: (ops: PaymentsOps, after: After) => Promise<T>, timeoutMs?: number): Promise<T> {
     const after: After = [];
     const result = await repo.transaction((ops) => fn(ops, after), { timeoutMs });
-    for (const f of after) f();
+    // Callback sau commit có thể bất đồng bộ (hook giới thiệu tự cô lập lỗi) — chờ để thứ tự/kết quả xác định.
+    for (const f of after) await f();
     return result;
   }
 
@@ -205,6 +208,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
         periodStart: at.toISOString(),
         periodEnd: periodEnd.toISOString(),
       });
+      after.push(() => referralsService.onPaymentSucceeded(final!)); // hoa hồng giới thiệu (cô lập lỗi, sau commit)
       later(after, {
         userId: intent.userId,
         type: 'payment_succeeded',
@@ -289,6 +293,8 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
     // Số hóa đơn cấp CUỐI CÙNG (cùng thứ tự khóa với settle).
     const invoiceNumber = await ops.nextInvoiceNumber(at.getUTCFullYear());
     payment = (await ops.transition(payment.id, ['succeeded'], { invoiceNumber })) ?? payment;
+    const paid = payment;
+    after.push(() => referralsService.onPaymentSucceeded(paid)); // hoa hồng giới thiệu (cô lập lỗi, sau commit)
     later(after, {
       userId: sub.userId,
       type: 'payment_succeeded',
@@ -384,6 +390,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
     }
     // Hoàn tiền SAU khi owner đã rút (số dư ròng < 0) ⇒ ghi sổ nợ.
     await recordDebt(ops, payment.communityId, balanceBefore, { kind: ledgerKind, paymentId: payment.id, refundId: refund.id, note: refund.reason });
+    if (full) after.push(() => referralsService.voidForPayment(payment.id)); // hủy hoa hồng giới thiệu chưa chi trả (sau commit)
     later(after, {
       userId: refund.userId,
       type: 'system',
@@ -1040,7 +1047,8 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
       const { items, total } = await repo.listByUser(userId, page, limit);
       const titles = new Map<string, string>();
       for (const id of new Set(items.map((p) => p.communityId))) titles.set(id, await courseTitle(id));
-      return { data: items.map((p) => ({ ...p, courseTitle: titles.get(p.communityId) })), meta: pageMeta(total, page, limit) };
+      const refunds = await refundStatuses(items.map((p) => p.id));
+      return { data: items.map((p) => ({ ...p, courseTitle: titles.get(p.communityId), refundStatus: refunds.get(p.id) ?? null })), meta: pageMeta(total, page, limit) };
     },
 
     async invoice(paymentId: string, userId: string) {

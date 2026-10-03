@@ -19,6 +19,7 @@ export interface PaymentIntent {
   refundedCents?: number;
   periodStart?: string;
   periodEnd?: string;
+  interval?: 'monthly' | 'annual';
 }
 
 export interface SubscriptionStatus {
@@ -43,6 +44,7 @@ export interface Subscription {
   createdAt: string;
   courseTitle?: string;
   accessUntil?: string | null;
+  interval?: 'monthly' | 'annual';
 }
 
 export interface PageMeta {
@@ -54,6 +56,8 @@ export interface PageMeta {
 
 export interface PaymentRecord extends PaymentIntent {
   courseTitle?: string;
+  /** Trạng thái yêu cầu hoàn tiền mới nhất của giao dịch (null = chưa yêu cầu). */
+  refundStatus?: RefundStatus | 'refunding' | null;
 }
 
 export interface Invoice {

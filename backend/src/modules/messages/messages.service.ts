@@ -4,7 +4,7 @@ import { assertUserCan } from '../auth/user-status.js';
 import { fileUserRepository } from '../auth/auth.repository.js';
 import { userBriefView } from '../auth/user-view.js';
 import { enrollmentService } from '../enrollments/enrollments.service.js';
-import { notify } from '../notifications/notifications.service.js';
+import { notificationsService, notify } from '../notifications/notifications.service.js';
 import { uploadService } from '../uploads/uploads.service.js';
 import { prismaMessageRepository, type ConversationCursor, type MessageRepository } from './messages.repository.js';
 import { shared } from '../../infra/shared.js';
@@ -64,6 +64,13 @@ export function createMessageService(repo: MessageRepository = prismaMessageRepo
   async function assertNotBlocked(a: string, b: string) {
     if ((await repo.isBlocked(a, b)) || (await repo.isBlocked(b, a))) {
       throw HttpError.forbidden('Bạn không thể nhắn tin cho người dùng này');
+    }
+  }
+
+  /** Người nhận tắt "Cho phép nhắn tin riêng" (Cài đặt > Thông báo) => không bắt đầu / gửi thêm tin được. */
+  async function assertDmAllowed(targetId: string) {
+    if (!(await notificationsService.getPreferences(targetId)).dmAllowed) {
+      throw HttpError.coded(403, 'DM_DISABLED', 'Người dùng này đã tắt nhận tin nhắn riêng');
     }
   }
 
@@ -137,6 +144,7 @@ export function createMessageService(repo: MessageRepository = prismaMessageRepo
         if (!target || target.deletedAt) throw HttpError.notFound('Không tìm thấy người dùng'); // tài khoản đã xóa coi như không tồn tại
       }
       await assertNotBlocked(userId, targetId);
+      await assertDmAllowed(targetId);
       let conv = await repo.findConversation(userId, targetId);
       const created = !conv;
       if (!conv) {
@@ -182,6 +190,7 @@ export function createMessageService(repo: MessageRepository = prismaMessageRepo
       const c = await requireParticipant(userId, conversationId);
       const otherId = otherOf(c, userId);
       await assertNotBlocked(userId, otherId);
+      await assertDmAllowed(otherId);
       // Lưu văn bản thuần: từ chối thẻ HTML thay vì lọc âm thầm (FE vẫn phải escape khi hiển thị).
       if (HTML_TAG.test(content)) throw HttpError.badRequest('Tin nhắn không được chứa mã HTML');
       await checkRate(userId);

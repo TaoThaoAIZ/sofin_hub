@@ -12,7 +12,7 @@ interface FieldErrors {
 }
 
 export function LoginPage() {
-  const { login } = useAuth();
+  const { login, completeTwoFactor } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const redirectTo = (location.state as { from?: string } | null)?.from ?? '/';
@@ -22,6 +22,9 @@ export function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  // Tài khoản bật 2FA: sau khi đúng mật khẩu, nhập mã 6 số của ứng dụng xác thực.
+  const [ticket, setTicket] = useState<string | null>(null);
+  const [code, setCode] = useState('');
 
   const clearFieldError = (key: keyof FieldErrors) =>
     setFieldErrors((f) => (f[key] ? { ...f, [key]: undefined } : f));
@@ -38,10 +41,35 @@ export function LoginPage() {
     setSubmitting(true);
     setError(null);
     try {
-      await login({ email, password });
+      const result = await login({ email, password });
+      if ('twoFactorRequired' in result) {
+        setTicket(result.ticket);
+        return;
+      }
       navigate(redirectTo, { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Đăng nhập thất bại, vui lòng thử lại');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const submitCode = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!ticket) return;
+    if (code.replace(/D/g, '').length !== 6) {
+      setError('Nhập đủ mã 6 số');
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      await completeTwoFactor(ticket, code);
+      navigate(redirectTo, { replace: true });
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Xác minh thất bại, vui lòng thử lại');
+      // Vé hết hạn: quay lại bước nhập mật khẩu.
+      if (err instanceof ApiError && err.status === 401 && /hết hạn, vui lòng đăng nhập lại/.test(err.message)) setTicket(null);
     } finally {
       setSubmitting(false);
     }
@@ -80,6 +108,31 @@ export function LoginPage() {
           </p>
         </div>
 
+        {ticket ? (
+          <form onSubmit={submitCode} noValidate className="mt-2 flex flex-col gap-4">
+            <p className="m-0 text-center text-[15px] text-stone-600">Nhập mã 6 số từ ứng dụng xác thực (Google Authenticator, Authy...) để hoàn tất đăng nhập.</p>
+            <FormField type="text" autoComplete="one-time-code" value={code} onChange={setCode} placeholder="Mã 6 số" />
+            {error && (
+              <div role="alert" className="rounded-xl bg-red-50 px-4 py-2.5 text-sm font-medium text-red-600">
+                {error}
+              </div>
+            )}
+            <Button type="submit" disabled={submitting} className="h-[60px] gap-2.5 rounded-2xl text-lg font-bold">
+              {submitting ? 'Đang xác minh…' : 'Xác minh'}
+            </Button>
+            <button
+              type="button"
+              onClick={() => {
+                setTicket(null);
+                setCode('');
+                setError(null);
+              }}
+              className="border-0 bg-transparent text-[15px] font-medium text-stone-600"
+            >
+              Quay lại
+            </button>
+          </form>
+        ) : (
         <form onSubmit={submit} noValidate className="mt-2 flex flex-col gap-4">
           <FormField
             type="email"
@@ -122,6 +175,7 @@ export function LoginPage() {
             </svg>
           </Button>
         </form>
+        )}
 
         <div className="flex items-center gap-4 text-[15px] text-stone-500">
           <span className="h-px flex-1 bg-[rgba(120,60,20,.14)]" />

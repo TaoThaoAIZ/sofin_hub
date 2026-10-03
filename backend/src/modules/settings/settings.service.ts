@@ -47,6 +47,13 @@ export const SETTING_DEFS = {
   /** Phí giao dịch HIỂN THỊ ở máy tính "Gói nào lợi hơn?" — KHÔNG dùng cho kế toán thật (vẫn là payments.commissionPct). */
   'owner.startFeePct': { schema: z.number().min(0).max(100), default: () => 10 },
   'owner.proFeePct': { schema: z.number().min(0).max(100), default: () => 2.9 },
+  /** Chương trình giới thiệu (GIÁ TRỊ TẠM lấy từ mockup, chờ chủ sở hữu chốt — xem OPEN_DECISIONS A17). Tỉ lệ tính bằng basis point (3000 = 30%). */
+  'referral.creatorRateBps': { schema: z.number().int().min(0).max(10_000), default: () => 3000 },
+  'referral.memberRateBps': { schema: z.number().int().min(0).max(10_000), default: () => 1000 },
+  /** Số ngày link giới thiệu còn hiệu lực kể từ lúc người được giới thiệu đăng ký. */
+  'referral.attributionDays': { schema: z.number().int().min(1).max(3650), default: () => 60 },
+  /** Ngày trong tháng chi trả hoa hồng (1-28). */
+  'referral.payoutDay': { schema: z.number().int().min(1).max(28), default: () => 5 },
   'security.require2fa': { schema: z.boolean(), default: () => false },
   'security.sessionTimeoutMin': { schema: z.union([z.literal(15), z.literal(30), z.literal(120)]), default: () => 30 as 15 | 30 | 120 },
   'security.maintenanceMode': { schema: z.boolean(), default: () => false },
@@ -72,6 +79,7 @@ export interface PlatformConfig {
     autoPayouts: boolean;
   };
   owner: { requirePlan: boolean; trialDays: number; currency: 'USD' | 'VND' | 'EUR'; proMonthlyPrice: number; proAnnualPrice: number; startFeePct: number; proFeePct: number };
+  referral: { creatorRateBps: number; memberRateBps: number; attributionDays: number; payoutDay: number };
   security: { require2fa: boolean; sessionTimeoutMin: 15 | 30 | 120; maintenanceMode: boolean };
 }
 
@@ -79,7 +87,7 @@ export type Overrides = Partial<Record<SettingKey, unknown>>;
 
 /** Gộp mặc định + ghi đè thành cấu trúc lồng nhau. Giá trị ghi đè sai kiểu (DB bị sửa tay) bị bỏ qua. */
 export function buildConfig(overrides: Overrides): PlatformConfig {
-  const out: Record<string, Record<string, unknown>> = { platform: {}, payments: {}, owner: {}, security: {} };
+  const out: Record<string, Record<string, unknown>> = { platform: {}, payments: {}, owner: {}, referral: {}, security: {} };
   for (const key of SETTING_KEYS) {
     const def = SETTING_DEFS[key];
     const [group, name] = key.split('.') as [string, string];

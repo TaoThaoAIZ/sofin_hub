@@ -10,8 +10,8 @@ Response: `{ data }`; danh sách: `{ data, meta }`. Mọi route cần `Authoriza
 | POST | `/notifications/:id/read` | Bearer | - | `{data: Notification}` (idempotent) | 401, 404 |
 | POST | `/notifications/read-all` | Bearer | - | `{data: {updated}}` | 401 |
 | DELETE | `/notifications/:id` | Bearer (chủ sở hữu) | - | `{data: {deleted: true}}` | 401, 404 |
-| GET | `/notifications/preferences` | Bearer | - | `{data: {types: {<type>: boolean}, emailDigest}}` | 401 |
-| PUT | `/notifications/preferences` | Bearer | `{types?: {post_liked?: boolean,...}, emailDigest?: 'off'\|'daily'\|'weekly'}` (cập nhật từng phần) | preferences mới | 400 (khóa lạ, tắt loại bắt buộc, body rỗng), 401 |
+| GET | `/notifications/preferences` | Bearer | - | `{data: {types, emailDigest, quiet, dmAllowed, emailUnreadDm, notifyFollowedPosts, communityPrefs, communities[]}}` (chi tiết: `settings-notify-communities.md`) | 401 |
+| PUT | `/notifications/preferences` | Bearer | `{types?: {post_liked?: boolean,...}, emailDigest?: 'off'\|'instant'\|'daily'\|'weekly', quiet?, dmAllowed?, emailUnreadDm?, notifyFollowedPosts?, communityPrefs?}` (cập nhật từng phần) | preferences mới | 400 (khóa lạ, tắt loại bắt buộc, body rỗng), 401 |
 | POST | `/notifications/stream-ticket` | Bearer | - | 201 `{data: {ticket, expiresInSec: 30}}` | 401 |
 | GET | `/notifications/stream` | Bearer header, hoặc `?ticket=` (KHÔNG nhận `?access_token=`) | - | SSE `text/event-stream` | 401 |
 
@@ -36,6 +36,6 @@ Response: `{ data }`; danh sách: `{ data, meta }`. Mọi route cần `Authoriza
 - Dọn thông báo cũ theo kiểu khi-ghi, không có job nền.
 
 ## Chưa làm / cần quyết định
-- `emailDigest` mới chỉ lưu tùy chọn; chưa có job gửi email tổng hợp.
+- `emailDigest`: `instant` gửi email thật khi có thông báo; `daily`/`weekly` mới chỉ lưu tùy chọn, chưa có job gom email (xem `settings-notify-communities.md`).
 - Chốt có chuyển SSE sang cookie httpOnly hay giữ ticket.
 - Gom nhóm thông báo (vd. "5 người đã thích bài của bạn") chưa có.

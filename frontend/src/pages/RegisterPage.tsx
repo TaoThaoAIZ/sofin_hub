@@ -6,6 +6,7 @@ import { FormField } from '../components/ui/FormField';
 import { ApiError } from '../lib/api';
 import { useAuth } from '../features/auth/AuthContext';
 import { hasReadPrivacy, hasReadTerms } from '../features/auth/legalConsent';
+import { clearReferralCode, readReferralCode } from '../features/referral/storage';
 import { validateEmail, validateNewPassword, validateRequired } from '../features/auth/validation';
 
 interface FieldErrors {
@@ -60,7 +61,8 @@ export function RegisterPage() {
     setSubmitting(true);
     setError(null);
     try {
-      await register({ firstName, lastName, email, password });
+      await register({ firstName, lastName, email, password, referralCode: readReferralCode() });
+      clearReferralCode();
       navigate('/', { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Đăng ký thất bại, vui lòng thử lại');

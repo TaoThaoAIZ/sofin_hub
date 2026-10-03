@@ -103,6 +103,7 @@ export function createEventsService(repo: EventsRepository = eventsRepository) {
           body: `Sự kiện "${event.title}" đã bị hủy`,
           link: eventPath(event),
           communityId: event.communityId,
+          category: 'event',
         });
       }
       await repo.delete(eventId);

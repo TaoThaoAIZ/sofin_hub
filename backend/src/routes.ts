@@ -15,6 +15,7 @@ import { eventsRouter } from './modules/events/events.routes.js';
 import { metaRouter } from './modules/meta/meta.routes.js';
 import { notificationsRouter } from './modules/notifications/notifications.routes.js';
 import { paymentsRouter } from './modules/payments/payments.routes.js';
+import { referralsRouter } from './modules/referrals/referrals.routes.js';
 import { searchRouter } from './modules/search/search.routes.js';
 import { postsRouter } from './modules/posts/posts.routes.js';
 import { messagesRouter } from './modules/messages/messages.routes.js';
@@ -24,6 +25,7 @@ import { adminBatch2Router } from './modules/admin/admin-b2.routes.js';
 import { adminBatch3Router } from './modules/admin/admin-b3.routes.js';
 import { maintenanceGuard, platformRouter } from './modules/platform/platform.routes.js';
 import { moderationRouter } from './modules/moderation/moderation.routes.js';
+import { myCommunitiesRouter } from './modules/my-communities/my-communities.routes.js';
 
 export const apiRouter = Router();
 
@@ -45,10 +47,12 @@ apiRouter.use('/', classroomRouter);
 apiRouter.use('/', eventsRouter);
 apiRouter.use('/', communityRouter);
 apiRouter.use('/', paymentsRouter);
+apiRouter.use('/', referralsRouter);
 apiRouter.use('/', notificationsRouter);
 apiRouter.use('/', searchRouter);
 apiRouter.use('/', uploadsRouter);
 apiRouter.use('/', messagesRouter);
+apiRouter.use('/', myCommunitiesRouter);
 apiRouter.use('/', communitiesRouter);
 // Wizard tạo cộng đồng + gói hosting owner + payout account (nháp, publish, slug, revenue-estimate).
 apiRouter.use('/', communityWizardRouter);

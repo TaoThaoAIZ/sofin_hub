@@ -3,10 +3,17 @@ import { HttpError } from '../../utils/http-error.js';
 import { shared as sharedState } from '../../infra/shared.js';
 import type { Shared } from '../../infra/shared-state.js';
 import type { ListNotificationsQuery, UpdatePreferencesBody } from './notifications.schema.js';
-import { prismaNotificationsRepository, type NotificationsRepository } from './notifications.repository.js';
+import { env } from '../../config/env.js';
+import { mailService } from '../mail/mail.service.js';
+import { getDeliveryInfo, listCommunityRows, prismaNotificationsRepository, type NotificationsRepository } from './notifications.repository.js';
+import { DEFAULT_TIMEZONE, isQuietNow } from './notifications.quiet.js';
 import {
+  COMMUNITY_PREF_KEYS,
   MANDATORY_TYPES,
   NOTIFICATION_TYPES,
+  TYPE_COMMUNITY_KEY,
+  type CommunityPref,
+  type CommunityPrefKey,
   type Notification,
   type NotificationPreferences,
   type NotificationType,
@@ -40,8 +47,27 @@ export function defaultPreferences(): NotificationPreferences {
   return {
     types: Object.fromEntries(NOTIFICATION_TYPES.map((t) => [t, true])) as Record<NotificationType, boolean>,
     emailDigest: 'off',
+    quiet: { enabled: false, from: '22:00', to: '07:00' },
+    dmAllowed: true,
+    emailUnreadDm: true,
+    notifyFollowedPosts: true,
+    communityPrefs: {},
   };
 }
+
+export const defaultCommunityPref = (): CommunityPref => ({ admin: true, event: true, featured: true, comment: true, joinRequest: true });
+
+/** Cột "Yêu cầu gia nhập" chỉ có nghĩa với mod trở lên (thành viên thường: ô "–"). */
+export const communityKeyApplies = (key: CommunityPrefKey, role: string): boolean => key !== 'joinRequest' || role !== 'member';
+
+/** Thông báo gửi vào bảng cộng đồng: nhãn rõ ràng (`category`) thắng, không thì suy từ loại. Không có communityId => không chặn. */
+export function communityKeyOf(n: { type: NotificationType; communityId?: string }, category?: CommunityPrefKey): CommunityPrefKey | undefined {
+  if (!n.communityId) return undefined;
+  return category ?? TYPE_COMMUNITY_KEY[n.type];
+}
+
+/** Input của notify(): thêm `category` (không lưu DB) để chọn cột cộng đồng cho các thông báo loại `system`. */
+export type NotifyInput = Omit<Notification, 'id' | 'readAt' | 'createdAt'> & { category?: CommunityPrefKey };
 
 /** Retry ghi DB khi lỗi tạm thời (test chỉnh `baseMs` nhỏ). Backoff: baseMs, 2*baseMs, 4*baseMs... */
 export const notificationWriteRetry = { attempts: 4, baseMs: 100 };
@@ -63,14 +89,25 @@ function mergePrefs(saved: NotificationPreferences | undefined): NotificationPre
   if (!saved) return base;
   const types = { ...base.types, ...saved.types };
   for (const t of MANDATORY_TYPES) types[t] = true; // loại quan trọng luôn bật
-  return { types, emailDigest: saved.emailDigest };
+  const communityPrefs: Record<string, CommunityPref> = {};
+  for (const [id, v] of Object.entries(saved.communityPrefs ?? {})) communityPrefs[id] = { ...defaultCommunityPref(), ...v };
+  return {
+    types,
+    emailDigest: saved.emailDigest ?? base.emailDigest,
+    quiet: { ...base.quiet, ...saved.quiet },
+    dmAllowed: saved.dmAllowed ?? base.dmAllowed,
+    emailUnreadDm: saved.emailUnreadDm ?? base.emailUnreadDm,
+    notifyFollowedPosts: saved.notifyFollowedPosts ?? base.notifyFollowedPosts,
+    communityPrefs,
+  };
 }
 
 export function createNotificationsService(
   repo: NotificationsRepository = prismaNotificationsRepository,
-  deps: { shared?: () => Shared } = {},
+  deps: { shared?: () => Shared; getDelivery?: typeof getDeliveryInfo } = {},
 ) {
   const st = deps.shared ?? sharedState;
+  const getDelivery = deps.getDelivery ?? getDeliveryInfo;
   const listeners = new Set<(n: Notification) => void>();
   const instanceId = randomUUID();
   const dead: Notification[] = [];
@@ -173,25 +210,54 @@ export function createNotificationsService(
     return prefs;
   }
 
-  /** Ghi tuần tự (giữ thứ tự), có retry; emit SSE chỉ sau khi commit; hỏng hẳn => `fail` (không nuốt im lặng). */
-  function enqueueWrite(n: Notification, opts: NotifyOptions): void {
+  async function sendEmail(n: Notification, to: string): Promise<void> {
+    const url = n.link ? `${env.FRONTEND_URL.replace(/\/$/, '')}${n.link}` : env.FRONTEND_URL;
+    await mailService.send({ to, subject: n.title, text: `${n.title}
+
+${n.body}
+
+Xem chi tiết: ${url}
+
+Bạn có thể đổi cách nhận thông báo tại Cài đặt > Thông báo.` });
+  }
+
+  /**
+   * Phát realtime + email SAU KHI thông báo đã lưu. Giờ im lặng (theo múi giờ user) chỉ chặn kênh đẩy (SSE/toast + email): thông báo vẫn nằm trong chuông.
+   * Email: tin nhắn riêng => theo `emailUnreadDm`; các loại khác => chỉ khi `emailDigest = instant`. Lỗi ở đây không được làm hỏng việc đã lưu.
+   */
+  async function deliver(n: Notification, prefs: NotificationPreferences): Promise<void> {
+    const wantsEmail = n.type === 'message_received' ? prefs.emailUnreadDm : prefs.emailDigest === 'instant';
+    let info: Awaited<ReturnType<typeof getDelivery>>;
+    let quiet = false;
+    if (wantsEmail || prefs.quiet.enabled) {
+      info = await getDelivery(n.userId).catch(() => undefined);
+      quiet = isQuietNow(prefs.quiet, info?.timezone ?? DEFAULT_TIMEZONE);
+    }
+    if (!quiet) await emit(n);
+    if (wantsEmail && !quiet && info) await sendEmail(n, info.email);
+  }
+
+  /** Ghi tuần tự (giữ thứ tự), có retry; phát SSE/email chỉ sau khi commit; hỏng hẳn => `fail` (không nuốt im lặng). */
+  function enqueueWrite(n: Notification, prefs: NotificationPreferences, opts: NotifyOptions): void {
     const p = writeChain
       .then(async () => {
         await withRetry(() => repo.add(n));
-        await emit(n);
+        await deliver(n, prefs).catch((e) => console.error('[notifications] phát/email lỗi', n.id, e instanceof Error ? e.message : e));
       })
       .catch((e) => fail(n, e, opts));
     writeChain = p;
     track(p);
   }
 
-  function accept(n: Notification, prefs: NotificationPreferences, opts: NotifyOptions): void {
-    if (!isMandatory(n.type) && !prefs.types[n.type]) {
+  function accept(n: Notification, prefs: NotificationPreferences, opts: NotifyOptions, category?: CommunityPrefKey): void {
+    const key = communityKeyOf(n, category);
+    const mutedHere = key !== undefined && prefs.communityPrefs[n.communityId!]?.[key] === false;
+    if (!isMandatory(n.type) && (!prefs.types[n.type] || mutedHere)) {
       const i = recent.indexOf(n);
       if (i >= 0) recent.splice(i, 1);
       return;
     }
-    enqueueWrite(n, opts);
+    enqueueWrite(n, prefs, opts);
   }
 
   const service = {
@@ -203,16 +269,16 @@ export function createNotificationsService(
      * Trả ngay thông báo (chữ ký cũ). Nếu user tắt loại này thì KHÔNG lưu/không phát (đối tượng trả về chỉ để giữ chữ ký).
      * Phát SSE ngay khi biết preference (đồng bộ nếu cache còn hạn), ghi DB chạy nền.
      */
-    notify(input: Omit<Notification, 'id' | 'readAt' | 'createdAt'>, opts: NotifyOptions = {}): Notification {
+    notify({ category, ...input }: NotifyInput, opts: NotifyOptions = {}): Notification {
       const n: Notification = { ...input, ...(input.communityId ? { courseId: input.communityId } : {}), id: randomUUID(), readAt: null, createdAt: nextTimestamp().toISOString() };
       recent.push(n);
       if (recent.length > RECENT_MAX) recent.shift();
       const hit = prefsCache.get(n.userId);
-      if (hit && hit.exp > Date.now()) accept(n, hit.prefs, opts);
+      if (hit && hit.exp > Date.now()) accept(n, hit.prefs, opts, category);
       else {
         track(
           withRetry(() => loadPreferences(n.userId))
-            .then((prefs) => accept(n, prefs, opts))
+            .then((prefs) => accept(n, prefs, opts, category))
             .catch((e) => fail(n, e, opts)),
         );
       }
@@ -270,9 +336,23 @@ export function createNotificationsService(
         }
       }
       const cur = await service.getPreferences(userId);
+      const quiet = { ...cur.quiet, ...body.quiet };
+      if (quiet.enabled && quiet.from === quiet.to) throw HttpError.badRequest('Giờ bắt đầu và kết thúc giờ im lặng không được trùng nhau');
+      let communityPrefs = cur.communityPrefs;
+      if (body.communityPrefs) {
+        // Chỉ giữ cộng đồng user thật sự còn là thành viên (id lạ bị bỏ, không lưu rác).
+        const mine = new Set((await listCommunityRows(userId)).map((c) => c.id));
+        communityPrefs = {};
+        for (const [id, v] of Object.entries(body.communityPrefs)) if (mine.has(id)) communityPrefs[id] = { ...defaultCommunityPref(), ...v };
+      }
       const next: NotificationPreferences = {
         types: { ...cur.types, ...(body.types as Partial<Record<NotificationType, boolean>> | undefined) },
         emailDigest: body.emailDigest ?? cur.emailDigest,
+        quiet,
+        dmAllowed: body.dmAllowed ?? cur.dmAllowed,
+        emailUnreadDm: body.emailUnreadDm ?? cur.emailUnreadDm,
+        notifyFollowedPosts: body.notifyFollowedPosts ?? cur.notifyFollowedPosts,
+        communityPrefs,
       };
       await repo.setPrefs(userId, next);
       prefsCache.set(userId, { prefs: next, exp: Date.now() + PREFS_TTL_MS });
@@ -280,6 +360,22 @@ export function createNotificationsService(
       void ensureSubscribed();
       await st().pubsub.publish(PREFS_CHANNEL, JSON.stringify({ userId, origin: instanceId })).catch(() => undefined);
       return next;
+    },
+
+    /** Preference + danh sách cộng đồng của user (kèm vai trò và cột nào áp dụng) cho màn Cài đặt > Thông báo. */
+    async getSettings(userId: string) {
+      const [prefs, rows] = await Promise.all([service.getPreferences(userId), listCommunityRows(userId)]);
+      return {
+        ...prefs,
+        communities: rows.map((c) => ({
+          id: c.id,
+          title: c.title,
+          logoUrl: c.logoUrl ?? c.thumbnail ?? null,
+          role: c.role,
+          prefs: { ...defaultCommunityPref(), ...prefs.communityPrefs[c.id] },
+          applicable: Object.fromEntries(COMMUNITY_PREF_KEYS.map((k) => [k, communityKeyApplies(k, c.role)])) as Record<CommunityPrefKey, boolean>,
+        })),
+      };
     },
 
     /** Vé SSE dùng 1 lần, sống 30s: tránh đưa access token (sống lâu hơn) lên URL. Lưu state chia sẻ nên mint ở A redeem được ở B. */
@@ -324,7 +420,7 @@ export const notificationStore = {
   onNew: notificationsService.onNew,
 };
 
-export function notify(input: Omit<Notification, 'id' | 'readAt' | 'createdAt'>, opts?: NotifyOptions): Notification {
+export function notify(input: NotifyInput, opts?: NotifyOptions): Notification {
   return notificationsService.notify(input, opts);
 }
 

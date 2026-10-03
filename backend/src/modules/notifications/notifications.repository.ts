@@ -1,6 +1,6 @@
 import { prisma } from '../../db/prisma.js';
 import type { Notification as Row } from '../../generated/prisma/client.js';
-import { NOTIFICATION_TYPES, type EmailDigest, type Notification, type NotificationPreferences, type NotificationType } from './notifications.types.js';
+import { COMMUNITY_PREF_KEYS, NOTIFICATION_TYPES, type CommunityPref, type EmailDigest, type Notification, type NotificationPreferences, type NotificationType } from './notifications.types.js';
 
 /** Tối đa mỗi user giữ bao nhiêu thông báo (xóa cũ nhất). Thực thi bằng truy vấn xóa, không quét bộ nhớ. */
 export const MAX_PER_USER = 200;
@@ -98,14 +98,62 @@ export const prismaNotificationsRepository: NotificationsRepository = {
     const stored = (r.types ?? {}) as Record<string, unknown>;
     const types = {} as Record<NotificationType, boolean>;
     for (const t of NOTIFICATION_TYPES) if (typeof stored[t] === 'boolean') types[t] = stored[t] as boolean;
-    return { types, emailDigest: r.emailDigest as EmailDigest };
+    const communityPrefs: Record<string, CommunityPref> = {};
+    for (const [id, v] of Object.entries((r.communityPrefs ?? {}) as Record<string, Record<string, unknown>>)) {
+      communityPrefs[id] = Object.fromEntries(COMMUNITY_PREF_KEYS.map((k) => [k, v?.[k] !== false])) as CommunityPref;
+    }
+    return {
+      types,
+      emailDigest: r.emailDigest as EmailDigest,
+      quiet: { enabled: r.quietEnabled, from: r.quietFrom, to: r.quietTo },
+      dmAllowed: r.dmAllowed,
+      emailUnreadDm: r.emailUnreadDm,
+      notifyFollowedPosts: r.notifyFollowedPosts,
+      communityPrefs,
+    };
   },
 
   async setPrefs(userId, prefs) {
-    await prisma.notificationPreference.upsert({
-      where: { userId },
-      create: { userId, types: prefs.types, emailDigest: prefs.emailDigest },
-      update: { types: prefs.types, emailDigest: prefs.emailDigest },
-    });
+    const data = {
+      types: prefs.types,
+      emailDigest: prefs.emailDigest,
+      quietEnabled: prefs.quiet.enabled,
+      quietFrom: prefs.quiet.from,
+      quietTo: prefs.quiet.to,
+      dmAllowed: prefs.dmAllowed,
+      emailUnreadDm: prefs.emailUnreadDm,
+      notifyFollowedPosts: prefs.notifyFollowedPosts,
+      communityPrefs: prefs.communityPrefs,
+    };
+    await prisma.notificationPreference.upsert({ where: { userId }, create: { userId, ...data }, update: data });
   },
 };
+
+/** Email + múi giờ để quyết định gửi mail / giờ im lặng (không nằm trong interface repo để test giả không phải cài thêm). */
+export async function getDeliveryInfo(userId: string): Promise<{ email: string; timezone: string } | undefined> {
+  const u = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, timezone: true, isDemo: true, deletedAt: true } });
+  return u && !u.isDemo && !u.deletedAt ? { email: u.email, timezone: u.timezone } : undefined;
+}
+
+export interface CommunityRow {
+  id: string;
+  title: string;
+  logoUrl: string | null;
+  thumbnail: string;
+  role: 'member' | 'mod' | 'admin' | 'owner';
+}
+
+/** Cộng đồng user đang là thành viên (không bị cấm, chưa xóa, không phải bản nháp) cho bảng "Theo từng cộng đồng". */
+export async function listCommunityRows(userId: string): Promise<CommunityRow[]> {
+  const bans = await prisma.communityBan.findMany({ where: { userId }, select: { communityId: true } });
+  const rows = await prisma.enrollment.findMany({
+    where: {
+      userId,
+      ...(bans.length ? { communityId: { notIn: bans.map((b) => b.communityId) } } : {}),
+      community: { deletedAt: null, moderationStatus: { not: 'draft' } },
+    },
+    select: { role: true, enrolledAt: true, community: { select: { id: true, title: true, logoUrl: true, thumbnail: true } } },
+    orderBy: [{ enrolledAt: 'asc' }, { communityId: 'asc' }],
+  });
+  return rows.map((r) => ({ ...r.community, role: r.role }));
+}

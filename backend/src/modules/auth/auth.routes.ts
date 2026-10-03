@@ -4,16 +4,23 @@ import { requireAuth } from '../../middlewares/auth.js';
 import { isDev, isProd } from '../../config/env.js';
 import { HttpError } from '../../utils/http-error.js';
 import {
+  changeEmailBody,
   changePasswordBody,
   deleteAccountBody,
   forgotPasswordBody,
   loginBody,
+  loginTwoFactorBody,
+  preferencesBody,
   registerBody,
   resetPasswordBody,
+  twoFactorCodeBody,
+  twoFactorDisableBody,
   updateProfileBody,
   verifyEmailBody,
 } from './auth.schema.js';
+import { accountService } from './account.service.js';
 import { authService, FORGOT_PASSWORD_MESSAGE, type AuthSession } from './auth.service.js';
+import { parseUserAgent } from './user-agent.js';
 import { peekSessionId, REFRESH_COOKIE_MAX_AGE_MS, REFRESH_COOKIE_NAME, type SessionMeta } from './tokens.js';
 
 export const authRouter = Router();
@@ -63,7 +70,18 @@ authRouter.post('/register', async (req, res) => {
 
 authRouter.post('/login', loginLimiter, async (req, res) => {
   const body = loginBody.parse(req.body);
-  sendSession(res, await authService.login(body, metaOf(req)));
+  const result = await authService.login(body, metaOf(req));
+  // Bật 2FA: chưa có phiên/cookie, FE gọi tiếp /login/2fa với vé này.
+  if ('twoFactorRequired' in result) {
+    res.json({ data: result });
+    return;
+  }
+  sendSession(res, result);
+});
+
+authRouter.post('/login/2fa', async (req, res) => {
+  const { ticket, code } = loginTwoFactorBody.parse(req.body);
+  sendSession(res, await authService.loginTwoFactor(ticket, code, metaOf(req)));
 });
 
 authRouter.post('/refresh', async (req, res) => {
@@ -94,6 +112,15 @@ authRouter.patch('/me', requireAuth, async (req, res) => {
   res.json({ data: await authService.updateProfile(req.userId!, body) });
 });
 
+// Điều kiện đang chặn xóa tài khoản (FE hiện ở thẻ "Xóa tài khoản"); cùng dữ liệu với `details` của 409 ACCOUNT_DELETE_BLOCKED.
+authRouter.get('/me/delete-blockers', requireAuth, async (req, res) => {
+  res.json({ data: await accountService.deleteBlockers(req.userId!) });
+});
+
+authRouter.patch('/me/preferences', requireAuth, async (req, res) => {
+  res.json({ data: await accountService.updatePreferences(req.userId!, preferencesBody.parse(req.body)) });
+});
+
 authRouter.delete('/me', requireAuth, async (req, res) => {
   const { password } = deleteAccountBody.parse(req.body ?? {});
   await authService.deleteAccount(req.userId!, password);
@@ -122,6 +149,26 @@ authRouter.post('/change-password', requireAuth, async (req, res) => {
   res.json({ data: { message: 'Đổi mật khẩu thành công' } });
 });
 
+// Đổi email: lưu email chờ + gửi link xác nhận tới email mới (xác nhận qua /verify-email). Rate limit như quên mật khẩu.
+authRouter.post('/change-email', requireAuth, forgotLimiter, async (req, res) => {
+  const { newEmail, password } = changeEmailBody.parse(req.body);
+  res.status(202).json({ data: await accountService.changeEmail(req.userId!, newEmail, password) });
+});
+
+authRouter.post('/2fa/setup', requireAuth, async (req, res) => {
+  res.json({ data: await accountService.setupTwoFactor(req.userId!) });
+});
+
+authRouter.post('/2fa/enable', requireAuth, async (req, res) => {
+  const { code } = twoFactorCodeBody.parse(req.body);
+  res.json({ data: await accountService.enableTwoFactor(req.userId!, code) });
+});
+
+authRouter.post('/2fa/disable', requireAuth, async (req, res) => {
+  const { code, password } = twoFactorDisableBody.parse(req.body);
+  res.json({ data: await accountService.disableTwoFactor(req.userId!, code, password) });
+});
+
 authRouter.post('/send-verification', requireAuth, async (req, res) => {
   await authService.sendVerification(req.userId!);
   res.status(202).json({ data: { message: 'Đã gửi email xác thực' } });
@@ -134,7 +181,15 @@ authRouter.post('/verify-email', async (req, res) => {
 
 authRouter.get('/sessions', requireAuth, async (req, res) => {
   const currentSid = req.sessionId ?? (await peekSessionId(req.cookies?.[REFRESH_COOKIE_NAME]));
-  res.json({ data: (await authService.listSessions(req.userId!)).map((s) => ({ ...s, current: s.id === currentSid })) });
+  res.json({ data: (await authService.listSessions(req.userId!)).map((s) => ({ ...s, current: s.id === currentSid, device: parseUserAgent(s.userAgent) })) });
+});
+
+// Đăng xuất mọi thiết bị KHÁC, giữ thiết bị đang dùng (khác /logout-all thu hồi tất cả).
+authRouter.post('/sessions/revoke-others', requireAuth, async (req, res) => {
+  const keepSid = req.sessionId ?? (await peekSessionId(req.cookies?.[REFRESH_COOKIE_NAME]));
+  if (!keepSid) throw HttpError.badRequest('Không xác định được phiên hiện tại');
+  await authService.logoutOthers(req.userId!, keepSid);
+  res.status(204).end();
 });
 
 authRouter.delete('/sessions/:id', requireAuth, async (req, res) => {

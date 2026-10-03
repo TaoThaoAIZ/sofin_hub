@@ -79,8 +79,8 @@ export function Header({ active = 'Khám phá' }: { active?: string }) {
                 <div className="truncate px-3 py-1.5 text-stone-500">{user.email}</div>
                 {[
                   { label: 'Hồ sơ của tôi', to: `/users/${user.id}` },
+                  { label: 'Cài đặt hồ sơ', to: '/settings' },
                   { label: 'Cộng đồng của tôi', to: '/me/communities' },
-                  { label: 'Cài đặt tài khoản', to: '/settings' },
                   { label: 'Thông báo', to: '/notifications' },
                   { label: 'Tin nhắn', to: '/messages' },
                   { label: 'Gói & thanh toán', to: '/billing' },

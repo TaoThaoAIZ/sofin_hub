@@ -352,7 +352,7 @@ describe('wizard tạo cộng đồng: nháp, slug, publish, câu hỏi gia nh�
       assert.deepEqual(Object.keys(rows[0]!).sort(), ['brand', 'createdAt', 'expMonth', 'expYear', 'gatewayToken', 'id', 'last4', 'userId']);
       assert.ok(!/\d{13,19}/.test(JSON.stringify(rows)));
       const mine = await c.call('GET', '/me/payment-methods', { token: u.token });
-      assert.deepEqual(Object.keys(mine.body.data[0]).sort(), ['brand', 'createdAt', 'expMonth', 'expYear', 'id', 'last4']);
+      assert.deepEqual(Object.keys(mine.body.data[0]).sort(), ['brand', 'createdAt', 'expMonth', 'expYear', 'id', 'isDefault', 'last4']);
     });
   });
 

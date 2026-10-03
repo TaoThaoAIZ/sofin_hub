@@ -13,12 +13,14 @@ import {
   listPayoutsQuery,
   listRefundsQuery,
   paginationQuery,
+  paymentMethodInput,
   refundRequestBody,
   resolvePayoutBody,
   resolveRefundBody,
   revenueQuery,
 } from './payments.schema.js';
 import { paymentsService } from './payments.service.js';
+import { billingSummary, cardsService } from './payments.cards.js';
 
 export const paymentsRouter = Router();
 const id = (v: unknown) => v as string;
@@ -41,7 +43,28 @@ paymentsRouter.get('/courses/:id/checkout-quote', optionalAuth, async (req, res)
 });
 
 paymentsRouter.get('/me/payment-methods', requireAuth, async (req, res) => {
-  res.json({ data: await paymentsService.myCards(req.userId!) });
+  res.json({ data: await cardsService.list(req.userId!) });
+});
+
+// Quản lý thẻ ở Cài đặt > Thanh toán (chỉ token + brand/last4/hạn; xem payments.cards.ts).
+paymentsRouter.post('/me/payment-methods', requireAuth, async (req, res) => {
+  res.status(201).json({ data: await cardsService.add(req.userId!, paymentMethodInput.parse(req.body)) });
+});
+
+paymentsRouter.put('/me/payment-methods/:cardId', requireAuth, async (req, res) => {
+  res.json({ data: await cardsService.replace(req.userId!, id(req.params.cardId), paymentMethodInput.parse(req.body)) });
+});
+
+paymentsRouter.patch('/me/payment-methods/:cardId/default', requireAuth, async (req, res) => {
+  res.json({ data: await cardsService.setDefault(req.userId!, id(req.params.cardId)) });
+});
+
+paymentsRouter.delete('/me/payment-methods/:cardId', requireAuth, async (req, res) => {
+  res.json({ data: await cardsService.remove(req.userId!, id(req.params.cardId)) });
+});
+
+paymentsRouter.get('/me/billing-summary', requireAuth, async (req, res) => {
+  res.json({ data: await billingSummary(req.userId!) });
 });
 
 paymentsRouter.post('/payments/:paymentIntentId/confirm', requireAuth, async (req, res) => {

@@ -64,11 +64,12 @@ notificationsRouter.get('/notifications/unread-count', requireAuth, async (req, 
 });
 
 notificationsRouter.get('/notifications/preferences', requireAuth, async (req, res) => {
-  res.json({ data: await notificationsService.getPreferences(req.userId!) });
+  res.json({ data: await notificationsService.getSettings(req.userId!) });
 });
 
 notificationsRouter.put('/notifications/preferences', requireAuth, async (req, res) => {
-  res.json({ data: await notificationsService.updatePreferences(req.userId!, updatePreferencesBody.parse(req.body)) });
+  await notificationsService.updatePreferences(req.userId!, updatePreferencesBody.parse(req.body));
+  res.json({ data: await notificationsService.getSettings(req.userId!) });
 });
 
 notificationsRouter.post('/notifications/read-all', requireAuth, async (req, res) => {

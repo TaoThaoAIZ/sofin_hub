@@ -262,6 +262,20 @@ WIZ_DATA = [
 ]
 
 
+# Luồng "Cài đặt hồ sơ" (2026-10-08): dữ liệu/ môi trường dùng trong module SETP, SETS, SETN, SETC, SETB, SETR.
+SET_DATA = [
+    ("Tài khoản dùng cho UI Cài đặt", "member1@ / owner@ / cadmin@ / mod@ / admin@ (mật khẩu Passw0rd!x)",
+     "member1: thành viên photo/yt/fin + gói ở paid-demo (xem bảng B/C), email đã xác minh; owner: chủ nhiều cộng đồng + 3 nháp wizard (bị chặn xóa tài khoản vì là chủ cộng đồng); cadmin/mod: admin/mod của photo (nhãn 'Quản trị viên'/'Điều hành viên'); admin: Platform Admin (có mục 'Quản trị' ở menu avatar). Case ghi dữ liệu dùng NGƯỜI DÙNG MỚI (đăng ký ở /register) để tránh dính dữ liệu cũ.", "member1@, owner@, cadmin@, mod@, admin@"),
+    ("Cổng & email dev", "GET /api/dev/outbox?to=<email> (ENABLE_DEV_OUTBOX=1)", "Đọc thư xác minh email, thư đổi email (gửi tới email MỚI), thư nhắc dùng thử, email thông báo 'Ngay lập tức', email tin nhắn chưa đọc. Không có SMTP thật.", "SETS, SETN, SETB"),
+    ("Ứng dụng/công cụ TOTP", "Google Authenticator/Authy hoặc 'oathtool --totp -b <secret>'", "Secret base32 32 ký tự lấy từ modal 'Bật xác minh 2 bước' (khóa nhập tay) hoặc POST /auth/2fa/setup. Đồng hồ máy phải đúng; mã bước hiện tại đã dùng để bật 2FA KHÔNG dùng lại được (chống replay) - chờ sang bước 30 giây kế tiếp.", "SETS"),
+    ("Thẻ test & token", "4242 4242 4242 4242 Visa · 5555 5555 5555 4444 Mastercard · 3782 822463 10005 Amex (CVC 4 số) · 6011 1111 1111 1117 Discover · 3530 1113 3330 0000 JCB; sai Luhn 4242 4242 4242 4241", "Hạn tương lai (vd. 12/29), CVC 123. FE tokenise phía client thành tok_mock_<hex>; chỉ token + brand + last4 + hạn gửi lên (STRICT, không PAN/CVC). Giới hạn 10 thẻ/người; CARD_EXISTS, CARD_IN_USE.", "SETB"),
+    ("Cộng đồng có phí để mua gói", "paid-demo ($19/tháng), annual-demo ($7/tháng + $48/năm, thử 7 ngày), hoặc tạo bằng POST /communities {priceUsd, priceAnnualUsd}", "Mua ở /communities/<id>/checkout bằng thẻ test, confirm bằng POST /payments/<id>/confirm. Hoàn tiền tự duyệt trong cửa sổ 7 ngày (giá trị TẠM), ngoài cửa sổ chờ admin (ép lùi ngày bằng SQL).", "SETB, SETR"),
+    ("Chương trình giới thiệu", "referral.creatorRateBps=3000, referral.memberRateBps=1000, referral.attributionDays=60, referral.payoutDay=5", "Giá trị TẠM từ mockup (OPEN_DECISIONS A17). Người giới thiệu R lấy mã ở /settings/gioi-thieu (hoặc GET /me/referral); người được giới thiệu F đăng ký qua /gioi-thieu/<mã> hoặc ?ref=<mã>. Hoa hồng member = 10% số tiền khách trả ($10 -> 100¢). Hoa hồng creator = 0 vì chưa có luồng trừ tiền gói hosting. Chỉnh bằng PATCH /api/admin/system/settings {\"referral\":{...}}, đặt lại bằng .../settings/reset hoặc npm run db:reset.", "SETR"),
+    ("Giờ im lặng & thông báo", "User.timezone + notifications.quiet.ts (isQuietNow)", "Case runtime đặt khoảng im lặng chứa giờ hiện tại theo múi giờ của người nhận; case hàm thuần chạy bằng 'npx tsx -e' trong thư mục backend. Email digest daily/weekly chưa có job gửi.", "SETN"),
+    ("Dữ liệu ép bằng SQL", "docker exec -it sofinhub-postgres psql ...", "bio dài 300 ký tự (case bio cũ), hạn thẻ quá khứ, trạng thái gói expired/past_due/paused, lùi ngày thanh toán >7 ngày (hoàn tiền chờ duyệt), hết hạn token verify-email, ReferralCommission tháng trước (delta %). Case MUTATE cần npm run db:reset sau khi chạy.", "SETP, SETS, SETB, SETR"),
+]
+
+
 def build_accounts_sheet(wb):
     ws = wb.create_sheet("Tài khoản & dữ liệu test")
     _title(ws, "TÀI KHOẢN & DỮ LIỆU TEST — SOFINHUB", 6)
@@ -287,6 +301,8 @@ def build_accounts_sheet(wb):
     r = _table(ws, r, ["Chủ đề", "Cấu hình / lệnh", "Cách dùng", "Dùng cho"], AUDIT_ENV, code_cols=(2,))
     r = _h2(ws, r, "A9. Dữ liệu seed wizard 'Tạo cộng đồng' + gói năm (module WIZ, ANN) - nháp của owner, annual-demo, danh mục mới, thẻ/token test, cài đặt owner.*")
     r = _table(ws, r, ["Nhóm", "Mã / ID", "Mô tả & số liệu", "Tài khoản liên quan"], WIZ_DATA, code_cols=(2,))
+    r = _h2(ws, r, "A10. Dữ liệu / môi trường cho luồng 'Cài đặt hồ sơ' (module SETP, SETS, SETN, SETC, SETB, SETR) - tài khoản, email dev, TOTP, thẻ test, gói, giới thiệu, SQL ép dữ liệu")
+    r = _table(ws, r, ["Nhóm", "Mã / ID", "Mô tả & số liệu", "Tài khoản / module liên quan"], SET_DATA, code_cols=(2,))
     r = _h2(ws, r, "B. Ma trận thành viên cộng đồng (Enrollment seed)")
     matrix = [
         ("photo", "owner", "cadmin (admin), mod (mod)", "member1, member2, member3", "banned (CommunityBan)", "Chưa: newbie"),
@@ -314,11 +330,11 @@ def build_changelog_sheet(wb, stats):
     stats["adm_count"] = next((nw for (c, n, o, nw) in stats["by_module"] if c == "ADM"), 0)
     stats["adm2_count"] = next((nw for (c, n, o, nw) in stats["by_module"] if c == "ADM2"), 0)
     stats["adm3_count"] = next((nw for (c, n, o, nw) in stats["by_module"] if c == "ADM3"), 0)
-    for _code in ("SECX", "MONEY", "GAME", "INFRA", "PERF", "SPLIT", "WIZ", "ANN"):
+    for _code in ("SECX", "MONEY", "GAME", "INFRA", "PERF", "SPLIT", "WIZ", "ANN", "SETP", "SETS", "SETN", "SETC", "SETB", "SETR"):
         stats[_code.lower() + "_count"] = next((nw for (c, n, o, nw) in stats["by_module"] if c == _code), 0)
     """stats: dict(old_total, new_total, by_module=[(code,name,old,new)], flipped=int, still_plan=int)"""
     ws = wb.create_sheet("Nhật ký thay đổi")
-    _title(ws, "NHẬT KÝ THAY ĐỔI — 2026-09-30 (BACKEND + FRONTEND) · 2026-10-01 (ADMIN CONSOLE ĐỢT 1) · 2026-10-02 (ADMIN CONSOLE ĐỢT 2) · 2026-10-03 (ADMIN CONSOLE ĐỢT 3) · 2026-10-04..06 (AUDIT BACKEND HARDENING BƯỚC 1-8) · 2026-10-07 (WIZARD TẠO CỘNG ĐỒNG + GÓI NĂM)", 5)
+    _title(ws, "NHẬT KÝ THAY ĐỔI — 2026-09-30 (BACKEND + FRONTEND) · 2026-10-01 (ADMIN CONSOLE ĐỢT 1) · 2026-10-02 (ADMIN CONSOLE ĐỢT 2) · 2026-10-03 (ADMIN CONSOLE ĐỢT 3) · 2026-10-04..06 (AUDIT BACKEND HARDENING BƯỚC 1-8) · 2026-10-07 (WIZARD TẠO CỘNG ĐỒNG + GÓI NĂM) · 2026-10-08 (CÀI ĐẶT HỒ SƠ)", 5)
     ws.cell(row=2, column=1, value="Ghi lại theo thứ tự thực hiện những gì đã làm và tác động tới bộ test case.").font = BOLD
     r = 4
     r = _h2(ws, r, "A. Những gì đã làm (theo thứ tự)")
@@ -434,6 +450,36 @@ def build_changelog_sheet(wb, stats):
     ]
     r = _table(ws, r, ["Ngày", "Hạng mục", "Nội dung đã làm", "Tài liệu / nguồn", "Ảnh hưởng tới test case"], wiz_log)
 
+    r = _h2(ws, r, "A7. 2026-10-08 - Luồng 'Cài đặt hồ sơ' (6 tab: Hồ sơ, Thông báo, Tài khoản & bảo mật, Thanh toán, Cộng đồng của tôi, Chương trình giới thiệu)")
+    set_log = [
+        ("2026-10-08", "Khung /settings + tab Hồ sơ và Tài khoản & bảo mật (BE + FE) - module SETP, SETS",
+         "FE features/settings (SettingsLayout, topbar, sidebar 6 mục + thẻ quảng bá theo tab, lưới 3/2/1 cột), /billing -> /settings/thanh-toan, /me/communities -> /settings/cong-dong. Hồ sơ: ảnh đại diện upload thật, họ/tên, handle (kiểm tra trực tiếp), bio <= 150, Website/Instagram/YouTube/Thành phố, showOnMap, thẻ xem trước. "
+         "Bảo mật: đổi email (link tới email MỚI, dùng lại token verify-email, pendingEmail), đổi mật khẩu (passwordChangedAt), 2FA TOTP (setup/enable/disable, vé đăng nhập bước 2, chống replay, 8 lần/5 phút), thiết bị (parse User-Agent, revoke-others), ngôn ngữ/múi giờ/giao diện (chỉ lưu), xóa tài khoản (điều kiện chặn ACCOUNT_DELETE_BLOCKED). "
+         "BE: PATCH /auth/me mở rộng, GET /users/handle-available, GET /users/:idOrHandle, PATCH /auth/me/preferences, POST /auth/change-email, /auth/2fa/*, /auth/login/2fa, /auth/sessions/revoke-others, GET /auth/me/delete-blockers. Gỡ file cũ features/account/components/{ProfileForm,PasswordForm,SessionsPanel,DeleteAccountPanel,VerifyBanner}.",
+         "docs/features/settings-profile-security.md, backend/docs/api/settings-account.md, backend/tests/account-settings.test.ts, mockup scratchpad/cdhs/template.html",
+         f"Module SETP ({stats['setp_count']} case: khung/điều hướng, hồ sơ UI + API) và SETS ({stats['sets_count']} case: email, mật khẩu, 2FA, thiết bị, ngôn ngữ/giao diện, xóa tài khoản, bảo mật). Case 'HIỆN TẠI'/'KỲ VỌNG' trạng thái 'Kế hoạch' ghi lại: ngôn ngữ/giao diện chỉ lưu, không có theo dõi (ô giữa thẻ xem trước hiển thị điểm), không có ảnh bìa, không mã khôi phục 2FA, secret TOTP lưu thô, không hủy được email chờ, thiết bị chỉ có IP."),
+        ("2026-10-08", "Tab Thông báo và Cộng đồng của tôi (BE + FE) - module SETN, SETC",
+         "BE: GET/PUT /notifications/preferences mở rộng (emailDigest, quiet {enabled,from,to}, dmAllowed, emailUnreadDm, notifyFollowedPosts, communityPrefs 5 cột); thực thi: email instant, giờ im lặng theo múi giờ (lưu nhưng không SSE/email), dmAllowed=false -> 403 DM_DISABLED, email tin nhắn chưa đọc, tắt cột theo cộng đồng. Module my-communities: GET /me/communities, PATCH :id {sidebarVisible,pinned}, PUT /order, DELETE :id (rời), GET /me/join-requests. "
+         "FE: NotifyTab (bảng theo cộng đồng), CommunitiesTab (kéo-thả, ghim, công tắc thanh bên, rời, Đang chờ, Bản nháp, Điểm của tôi chuyển từ trang cũ).",
+         "docs/features/settings-notify-communities.md, backend/docs/api/settings-notify-communities.md, backend/tests/{notifications-settings,my-communities}.test.ts",
+         f"Module SETN ({stats['setn_count']} case) và SETC ({stats['setc_count']} case). Gồm case giờ im lặng qua nửa đêm/múi giờ (chạy hàm isQuietNow bằng npx tsx), DM_DISABLED, mute theo cột, email instant. Kế hoạch: digest daily/weekly chưa có job gửi, cột 'Bài nổi bật' và 'theo dõi' chỉ lưu, sidebarVisible/pinned chỉ ảnh hưởng trang Cài đặt, lời mời (invites) luôn rỗng, ghim không giới hạn 1, nhãn 'Chủ sở hữu' khác 'Chủ cộng đồng'."),
+        ("2026-10-08", "Tab Thanh toán và Chương trình giới thiệu (BE + FE) - module SETB, SETR",
+         "BE: /me/payment-methods (thêm/sửa/mặc định/xóa, CARD_LIMIT/CARD_EXISTS/CARD_IN_USE, thẻ mặc định = createdAt mới nhất), GET /me/billing-summary (gói năm /12), refundStatus ở /me/payments; referrals (ReferralCode/Referral/ReferralCommission, GET /me/referral*, ghi nhận khi POST /auth/register {referralCode}, hoa hồng member 10% sau commit, void khi hoàn tiền, job referrals.reconcile, Global Settings referral.*). "
+         "FE: BillingTab (thẻ, thẻ tối 'Lần trừ tiền tiếp theo', gói thành viên + Quản lý/hủy ngay/kích hoạt lại/hoàn tiền, lịch sử + hóa đơn + CSV), ReferralTab, /gioi-thieu/:code và ?ref=.",
+         "docs/features/settings-billing-referral.md, backend/docs/api/{payments,referrals}.md, docs/OPEN_DECISIONS.md A16/A17, backend/tests/{payment-cards,referrals}.test.ts",
+         f"Module SETB ({stats['setb_count']} case) và SETR ({stats['setr_count']} case). Số liệu chính xác: $7 + $48/12 = 1100¢, hoa hồng $10 -> 100¢ (memberRateBps 2500 -> 250¢), 30%/10%/60 ngày/ngày 5 là giá trị TẠM [PHỤ THUỘC QUYẾT ĐỊNH CHƯA CHỐT] (A17). Kế hoạch: tiền tệ USD vs VND của mockup (A16), Luhn chỉ ở client, hoa hồng creator = 0 (hosting mô phỏng), không có job pending -> paid, modal hoàn tiền ghi cứng '7 ngày', CSV cắt 2.000 giao dịch, 'Cài đặt nhận tiền' chỉ mở tab thanh toán, mô tả 'bật chương trình giới thiệu thành viên' không có công tắc."),
+        ("2026-10-08", "Bộ test QA: thêm 6 module SETP, SETS, SETN, SETC, SETB, SETR",
+         f"Thêm qa/cases_settings.py: SETP {stats['setp_count']} + SETS {stats['sets_count']} + SETN {stats['setn_count']} + SETC {stats['setc_count']} + SETB {stats['setb_count']} + SETR {stats['setr_count']} = {stats['setp_count'] + stats['sets_count'] + stats['setn_count'] + stats['setc_count'] + stats['setb_count'] + stats['setr_count']} case. Workbook từ 28 lên 34 sheet module (đặt sau ANN). Cột 'Phù hợp Playwright' theo mô hình hai người test: giao diện 'Có'/'Một phần'; API, email thật, ứng dụng TOTP, ép thời gian/SQL, job nền = 'Không' (chỉ Test 2). Test 1/Test 2 của case mới đều 'Chưa test'; Playwright KHÔNG tự chạy.",
+         "qa/cases_settings.py, qa/gen_testcases.py (CASE_MODULES), qa/split_sheets.py (SHORT_NAMES/ORDER), qa/sheets_extra.py (mục A10 + nhật ký A7), qa/README.md",
+         "Mã TC các module cũ không đổi; kết quả Pass/Fail cũ giữ nguyên. Sheet 'Tài khoản & dữ liệu test' thêm mục A10; mục C 'Còn mô phỏng/ chưa làm' thêm dòng Cài đặt. Case cũ nhắc 'đổi email/ 2FA chưa làm' (AUTH/ADM3) có thể lỗi thời với tài khoản người dùng thường - xem module SETS."),
+        ("2026-10-08", "Lệch tài liệu / code / giao diện phát hiện khi viết case (ghi 'HIỆN TẠI'/'KỲ VỌNG', trạng thái 'Kế hoạch')",
+         "(1) FE ô Thành phố cho gõ 300 ký tự nhưng BE giới hạn location 120. (2) Modal hoàn tiền ghi cứng '7 ngày đầu' trong khi cửa sổ hoàn tiền cấu hình được. (3) Nhãn owner 'Chủ sở hữu' (tab Cộng đồng) và 'Chủ cộng đồng' (tab Thông báo). (4) Tab Thông báo không có thẻ quảng bá riêng (fallback 'Nâng cấp tài khoản'). (5) Mô tả tab giới thiệu thành viên 'cộng đồng có bật chương trình giới thiệu thành viên' nhưng không có công tắc nào. "
+         "(6) Link 'Cài đặt nhận tiền' mở tab thanh toán thẻ, không phải cấu hình nhận hoa hồng. (7) Mod/Admin (không phải owner) nằm trong 'Tôi quản lý' nhưng chỉ có nút 'Mở'. (8) Bật 2FA xong không tắt ngay được bằng cùng mã (chống replay) - dễ gây khó hiểu. (9) docs/features/settings-profile-security.md ghi 'Chưa thêm test case vào xlsx' - nay đã có SETP/SETS. (10) Mockup thẻ xem trước có 'theo dõi', ảnh bìa đổi được, tên thiết bị/ thành phố cụ thể, ẩn 'Xóa thẻ' khi chỉ 1 thẻ, tiền VND - UI hiện khác (xem Kế hoạch).",
+         "frontend/src/features/settings/**, backend/src/modules/auth/auth.schema.ts, docs/features/settings-*.md, mockup template.html",
+         "Mỗi điểm có case 'Kế hoạch' tương ứng ở SETP/SETS/SETN/SETC/SETB/SETR để tester không báo lỗi trùng."),
+    ]
+    r = _table(ws, r, ["Ngày", "Hạng mục", "Nội dung đã làm", "Tài liệu / nguồn", "Ảnh hưởng tới test case"], set_log)
+
     r = _h2(ws, r, "B. Giá trị TẠM chưa chốt (đang dùng cấu hình mặc định, test theo hành vi thực tế)")
     pending = [
         ("Hoa hồng nền tảng", "10% (PLATFORM_COMMISSION_PCT) + phí cổng 2.9% + 30¢ (GATEWAY_FEE_PCT, GATEWAY_FEE_FIXED_CENTS)", "Chờ chốt mô hình doanh thu (PLAN câu hỏi #6)", "PAY: công thức doanh thu ròng/số dư owner"),
@@ -453,13 +499,16 @@ def build_changelog_sheet(wb, stats):
         ("Các giá trị tiền tạm ở trên (hoa hồng, phí cổng, cửa sổ hoàn tiền, rút tối thiểu, dùng thử, chu kỳ gói)", "Từ 2026-10-03 chỉnh được ở Admin > Hệ thống > Cài đặt chung (PATCH /api/admin/system/settings), mặc định vẫn lấy từ env và Khôi phục được", "Giá trị cuối cùng vẫn chưa chốt", "ADM3: nhóm case 'Cài đặt chung: hiệu lực thật lên thanh toán' + case Kế hoạch 'Giá trị nghiệp vụ tạm...'"),
         ("Công thức điểm chất lượng tìm kiếm", "40×rating/5 + 25×tương tác + 15 (mô tả ≥80 ký tự) + 10 (ảnh bìa) + 10 (bài 30 ngày) − 8×vi phạm", "Chưa chốt", "ADM2: Hiển thị tìm kiếm"),
         ("Gói hosting của owner (A16)", "Khởi đầu 0đ (phí 10%) vs Chuyên nghiệp 299.000đ/tháng - 2.990.000đ/năm (phí 2,9%), dùng thử 14 ngày, nhắc 3 ngày, tiền tệ VND (owner.*); không bắt buộc (owner.requirePlan=false); điều kiện Khám phá (10 thành viên, bài 7 ngày) chỉ hiển thị", "Chưa chốt (docs/OPEN_DECISIONS.md A16): MÔ PHỎNG, không trừ tiền khi hết thử", "WIZ: nhóm Bước 2, API gói owner, Global Settings owner.*, điểm chưa làm; ANN: tiền tệ lẫn lộn"),
+        ("Chương trình giới thiệu (A17)", "Hoa hồng creator 30% (3000 bps), member 10% (1000 bps), cửa sổ ghi nhận 60 ngày kể từ lúc đăng ký, chi trả ngày 5 tháng sau, hoa hồng định kỳ (cửa sổ chỉ xét ở lần thanh toán đầu), tính trên số tiền khách trả, chỉ hủy hoa hồng pending khi hoàn tiền toàn bộ; chưa có job pending -> paid, hoa hồng creator chưa phát sinh", "Chưa chốt (A17)", "SETR: KPI, hoa hồng, Global Settings referral.* ([PHỤ THUỘC QUYẾT ĐỊNH CHƯA CHỐT])"),
+        ("Đơn vị tiền ở Cài đặt > Thanh toán / Giới thiệu", "Gói thành viên USD ($7.00), gói hosting & hoa hồng creator VND; mockup hiển thị VND (149.000đ)", "Chưa chốt (A16/A17)", "SETB, SETR: case 'Kế hoạch' về tiền tệ"),
         ("Gói thành viên theo năm", "Kỳ năm 365 ngày (payments.annualPeriodDays), giá năm <= 12 x giá tháng, savings làm tròn, dùng thử thành viên 7 ngày + nhắc 3 ngày (payments.trialReminderDays), hoàn tiền gói năm trong cửa sổ 7 ngày, 'Phổ biến nhất' cố định ở gói tháng", "Chưa chốt (cùng nhóm giá trị tiền tạm)", "ANN: quote, checkout năm, gia hạn/hoàn tiền, nhắc dùng thử"),
     ]
     r = _table(ws, r, ["Hạng mục", "Giá trị tạm hiện tại", "Trạng thái", "Ảnh hưởng tới test"], pending)
 
     r = _h2(ws, r, "C. Còn mô phỏng / chưa làm (giữ 'Kế hoạch' trong test case)")
     todo = [
-        ("Đăng nhập Google/Facebook, 2FA, đổi email", "Chưa làm (nút chỉ hiển thị hoặc không có)."),
+        ("Đăng nhập Google/Facebook", "Chưa làm (nút chỉ hiển thị hoặc không có). 2FA TOTP và đổi email của NGƯỜI DÙNG đã làm 2026-10-08 (module SETS); 2FA của nhân viên admin vẫn chỉ là cờ."),
+        ("Cài đặt hồ sơ - chưa làm / mô phỏng", "i18n và dark mode (ngôn ngữ/giao diện chỉ lưu; múi giờ chỉ dùng cho giờ im lặng), theo dõi người dùng (notifyFollowedPosts, ô 'theo dõi' của thẻ xem trước), ảnh bìa hồ sơ, mã khôi phục 2FA + mã hóa secret, hủy email chờ xác nhận, geo-IP thiết bị, email tổng hợp daily/weekly + gửi bù email trong giờ im lặng, nguồn thông báo 'Bài nổi bật', lời mời theo người nhận, thanh bên cộng đồng toàn cục, hoa hồng creator (hosting mô phỏng), job chi trả pending -> paid, cột isDefault cho thẻ."),
         ("PDF chứng nhận", "Chưa làm (hiện chỉ trang chứng nhận + xác minh công khai)."),
         ("Tìm kiếm Postgres full-text", "ĐÃ LÀM 2026-10-05 (module PERF): tsvector + GIN + pg_trgm; còn thiếu tìm trong bình luận, sự kiện, bài học lớp học; chưa khớp chuỗi con giữa từ cho nội dung bài."),
         ("Email thật", "Chỉ ghi vào outbox dev (GET /api/dev/outbox), chưa nối SES/SMTP -> các case 'nhận email' giữ 'Kế hoạch'."),
@@ -649,6 +698,7 @@ RULES = [
     ("Guard rút tiền theo payout (từ 2026-10-07)", "Cộng đồng có PayoutAccount 'skipped' bị chặn rút (400 PAYOUT_ACCOUNT_REQUIRED) cho tới khi kết nối; 'connected' thì không cần gửi method; cộng đồng tạo kiểu cũ (không bản ghi) giữ luồng cũ. Ra mắt bằng wizard mà không qua bước payout mặc định 'skipped'."),
     ("Gói hosting của owner & payout là MÔ PHỎNG (A16)", "Chỉ owner (requireRole) đọc/sửa; không trừ tiền thật, không KYC. Cột 'Super Admin' đọc được vì thứ bậc platform_admin > owner."),
     ("Câu trả lời join request chỉ cho admin+ (từ 2026-10-07)", "Bản chụp [{question, answer}] nằm ở GET /communities/:id/join-requests (admin+, member 403); FE admin hiện chưa hiển thị. requireRulesAgreement chỉ ép ở join-requests (acceptRules)."),
+    ("Cài đặt cá nhân chỉ tác động chủ tài khoản (từ 2026-10-08)", "Hồ sơ, tùy chọn, đổi email/mật khẩu, 2FA, phiên đăng nhập, thẻ thanh toán, tùy chọn thông báo, cộng đồng của tôi, mã giới thiệu đều lấy chủ thể từ access token (không có tham số userId). Thẻ/phiên/cộng đồng của người khác trả 404 (không lộ tồn tại); secret TOTP chỉ trả ở /auth/2fa/setup; server không bao giờ nhận số thẻ/CVC. Người được giới thiệu chỉ lộ tên/ảnh/cộng đồng/số tiền cho người giới thiệu (404 với người lạ)."),
 ]
 
 NOT_BUILT = [

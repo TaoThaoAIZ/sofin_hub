@@ -147,3 +147,21 @@ Quyết định thiết kế:
 Chạy test: `npm test` dùng `--test-concurrency=16` vì Postgres local `max_connections=100` — ~38 file test chạy hết song song, mỗi file một pool kết nối, sẽ gặp "too many clients".
 
 Chưa làm / cần quyết định: trừ tiền thật gói owner; đổi chu kỳ (tháng↔năm) của gói đang sống; nâng/hạ cấp có proration; thẻ hết hạn trước ngày gia hạn (chỉ biết khi cổng từ chối); xóa thẻ đã lưu.
+
+## Quản lý thẻ & tổng quan thanh toán (Cài đặt > Thanh toán, 2026-10-08)
+Code: `src/modules/payments/payments.cards.ts`, route trong `payments.routes.ts`. Test: `tests/payment-cards.test.ts`. Body thẻ = `paymentMethodInput` (STRICT, token + brand/last4/hạn — không có số thẻ/CVC; **Luhn chỉ kiểm được ở client** vì server không bao giờ thấy PAN, server kiểm định dạng token/brand/last4 và hạn dùng).
+
+| Method · Path | Body | Response | Lỗi |
+|---|---|---|---|
+| `GET /me/payment-methods` | | `SavedCard[]` = `{ id, brand, last4, expMonth, expYear, createdAt, isDefault }` (mặc định đứng đầu) | |
+| `POST /me/payment-methods` | `PaymentMethodInput` | 201 `SavedCard` (thẻ đầu tiên là mặc định; thẻ sau không đổi mặc định) | 400 thẻ hết hạn/trường lạ/token sai, 400 `CARD_LIMIT` (tối đa 10), 409 `CARD_EXISTS` (trùng token hoặc trùng brand+4 số+hạn) |
+| `PUT /me/payment-methods/:id` | `PaymentMethodInput` | `SavedCard` — thay thông tin của đúng thẻ này ("Cập nhật thẻ"), giữ id/vị trí mặc định/gói đang gắn | 404, 409 `CARD_EXISTS`, 400 |
+| `PATCH /me/payment-methods/:id/default` | | `SavedCard[]` đã sắp xếp; gói đang sống chưa hủy chuyển sang thẻ này để gia hạn | 404 |
+| `DELETE /me/payment-methods/:id` | | `SavedCard[]` còn lại | 404, 409 `CARD_IN_USE` |
+| `GET /me/billing-summary` | | `{ currency:'USD', next: { amountCents, date, communityId, communityTitle, trialing } \| null, monthlyTotalCents, activeCount }` | |
+
+- **Thẻ mặc định** = thẻ có `createdAt` **mới nhất** (bảng `PaymentCard` chưa có cột `isDefault`, schema đã đóng băng). "Đặt làm mặc định" nâng `createdAt` lên hiện tại; thẻ thêm sau ở Cài đặt được lùi `createdAt` để không chiếm mặc định; thẻ vừa nhập ở thanh toán/dùng thử (`upsertCard`) tự thành mặc định. Nếu cần ngữ nghĩa sạch hơn: thêm cột `isDefault` (cần migration).
+- **Xóa thẻ**: gói đang sống **và chưa đặt hủy cuối kỳ** (`trialing|active`) cùng gói hosting `pro` đang chạy được coi là "đang dùng thẻ". Còn thẻ khác → chuyển các gói đó sang thẻ mặc định còn lại rồi xóa; thẻ cuối cùng mà gói còn cần → 409 `CARD_IN_USE` (thêm thẻ khác hoặc hủy gói trước). Gói đã hủy cuối kỳ không cần thẻ. Giao dịch cũ chỉ mất liên kết thẻ (FK SetNull), lịch sử/hóa đơn giữ nguyên.
+- `GET /me/billing-summary`: chỉ tính gói `trialing|active` chưa hủy cuối kỳ. `next` = gói có `currentPeriodEnd` sớm nhất (gói dùng thử: lần trừ đầu là lúc hết dùng thử, `trialing:true`). `monthlyTotalCents` quy gói năm về /12 (`round(priceCents/12)`).
+- `GET /me/payments` thêm `refundStatus` (`pending|refunding|approved|rejected|null`) — trạng thái yêu cầu hoàn tiền mới nhất của giao dịch (thay cho việc FE nhớ bằng localStorage).
+- Hook hoa hồng giới thiệu chạy sau commit của `settle`/`recordRenewal`/`applyRefund` — xem `docs/api/referrals.md`. `inTx` giờ `await` các callback sau commit.

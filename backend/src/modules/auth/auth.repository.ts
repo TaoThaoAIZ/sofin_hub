@@ -6,6 +6,13 @@ import type { User } from './auth.types.js';
 export interface UserRepository {
   findByEmail(email: string): Promise<User | undefined>;
   findById(id: string): Promise<User | undefined>;
+  /** Tìm theo handle (đã chuẩn hóa chữ thường); bỏ qua tài khoản đã xóa. */
+  findByHandle(handle: string): Promise<User | undefined>;
+  /**
+   * Hoàn tất đổi email: email = pendingEmail, xóa pendingEmail, emailVerified = true. Ném lỗi Prisma P2002 nếu email đã bị người khác dùng;
+   * trả undefined nếu user không còn pendingEmail.
+   */
+  applyPendingEmail(id: string): Promise<User | undefined>;
   create(data: Pick<User, 'email' | 'firstName' | 'lastName' | 'passwordHash'>): Promise<User>;
   /** Cập nhật một phần; giá trị `undefined` = xóa trường tùy chọn đó. Trả về user mới hoặc undefined nếu không tồn tại. */
   update(id: string, patch: UserPatch): Promise<User | undefined>;
@@ -22,7 +29,7 @@ export interface UserRepository {
 
 export type UserPatch = Partial<Omit<User, 'id' | 'email' | 'createdAt'>>;
 
-const NULLABLE_FIELDS = new Set(['bio', 'location', 'website', 'avatarUrl']);
+const NULLABLE_FIELDS = new Set(['bio', 'location', 'website', 'avatarUrl', 'handle', 'instagram', 'youtube', 'totpSecret', 'pendingEmail']);
 
 export function toUser(u: DbUser): User {
   return {
@@ -36,6 +43,17 @@ export function toUser(u: DbUser): User {
     location: u.location ?? undefined,
     website: u.website ?? undefined,
     avatarUrl: u.avatarUrl ?? undefined,
+    handle: u.handle ?? undefined,
+    instagram: u.instagram ?? undefined,
+    youtube: u.youtube ?? undefined,
+    showOnMap: u.showOnMap,
+    language: u.language,
+    timezone: u.timezone,
+    theme: u.theme,
+    totpSecret: u.totpSecret ?? undefined,
+    twoFactorEnabled: u.twoFactorEnabled,
+    passwordChangedAt: u.passwordChangedAt?.toISOString(),
+    pendingEmail: u.pendingEmail ?? undefined,
     emailVerified: u.emailVerified,
     tokenVersion: u.tokenVersion,
     isDemo: u.isDemo,
@@ -52,6 +70,19 @@ export const userRepository: UserRepository = {
   async findById(id) {
     const u = await prisma.user.findUnique({ where: { id } });
     return u ? toUser(u) : undefined;
+  },
+
+  async findByHandle(handle) {
+    const u = await prisma.user.findUnique({ where: { handle } });
+    return u && !u.deletedAt ? toUser(u) : undefined;
+  },
+
+  async applyPendingEmail(id) {
+    return prisma.$transaction(async (tx) => {
+      const u = await tx.user.findUnique({ where: { id }, select: { pendingEmail: true } });
+      if (!u?.pendingEmail) return undefined;
+      return toUser(await tx.user.update({ where: { id }, data: { email: u.pendingEmail, pendingEmail: null, emailVerified: true } }));
+    });
   },
 
   async create({ email, firstName, lastName, passwordHash }) {
@@ -91,6 +122,12 @@ export const userRepository: UserRepository = {
           website: null,
           location: null,
           avatarUrl: null,
+          handle: null,
+          instagram: null,
+          youtube: null,
+          totpSecret: null,
+          twoFactorEnabled: false,
+          pendingEmail: null,
           // Không phải hash bcrypt hợp lệ nên bcrypt.compare luôn false.
           passwordHash: '!deleted',
           emailVerified: false,

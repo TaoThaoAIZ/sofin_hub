@@ -1,12 +1,16 @@
 import { apiPost } from '../../lib/api';
-import type { AuthSession, AuthUser, LoginInput, RegisterInput } from './types';
+import type { AuthSession, AuthUser, LoginInput, RegisterInput, TwoFactorChallenge } from './types';
 
 export const register = (input: RegisterInput) =>
   apiPost<{ data: AuthSession }>('/auth/register', input).then((r) => r.data);
 
 // skipAuthRetry: sai mật khẩu cũng trả 401 — không phải access token hết hạn, đừng tự refresh phiên khác rồi thử lại.
 export const login = (input: LoginInput) =>
-  apiPost<{ data: AuthSession }>('/auth/login', input, { skipAuthRetry: true }).then((r) => r.data);
+  apiPost<{ data: AuthSession | TwoFactorChallenge }>('/auth/login', input, { skipAuthRetry: true }).then((r) => r.data);
+
+// Bước 2 khi bật 2FA: vé từ bước 1 + mã 6 số của ứng dụng xác thực.
+export const loginTwoFactor = (ticket: string, code: string) =>
+  apiPost<{ data: AuthSession }>('/auth/login/2fa', { ticket, code }, { skipAuthRetry: true }).then((r) => r.data);
 
 let inFlightRefresh: Promise<AuthSession> | null = null;
 

@@ -15,6 +15,8 @@ export interface AuthSessionInfo {
   ip: string | null;
   userAgent: string | null;
   current: boolean;
+  /** BE phân tích sẵn từ User-Agent. */
+  device: { browser: string; browserVersion?: string; os: string; osVersion?: string; kind: 'desktop' | 'mobile' | 'tablet' | 'unknown' };
 }
 
 export interface PublicProfile {
@@ -23,10 +25,17 @@ export interface PublicProfile {
   bio: string | null;
   location: string | null;
   website: string | null;
+  handle: string | null;
+  instagram: string | null;
+  youtube: string | null;
   avatarUrl: string | null;
   joinedAt: string;
   communities: { course: CourseBrief; role: MemberRole; joinedAt: string }[];
+  /** Số cộng đồng (chính chủ xem: gồm cả cộng đồng riêng tư). */
+  communityCount: number;
   totalPoints: number;
+  /** Cấp độ theo tổng điểm. */
+  level: number;
 }
 
 export interface MyEnrollment {
@@ -53,11 +62,16 @@ export interface MyPoints {
   recent: PointEvent[];
 }
 
+/** PATCH /auth/me: chuỗi rỗng = xóa trường (trừ firstName/lastName). */
 export interface UpdateProfileInput {
-  firstName: string;
-  lastName: string;
-  bio: string;
-  location: string;
-  website: string;
-  avatarUrl: string;
+  firstName?: string;
+  lastName?: string;
+  bio?: string;
+  location?: string;
+  website?: string;
+  avatarUrl?: string;
+  handle?: string;
+  instagram?: string;
+  youtube?: string;
+  showOnMap?: boolean;
 }
