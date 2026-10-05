@@ -181,7 +181,7 @@ export function CourseDetailPage() {
 
   return (
     <div
-      className="min-h-screen bg-white pb-16"
+      className="min-h-screen bg-white"
       style={{
         background:
           'radial-gradient(700px 500px at 0% 30%, rgba(255,186,140,.3), transparent 70%), radial-gradient(700px 600px at 100% 20%, rgba(255,200,160,.3), transparent 70%), radial-gradient(800px 600px at 60% 100%, rgba(251,207,232,.28), transparent 70%), #fff',
@@ -418,6 +418,9 @@ export function CourseDetailPage() {
         <JoinRequestDialog
           courseId={id}
           courseTitle={course.title}
+          questions={course.joinQuestions}
+          rules={course.rules}
+          requireRules={course.requireRulesAgreement}
           onClose={() => setShowRequestDialog(false)}
           onSent={(req) => {
             savePendingRequestId(id, req.id);

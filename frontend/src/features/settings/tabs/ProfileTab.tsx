@@ -61,11 +61,17 @@ export function ProfileTab() {
     else if (!checking.data) hPending = true;
   }
 
+  // Ảnh đại diện lưu ngay (không cần bấm "Lưu thay đổi"); các trường khác đang sửa dở được giữ nguyên.
+  const saveAvatar = async (avatarUrl: string) => {
+    const next = await update.mutateAsync({ avatarUrl });
+    set('avatarUrl', next.avatarUrl ?? '');
+    toast.success(avatarUrl ? 'Đã cập nhật ảnh đại diện' : 'Đã xóa ảnh đại diện');
+  };
   const pickAvatar = async (file: File | undefined) => {
     if (!file) return;
     try {
       const up = await upload(file, { purpose: 'avatar' });
-      set('avatarUrl', up.url);
+      await saveAvatar(up.url);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Không tải được ảnh');
     }
@@ -155,10 +161,7 @@ export function ProfileTab() {
                 <button
                   type="button"
                   disabled={!form.avatarUrl}
-                  onClick={() => {
-                    set('avatarUrl', '');
-                    toast.success('Đã xóa ảnh đại diện · nhớ bấm Lưu thay đổi');
-                  }}
+                  onClick={() => void saveAvatar('').catch((err) => toast.error(err instanceof ApiError ? err.message : 'Không xóa được ảnh'))}
                   className="flex items-center gap-1.5 border-0 bg-transparent p-0 text-sm font-semibold text-[#dc2626] disabled:opacity-40"
                 >
                   <MaterialIcon name="delete" size={20} />

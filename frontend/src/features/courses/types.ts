@@ -110,6 +110,10 @@ export interface CourseDetail extends Course {
   facts: CourseFact[];
   stats: { members: number; online: number; admins: number };
   viewerEnrolled?: boolean;
+  /** Câu hỏi gia nhập + nội quy (cộng đồng riêng tư): BE bắt buộc trả lời/đồng ý khi gửi yêu cầu. */
+  joinQuestions?: string[];
+  rules?: { title: string; body: string }[];
+  requireRulesAgreement?: boolean;
   /** Vai trò hiệu lực của người xem trong cộng đồng (null nếu chưa tham gia). */
   viewerRole?: 'member' | 'mod' | 'admin' | 'owner' | 'platform_admin' | null;
   /** Cộng đồng đang bị Platform Admin khóa (BE trả kèm khi khóa). */

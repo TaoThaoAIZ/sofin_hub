@@ -17,18 +17,51 @@ interface FieldErrors {
   agree?: string;
 }
 
+// Giữ bản nháp form khi người dùng sang /terms, /privacy rồi quay lại (trang bị unmount nên state mất).
+// Chỉ lưu trong sessionStorage (tự xóa khi đóng tab) và xóa ngay khi đăng ký thành công.
+const DRAFT_KEY = 'sofinhub_register_draft';
+interface Draft {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  agreed: boolean;
+}
+function loadDraft(): Partial<Draft> {
+  try {
+    return JSON.parse(sessionStorage.getItem(DRAFT_KEY) ?? '{}') as Partial<Draft>;
+  } catch {
+    return {};
+  }
+}
+function saveDraft(d: Draft) {
+  try {
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify(d));
+  } catch {
+    /* trình duyệt chặn storage: bỏ qua */
+  }
+}
+function clearDraft() {
+  try {
+    sessionStorage.removeItem(DRAFT_KEY);
+  } catch {
+    /* bỏ qua */
+  }
+}
+
 export function RegisterPage() {
   const { register } = useAuth();
   const navigate = useNavigate();
 
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [draft] = useState(loadDraft);
+  const [firstName, setFirstName] = useState(draft.firstName ?? '');
+  const [lastName, setLastName] = useState(draft.lastName ?? '');
+  const [email, setEmail] = useState(draft.email ?? '');
+  const [password, setPassword] = useState(draft.password ?? '');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-  const [agreed, setAgreed] = useState(false);
+  const [agreed, setAgreed] = useState(draft.agreed ?? false);
   const [termsRead, setTermsRead] = useState(false);
   const [privacyRead, setPrivacyRead] = useState(false);
   const bothRead = termsRead && privacyRead;
@@ -38,6 +71,10 @@ export function RegisterPage() {
     setTermsRead(hasReadTerms());
     setPrivacyRead(hasReadPrivacy());
   }, []);
+
+  useEffect(() => {
+    saveDraft({ firstName, lastName, email, password, agreed });
+  }, [firstName, lastName, email, password, agreed]);
 
   const clearFieldError = (key: keyof FieldErrors) =>
     setFieldErrors((f) => (f[key] ? { ...f, [key]: undefined } : f));
@@ -63,6 +100,7 @@ export function RegisterPage() {
     try {
       await register({ firstName, lastName, email, password, referralCode: readReferralCode() });
       clearReferralCode();
+      clearDraft();
       navigate('/', { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Đăng ký thất bại, vui lòng thử lại');

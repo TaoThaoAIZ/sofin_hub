@@ -66,9 +66,13 @@ export function Header({ active = 'Khám phá' }: { active?: string }) {
               onClick={() => setMenuOpen((o) => !o)}
               className="glass flex h-10 items-center gap-2 rounded-[14px] pr-3.5 pl-1.5 text-sm font-medium"
             >
-              <span className="bg-brand-gradient grid size-7 place-items-center rounded-full text-[13px] font-bold text-white">
-                {user.firstName.charAt(0).toUpperCase()}
-              </span>
+              {user.avatarUrl ? (
+                <img src={user.avatarUrl} alt="" className="size-7 rounded-full object-cover" />
+              ) : (
+                <span className="bg-brand-gradient grid size-7 place-items-center rounded-full text-[13px] font-bold text-white">
+                  {user.firstName.charAt(0).toUpperCase()}
+                </span>
+              )}
               <span className="hidden max-w-[120px] truncate sm:inline">{user.firstName}</span>
             </button>
             {menuOpen && (

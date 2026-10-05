@@ -28,9 +28,6 @@ export function CommunityCta() {
         </div>
 
         <div className="pointer-events-none relative z-[1] hidden h-[260px] md:block" aria-hidden="true">
-          <div className="absolute right-2 bottom-[18px] flex items-center gap-2 rounded-2xl border border-white/90 bg-white/78 px-[18px] py-3 text-[15px] font-semibold text-brand shadow-[0_14px_30px_rgba(0,0,0,.2)] backdrop-blur-[20px]">
-            ＋ Mời thành viên
-          </div>
         </div>
       </div>
     </section>

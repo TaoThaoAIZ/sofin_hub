@@ -21,7 +21,7 @@ import { absoluteUrl, areaCls, ConfirmDialog, Dialog, errText, ErrorNote, ghostB
 const iconBtn = 'grid size-8 place-items-center rounded-lg text-stone-500 hover:bg-stone-100 disabled:opacity-30';
 
 // ---------------------------------------------------------------- Form module
-function ModuleFormDialog({ communityId, courseId, module, onClose }: { communityId: string; courseId: string; module?: ClassroomModule; onClose: () => void }) {
+export function ModuleFormDialog({ communityId, courseId, module, onClose }: { communityId: string; courseId: string; module?: ClassroomModule; onClose: () => void }) {
   const create = useCreateModule(communityId, courseId);
   const update = useUpdateModule(communityId, courseId);
   const { upload, uploading, error: uploadError } = useUpload();
@@ -108,7 +108,8 @@ function ModuleFormDialog({ communityId, courseId, module, onClose }: { communit
 }
 
 // ---------------------------------------------------------------- Form bài học
-function LessonFormDialog({ communityId, courseId, moduleId, lesson, onClose }: { communityId: string; courseId: string; moduleId: string; lesson?: ClassroomLesson; onClose: () => void }) {
+export function LessonFormDialog({ communityId, courseId, moduleId: initialModuleId, modules, lesson, onClose }: { communityId: string; courseId: string; moduleId: string; /** Có danh sách thì cho chọn module khi tạo bài học mới. */ modules?: ClassroomModule[]; lesson?: ClassroomLesson; onClose: () => void }) {
+  const [moduleId, setModuleId] = useState(initialModuleId);
   const create = useCreateLesson(communityId, courseId);
   const update = useUpdateLesson(communityId);
   const { upload, uploading, error: uploadError } = useUpload();
@@ -158,6 +159,15 @@ function LessonFormDialog({ communityId, courseId, moduleId, lesson, onClose }: 
       }
     >
       <div className="flex flex-col gap-2.5">
+        {!lesson && modules && modules.length > 0 && (
+          <select value={moduleId} onChange={(e) => setModuleId(e.target.value)} aria-label="Module" className="h-10 rounded-xl border border-[rgba(120,60,20,.12)] bg-white px-3 text-sm">
+            {modules.map((m) => (
+              <option key={m.id} value={m.id}>
+                #{m.index - 1}: {m.title}
+              </option>
+            ))}
+          </select>
+        )}
         <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} placeholder="Tiêu đề bài học" aria-label="Tiêu đề bài học" className={inputCls} />
         <div className="flex flex-wrap gap-2.5">
           <select value={type} onChange={(e) => setType(e.target.value as 'video' | 'text' | 'file')} aria-label="Loại bài học" className="h-10 rounded-xl border border-[rgba(120,60,20,.12)] bg-white px-3 text-sm">

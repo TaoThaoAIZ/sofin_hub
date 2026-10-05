@@ -7,7 +7,7 @@ import { formatCompact } from '../../../lib/format';
 import { useClaimCertificate, useCourseList, useLessons, useModules, useProgress, useToggleLessonComplete } from '../queries';
 import type { Certificate, ClassroomModule } from '../types';
 import { CertificateDialog } from './CertificateCard';
-import { ClassroomEditor } from './ClassroomEditor';
+import { ClassroomEditor, LessonFormDialog, ModuleFormDialog } from './ClassroomEditor';
 import { CourseManager, PUBLISH_LABEL, publishBadgeCls } from './CourseManager';
 import { errText, ErrorNote, ghostBtn, isAdminPlus, isModPlus, primaryBtn, safeUrl, toast, ToastHost } from './contentUi';
 
@@ -76,6 +76,8 @@ export function ClassroomTab() {
   const [page, setPage] = useState(1);
   const [editMode, setEditMode] = useState(false);
   const [cert, setCert] = useState<Certificate | null>(null);
+  const [editingModule, setEditingModule] = useState<ClassroomModule | null>(null);
+  const [addingLesson, setAddingLesson] = useState(false);
 
   const role = community?.viewerRole;
   const canEdit = isModPlus(role);
@@ -154,6 +156,12 @@ export function ClassroomTab() {
             </div>
           ))}
         </div>
+        {canEdit && list.length > 0 && (
+          <button type="button" onClick={() => setAddingLesson(true)} className={`${primaryBtn} relative h-14 rounded-2xl px-6`}>
+            <MaterialIcon name="add" size={22} color="#fff" />
+            Thêm bài học
+          </button>
+        )}
       </div>
 
       {/* Chọn khóa học: chỉ hiện khi cộng đồng có nhiều hơn 1 khóa */}
@@ -255,6 +263,17 @@ export function ClassroomTab() {
             >
               <div className="relative h-[156px] overflow-hidden bg-[#110d0b]">
                 <img src={thumb} alt={m.title} className="size-full object-cover" />
+                {canEdit && (
+                  <button
+                    type="button"
+                    onClick={() => setEditingModule(m)}
+                    title="Chỉnh sửa module"
+                    className="absolute top-3 right-3 z-[3] flex h-[34px] items-center gap-1.5 rounded-[10px] bg-white/95 px-3 text-[13px] font-bold shadow-[0_6px_16px_rgba(0,0,0,.18)] hover:bg-white hover:text-brand"
+                  >
+                    <MaterialIcon name="edit" size={17} />
+                    Sửa
+                  </button>
+                )}
                 {m.locked && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[rgba(12,8,6,.62)] px-5 text-center text-sm font-bold text-white backdrop-blur-[2px]">
                     <span className="grid size-11 place-items-center rounded-full border border-white/25 bg-white/15">
@@ -309,6 +328,10 @@ export function ClassroomTab() {
         <span>{list.length ? `${start + 1}–${start + shown.length} trên ${list.length}` : ''}</span>
       </div>
 
+      {editingModule && <ModuleFormDialog communityId={communityId} courseId={courseId} module={editingModule} onClose={() => setEditingModule(null)} />}
+      {addingLesson && (
+        <LessonFormDialog communityId={communityId} courseId={courseId} moduleId={(openModule ?? list[0]!).id} modules={list} onClose={() => setAddingLesson(false)} />
+      )}
       {cert && <CertificateDialog cert={cert} onClose={() => setCert(null)} />}
     </div>
   );

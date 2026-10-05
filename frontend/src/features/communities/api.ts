@@ -36,8 +36,14 @@ export const transferOwnership = (courseId: string, userId: string) =>
   apiPost<{ data: { ownerId: string } }>(`/communities/${courseId}/transfer-ownership`, { userId });
 
 // ---- Yêu cầu tham gia ----
-export const createJoinRequest = (courseId: string, message: string) =>
-  apiPost<{ data: JoinRequest }>(`/communities/${courseId}/join-requests`, { message }).then((r) => r.data);
+export interface JoinRequestInput {
+  message: string;
+  answers?: string[];
+  acceptRules?: boolean;
+}
+
+export const createJoinRequest = (courseId: string, input: JoinRequestInput) =>
+  apiPost<{ data: JoinRequest }>(`/communities/${courseId}/join-requests`, input).then((r) => r.data);
 
 export const cancelJoinRequest = (requestId: string) => apiDelete<{ data: { cancelled: boolean } }>(`/join-requests/${requestId}`);
 

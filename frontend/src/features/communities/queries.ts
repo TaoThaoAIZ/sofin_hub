@@ -75,7 +75,7 @@ export const useTransferOwnership = (courseId: string) => {
 
 // ---- Yêu cầu tham gia ----
 export const useCreateJoinRequest = (courseId: string) =>
-  useMutation({ mutationFn: (message: string) => api.createJoinRequest(courseId, message) });
+  useMutation({ mutationFn: (input: api.JoinRequestInput) => api.createJoinRequest(courseId, input) });
 
 export const useCancelJoinRequest = () => useMutation({ mutationFn: (requestId: string) => api.cancelJoinRequest(requestId) });
 

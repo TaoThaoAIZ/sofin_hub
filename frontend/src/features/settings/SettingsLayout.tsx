@@ -1,4 +1,4 @@
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { MaterialIcon } from '../../components/ui/MaterialIcon';
 import { ToastProvider } from '../admin/components/overlay';
 import { RequireAuth } from '../auth/RequireAuth';
@@ -19,23 +19,6 @@ const NAV: NavItem[] = [
   { to: '/settings/cong-dong', icon: 'group', label: 'Cộng đồng của tôi', divider: true },
   { to: '/settings/gioi-thieu', icon: 'redeem', label: 'Chương trình giới thiệu' },
 ];
-
-interface Promo {
-  icon: string;
-  title: string;
-  text: string;
-  cta: string;
-  to: string;
-}
-
-/** Thẻ quảng bá cuối sidebar đổi theo tab (đúng nội dung thiết kế). */
-const PROMO: Record<string, Promo> = {
-  '/settings': { icon: 'crown', title: 'Nâng cấp tài khoản', text: 'Mở khóa thêm nhiều tính năng để phát triển cộng đồng của bạn.', cta: 'Khám phá ngay', to: '/communities/new' },
-  '/settings/bao-mat': { icon: 'shield', title: 'Bảo vệ tài khoản', text: 'Kích hoạt xác minh 2 bước để tăng cường bảo mật cho tài khoản của bạn.', cta: 'Tìm hiểu thêm', to: '/settings/bao-mat?2fa=1' },
-  '/settings/thanh-toan': { icon: 'credit_card', title: 'Quản lý thanh toán dễ dàng', text: 'Theo dõi chi tiêu, hóa đơn và nâng cấp gói linh hoạt.', cta: 'Tìm hiểu thêm', to: '/settings/thanh-toan' },
-  '/settings/cong-dong': { icon: 'groups', title: 'Khám phá thêm nhiều cộng đồng', text: 'Kết nối, học hỏi và phát triển cùng những người cùng chí hướng.', cta: 'Khám phá ngay', to: '/search' },
-  '/settings/gioi-thieu': { icon: 'redeem', title: 'Mời bạn bè, nhận hoa hồng', text: 'Cùng phát triển cộng đồng và nhận thu nhập thụ động.', cta: 'Tìm hiểu thêm', to: '/settings/gioi-thieu' },
-};
 
 function SideNav() {
   return (
@@ -76,20 +59,6 @@ function SideNav() {
   );
 }
 
-function PromoCard({ promo }: { promo: Promo }) {
-  return (
-    <div className="relative overflow-hidden rounded-[18px] bg-gradient-to-br from-[#fff4ea] to-[#ffe6d2] px-[18px] py-5">
-      <MaterialIcon name={promo.icon} size={34} filled color="#f26a1b" />
-      <div className="mt-2.5 text-base font-extrabold">{promo.title}</div>
-      <div className="mt-1.5 text-[13px] leading-[1.55] text-stone-600">{promo.text}</div>
-      <Link to={promo.to} className="mt-3.5 inline-flex h-[38px] items-center gap-1.5 rounded-[10px] bg-white px-3.5 text-sm font-bold text-brand no-underline">
-        {promo.cta}
-        <MaterialIcon name="arrow_forward" size={18} />
-      </Link>
-    </div>
-  );
-}
-
 /**
  * Khung trang Cài đặt (thiết kế "Cai dat ho so"): header chung + sidebar 6 mục + vùng nội dung (route lồng).
  * Tab Hồ sơ có thêm cột xem trước ở bên phải (≥1240px), nên lưới 3 cột chỉ áp cho tab đó.
@@ -97,7 +66,6 @@ function PromoCard({ promo }: { promo: Promo }) {
 export function SettingsLayout() {
   const { pathname } = useLocation();
   const isProfile = pathname === '/settings' || pathname === '/settings/';
-  const promo = PROMO[pathname.replace(/\/$/, '')] ?? PROMO['/settings']!;
   return (
     <RequireAuth>
       <ToastProvider>
@@ -110,8 +78,6 @@ export function SettingsLayout() {
           >
             <aside className="flex flex-col gap-1 self-start rounded-[20px] border border-[rgba(120,60,20,.07)] bg-white px-3.5 pt-5 pb-3.5 min-[900px]:sticky min-[900px]:top-[88px] min-[900px]:row-span-2 min-[900px]:min-h-[calc(100vh-108px)] min-[1240px]:row-span-1">
               <SideNav />
-              <div className="min-h-6 flex-1" />
-              <PromoCard promo={promo} />
             </aside>
             <Outlet />
           </div>

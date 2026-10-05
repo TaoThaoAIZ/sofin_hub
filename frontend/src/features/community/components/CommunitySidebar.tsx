@@ -88,8 +88,8 @@ export function CommunitySidebar({ courseTitle }: { courseTitle: string }) {
         )}
       </nav>
 
-      <div className="relative mt-auto overflow-hidden rounded-2xl border border-white/90 bg-gradient-to-br from-brand-soft to-[#ffe0cb] p-4 text-center">
-        <div className="relative mx-auto mt-1 mb-2.5" style={{ width: 150, height: 88 }}>
+      <div className="relative mt-auto flex-none overflow-hidden rounded-2xl border border-white/90 bg-gradient-to-br from-brand-soft to-[#ffe0cb] p-4 text-center">
+        <div className="relative mx-auto mt-1 mb-2.5 max-[900px]:hidden [@media(max-height:820px)]:hidden" style={{ width: 150, height: 88 }}>
           <div
             className="absolute"
             style={{ left: 4, top: 44, width: 142, height: 36, borderRadius: '50%', border: '3px solid rgba(255,190,140,.55)', transform: 'rotate(-8deg)' }}
