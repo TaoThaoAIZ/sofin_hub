@@ -22,7 +22,7 @@ export function CommunityRightSidebar({ course }: { course: CommunityDetail }) {
   const suggestedCourses = (suggested.data?.data ?? []).filter((c) => c.id !== course.id).slice(0, 3);
 
   return (
-    <aside className="sticky top-[70px] flex flex-col gap-4 max-lg:static">
+    <aside className="sticky top-[72px] flex flex-col gap-4 max-lg:static">
       <div className="glass overflow-hidden rounded-[22px]">
         <div className="relative h-[110px]">
           <img src={course.thumbnail} alt="" className="size-full object-cover" />

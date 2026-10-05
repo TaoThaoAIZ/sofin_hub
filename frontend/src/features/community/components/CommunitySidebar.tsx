@@ -35,7 +35,7 @@ export function CommunitySidebar({ courseTitle }: { courseTitle: string }) {
   const { id: courseId = '' } = useParams();
   const { data: viewerCourse } = useCommunityDetail(courseId);
   return (
-    <aside className="glass sticky top-[70px] flex h-[calc(100vh-82px)] flex-col gap-1 overflow-auto rounded-3xl p-3 max-md:hidden">
+    <aside className="glass sticky top-[72px] flex h-[calc(100vh-84px)] flex-col gap-1 overflow-auto rounded-3xl p-3 max-md:hidden">
       <div className="flex items-center gap-3 border-b border-[rgba(120,60,20,.08)] px-2 pt-1 pb-4">
         <span className="grid size-11 flex-none place-items-center rounded-xl bg-[#0f1a2e] text-sm font-bold text-white">
           {courseTitle.charAt(0).toUpperCase()}
@@ -76,6 +76,15 @@ export function CommunitySidebar({ courseTitle }: { courseTitle: string }) {
             <MaterialIcon name="shield" size={21} color="currentColor" />
             Kiểm duyệt
           </NavLink>
+        )}
+        {(viewerCourse?.viewerRole === 'owner' || viewerCourse?.viewerRole === 'platform_admin') && (
+          <Link
+            to={`/communities/${courseId}/revenue-dashboard`}
+            className="flex h-11 items-center gap-3.5 rounded-xl px-3.5 text-[14.5px] font-normal text-stone-900 hover:bg-stone-50"
+          >
+            <MaterialIcon name="payments" size={21} color="currentColor" />
+            Doanh thu & rút tiền
+          </Link>
         )}
       </nav>
 

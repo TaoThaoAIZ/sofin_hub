@@ -1,5 +1,4 @@
 import { Navigate, Outlet, useParams } from 'react-router-dom';
-import { CommunityTopbar } from '../features/community/components/CommunityTopbar';
 import { Header } from '../components/layout/Header';
 import { CommunitySidebar } from '../features/community/components/CommunitySidebar';
 import { useCommunityDetail } from '../features/courses/queries';
@@ -23,9 +22,9 @@ export function CommunityPage() {
   if (!course.viewerEnrolled) return <Navigate to={`/communities/${id}`} replace />;
 
   return (
-    <div className="min-h-screen bg-[#fdfbfa]">
-      <CommunityTopbar courseId={id} />
-      <div className="mx-auto grid max-w-[1800px] grid-cols-[248px_minmax(0,1fr)] items-start gap-6 px-4 py-3 md:px-6 max-md:grid-cols-1">
+    <div className="min-h-screen bg-white">
+      <Header active="Cộng đồng của tôi" />
+      <div className="mx-auto grid w-[calc(100%-32px)] max-w-[1320px] grid-cols-[248px_minmax(0,1fr)] items-start gap-6 pt-3 pb-10 md:w-[calc(100%-80px)] max-md:grid-cols-1">
         <CommunitySidebar courseTitle={course.title} />
         <div className="min-w-0">
           <Outlet context={{ course }} />

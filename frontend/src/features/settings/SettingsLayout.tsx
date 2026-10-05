@@ -2,7 +2,7 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { MaterialIcon } from '../../components/ui/MaterialIcon';
 import { ToastProvider } from '../admin/components/overlay';
 import { RequireAuth } from '../auth/RequireAuth';
-import { SettingsTopbar } from './SettingsTopbar';
+import { Header } from '../../components/layout/Header';
 
 interface NavItem {
   to: string;
@@ -91,7 +91,7 @@ function PromoCard({ promo }: { promo: Promo }) {
 }
 
 /**
- * Khung trang Cài đặt (thiết kế "Cai dat ho so"): topbar + sidebar 6 mục + vùng nội dung (route lồng).
+ * Khung trang Cài đặt (thiết kế "Cai dat ho so"): header chung + sidebar 6 mục + vùng nội dung (route lồng).
  * Tab Hồ sơ có thêm cột xem trước ở bên phải (≥1240px), nên lưới 3 cột chỉ áp cho tab đó.
  */
 export function SettingsLayout() {
@@ -102,9 +102,9 @@ export function SettingsLayout() {
     <RequireAuth>
       <ToastProvider>
         <div className="flex min-h-screen flex-col bg-[#faf8f6]">
-          <SettingsTopbar />
+          <Header active="" />
           <div
-            className={`grid flex-1 items-start gap-[18px] px-4 pt-5 pb-7 md:px-6 min-[900px]:grid-cols-[250px_minmax(0,1fr)] min-[1240px]:grid-cols-[280px_minmax(0,1fr)] ${
+            className={`mx-auto grid w-[calc(100%-32px)] max-w-[1320px] flex-1 items-start gap-[18px] pt-5 pb-7 md:w-[calc(100%-80px)] min-[900px]:grid-cols-[250px_minmax(0,1fr)] min-[1240px]:grid-cols-[280px_minmax(0,1fr)] ${
               isProfile ? 'min-[1240px]:grid-cols-[280px_minmax(0,1fr)_380px]' : ''
             }`}
           >
