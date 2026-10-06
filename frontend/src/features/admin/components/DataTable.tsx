@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { useMenu, type MenuItem } from './overlay';
 import { AdminAvatar, CARD_CLS, EmptyBlock, ErrorBlock, LoadingBlock, MONO_FONT, miniBtnCls, fmtNum } from './ui';
@@ -80,6 +81,7 @@ export const MonoCell = ({ children }: { children: ReactNode }) => (
 /* ---- Ô tìm kiếm có debounce ---- */
 
 export function SearchInput({ value, onChange, placeholder, className = '' }: { value: string; onChange: (v: string) => void; placeholder?: string; className?: string }) {
+  const { t } = useTranslation('admin-parts');
   const [local, setLocal] = useState(value);
   const timer = useRef<number | undefined>(undefined);
   // Đồng bộ khi trang cha reset giá trị (vd. "Xóa bộ lọc").
@@ -96,7 +98,7 @@ export function SearchInput({ value, onChange, placeholder, className = '' }: { 
           timer.current = window.setTimeout(() => onChange(e.target.value), 350);
         }}
         placeholder={placeholder}
-        aria-label={placeholder ?? 'Tìm kiếm'}
+        aria-label={placeholder ?? t('table.search')}
         className="min-w-0 flex-1 border-0 bg-transparent text-[13px] font-medium outline-0"
       />
     </div>
@@ -118,11 +120,12 @@ function pageWindow(page: number, total: number): (number | '…')[] {
 }
 
 export function TablePager({ info }: { info: TablePage }) {
+  const { t } = useTranslation('admin-parts');
   const { page, totalPages, onPage } = info;
   const sq = 'grid size-8 place-items-center rounded-[9px] border-[1.5px] border-[#ece5df] bg-white text-[13px] text-stone-700 hover:bg-[#fff4ec] disabled:cursor-default disabled:opacity-40 disabled:hover:bg-white';
   return (
-    <nav aria-label="Phân trang" className="flex gap-1.5">
-      <button type="button" className={sq} disabled={page <= 1} onClick={() => onPage(page - 1)} aria-label="Trang trước">
+    <nav aria-label={t('table.pagination')} className="flex gap-1.5">
+      <button type="button" className={sq} disabled={page <= 1} onClick={() => onPage(page - 1)} aria-label={t('table.prevPage')}>
         <MaterialIcon name="chevron_left" size={18} />
       </button>
       {pageWindow(page, totalPages).map((n, i) =>
@@ -136,7 +139,7 @@ export function TablePager({ info }: { info: TablePage }) {
           </button>
         ),
       )}
-      <button type="button" className={sq} disabled={page >= totalPages} onClick={() => onPage(page + 1)} aria-label="Trang sau">
+      <button type="button" className={sq} disabled={page >= totalPages} onClick={() => onPage(page + 1)} aria-label={t('table.nextPage')}>
         <MaterialIcon name="chevron_right" size={18} />
       </button>
     </nav>
@@ -182,6 +185,7 @@ const actionColWidth = (rows: { label: string }[]) => Math.max(96, Math.ceil(Mat
 
 export function DataTable<T>(props: DataTableProps<T>) {
   const { title, sub, headAction, headLink, headTools, tabs, tab, onTab, search, filters = [], onClearFilters, columns, rows, rowKey, onRow, isActive, actions, loading, error, onRetry, emptyText, page } = props;
+  const { t } = useTranslation('admin-parts');
   const { openMenu, menuEl } = useMenu();
 
   const firstActions = actions ? rows.map((r) => actions(r)[0]).filter((a): a is RowAction => !!a) : [];
@@ -193,7 +197,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
   const hasFilter = filters.some((f) => f.value);
 
   const filterMenu = (e: MouseEvent<HTMLElement>, f: TableFilter) => {
-    const items: MenuItem[] = [{ label: 'Tất cả', on: !f.value, onClick: () => f.onChange('') }, ...f.options.map((o) => ({ label: o.label, on: f.value === o.value, onClick: () => f.onChange(o.value) }))];
+    const items: MenuItem[] = [{ label: t('table.all'), on: !f.value, onClick: () => f.onChange('') }, ...f.options.map((o) => ({ label: o.label, on: f.value === o.value, onClick: () => f.onChange(o.value) }))];
     openMenu(e, items, f.label.toUpperCase(), 230);
   };
 
@@ -270,7 +274,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
                   })}
                   {hasFilter && onClearFilters && (
                     <button type="button" onClick={onClearFilters} className="border-0 bg-transparent px-1 text-[12.5px] font-semibold text-brand hover:underline">
-                      Xóa bộ lọc
+                      {t('table.clearFilters')}
                     </button>
                   )}
                 </div>
@@ -283,7 +287,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
       {props.bulkBar && sel && sel.selected.length > 0 && <div className="flex flex-wrap items-center gap-2.5 border-b border-[#fdba74] bg-[#fff4ec] px-[18px] py-2.5">{props.bulkBar}</div>}
       {loading && <LoadingBlock />}
       {!loading && !!error && <ErrorBlock error={error} onRetry={onRetry} />}
-      {empty && <EmptyBlock>{emptyText ?? 'Không có kết quả phù hợp.'}</EmptyBlock>}
+      {empty && <EmptyBlock>{emptyText ?? t('table.noResults')}</EmptyBlock>}
 
       {!loading && !error && rows.length > 0 && (
         <div className="overflow-x-auto">
@@ -292,7 +296,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
               {sel && (
                 <input
                   type="checkbox"
-                  aria-label="Chọn tất cả"
+                  aria-label={t('table.selectAll')}
                   className="size-4 accent-[#f26a1b]"
                   checked={rows.length > 0 && rows.every((r) => sel.selected.includes(rowKey(r)))}
                   onChange={(e) => sel.onChange(e.target.checked ? rows.map(rowKey) : [])}
@@ -306,7 +310,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
               {actions && (
                 <span
                   role="columnheader"
-                  aria-label="Thao tác"
+                  aria-label={t('table.actions')}
                   className="sticky right-0 z-[1] -mr-[18px] -ml-3 self-stretch bg-[#fbf9f7] shadow-[-10px_0_12px_-12px_rgba(60,30,10,.35)]"
                 />
               )}
@@ -330,7 +334,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
                   {sel && (
                     <input
                       type="checkbox"
-                      aria-label="Chọn dòng"
+                      aria-label={t('table.selectRow')}
                       className="size-4 accent-[#f26a1b]"
                       checked={sel.selected.includes(rowKey(r))}
                       onClick={(e) => e.stopPropagation()}
@@ -367,7 +371,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
                         <button
                           type="button"
                           aria-haspopup="menu"
-                          aria-label="Thêm thao tác"
+                          aria-label={t('table.moreActions')}
                           onClick={(e) => rowMenu(e, more)}
                           className="grid size-[30px] flex-none place-items-center rounded-[9px] border border-[#e7e0da] bg-white hover:bg-[#fff4ec]"
                         >
@@ -386,7 +390,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
       {page && !loading && !error && rows.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#f1ebe6] px-[18px] py-3 text-[12.5px] text-stone-500">
           <span>
-            {props.footerNote ?? `Hiển thị ${fmtNum(rows.length)} / ${fmtNum(page.total)} kết quả`}
+            {props.footerNote ?? t('table.showing', { shown: fmtNum(rows.length), total: fmtNum(page.total) })}
           </span>
           {page.totalPages > 1 && <TablePager info={page} />}
         </div>

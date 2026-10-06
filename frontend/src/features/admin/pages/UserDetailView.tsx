@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { formatCents, formatDate, formatDateTime, formatRelative } from '../../../lib/datetime';
 import { useStartConversation } from '../../messages/useStartConversation';
@@ -12,72 +14,67 @@ import { AdminAvatar, AdminButton, Card, EmptyBlock, ErrorBlock, LoadingBlock, S
 import { useRevokeSession, useUserActivity, useUserCommunities, useUserDetail, useUserPurchases, useUserReports } from '../queries';
 import { COMMUNITY_STATUS, PURCHASE_STATUS, RESTRICTION_LABEL, USER_STATUS, type CommunityStatus, type UserDetail } from '../types';
 
-const TABS = [
-  { key: 'overview', label: 'Tổng quan' },
-  { key: 'communities', label: 'Cộng đồng đã tham gia' },
-  { key: 'activity', label: 'Hoạt động' },
-  { key: 'purchases', label: 'Lịch sử mua' },
-  { key: 'reports', label: 'Báo cáo / Vi phạm' },
-  { key: 'security', label: 'Bảo mật' },
-] as const;
+const TABS = [{ key: 'overview' }, { key: 'communities' }, { key: 'activity' }, { key: 'purchases' }, { key: 'reports' }, { key: 'security' }] as const;
 type TabKey = (typeof TABS)[number]['key'];
+const tabLabel = (t: TFunction, k: TabKey) => t(`userDetail.tab.${k}`);
 
 const LIMIT = 20;
-const ACTIVITY_FILTERS = [
-  { value: '', label: 'Tất cả' },
-  { value: 'login', label: 'Đăng nhập' },
-  { value: 'community', label: 'Cộng đồng' },
-  { value: 'content', label: 'Nội dung' },
-  { value: 'payment', label: 'Thanh toán' },
-  { value: 'moderation', label: 'Kiểm duyệt' },
+const activityFilters = (t: TFunction) => [
+  { value: '', label: t('userDetail.activity.all') },
+  { value: 'login', label: t('userDetail.activity.login') },
+  { value: 'community', label: t('userDetail.activity.community') },
+  { value: 'content', label: t('userDetail.activity.content') },
+  { value: 'payment', label: t('userDetail.activity.payment') },
+  { value: 'moderation', label: t('userDetail.activity.moderation') },
 ];
 const ACTIVITY_TONE: Record<string, Tone> = { login: 'x', community: 'g', content: 'b', payment: 'g', moderation: 'o' };
 
 function Overview({ u, goTab }: { u: UserDetail; goTab: (k: TabKey) => void }) {
+  const { t } = useTranslation('admin-pages2');
   const s = u.stats;
   return (
     <>
       <KpiGrid
         min={150}
         items={[
-          { icon: 'groups', label: 'Cộng đồng', value: fmtNum(s.communities) },
-          { icon: 'article', label: 'Bài viết', value: fmtNum(s.posts) },
-          { icon: 'chat', label: 'Bình luận', value: fmtNum(s.comments) },
-          { icon: 'shopping_bag', label: 'Lượt mua', value: fmtNum(s.purchases) },
-          { icon: 'flag', label: 'Báo cáo', value: fmtNum(s.reportsReceived), note: s.reportsReceived ? 'Đã nhận' : 'Hồ sơ sạch', bad: true },
+          { icon: 'groups', label: t('userDetail.kpi.communities'), value: fmtNum(s.communities) },
+          { icon: 'article', label: t('userDetail.kpi.posts'), value: fmtNum(s.posts) },
+          { icon: 'chat', label: t('userDetail.kpi.comments'), value: fmtNum(s.comments) },
+          { icon: 'shopping_bag', label: t('userDetail.kpi.purchases'), value: fmtNum(s.purchases) },
+          { icon: 'flag', label: t('userDetail.kpi.reports'), value: fmtNum(s.reportsReceived), note: s.reportsReceived ? t('userDetail.kpi.received') : t('userDetail.kpi.clean'), bad: true },
         ]}
       />
       <Row cols="1fr 1.2fr">
         <KvCard
-          title="Hồ sơ"
+          title={t('userDetail.profile.title')}
           items={[
             { k: 'Email', v: u.email },
-            { k: 'Vị trí', v: u.location || '—' },
+            { k: t('userDetail.profile.location'), v: u.location || '—' },
             { k: 'Website', v: u.website || '—' },
-            { k: 'Tham gia', v: formatDate(u.joinedAt) },
-            { k: 'Đăng nhập gần nhất', v: u.lastLoginAt ? formatRelative(u.lastLoginAt) : '—' },
-            { k: 'Trạng thái xác minh', v: u.emailVerified ? 'Đã xác minh' : 'Chưa xác minh', badge: u.emailVerified ? 'g' : 'o' },
-            { k: 'Vai trò', v: u.role === 'creator' ? 'Creator' : 'Thành viên' },
-            { k: 'Gói đăng ký', v: u.plan === 'paid' ? 'Trả phí' : 'Miễn phí' },
+            { k: t('userDetail.profile.joined'), v: formatDate(u.joinedAt) },
+            { k: t('userDetail.lastLogin'), v: u.lastLoginAt ? formatRelative(u.lastLoginAt) : '—' },
+            { k: t('userDetail.profile.verification'), v: u.emailVerified ? t('userDetail.verified') : t('userDetail.unverified'), badge: u.emailVerified ? 'g' : 'o' },
+            { k: t('userDetail.profile.role'), v: u.role === 'creator' ? 'Creator' : t('userDetail.profile.member') },
+            { k: t('userDetail.profile.plan'), v: u.plan === 'paid' ? t('userDetail.paid') : t('userDetail.free') },
           ]}
         />
         <TimelineCard
-          title="Hoạt động gần đây"
-          link="Xem tất cả"
+          title={t('userDetail.recent.title')}
+          link={t('userDetail.recent.viewAll')}
           onLink={() => goTab('activity')}
           items={u.recentActivity.map((a) => ({ icon: a.icon, who: a.title, text: a.detail ?? '', time: formatRelative(a.createdAt), tone: ACTIVITY_TONE[a.type] ?? 'o' }))}
         />
       </Row>
       {u.status !== 'active' && (
         <KvCard
-          title="Tình trạng tài khoản"
+          title={t('userDetail.account.title')}
           items={[
-            { k: 'Trạng thái', v: USER_STATUS[u.status].label, badge: USER_STATUS[u.status].tone },
-            ...(u.restrictions.length ? [{ k: 'Hạn chế', v: u.restrictions.map((r) => RESTRICTION_LABEL[r] ?? r).join(', ') }] : []),
-            { k: 'Lý do', v: u.statusReason ?? '—' },
-            { k: 'Hiệu lực đến', v: u.statusUntil ? formatDateTime(u.statusUntil) : 'Vô thời hạn' },
-            { k: 'Thực hiện bởi', v: u.statusChangedBy?.name ?? '—' },
-            { k: 'Lúc', v: u.statusChangedAt ? formatDateTime(u.statusChangedAt) : '—' },
+            { k: t('userDetail.account.status'), v: USER_STATUS[u.status].label, badge: USER_STATUS[u.status].tone },
+            ...(u.restrictions.length ? [{ k: t('userDetail.account.restrictions'), v: u.restrictions.map((r) => RESTRICTION_LABEL[r] ?? r).join(', ') }] : []),
+            { k: t('userDetail.account.reason'), v: u.statusReason ?? '—' },
+            { k: t('userDetail.account.until'), v: u.statusUntil ? formatDateTime(u.statusUntil) : t('userDetail.account.indefinite') },
+            { k: t('userDetail.account.by'), v: u.statusChangedBy?.name ?? '—' },
+            { k: t('userDetail.account.at'), v: u.statusChangedAt ? formatDateTime(u.statusChangedAt) : '—' },
           ]}
         />
       )}
@@ -86,20 +83,21 @@ function Overview({ u, goTab }: { u: UserDetail; goTab: (k: TabKey) => void }) {
 }
 
 function CommunitiesTab({ id }: { id: string }) {
+  const { t } = useTranslation('admin-pages2');
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const list = useUserCommunities(id, { page, limit: LIMIT }, true);
   return (
     <DataTable
       columns={[
-        { key: 'name', label: 'Cộng đồng', w: 2, render: (c) => <MainCell name={c.name} sub={c.id} shape="square" seed={c.id} /> },
-        { key: 'role', label: 'Vai trò', render: (c) => <TextCell>{({ owner: 'Chủ sở hữu', admin: 'Quản trị viên', mod: 'Kiểm duyệt viên', member: 'Thành viên' } as Record<string, string>)[c.role] ?? c.role}</TextCell> },
-        { key: 'mem', label: 'Gói thành viên', render: (c) => <TextCell>{c.membership === 'paid' ? `Trả phí · $${c.priceUsd}/tháng` : 'Miễn phí'}</TextCell> },
-        { key: 'joined', label: 'Tham gia', render: (c) => <MutedCell>{formatDate(c.joinedAt)}</MutedCell> },
-        { key: 'last', label: 'Hoạt động gần nhất', render: (c) => <MutedCell>{c.lastActiveAt ? formatRelative(c.lastActiveAt) : '—'}</MutedCell> },
+        { key: 'name', label: t('userDetail.communities.col.community'), w: 2, render: (c) => <MainCell name={c.name} sub={c.id} shape="square" seed={c.id} /> },
+        { key: 'role', label: t('userDetail.profile.role'), render: (c) => <TextCell>{({ owner: t('userDetail.communities.role.owner'), admin: t('userDetail.communities.role.admin'), mod: t('userDetail.communities.role.mod'), member: t('userDetail.profile.member') } as Record<string, string>)[c.role] ?? c.role}</TextCell> },
+        { key: 'mem', label: t('userDetail.communities.col.membership'), render: (c) => <TextCell>{c.membership === 'paid' ? t('userDetail.communities.paidPrice', { price: c.priceUsd }) : t('userDetail.free')}</TextCell> },
+        { key: 'joined', label: t('userDetail.profile.joined'), render: (c) => <MutedCell>{formatDate(c.joinedAt)}</MutedCell> },
+        { key: 'last', label: t('userDetail.lastActive'), render: (c) => <MutedCell>{c.lastActiveAt ? formatRelative(c.lastActiveAt) : '—'}</MutedCell> },
         {
           key: 'status',
-          label: 'Trạng thái',
+          label: t('userDetail.status'),
           render: (c) => {
             const st = COMMUNITY_STATUS[c.status as CommunityStatus];
             return st ? <StatusBadge tone={st.tone}>{st.label}</StatusBadge> : <MutedCell>{c.status}</MutedCell>;
@@ -111,21 +109,22 @@ function CommunitiesTab({ id }: { id: string }) {
       loading={list.isPending}
       error={list.isError ? list.error : null}
       onRetry={() => void list.refetch()}
-      emptyText="Người dùng này chưa tham gia cộng đồng nào."
+      emptyText={t('userDetail.communities.empty')}
       onRow={(c) => navigate(`/admin/communities/${c.id}`)}
-      actions={(c) => [{ label: 'Mở cộng đồng', onClick: () => navigate(`/admin/communities/${c.id}`) }]}
+      actions={(c) => [{ label: t('userDetail.communities.open'), onClick: () => navigate(`/admin/communities/${c.id}`) }]}
       page={list.data ? { page: list.data.meta.page, totalPages: list.data.meta.totalPages, total: list.data.meta.total, limit: LIMIT, onPage: setPage } : undefined}
     />
   );
 }
 
 function ActivityTab({ id }: { id: string }) {
+  const { t } = useTranslation('admin-pages2');
   const [type, setType] = useState('');
   const [page, setPage] = useState(1);
   const list = useUserActivity(id, { type: type || undefined, page, limit: LIMIT }, true);
   const chips = (
     <div className="flex flex-wrap gap-1.5">
-      {ACTIVITY_FILTERS.map((f) => (
+      {activityFilters(t).map((f) => (
         <button
           key={f.value}
           type="button"
@@ -144,20 +143,20 @@ function ActivityTab({ id }: { id: string }) {
   return (
     <>
       {list.isPending ? (
-        <Card title="Dòng thời gian hoạt động">
+        <Card title={t('userDetail.activity.timeline')}>
           {chips}
           <LoadingBlock />
         </Card>
       ) : list.isError ? (
-        <Card title="Dòng thời gian hoạt động">
+        <Card title={t('userDetail.activity.timeline')}>
           {chips}
           <ErrorBlock error={list.error} onRetry={() => void list.refetch()} />
         </Card>
       ) : (
         <TimelineCard
-          title="Dòng thời gian hoạt động"
+          title={t('userDetail.activity.timeline')}
           chips={chips}
-          empty="Chưa có hoạt động nào."
+          empty={t('userDetail.activity.empty')}
           items={list.data.data.map((a) => ({ icon: a.icon, who: a.title, text: a.detail ?? '', time: formatRelative(a.createdAt), tone: ACTIVITY_TONE[a.type] ?? 'o' }))}
         />
       )}
@@ -171,6 +170,7 @@ function ActivityTab({ id }: { id: string }) {
 }
 
 function PurchasesTab({ id }: { id: string }) {
+  const { t } = useTranslation('admin-pages2');
   const [page, setPage] = useState(1);
   const list = useUserPurchases(id, { page, limit: LIMIT }, true);
   const sm = list.data?.summary;
@@ -180,35 +180,35 @@ function PurchasesTab({ id }: { id: string }) {
         <KpiGrid
           min={200}
           items={[
-            { icon: 'payments', label: 'Tổng chi tiêu', value: formatCents(sm.lifetimeSpendCents) },
-            { icon: 'autorenew', label: 'Gói đang hoạt động', value: fmtNum(sm.activeSubscriptions) },
-            { icon: 'undo', label: 'Hoàn tiền', value: formatCents(sm.refundsCents) },
+            { icon: 'payments', label: t('userDetail.purchases.totalSpend'), value: formatCents(sm.lifetimeSpendCents) },
+            { icon: 'autorenew', label: t('userDetail.purchases.activeSubs'), value: fmtNum(sm.activeSubscriptions) },
+            { icon: 'undo', label: t('userDetail.purchases.refunds'), value: formatCents(sm.refundsCents) },
           ]}
         />
       )}
       <DataTable
         columns={[
-          { key: 'id', label: 'Giao dịch', w: 1.2, render: (p) => <MonoCell>{p.invoiceNumber ?? p.id.slice(0, 8)}</MonoCell> },
-          { key: 'course', label: 'Cộng đồng', w: 1.6, render: (p) => <TextCell>{p.courseName}</TextCell> },
-          { key: 'amount', label: 'Số tiền', render: (p) => <NumCell>{formatCents(p.amountCents)}</NumCell> },
-          { key: 'refunded', label: 'Đã hoàn', render: (p) => <NumCell>{p.refundedCents ? formatCents(p.refundedCents) : '—'}</NumCell> },
-          { key: 'method', label: 'Phương thức', render: (p) => <TextCell>{p.method}</TextCell> },
+          { key: 'id', label: t('userDetail.purchases.col.transaction'), w: 1.2, render: (p) => <MonoCell>{p.invoiceNumber ?? p.id.slice(0, 8)}</MonoCell> },
+          { key: 'course', label: t('userDetail.communities.col.community'), w: 1.6, render: (p) => <TextCell>{p.courseName}</TextCell> },
+          { key: 'amount', label: t('userDetail.purchases.col.amount'), render: (p) => <NumCell>{formatCents(p.amountCents)}</NumCell> },
+          { key: 'refunded', label: t('userDetail.purchases.col.refunded'), render: (p) => <NumCell>{p.refundedCents ? formatCents(p.refundedCents) : '—'}</NumCell> },
+          { key: 'method', label: t('userDetail.purchases.col.method'), render: (p) => <TextCell>{p.method}</TextCell> },
           {
             key: 'status',
-            label: 'Trạng thái',
+            label: t('userDetail.status'),
             render: (p) => {
               const st = PURCHASE_STATUS[p.status];
               return <StatusBadge tone={st?.tone ?? 'b'}>{st?.label ?? p.status}</StatusBadge>;
             },
           },
-          { key: 'date', label: 'Ngày', render: (p) => <MutedCell>{formatDate(p.createdAt)}</MutedCell> },
+          { key: 'date', label: t('userDetail.purchases.col.date'), render: (p) => <MutedCell>{formatDate(p.createdAt)}</MutedCell> },
         ]}
         rows={list.data?.data ?? []}
         rowKey={(p) => p.id}
         loading={list.isPending}
         error={list.isError ? list.error : null}
         onRetry={() => void list.refetch()}
-        emptyText="Người dùng này chưa có giao dịch nào."
+        emptyText={t('userDetail.purchases.empty')}
         page={list.data ? { page: list.data.meta.page, totalPages: list.data.meta.totalPages, total: list.data.meta.total, limit: LIMIT, onPage: setPage } : undefined}
       />
     </>
@@ -216,6 +216,7 @@ function PurchasesTab({ id }: { id: string }) {
 }
 
 function ReportsTab({ id }: { id: string }) {
+  const { t } = useTranslation('admin-pages2');
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const list = useUserReports(id, { page, limit: LIMIT }, true);
@@ -226,10 +227,10 @@ function ReportsTab({ id }: { id: string }) {
         <KpiGrid
           min={170}
           items={[
-            { icon: 'flag', label: 'Báo cáo nhận được', value: fmtNum(sm.received), bad: true },
-            { icon: 'gavel', label: 'Vi phạm đã xác nhận', value: fmtNum(sm.confirmed), bad: true },
-            { icon: 'warning', label: 'Cảnh cáo', value: fmtNum(sm.warnings), bad: true },
-            { icon: 'pause_circle', label: 'Lần tạm ngưng', value: fmtNum(sm.suspensions), bad: true },
+            { icon: 'flag', label: t('userDetail.reports.received'), value: fmtNum(sm.received), bad: true },
+            { icon: 'gavel', label: t('userDetail.reports.confirmed'), value: fmtNum(sm.confirmed), bad: true },
+            { icon: 'warning', label: t('userDetail.reports.warnings'), value: fmtNum(sm.warnings), bad: true },
+            { icon: 'pause_circle', label: t('userDetail.reports.suspensions'), value: fmtNum(sm.suspensions), bad: true },
           ]}
         />
       )}
@@ -240,9 +241,9 @@ function ReportsTab({ id }: { id: string }) {
         loading={list.isPending}
         error={list.isError ? list.error : null}
         onRetry={() => void list.refetch()}
-        emptyText="Người dùng này chưa bị báo cáo."
+        emptyText={t('userDetail.reports.empty')}
         onRow={(c) => navigate(`/admin/moderation/cases/${c.id}`)}
-        actions={(c) => [{ label: 'Duyệt', onClick: () => navigate(`/admin/moderation/cases/${c.id}`) }]}
+        actions={(c) => [{ label: t('userDetail.reports.review'), onClick: () => navigate(`/admin/moderation/cases/${c.id}`) }]}
         page={list.data ? { page: list.data.meta.page, totalPages: list.data.meta.totalPages, total: list.data.meta.total, limit: LIMIT, onPage: setPage } : undefined}
       />
     </>
@@ -250,36 +251,37 @@ function ReportsTab({ id }: { id: string }) {
 }
 
 function SecurityTab({ u }: { u: UserDetail }) {
+  const { t } = useTranslation('admin-pages2');
   const toast = useToast();
   const revoke = useRevokeSession();
   const sessions = u.security.activeSessions;
   return (
     <Row cols="1fr 1.4fr">
       <KvCard
-        title="Bảo mật"
+        title={t('userDetail.tab.security')}
         items={[
-          { k: 'Xác minh email', v: u.security.emailVerified ? 'Đã xác minh' : 'Chưa xác minh', badge: u.security.emailVerified ? 'g' : 'o' },
-          { k: 'Phiên đang hoạt động', v: String(sessions.length) },
-          { k: 'Đăng nhập gần nhất', v: u.lastLoginAt ? formatDateTime(u.lastLoginAt) : '—' },
+          { k: t('userDetail.security.emailVerification'), v: u.security.emailVerified ? t('userDetail.verified') : t('userDetail.unverified'), badge: u.security.emailVerified ? 'g' : 'o' },
+          { k: t('userDetail.security.activeSessions'), v: String(sessions.length) },
+          { k: t('userDetail.lastLogin'), v: u.lastLoginAt ? formatDateTime(u.lastLoginAt) : '—' },
         ]}
       />
       <DataTable
-        title="Phiên đang hoạt động"
+        title={t('userDetail.security.activeSessions')}
         columns={[
-          { key: 'device', label: 'Thiết bị', w: 1.6, render: (s) => <MainCell name={s.device || 'Không rõ'} icon="devices" /> },
-          { key: 'ip', label: 'IP', render: (s) => <MonoCell>{s.ip ?? 'Không rõ'}</MonoCell> },
-          { key: 'created', label: 'Tạo lúc', render: (s) => <MutedCell>{formatRelative(s.createdAt)}</MutedCell> },
-          { key: 'last', label: 'Hoạt động gần nhất', render: (s) => <MutedCell>{s.lastUsedAt ? formatRelative(s.lastUsedAt) : '—'}</MutedCell> },
-          { key: 'status', label: 'Trạng thái', render: () => <StatusBadge tone="g">Hoạt động</StatusBadge> },
+          { key: 'device', label: t('userDetail.security.device'), w: 1.6, render: (s) => <MainCell name={s.device || t('userDetail.security.unknown')} icon="devices" /> },
+          { key: 'ip', label: 'IP', render: (s) => <MonoCell>{s.ip ?? t('userDetail.security.unknown')}</MonoCell> },
+          { key: 'created', label: t('userDetail.security.createdAt'), render: (s) => <MutedCell>{formatRelative(s.createdAt)}</MutedCell> },
+          { key: 'last', label: t('userDetail.lastActive'), render: (s) => <MutedCell>{s.lastUsedAt ? formatRelative(s.lastUsedAt) : '—'}</MutedCell> },
+          { key: 'status', label: t('userDetail.status'), render: () => <StatusBadge tone="g">{t('userDetail.security.active')}</StatusBadge> },
         ]}
         rows={sessions}
         rowKey={(s) => s.id}
-        emptyText="Không có phiên đang hoạt động."
+        emptyText={t('userDetail.security.noSessions')}
         actions={(s) => [
           {
-            label: 'Thu hồi',
+            label: t('userDetail.security.revoke'),
             disabled: revoke.isPending,
-            onClick: () => revoke.mutate({ id: u.id, sid: s.id }, { onSuccess: () => toast.success('Đã thu hồi phiên'), onError: (e) => toast.error(errMessage(e)) }),
+            onClick: () => revoke.mutate({ id: u.id, sid: s.id }, { onSuccess: () => toast.success(t('userDetail.security.revoked')), onError: (e) => toast.error(errMessage(e)) }),
           },
         ]}
       />
@@ -289,9 +291,10 @@ function SecurityTab({ u }: { u: UserDetail }) {
 
 /** Chi tiết người dùng: header + hành động theo trạng thái + 6 tab. */
 export function UserDetailView() {
+  const { t } = useTranslation('admin-pages2');
   const { id = '' } = useParams();
   const [params, setParams] = useSearchParams();
-  const tab = (TABS.find((t) => t.key === params.get('tab'))?.key ?? 'overview') as TabKey;
+  const tab = (TABS.find((x) => x.key === params.get('tab'))?.key ?? 'overview') as TabKey;
   const q = useUserDetail(id);
   const { startConversation, error: dmError, clearError } = useStartConversation();
   const [modal, setModal] = useState<'restrict' | 'suspend' | 'ban' | 'reinstate' | 'warn' | null>(null);
@@ -300,7 +303,7 @@ export function UserDetailView() {
   if (q.isError) {
     return (
       <>
-        <PageHeader title="Chi tiết người dùng" />
+        <PageHeader title={t('userDetail.title')} />
         <Card>
           <ErrorBlock error={q.error} onRetry={() => void q.refetch()} />
         </Card>
@@ -316,7 +319,7 @@ export function UserDetailView() {
 
   return (
     <>
-      <PageHeader title={u.name} trail={tab === 'overview' ? [{ label: u.name }] : [{ label: u.name, to: `/admin/users/${u.id}` }, { label: TABS.find((t) => t.key === tab)!.label }]} />
+      <PageHeader title={u.name} trail={tab === 'overview' ? [{ label: u.name }] : [{ label: u.name, to: `/admin/users/${u.id}` }, { label: tabLabel(t, tab) }]} />
       <EntityHeader
         avatar={<AdminAvatar name={u.name} src={u.avatarUrl} size={62} seed={u.id} />}
         name={u.name}
@@ -325,38 +328,38 @@ export function UserDetailView() {
           { icon: 'tag', text: u.id },
           { icon: 'mail', text: u.email },
           ...(u.location ? [{ icon: 'location_on', text: u.location }] : []),
-          { icon: 'schedule', text: u.lastLoginAt ? `Đăng nhập gần nhất ${formatRelative(u.lastLoginAt)}` : 'Chưa đăng nhập' },
+          { icon: 'schedule', text: u.lastLoginAt ? t('userDetail.lastLoginAgo', { time: formatRelative(u.lastLoginAt) }) : t('userDetail.neverLoggedIn') },
         ]}
         actions={
           <>
             <AdminButton icon="mail" onClick={() => { clearError(); void startConversation(u.id); }}>
-              Nhắn tin
+              {t('userDetail.action.message')}
             </AdminButton>
             {!protectedAcct && (
               <>
                 <AdminButton icon="warning" onClick={() => setModal('warn')}>
-                  Cảnh cáo
+                  {t('userDetail.action.warn')}
                 </AdminButton>
                 {u.status === 'active' ? (
                   <>
                     <AdminButton icon="block" onClick={() => setModal('restrict')}>
-                      Hạn chế
+                      {t('userDetail.action.restrict')}
                     </AdminButton>
                     <AdminButton kind="danger" icon="pause_circle" onClick={() => setModal('suspend')}>
-                      Tạm ngưng
+                      {t('userDetail.action.suspend')}
                     </AdminButton>
                     <AdminButton kind="danger" icon="gavel" onClick={() => setModal('ban')}>
-                      Cấm
+                      {t('userDetail.action.ban')}
                     </AdminButton>
                   </>
                 ) : (
                   <>
                     <AdminButton kind="primary" icon="restart_alt" onClick={() => setModal('reinstate')}>
-                      Khôi phục truy cập
+                      {t('userDetail.action.reinstate')}
                     </AdminButton>
                     {u.status !== 'banned' && (
                       <AdminButton kind="danger" icon="gavel" onClick={() => setModal('ban')}>
-                        Cấm
+                        {t('userDetail.action.ban')}
                       </AdminButton>
                     )}
                   </>
@@ -365,7 +368,7 @@ export function UserDetailView() {
             )}
           </>
         }
-        tabs={TABS.map((t) => ({ key: t.key, label: t.label }))}
+        tabs={TABS.map((x) => ({ key: x.key, label: tabLabel(t, x.key) }))}
         tab={tab}
         onTab={setTab}
       />
@@ -374,7 +377,7 @@ export function UserDetailView() {
           {dmError}
         </div>
       )}
-      {protectedAcct && <EmptyBlock icon="shield">Đây là tài khoản Platform Admin — không thể hạn chế, tạm ngưng hoặc cấm.</EmptyBlock>}
+      {protectedAcct && <EmptyBlock icon="shield">{t('userDetail.protected')}</EmptyBlock>}
 
       {tab === 'overview' && <Overview u={u} goTab={setTab} />}
       {tab === 'communities' && <CommunitiesTab id={u.id} />}

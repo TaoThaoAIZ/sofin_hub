@@ -1,0 +1,75 @@
+{
+  "table": {
+    "search": "Search",
+    "pagination": "Pagination",
+    "prevPage": "Previous page",
+    "nextPage": "Next page",
+    "all": "All",
+    "clearFilters": "Clear filters",
+    "noResults": "No matching results.",
+    "selectAll": "Select all",
+    "selectRow": "Select row",
+    "actions": "Actions",
+    "moreActions": "More actions",
+    "showing": "Showing {{shown}} / {{total}} results"
+  },
+  "common": {
+    "noData": "No data yet."
+  },
+  "chart": {
+    "seriesTotal": "{{name}} total {{total}}",
+    "loading": "Loading…",
+    "notEnoughData": "Not enough data to draw the chart.",
+    "enableOneSeries": "Turn on at least one line to see the chart."
+  },
+  "timeline": {
+    "empty": "No activity yet."
+  },
+  "content": {
+    "context": "CONTEXT"
+  },
+  "action": {
+    "reason": "Reason",
+    "typeToConfirm": "Type {{word}} to confirm"
+  },
+  "media": {
+    "empty": "No files.",
+    "reports": "{{count}} reports"
+  },
+  "factors": {
+    "decrease": "Decrease {{label}}",
+    "increase": "Increase {{label}}"
+  },
+  "featured": {
+    "empty": "No communities in this section yet.",
+    "start": "Start date for {{name}}",
+    "end": "End date for {{name}}",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "remove": "Remove from list",
+    "add": "Find & add community"
+  },
+  "preview": {
+    "close": "Close"
+  },
+  "history": {
+    "empty": "No admin actions yet.",
+    "system": "System",
+    "reason": "Reason: {{value}}",
+    "note": "Note: {{value}}"
+  },
+  "cohort": {
+    "empty": "No signup cohorts yet.",
+    "group": "Cohort",
+    "users": "Users"
+  },
+  "matrix": {
+    "permission": "Permission"
+  },
+  "email": {
+    "variables": "Insertable variables",
+    "insertHint": "Click to insert into the field being edited",
+    "subject": "Subject",
+    "emptyBody": "Empty content."
+  }
+}

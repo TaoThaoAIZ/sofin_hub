@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { MaterialIcon } from '../../components/ui/MaterialIcon';
 import { resolveApiPath } from '../../lib/api';
 import { useUpload, type UploadPurpose } from '../uploads/useUpload';
@@ -19,6 +20,7 @@ export function ImageSlot({
   ariaLabel: string;
   className?: string;
 }) {
+  const { t } = useTranslation('wizard');
   const inputRef = useRef<HTMLInputElement>(null);
   const { upload, uploading, error } = useUpload();
   const [drag, setDrag] = useState(false);
@@ -61,12 +63,12 @@ export function ImageSlot({
             {placeholder}
           </span>
         )}
-        {uploading && <span className="absolute inset-0 grid place-items-center bg-white/70 text-sm font-semibold text-brand">Đang tải lên…</span>}
+        {uploading && <span className="absolute inset-0 grid place-items-center bg-white/70 text-sm font-semibold text-brand">{t('imageSlot.uploading')}</span>}
         {value && !uploading && (
           <span className="absolute right-1.5 bottom-1.5 flex gap-1">
             <button
               type="button"
-              aria-label="Gỡ ảnh"
+              aria-label={t('imageSlot.remove')}
               onClick={(e) => {
                 e.stopPropagation();
                 onChange('');

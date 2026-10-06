@@ -1,4 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import i18n from '../../i18n';
 import { useAuth } from '../auth/AuthContext';
 import { fetchCategories, fetchCourseDetail, fetchCourses, fetchStats, toggleEnrollment } from './api';
 import type { CourseDetail, CourseQuery } from './types';
@@ -48,7 +49,7 @@ export const useToggleEnrollment = (id: string) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => {
-      if (!accessToken) throw new Error('Bạn cần đăng nhập để tham gia khóa học');
+      if (!accessToken) throw new Error(i18n.t('list.loginToJoin', { ns: 'course' }));
       return toggleEnrollment(id, accessToken);
     },
     onSuccess: ({ enrolled }) => {

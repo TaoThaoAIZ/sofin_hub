@@ -1,4 +1,5 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import i18n from '../../i18n';
 import { ApiError } from '../../lib/api';
 import { useAuth } from '../auth/AuthContext';
 import * as api from './api';
@@ -95,9 +96,9 @@ export const useBlockToggle = () => {
 /** Thông báo lỗi dễ hiểu cho các lỗi thường gặp của module tin nhắn. */
 export function messageErrorText(err: unknown): string {
   if (err instanceof ApiError) {
-    if (err.status === 403) return err.message || 'Bạn không thể nhắn tin cho người này (không chung cộng đồng hoặc đã bị chặn).';
-    if (err.status === 429) return 'Bạn gửi tin quá nhanh, vui lòng chờ một chút rồi thử lại.';
+    if (err.status === 403) return err.message || i18n.t('errors.forbidden', { ns: 'messages' });
+    if (err.status === 429) return i18n.t('errors.rateLimit', { ns: 'messages' });
     return err.message;
   }
-  return err instanceof Error ? err.message : 'Đã có lỗi xảy ra, vui lòng thử lại';
+  return err instanceof Error ? err.message : i18n.t('errors.generic', { ns: 'messages' });
 }

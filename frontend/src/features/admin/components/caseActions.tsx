@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAssignCase, useDismissCase, useEscalateCase, useResolveCase } from '../queries';
 import type { AdminCase } from '../types';
@@ -14,6 +15,7 @@ export type CaseModalKind = 'warn' | 'remove' | 'restrict' | 'suspend' | 'ban' |
  * Dùng chung cho hàng đợi và trang chi tiết; `modalEl` render trong trang. `note` là ghi chú nội bộ đang nhập (nếu có).
  */
 export function useCaseActions(opts: { onDone?: () => void } = {}) {
+  const { t } = useTranslation('admin-components');
   const navigate = useNavigate();
   const toast = useToast();
   const assign = useAssignCase();
@@ -25,19 +27,19 @@ export function useCaseActions(opts: { onDone?: () => void } = {}) {
   const open = (kind: CaseModalKind, c: AdminCase, note?: string) => setModal({ kind, c, note });
 
   const assignToMe = (c: AdminCase) =>
-    assign.mutate({ id: c.id }, { onSuccess: () => toast.success(`Đã nhận xử lý · ${c.caseCode}`), onError: (e) => toast.error(errMessage(e)) });
+    assign.mutate({ id: c.id }, { onSuccess: () => toast.success(t('ca.assigned', { code: c.caseCode })), onError: (e) => toast.error(errMessage(e)) });
 
   const actionsFor = (c: AdminCase, o: { includeView?: boolean } = {}): RowAction[] => {
     const decidable = c.status === 'open' || c.status === 'under_review';
     const list: RowAction[] = [];
-    if (o.includeView !== false) list.push({ label: 'Duyệt', onClick: () => navigate(`/admin/moderation/cases/${c.id}`) });
+    if (o.includeView !== false) list.push({ label: t('ca.view'), onClick: () => navigate(`/admin/moderation/cases/${c.id}`) });
     if (decidable) {
-      list.push({ label: 'Nhận xử lý', icon: 'person_check', disabled: assign.isPending, onClick: () => assignToMe(c) });
-      list.push({ label: 'Bỏ qua', icon: 'do_not_disturb_on', onClick: () => open('dismiss', c) });
-      if (c.targetType !== 'member') list.push({ label: 'Gỡ nội dung', icon: 'delete', danger: true, onClick: () => open('remove', c) });
+      list.push({ label: t('ca.assign'), icon: 'person_check', disabled: assign.isPending, onClick: () => assignToMe(c) });
+      list.push({ label: t('ca.dismiss'), icon: 'do_not_disturb_on', onClick: () => open('dismiss', c) });
+      if (c.targetType !== 'member') list.push({ label: t('ca.remove'), icon: 'delete', danger: true, onClick: () => open('remove', c) });
       if (c.reportedUser) {
-        list.push({ label: 'Cảnh cáo', icon: 'warning', onClick: () => open('warn', c) });
-        list.push({ label: 'Tạm ngưng người dùng', icon: 'pause_circle', danger: true, onClick: () => open('suspend', c) });
+        list.push({ label: t('ca.warn'), icon: 'warning', onClick: () => open('warn', c) });
+        list.push({ label: t('ca.suspend'), icon: 'pause_circle', danger: true, onClick: () => open('suspend', c) });
       }
     }
     return list;
@@ -47,7 +49,7 @@ export function useCaseActions(opts: { onDone?: () => void } = {}) {
   let modalEl = null;
   if (modal) {
     const { kind, c, note } = modal;
-    const userTarget = { kind: 'case' as const, caseId: c.id, name: c.reportedUser?.name ?? 'người dùng' };
+    const userTarget = { kind: 'case' as const, caseId: c.id, name: c.reportedUser?.name ?? t('ca.userFallback') };
     const common = { onClose: close, onDone: opts.onDone };
     if (kind === 'warn') modalEl = <WarnModal target={userTarget} {...common} />;
     else if (kind === 'remove') modalEl = <RemoveContentModal caseId={c.id} title={c.content.title} {...common} />;
@@ -58,13 +60,13 @@ export function useCaseActions(opts: { onDone?: () => void } = {}) {
       modalEl = (
         <NoteModal
           icon="do_not_disturb_on"
-          title={`Bỏ qua ${c.caseCode}?`}
-          body="Vụ việc được đóng với kết luận không vi phạm."
-          cta="Bỏ qua vụ việc"
+          title={t('ca.dismissModal.title', { code: c.caseCode })}
+          body={t('ca.dismissModal.body')}
+          cta={t('ca.dismissModal.cta')}
           defaultNote={note}
           pending={dismiss.isPending}
           error={dismiss.isError ? dismiss.error : null}
-          successMessage={`Đã đóng · không vi phạm · ${c.caseCode}`}
+          successMessage={t('ca.dismissModal.done', { code: c.caseCode })}
           run={(n, ok) => dismiss.mutate({ id: c.id, note: n || undefined }, { onSuccess: ok })}
           {...common}
         />
@@ -73,13 +75,13 @@ export function useCaseActions(opts: { onDone?: () => void } = {}) {
       modalEl = (
         <NoteModal
           icon="task_alt"
-          title={`Đóng ${c.caseCode}?`}
-          body="Vụ việc được đóng mà không kèm hành động xử phạt."
-          cta="Đóng vụ việc"
+          title={t('ca.resolveModal.title', { code: c.caseCode })}
+          body={t('ca.resolveModal.body')}
+          cta={t('ca.resolveModal.cta')}
           defaultNote={note}
           pending={resolve.isPending}
           error={resolve.isError ? resolve.error : null}
-          successMessage={`Đã đóng · ${c.caseCode}`}
+          successMessage={t('ca.resolveModal.done', { code: c.caseCode })}
           run={(n, ok) => resolve.mutate({ id: c.id, note: n || undefined }, { onSuccess: ok })}
           {...common}
         />
@@ -88,13 +90,13 @@ export function useCaseActions(opts: { onDone?: () => void } = {}) {
       modalEl = (
         <NoteModal
           icon="priority_high"
-          title={`Nâng mức rủi ro ${c.caseCode}?`}
-          body="Mức rủi ro của vụ việc tăng một bậc và chuyển sang trạng thái đang xem xét."
-          cta="Nâng mức"
+          title={t('ca.escalateModal.title', { code: c.caseCode })}
+          body={t('ca.escalateModal.body')}
+          cta={t('ca.escalateModal.cta')}
           defaultNote={note}
           pending={escalate.isPending}
           error={escalate.isError ? escalate.error : null}
-          successMessage={`Đã nâng mức · ${c.caseCode}`}
+          successMessage={t('ca.escalateModal.done', { code: c.caseCode })}
           run={(n, ok) => escalate.mutate({ id: c.id, note: n || undefined }, { onSuccess: ok })}
           {...common}
         />

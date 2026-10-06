@@ -1,5 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
+import i18n from '../../i18n';
 import { useAuth } from '../auth/AuthContext';
 import * as api from './api';
 import type { PaymentMethodInput } from '../../lib/card';
@@ -57,7 +58,7 @@ export const useCheckout = (courseId: string) => {
   }, [courseId]);
   return useMutation({
     mutationFn: (input: api.CheckoutInput) => {
-      if (!accessToken) throw new Error('Bạn cần đăng nhập để thanh toán');
+      if (!accessToken) throw new Error(i18n.t('errors.loginRequired', { ns: 'payments' }));
       return api.checkout(courseId, input, accessToken, keyFor(courseId, input.interval ?? 'monthly'));
     },
     onError: () => dropKeys(courseId),
@@ -69,7 +70,7 @@ export const useConfirmPayment = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (paymentIntentId: string) => {
-      if (!accessToken) throw new Error('Bạn cần đăng nhập để thanh toán');
+      if (!accessToken) throw new Error(i18n.t('errors.loginRequired', { ns: 'payments' }));
       return api.confirmPayment(paymentIntentId, accessToken);
     },
     onSuccess: (p) => {

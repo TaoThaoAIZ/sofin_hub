@@ -1,17 +1,8 @@
+import i18n, { currentLocale } from '../../i18n';
 import type { MemberRole, PointReason } from './types';
 
-export const ROLE_LABEL: Record<MemberRole, string> = {
-  member: 'Thành viên',
-  mod: 'Điều hành viên',
-  admin: 'Quản trị viên',
-  owner: 'Chủ cộng đồng',
-};
+export const roleLabel = (role: MemberRole): string => i18n.t(`roles.${role}`, { ns: 'account', defaultValue: role });
 
-export const REASON_LABEL: Record<PointReason, string> = {
-  post: 'Đăng bài viết',
-  like_received: 'Được thích bài viết',
-  lesson_complete: 'Hoàn thành bài học',
-  event_rsvp: 'Đăng ký sự kiện',
-};
+export const reasonLabel = (reason: PointReason): string => i18n.t(`reasons.${reason}`, { ns: 'account', defaultValue: reason });
 
-export const formatDate = (iso: string) => new Date(iso).toLocaleDateString('vi-VN');
+export const formatDate = (iso: string) => new Date(iso).toLocaleDateString(currentLocale());

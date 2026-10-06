@@ -1,0 +1,77 @@
+{
+  "err": {
+    "PAYOUT_BLOCKED": "Your net balance is negative due to refunds after withdrawal — you cannot withdraw more until the debt is offset.",
+    "COMMUNITY_LOCKED": "The community is locked, so withdrawals are unavailable.",
+    "generic": "Something went wrong, please try again",
+    "invalidAmount": "Enter a valid amount (USD).",
+    "overBalance": "The amount exceeds your withdrawable balance ({{amount}}).",
+    "invalidAccount": "Account number must be 6–20 digits."
+  },
+  "payoutStatus": {
+    "requested": "Requested",
+    "approved": "Approved",
+    "paid": "Paid",
+    "rejected": "Rejected",
+    "failed": "Failed",
+    "on_hold": "On hold"
+  },
+  "form": {
+    "title": "Request a payout",
+    "amount": "Amount (USD) — {{amount}} available",
+    "bank": "Bank",
+    "account": "Account number",
+    "holder": "Account holder",
+    "sent": "Payout request sent, awaiting approval from the platform admins.",
+    "sending": "Sending…",
+    "submit": "Submit payout request"
+  },
+  "title": "Revenue & payouts",
+  "loading": "Loading…",
+  "forbidden": "Only the community owner (or platform admins) can view revenue.",
+  "from": "From",
+  "to": "To",
+  "clearFilter": "Clear filter",
+  "stats": {
+    "gross": "Total revenue (gross)",
+    "refunds": "Refunds",
+    "commission": "Platform commission*",
+    "commissionHint": "estimated {{pct}}%",
+    "gatewayFee": "Payment gateway fee*",
+    "net": "Net earnings",
+    "available": "Available to withdraw",
+    "allTime": "all time",
+    "held": "On hold (pending refunds/disputes)",
+    "heldHint": "withdrawable after {{days}} days",
+    "reserve": "Reserve fund",
+    "reserveHint": "{{pct}}% retained",
+    "mrr": "MRR",
+    "mrrHint": "{{paid}} paying members · {{trial}} on trial",
+    "pending": "Pending payouts"
+  },
+  "debt": "You owe {{amount}} due to refunds/chargebacks after withdrawal. Payouts are temporarily locked until new revenue offsets this debt.",
+  "policy": "Payout policy: new revenue can only be withdrawn after {{hold}} days ({{refund}}-day refund window + {{dispute}}-day dispute window), and {{reserve}}% is always retained as a reserve fund.",
+  "estimateNote": "Commission and gateway fees are TEMPORARY/simulated values and may change once the revenue model is finalized. The withdrawable balance does not depend on the date filter.",
+  "recent": {
+    "title": "Recent transactions",
+    "time": "TIME",
+    "type": "TYPE",
+    "invoice": "INVOICE",
+    "status": "STATUS",
+    "amount": "AMOUNT",
+    "empty": "No transactions yet.",
+    "renewal": "Renewal",
+    "initial": "Initial payment",
+    "refunded": "Refunded",
+    "success": "Successful",
+    "refund": "refunded {{amount}}"
+  },
+  "payouts": {
+    "title": "Payout requests",
+    "date": "DATE",
+    "amount": "AMOUNT",
+    "account": "ACCOUNT",
+    "status": "STATUS",
+    "empty": "No payout requests yet.",
+    "note": "Note: {{note}}"
+  }
+}

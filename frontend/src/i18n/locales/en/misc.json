@@ -1,0 +1,76 @@
+{
+  "api": {
+    "requestFailed": "Request failed ({{status}})"
+  },
+  "card": {
+    "brandUnknown": "Card",
+    "numberRequired": "Please enter your card number",
+    "numberIncomplete": "Card number is incomplete",
+    "numberInvalid": "Invalid card number",
+    "expiryRequired": "Enter the expiry date",
+    "expiryFormat": "Invalid expiry date (MM / YY)",
+    "expired": "This card has expired",
+    "expiryInvalid": "Invalid expiry date",
+    "cvcRequired": "Enter the CVC code",
+    "cvcLength": "CVC must be {{count}} digits"
+  },
+  "upload": {
+    "empty": "This file is empty, please choose another file",
+    "tooLarge": "File is too large (max {{max}}MB)",
+    "unsupported": "Unsupported file type. Accepted: {{types}}",
+    "labels": {
+      "images": "JPG, PNG, WEBP, GIF images",
+      "files": "PDF, ZIP, DOCX, XLSX, PPTX, TXT, MP4",
+      "message": "images, PDF, ZIP, DOCX, XLSX, PPTX, TXT"
+    },
+    "failedStatus": "File upload failed ({{status}})",
+    "failed": "File upload failed, please try again",
+    "quota": "You have used up your storage allowance (200MB).",
+    "tooLargeLimit": "The file exceeds the allowed size limit.",
+    "forbidden": "You don't have permission to upload this file."
+  },
+  "certVerify": {
+    "title": "Verify certificate",
+    "verifying": "Verifying…",
+    "valid": "Valid certificate",
+    "notFoundTitle": "Certificate not found",
+    "failedTitle": "Couldn't verify",
+    "notFoundDesc": "The code \"{{code}}\" does not exist or is invalid. Please check the link.",
+    "home": "Back to SofinHub home"
+  },
+  "contact": {
+    "fieldName": "full name",
+    "fieldSubject": "subject",
+    "fieldMessage": "message",
+    "rateLimit": "You've sent too many requests, please try again in a few minutes.",
+    "sendFailed": "Couldn't send your message, please try again",
+    "title": "Contact us",
+    "subtitle": "Send us a question or feedback and the SofinHub team will reply by email.",
+    "name": "Full name",
+    "email": "Email",
+    "subject": "Subject",
+    "message": "Message",
+    "charCount": "{{count}}/5000 characters",
+    "sending": "Sending…",
+    "send": "Send message"
+  },
+  "myCommunities": {
+    "loading": "Loading…",
+    "guestTitle1": "Your ",
+    "guestTitleBrand": "community",
+    "guestTitle2": " lives here",
+    "guestContent": "Log in to see the communities you have joined, follow new activity and keep learning with everyone.",
+    "login": "Log in",
+    "explore": "Explore communities",
+    "noAccount": "Don't have an account?",
+    "register": "Sign up for free →",
+    "loadError": "Couldn't load your communities, please try again.",
+    "emptyTitle": "You haven't joined any community yet",
+    "emptyContent": "Discover great communities and join to learn, share and connect with people who share your passion.",
+    "title": "My communities"
+  },
+  "notFound": {
+    "message": "This page doesn't exist or is still under construction.",
+    "home": "Back to home"
+  }
+}

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { formatCompact } from '../../../lib/format';
@@ -10,21 +11,22 @@ const GAIN_ICONS = ['smart_display', 'edit', 'auto_awesome', 'handshake', 'grid_
 const glass = 'glass rounded-[22px]';
 
 export function AboutTab() {
+  const { t } = useTranslation('community');
   const { id = '' } = useParams();
   const { data: course, isPending } = useCommunityDetail(id);
 
-  if (isPending || !course) return <p className="py-10 text-center text-stone-400">Đang tải…</p>;
+  if (isPending || !course) return <p className="py-10 text-center text-stone-400">{t('common.loading')}</p>;
 
   const chips = [
-    { icon: course.visibility === 'private' ? 'lock' : 'public', t: course.visibility === 'private' ? 'Riêng tư' : 'Công khai', s: course.visibility === 'private' ? 'Chỉ thành viên' : 'Cộng đồng mở' },
-    { icon: 'group', t: `${formatCompact(course.stats.members)} thành viên`, s: 'Đang hoạt động' },
-    { icon: 'sell', t: course.priceUsd === 0 ? 'Miễn phí' : `$${course.priceUsd}/tháng`, s: course.priceUsd === 0 ? 'Tham gia ngay' : 'Gói thành viên' },
-    { face: initials(course.instructor.name), t: `Bởi ${course.instructor.name}`, s: `${course.instructor.role} & Admin` },
+    { icon: course.visibility === 'private' ? 'lock' : 'public', t: course.visibility === 'private' ? t('about.private') : t('about.public'), s: course.visibility === 'private' ? t('about.membersOnly') : t('about.openCommunity') },
+    { icon: 'group', t: t('about.membersChip', { n: formatCompact(course.stats.members) }), s: t('about.active') },
+    { icon: 'sell', t: course.priceUsd === 0 ? t('about.free') : t('about.perMonth', { price: course.priceUsd }), s: course.priceUsd === 0 ? t('about.joinNow') : t('about.membership') },
+    { face: initials(course.instructor.name), t: t('about.byInstructor', { name: course.instructor.name }), s: t('about.roleAdmin', { role: course.instructor.role }) },
   ];
   const lessons = Number(course.facts.find((f) => f.label === 'Bài học')?.value ?? 0);
   const free = [
-    ...(lessons > 0 ? [`${lessons} bài học trong Lớp học`] : []),
-    `Cộng đồng ${formatCompact(course.stats.members)} thành viên`,
+    ...(lessons > 0 ? [t('about.lessonsInClassroom', { n: lessons })] : []),
+    t('about.communityMembers', { n: formatCompact(course.stats.members) }),
   ];
 
   return (
@@ -64,7 +66,7 @@ export function AboutTab() {
             <span className="grid size-[42px] place-items-center rounded-full bg-brand/10">
               <MaterialIcon name="bolt" size={24} filled color="#f26a1b" />
             </span>
-            <span className="text-[21px] font-extrabold">Bạn sẽ học và nhận được gì?</span>
+            <span className="text-[21px] font-extrabold">{t('about.whatYouGet')}</span>
           </div>
           <div className="grid max-w-[900px] grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-x-7 gap-y-[18px]">
             {course.gains.map((g, i) => (
@@ -85,13 +87,13 @@ export function AboutTab() {
         <section className={`${glass} px-6 pt-[22px] pb-[18px]`}>
           <div className="mb-4 flex items-center gap-3.5">
             <MaterialIcon name="menu_book" size={32} filled color="#f26a1b" />
-            <span className="text-[21px] font-extrabold">Nội dung nổi bật</span>
+            <span className="text-[21px] font-extrabold">{t('about.highlights')}</span>
           </div>
           <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4">
             <div className="rounded-[18px] border border-[#dbe8fb] bg-gradient-to-b from-[#eef5ff] to-[#f6f9ff] px-[22px] py-5">
               <div className="mb-3 flex items-center gap-3 text-[17px] font-extrabold">
                 <MaterialIcon name="view_agenda" size={28} filled color="#2563eb" />
-                CÓ GÌ MIỄN PHÍ?
+                {t('about.whatsFree')}
               </div>
               {free.map((x) => (
                 <div key={x} className="flex items-start gap-3 py-1 text-[14.5px] text-stone-800">
@@ -104,10 +106,10 @@ export function AboutTab() {
               <div className="mb-3 flex items-center gap-3 text-[17px] font-extrabold">
                 <MaterialIcon name="crown" size={28} filled color="#f59e0b" />
                 <span className="text-[#c2410c]">
-                  NÂNG CẤP VIP {course.priceUsd > 0 && <span className="text-brand">(${course.priceUsd}/tháng)</span>}
+                  {t('about.upgradeVip')} {course.priceUsd > 0 && <span className="text-brand">{t('about.upgradePrice', { price: course.priceUsd })}</span>}
                 </span>
               </div>
-              {course.priceUsd === 0 && <div className="py-1 text-[14.5px] text-stone-500">Cộng đồng này miễn phí.</div>}
+              {course.priceUsd === 0 && <div className="py-1 text-[14.5px] text-stone-500">{t('about.communityFree')}</div>}
               {course.priceNotes.map((x) => (
                 <div key={x} className="flex items-start gap-3 py-1 text-[14.5px] text-stone-800">
                   <MaterialIcon name="check" size={20} color="#f26a1b" />
@@ -119,7 +121,7 @@ export function AboutTab() {
           <div className="mt-4 flex flex-wrap items-center gap-4">
             <div className="flex items-center gap-3">
               <span className="grid size-10 place-items-center rounded-full bg-[#e7d3c6] text-xs font-bold text-[#7c2d12]">{initials(course.instructor.name)}</span>
-              <span className="text-[15px]">Founder: {course.instructor.name}</span>
+              <span className="text-[15px]">{t('about.founder', { name: course.instructor.name })}</span>
             </div>
           </div>
         </section>

@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { formatDateTime } from '../../../lib/datetime';
 import { AUDIT_ACTION, type AuditItem } from '../types';
 import { auditLabel } from '../types.batch3';
@@ -32,7 +33,7 @@ export function ActionDialog({
   body,
   cta,
   reasons,
-  reasonLabel = 'Lý do',
+  reasonLabel,
   requireReason,
   noteLabel,
   notePlaceholder,
@@ -71,6 +72,7 @@ export function ActionDialog({
   onDone?: () => void;
   children?: ReactNode;
 }) {
+  const { t } = useTranslation('admin-parts');
   const toast = useToast();
   const [reason, setReason] = useState('');
   const [note, setNote] = useState(defaultNote);
@@ -98,10 +100,10 @@ export function ActionDialog({
   return (
     <ModalShell icon={icon} danger={danger} title={title} body={body} cta={cta} pending={pending} disabled={disabled} error={error} onConfirm={() => void submit()} onClose={onClose}>
       {children}
-      {reasons && <OptionChips label={reasonLabel} options={reasons} value={reason} onChange={(v) => setReason(v as string)} />}
+      {reasons && <OptionChips label={reasonLabel ?? t('action.reason')} options={reasons} value={reason} onChange={(v) => setReason(v as string)} />}
       {noteLabel && <TextAreaField label={noteLabel} value={note} onChange={setNote} placeholder={notePlaceholder} />}
       {flagLabel && <CheckField text={flagLabel} checked={flag} onChange={setFlag} />}
-      {confirmWord && <InputField label={`Gõ ${confirmWord} để xác nhận`} value={word} onChange={setWord} placeholder={confirmWord} mono />}
+      {confirmWord && <InputField label={t('action.typeToConfirm', { word: confirmWord })} value={word} onChange={setWord} placeholder={confirmWord} mono />}
     </ModalShell>
   );
 }
@@ -137,18 +139,19 @@ export const mediaIcon = (kind: string) => MEDIA_ICON[kind] ?? 'draft';
 
 /** Lưới thư viện media (ô 180px, ảnh 120px, nhãn "n báo cáo", 3 nút Xem/Tải/Gỡ). */
 export function MediaGrid({ items, title, sub, tools, chips }: { items: MediaCardItem[]; title: string; sub?: string; tools?: ReactNode; chips?: ReactNode }) {
+  const { t } = useTranslation('admin-parts');
   return (
     <Card title={title} sub={sub} action={tools}>
       {chips}
       {items.length === 0 ? (
-        <EmptyBlock icon="perm_media">Không có tệp nào.</EmptyBlock>
+        <EmptyBlock icon="perm_media">{t('media.empty')}</EmptyBlock>
       ) : (
         <div className="grid gap-3.5" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))' }}>
           {items.map((m) => (
             <div key={m.id} className="overflow-hidden rounded-[14px] border border-[#f1ebe6]">
               <div className="relative grid h-[120px] place-items-center bg-[#f5f1ed]">
                 {m.kind === 'image' && m.thumbUrl ? <img src={m.thumbUrl} alt="" loading="lazy" className="size-full object-cover" /> : <MaterialIcon name={mediaIcon(m.kind)} size={38} color="#c9bfb6" />}
-                {!!m.reports && <span className="absolute top-2 right-2 rounded-full bg-[#dc2626] px-2 py-0.5 text-[11px] font-bold text-white">{m.reports} báo cáo</span>}
+                {!!m.reports && <span className="absolute top-2 right-2 rounded-full bg-[#dc2626] px-2 py-0.5 text-[11px] font-bold text-white">{t('media.reports', { count: m.reports })}</span>}
               </div>
               <div className="px-3 py-2.5">
                 <div className="truncate text-[13px] font-semibold" title={m.name}>
@@ -197,6 +200,7 @@ export interface FactorItem {
 
 /** Thẻ "Yếu tố xếp hạng": thanh + nút −/+ (bước 5). */
 export function FactorsCard({ title, sub, items, onChange, max = 60 }: { title: string; sub?: string; items: FactorItem[]; onChange: (key: string, value: number) => void; max?: number }) {
+  const { t } = useTranslation('admin-parts');
   const sq = 'grid size-7 place-items-center rounded-lg border border-[#e7e0da] bg-white hover:bg-[#fff4ec] disabled:opacity-40';
   return (
     <Card title={title} sub={sub}>
@@ -207,11 +211,11 @@ export function FactorsCard({ title, sub, items, onChange, max = 60 }: { title: 
             <div className="h-2 min-w-10 flex-1 overflow-hidden rounded-full bg-[#f5f1ed]">
               <div className="h-full rounded-full" style={{ width: `${Math.min(100, f.value * 2.5)}%`, background: f.penalty ? '#dc2626' : '#f26a1b' }} />
             </div>
-            <button type="button" className={sq} aria-label={`Giảm ${f.label}`} disabled={f.value <= 0} onClick={() => onChange(f.key, Math.max(0, f.value - 5))}>
+            <button type="button" className={sq} aria-label={t('factors.decrease', { label: f.label })} disabled={f.value <= 0} onClick={() => onChange(f.key, Math.max(0, f.value - 5))}>
               <MaterialIcon name="remove" size={17} />
             </button>
             <span className="min-w-10 text-center text-[13px] font-bold tabular-nums">{f.value}%</span>
-            <button type="button" className={sq} aria-label={`Tăng ${f.label}`} disabled={f.value >= max} onClick={() => onChange(f.key, Math.min(max, f.value + 5))}>
+            <button type="button" className={sq} aria-label={t('factors.increase', { label: f.label })} disabled={f.value >= max} onClick={() => onChange(f.key, Math.min(max, f.value + 5))}>
               <MaterialIcon name="add" size={17} />
             </button>
           </div>
@@ -251,11 +255,12 @@ export function FeaturedCard({
   onDates: (row: FeaturedRow, start: string, end: string) => void;
   onAdd: (e: React.MouseEvent<HTMLElement>) => void;
 }) {
+  const { t } = useTranslation('admin-parts');
   const arrow = 'grid size-8 place-items-center rounded-[7px] border-0 bg-transparent text-stone-500 hover:bg-[#f5f1ed] disabled:opacity-30';
   return (
     <Card title={title} sub={sub}>
       <div className="flex flex-col">
-        {rows.length === 0 && <EmptyBlock>Chưa có cộng đồng nào trong mục này.</EmptyBlock>}
+        {rows.length === 0 && <EmptyBlock>{t('featured.empty')}</EmptyBlock>}
         {rows.map((r, i) => (
           <div key={r.id} className="flex flex-wrap items-center gap-2.5 border-t border-[#f4efeb] py-2.5 first:border-t-0">
             <span className="w-6 text-[13px] font-extrabold text-brand">#{i + 1}</span>
@@ -263,16 +268,16 @@ export function FeaturedCard({
               <div className="truncate text-[13.5px] font-semibold">{r.name}</div>
               <div className="truncate text-xs text-stone-400">{r.meta}</div>
             </div>
-            <DateInput label={`Bắt đầu ${r.name}`} value={r.start} onChange={(v) => onDates(r, v, r.end)} />
+            <DateInput label={t('featured.start', { name: r.name })} value={r.start} onChange={(v) => onDates(r, v, r.end)} />
             <span className="text-xs text-stone-400">→</span>
-            <DateInput label={`Kết thúc ${r.name}`} value={r.end} min={r.start} onChange={(v) => onDates(r, r.start, v)} />
-            <button type="button" className={arrow} disabled={busy || i === 0} aria-label="Chuyển lên" onClick={() => onMove(i, -1)}>
+            <DateInput label={t('featured.end', { name: r.name })} value={r.end} min={r.start} onChange={(v) => onDates(r, r.start, v)} />
+            <button type="button" className={arrow} disabled={busy || i === 0} aria-label={t('featured.moveUp')} onClick={() => onMove(i, -1)}>
               <MaterialIcon name="arrow_upward" size={19} />
             </button>
-            <button type="button" className={arrow} disabled={busy || i === rows.length - 1} aria-label="Chuyển xuống" onClick={() => onMove(i, 1)}>
+            <button type="button" className={arrow} disabled={busy || i === rows.length - 1} aria-label={t('featured.moveDown')} onClick={() => onMove(i, 1)}>
               <MaterialIcon name="arrow_downward" size={19} />
             </button>
-            <button type="button" className={`${arrow} !text-[#dc2626] hover:!bg-[#fef2f2]`} disabled={busy} aria-label="Gỡ khỏi danh sách" onClick={() => onRemove(r)}>
+            <button type="button" className={`${arrow} !text-[#dc2626] hover:!bg-[#fef2f2]`} disabled={busy} aria-label={t('featured.remove')} onClick={() => onRemove(r)}>
               <MaterialIcon name="close" size={19} />
             </button>
           </div>
@@ -285,7 +290,7 @@ export function FeaturedCard({
         className="flex h-10 items-center justify-center gap-1.5 rounded-[11px] border-[1.5px] border-dashed border-[#fdba74] bg-transparent text-[13px] font-semibold text-brand hover:bg-[#fffaf6] disabled:opacity-50"
       >
         <MaterialIcon name="add" size={18} />
-        Tìm &amp; thêm cộng đồng
+        {t('featured.add')}
       </button>
     </Card>
   );
@@ -311,6 +316,7 @@ export function BarCell({ pct, tone }: { pct: number; tone?: 'auto' | 'brand' })
 
 /** Khung xem nhanh (không có nút xác nhận): tiêu đề + nội dung cuộn + nút Đóng. */
 export function PreviewDialog({ title, sub, onClose, children, wide }: { title: string; sub?: ReactNode; onClose: () => void; children: ReactNode; wide?: boolean }) {
+  const { t } = useTranslation('admin-parts');
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
@@ -331,13 +337,13 @@ export function PreviewDialog({ title, sub, onClose, children, wide }: { title: 
             <div className="text-[18.5px] font-extrabold tracking-[-.01em] break-words">{title}</div>
             {sub && <div className="mt-1 text-[13px] text-stone-500">{sub}</div>}
           </div>
-          <button type="button" onClick={onClose} aria-label="Đóng" className="border-0 bg-transparent p-0 text-stone-400 hover:text-stone-700">
+          <button type="button" onClick={onClose} aria-label={t('preview.close')} className="border-0 bg-transparent p-0 text-stone-400 hover:text-stone-700">
             <MaterialIcon name="close" size={22} />
           </button>
         </div>
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-1">{children}</div>
         <button type="button" onClick={onClose} className="h-[44px] rounded-[13px] border-[1.5px] border-[#e7e0da] bg-white text-sm font-semibold hover:bg-[#fff4ec]">
-          Đóng
+          {t('preview.close')}
         </button>
       </div>
     </div>,
@@ -357,14 +363,15 @@ export function PreviewSection({ title, children }: { title: string; children: R
 
 /** Lịch sử thao tác quản trị (history[] của các endpoint chi tiết). */
 export function HistoryList({ items }: { items: AuditItem[] }) {
-  if (!items?.length) return <div className="text-[13px] text-stone-400">Chưa có thao tác quản trị nào.</div>;
+  const { t } = useTranslation('admin-parts');
+  if (!items?.length) return <div className="text-[13px] text-stone-400">{t('history.empty')}</div>;
   return (
     <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
       {items.map((h, i) => (
         <li key={h.id ?? i} className="rounded-xl bg-[#faf7f4] px-3 py-2 text-[13px]">
-          <b>{auditLabel(h.action, AUDIT_ACTION)}</b> <span className="text-stone-500">· {h.actor?.name ?? 'Hệ thống'} · {formatDateTime(h.createdAt)}</span>
-          {h.reason && <div className="mt-0.5 text-stone-600">Lý do: {h.reason}</div>}
-          {h.note && <div className="mt-0.5 text-stone-600">Ghi chú: {h.note}</div>}
+          <b>{auditLabel(h.action, AUDIT_ACTION)}</b> <span className="text-stone-500">· {h.actor?.name ?? t('history.system')} · {formatDateTime(h.createdAt)}</span>
+          {h.reason && <div className="mt-0.5 text-stone-600">{t('history.reason', { value: h.reason })}</div>}
+          {h.note && <div className="mt-0.5 text-stone-600">{t('history.note', { value: h.note })}</div>}
         </li>
       ))}
     </ul>

@@ -1,4 +1,4 @@
-import type { AuditItem, StatusMeta } from './types';
+import { tl, type AuditItem, type StatusMeta } from './types';
 
 /** Kiểu dữ liệu theo hợp đồng backend/docs/api/admin-batch2.md (Nội dung · Thanh toán · Khám phá). */
 
@@ -514,115 +514,115 @@ export interface AdminSearchVisibility {
 /* ================================ Nhãn hiển thị ================================ */
 
 export const CONTENT_STATUS: Record<string, StatusMeta> = {
-  published: { label: 'Đã xuất bản', tone: 'g' },
-  under_review: { label: 'Đang xem xét', tone: 'o' },
-  hidden: { label: 'Đã ẩn', tone: 'o' },
-  removed: { label: 'Đã gỡ', tone: 'r' },
-  draft: { label: 'Nháp', tone: 'x' },
-  archived: { label: 'Đã lưu trữ', tone: 'x' },
-  upcoming: { label: 'Sắp diễn ra', tone: 'b' },
-  live: { label: 'Đang diễn ra', tone: 'g' },
-  completed: { label: 'Hoàn tất', tone: 'x' },
-  cancelled: { label: 'Đã hủy', tone: 'r' },
-  active: { label: 'Hoạt động', tone: 'g' },
-  flagged: { label: 'Bị gắn cờ', tone: 'o' },
-  disabled: { label: 'Đã tắt', tone: 'x' },
+  published: { get label() { return tl('labels.contentStatus.published'); }, tone: 'g' },
+  under_review: { get label() { return tl('labels.contentStatus.under_review'); }, tone: 'o' },
+  hidden: { get label() { return tl('labels.contentStatus.hidden'); }, tone: 'o' },
+  removed: { get label() { return tl('labels.contentStatus.removed'); }, tone: 'r' },
+  draft: { get label() { return tl('labels.contentStatus.draft'); }, tone: 'x' },
+  archived: { get label() { return tl('labels.contentStatus.archived'); }, tone: 'x' },
+  upcoming: { get label() { return tl('labels.contentStatus.upcoming'); }, tone: 'b' },
+  live: { get label() { return tl('labels.contentStatus.live'); }, tone: 'g' },
+  completed: { get label() { return tl('labels.contentStatus.completed'); }, tone: 'x' },
+  cancelled: { get label() { return tl('labels.contentStatus.cancelled'); }, tone: 'r' },
+  active: { get label() { return tl('labels.contentStatus.active'); }, tone: 'g' },
+  flagged: { get label() { return tl('labels.contentStatus.flagged'); }, tone: 'o' },
+  disabled: { get label() { return tl('labels.contentStatus.disabled'); }, tone: 'x' },
 };
 
 export const TX_STATUS: Record<string, StatusMeta> = {
-  succeeded: { label: 'Thành công', tone: 'g' },
-  failed: { label: 'Thất bại', tone: 'r' },
-  pending: { label: 'Đang chờ', tone: 'o' },
-  refunded: { label: 'Đã hoàn tiền', tone: 'x' },
+  succeeded: { get label() { return tl('labels.txStatus.succeeded'); }, tone: 'g' },
+  failed: { get label() { return tl('labels.txStatus.failed'); }, tone: 'r' },
+  pending: { get label() { return tl('labels.txStatus.pending'); }, tone: 'o' },
+  refunded: { get label() { return tl('labels.txStatus.refunded'); }, tone: 'x' },
 };
 
 export const SUB_STATUS: Record<string, StatusMeta> = {
-  trialing: { label: 'Dùng thử', tone: 'b' },
-  active: { label: 'Hoạt động', tone: 'g' },
-  past_due: { label: 'Quá hạn', tone: 'o' },
-  paused: { label: 'Tạm dừng', tone: 'x' },
-  canceled: { label: 'Đã hủy', tone: 'r' },
-  expired: { label: 'Hết hạn', tone: 'x' },
+  trialing: { get label() { return tl('labels.subStatus.trialing'); }, tone: 'b' },
+  active: { get label() { return tl('labels.subStatus.active'); }, tone: 'g' },
+  past_due: { get label() { return tl('labels.subStatus.past_due'); }, tone: 'o' },
+  paused: { get label() { return tl('labels.subStatus.paused'); }, tone: 'x' },
+  canceled: { get label() { return tl('labels.subStatus.canceled'); }, tone: 'r' },
+  expired: { get label() { return tl('labels.subStatus.expired'); }, tone: 'x' },
 };
 
 export const REFUND_STATUS: Record<RefundStatus, StatusMeta> = {
-  pending: { label: 'Yêu cầu mới', tone: 'o' },
-  refunding: { label: 'Đang hoàn tiền (chờ cổng)', tone: 'b' },
-  approved: { label: 'Hoàn tất', tone: 'g' },
-  rejected: { label: 'Đã từ chối', tone: 'r' },
+  pending: { get label() { return tl('labels.refundStatus.pending'); }, tone: 'o' },
+  refunding: { get label() { return tl('labels.refundStatus.refunding'); }, tone: 'b' },
+  approved: { get label() { return tl('labels.refundStatus.approved'); }, tone: 'g' },
+  rejected: { get label() { return tl('labels.refundStatus.rejected'); }, tone: 'r' },
 };
 
 export const CHARGEBACK_STATUS: Record<ChargebackStatus, StatusMeta> = {
-  open: { label: 'Mở', tone: 'o' },
-  under_review: { label: 'Đang xem xét', tone: 'b' },
-  won: { label: 'Thắng', tone: 'g' },
+  open: { get label() { return tl('labels.chargebackStatus.open'); }, tone: 'o' },
+  under_review: { get label() { return tl('labels.chargebackStatus.under_review'); }, tone: 'b' },
+  won: { get label() { return tl('labels.chargebackStatus.won'); }, tone: 'g' },
   lost: { label: 'Thua', tone: 'r' },
 };
 
 export const CHARGEBACK_REASON: Record<string, string> = {
-  fraudulent: 'Gian lận',
-  product_not_received: 'Chưa nhận sản phẩm',
-  duplicate: 'Trùng lặp',
-  subscription_cancelled: 'Đã hủy gói',
-  unrecognized: 'Không nhận ra giao dịch',
-  product_not_as_described: 'Sản phẩm không như mô tả',
+  get fraudulent() { return tl('labels.chargebackReason.fraudulent'); },
+  get product_not_received() { return tl('labels.chargebackReason.product_not_received'); },
+  get duplicate() { return tl('labels.chargebackReason.duplicate'); },
+  get subscription_cancelled() { return tl('labels.chargebackReason.subscription_cancelled'); },
+  get unrecognized() { return tl('labels.chargebackReason.unrecognized'); },
+  get product_not_as_described() { return tl('labels.chargebackReason.product_not_as_described'); },
 };
 
 export const PAYOUT_STATUS: Record<PayoutStatus, StatusMeta> = {
-  requested: { label: 'Đang chờ', tone: 'o' },
-  approved: { label: 'Đang xử lý', tone: 'b' },
-  paid: { label: 'Đã chi trả', tone: 'g' },
-  failed: { label: 'Thất bại', tone: 'r' },
-  on_hold: { label: 'Tạm giữ', tone: 'x' },
-  rejected: { label: 'Đã từ chối', tone: 'r' },
+  requested: { get label() { return tl('labels.payoutStatus.requested'); }, tone: 'o' },
+  approved: { get label() { return tl('labels.payoutStatus.approved'); }, tone: 'b' },
+  paid: { get label() { return tl('labels.payoutStatus.paid'); }, tone: 'g' },
+  failed: { get label() { return tl('labels.payoutStatus.failed'); }, tone: 'r' },
+  on_hold: { get label() { return tl('labels.payoutStatus.on_hold'); }, tone: 'x' },
+  rejected: { get label() { return tl('labels.payoutStatus.rejected'); }, tone: 'r' },
 };
 
 export const LISTED_STATUS: Record<string, StatusMeta> = {
-  listed: { label: 'Đang hiển thị', tone: 'g' },
-  featured: { label: 'Nổi bật', tone: 'o' },
-  hidden: { label: 'Đã ẩn', tone: 'x' },
-  unlisted: { label: 'Gỡ khỏi khám phá', tone: 'r' },
+  listed: { get label() { return tl('labels.listedStatus.listed'); }, tone: 'g' },
+  featured: { get label() { return tl('labels.listedStatus.featured'); }, tone: 'o' },
+  hidden: { get label() { return tl('labels.listedStatus.hidden'); }, tone: 'x' },
+  unlisted: { get label() { return tl('labels.listedStatus.unlisted'); }, tone: 'r' },
 };
 
 export const SEARCH_VIS: Record<SearchVis, StatusMeta> = {
-  searchable: { label: 'Cho phép tìm kiếm', tone: 'g' },
-  reduced: { label: 'Giảm hiển thị', tone: 'o' },
-  hidden: { label: 'Đã ẩn', tone: 'x' },
+  searchable: { get label() { return tl('labels.searchVis.searchable'); }, tone: 'g' },
+  reduced: { get label() { return tl('labels.searchVis.reduced'); }, tone: 'o' },
+  hidden: { get label() { return tl('labels.searchVis.hidden'); }, tone: 'x' },
 };
 
 export const FEATURED_LABEL: Record<FeaturedSectionKey, string> = {
-  featured: 'Cộng đồng nổi bật',
-  trending: 'Đang thịnh hành',
-  editors_picks: 'Biên tập viên chọn',
-  new_noteworthy: 'Mới & Đáng chú ý',
+  get featured() { return tl('labels.featuredLabel.featured'); },
+  get trending() { return tl('labels.featuredLabel.trending'); },
+  get editors_picks() { return tl('labels.featuredLabel.editors_picks'); },
+  get new_noteworthy() { return tl('labels.featuredLabel.new_noteworthy'); },
 };
 
 export const FACTOR_LABEL: Record<keyof RankingWeights, string> = {
-  memberGrowth: 'Tăng trưởng thành viên',
-  engagement: 'Tương tác',
-  retention: 'Giữ chân',
-  rating: 'Đánh giá',
+  get memberGrowth() { return tl('labels.factorLabel.memberGrowth'); },
+  get engagement() { return tl('labels.factorLabel.engagement'); },
+  get retention() { return tl('labels.factorLabel.retention'); },
+  get rating() { return tl('labels.factorLabel.rating'); },
   revenue: 'Doanh thu',
-  reportPenalty: 'Trừ điểm báo cáo',
+  get reportPenalty() { return tl('labels.factorLabel.reportPenalty'); },
 };
 
 export const LESSON_ICON: Record<string, string> = { video: 'play_circle', text: 'description', file: 'attach_file', link: 'link' };
-export const LESSON_TYPE: Record<string, string> = { video: 'Video', text: 'Văn bản', file: 'Tệp', link: 'Liên kết' };
-export const MEDIA_KIND_LABEL: Record<string, string> = { image: 'Hình ảnh', video: 'Video', document: 'Tài liệu', audio: 'Âm thanh' };
+export const LESSON_TYPE: Record<string, string> = { video: 'Video', get text() { return tl('labels.lessonType.text'); }, get file() { return tl('labels.lessonType.file'); }, get link() { return tl('labels.lessonType.link'); } };
+export const MEDIA_KIND_LABEL: Record<string, string> = { get image() { return tl('labels.mediaKindLabel.image'); }, video: 'Video', get document() { return tl('labels.mediaKindLabel.document'); }, get audio() { return tl('labels.mediaKindLabel.audio'); } };
 export const REFUND_REASONS = ['Bị trừ tiền 2 lần', 'Không sử dụng sản phẩm', 'Nội dung không như mô tả', 'Mua nhầm', 'Đã hủy nhưng vẫn bị trừ tiền', 'Lỗi kỹ thuật', 'Đổi ý', 'Trùng tài khoản'] as const;
 
 /** Tên danh mục mặc định (Tiếng Việt) khi admin thêm danh mục theo key. */
 export const CATEGORY_DEFAULT_NAME: Record<string, string> = {
   business: 'Kinh doanh',
-  content: 'Nội dung',
-  tech: 'Công nghệ',
-  finance: 'Tài chính',
-  health: 'Sức khỏe & Thể hình',
-  self: 'Phát triển bản thân',
-  hobby: 'Sở thích',
-  relationships: 'Các mối quan hệ',
+  get content() { return tl('labels.categoryDefaultName.content'); },
+  get tech() { return tl('labels.categoryDefaultName.tech'); },
+  get finance() { return tl('labels.categoryDefaultName.finance'); },
+  get health() { return tl('labels.categoryDefaultName.health'); },
+  get self() { return tl('labels.categoryDefaultName.self'); },
+  get hobby() { return tl('labels.categoryDefaultName.hobby'); },
+  get relationships() { return tl('labels.categoryDefaultName.relationships'); },
   marketing: 'Marketing',
-  design: 'Thiết kế',
+  get design() { return tl('labels.categoryDefaultName.design'); },
 };
 
 export const methodLabel = (m: string) => ({ stripe: 'Stripe', vnpay: 'VNPay', momo: 'MoMo' })[m] ?? m;

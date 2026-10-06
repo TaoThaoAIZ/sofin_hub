@@ -1,4 +1,7 @@
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { useEffect, useState } from 'react';
+import { currentLocale } from '../../../i18n';
 import { formatDateTime, formatRelative } from '../../../lib/datetime';
 import { ActionDialog, useDialogSlot, useTableState } from '../components/Batch2Parts';
 import { SettingInput, SettingRow, Toggle } from '../components/Batch3Parts';
@@ -24,6 +27,7 @@ const STAGE_OPTS = (Object.keys(FLAG_STAGE) as FlagStage[]).map((k) => ({ value:
 /* ============================== Tính năng thử nghiệm ============================== */
 
 function FlagFormDialog({ flag, onClose }: { flag?: FeatureFlag; onClose: () => void }) {
+  const { t } = useTranslation('admin-system');
   const act = useAdminAction();
   const [key, setKey] = useState(flag?.key ?? '');
   const [name, setName] = useState(flag?.name ?? '');
@@ -35,11 +39,11 @@ function FlagFormDialog({ flag, onClose }: { flag?: FeatureFlag; onClose: () => 
   return (
     <ActionDialog
       icon="flag"
-      title={flag ? `Sửa tính năng · ${flag.name}` : 'Thêm tính năng thử nghiệm'}
-      body={flag ? undefined : 'Tính năng mới mặc định đang tắt. Bạn có thể bật sau trong danh sách.'}
-      cta={flag ? 'Lưu' : 'Thêm tính năng'}
+      title={flag ? t('flags.editTitle', { name: flag.name }) : t('flags.addTitle')}
+      body={flag ? undefined : t('flags.addBody')}
+      cta={flag ? t('common.save') : t('flags.add')}
       disabledExtra={!name.trim() || !rolloutOk || (!flag && !/^[a-z0-9_]+$/.test(key))}
-      successMessage={flag ? 'Đã cập nhật tính năng' : 'Đã thêm tính năng'}
+      successMessage={flag ? t('flags.updated') : t('flags.added')}
       run={() =>
         flag
           ? act.mutateAsync({ method: 'PATCH', path: `/system/flags/${flag.key}`, body: { name: name.trim(), description: desc.trim(), stage, rolloutPercent: r } })
@@ -47,28 +51,29 @@ function FlagFormDialog({ flag, onClose }: { flag?: FeatureFlag; onClose: () => 
       }
       onClose={onClose}
     >
-      {!flag && <InputField label="Khóa (a-z, 0-9, _)" value={key} onChange={(v) => setKey(v.toLowerCase())} placeholder="vd. dm_v2" mono maxLength={60} />}
-      <InputField label="Tên hiển thị" value={name} onChange={setName} maxLength={80} />
-      <TextAreaField label="Mô tả" value={desc} onChange={setDesc} maxLength={300} />
-      <OptionChips label="Giai đoạn triển khai" options={STAGE_OPTS} value={stage} onChange={(v) => setStage(v as string)} />
-      <InputField label="Tỷ lệ triển khai (0-100%)" value={rollout} onChange={(v) => setRollout(v.replace(/\D/g, '').slice(0, 3))} />
+      {!flag && <InputField label={t('flags.keyLabel')} value={key} onChange={(v) => setKey(v.toLowerCase())} placeholder={t('flags.keyPlaceholder')} mono maxLength={60} />}
+      <InputField label={t('common.displayName')} value={name} onChange={setName} maxLength={80} />
+      <TextAreaField label={t('common.description')} value={desc} onChange={setDesc} maxLength={300} />
+      <OptionChips label={t('flags.stage')} options={STAGE_OPTS} value={stage} onChange={(v) => setStage(v as string)} />
+      <InputField label={t('flags.rollout')} value={rollout} onChange={(v) => setRollout(v.replace(/\D/g, '').slice(0, 3))} />
     </ActionDialog>
   );
 }
 
 export function FlagsView() {
-  const t = useTableState({ stage: '' });
+  const { t } = useTranslation('admin-system');
+  const ts = useTableState({ stage: '' });
   const slot = useDialogSlot();
   const toast = useToast();
   const act = useAdminAction();
   const [busy, setBusy] = useState<string | null>(null);
-  const q = useAdminData<FeatureFlag[]>('system', '/system/flags', { q: t.q || undefined, stage: t.f.stage || undefined });
+  const q = useAdminData<FeatureFlag[]>('system', '/system/flags', { q: ts.q || undefined, stage: ts.f.stage || undefined });
 
   const toggle = async (f: FeatureFlag, enabled: boolean) => {
     setBusy(f.key);
     try {
       await act.mutateAsync({ path: `/system/flags/${f.key}/toggle`, body: { enabled } });
-      toast.success(`${enabled ? 'Đã bật' : 'Đã tắt'} "${f.name}"`);
+      toast.success(t(enabled ? 'flags.enabledToast' : 'flags.disabledToast', { name: f.name }));
     } catch (e) {
       toast.error(errMessage(e));
     } finally {
@@ -77,11 +82,11 @@ export function FlagsView() {
   };
 
   const columns: Column<FeatureFlag>[] = [
-    { key: 'f', label: 'Tính năng', w: 1.8, render: (f) => <MainCell name={f.name} sub={f.key} icon="flag" /> },
-    { key: 'd', label: 'Mô tả', w: 2, render: (f) => <TextCell>{f.description || '—'}</TextCell> },
+    { key: 'f', label: t('flags.feature'), w: 1.8, render: (f) => <MainCell name={f.name} sub={f.key} icon="flag" /> },
+    { key: 'd', label: t('common.description'), w: 2, render: (f) => <TextCell>{f.description || '—'}</TextCell> },
     {
       key: 'r',
-      label: 'Triển khai',
+      label: t('flags.rolloutCol'),
       render: (f) => (
         <span className="flex flex-wrap items-center gap-1.5">
           <StatusBadge tone={FLAG_STAGE[f.stage]?.tone ?? 'x'}>{FLAG_STAGE[f.stage]?.label ?? f.stage}</StatusBadge>
@@ -89,19 +94,19 @@ export function FlagsView() {
         </span>
       ),
     },
-    { key: 'u', label: 'Cập nhật', render: (f) => <MutedCell>{formatRelative(f.updatedAt)}</MutedCell> },
-    { key: 'on', label: 'Bật', w: 0.6, render: (f) => <Toggle on={f.enabled} disabled={busy === f.key} label={`Bật/tắt ${f.name}`} onChange={(v) => void toggle(f, v)} /> },
+    { key: 'u', label: t('flags.updatedCol'), render: (f) => <MutedCell>{formatRelative(f.updatedAt)}</MutedCell> },
+    { key: 'on', label: t('flags.onCol'), w: 0.6, render: (f) => <Toggle on={f.enabled} disabled={busy === f.key} label={t('flags.toggleLabel', { name: f.name })} onChange={(v) => void toggle(f, v)} /> },
   ];
 
   const actions = (f: FeatureFlag): RowAction[] => [
-    { label: 'Sửa', icon: 'edit', onClick: () => slot.show((close) => <FlagFormDialog flag={f} onClose={close} />) },
+    { label: t('common.edit'), icon: 'edit', onClick: () => slot.show((close) => <FlagFormDialog flag={f} onClose={close} />) },
     {
-      label: 'Xóa',
+      label: t('common.delete'),
       icon: 'delete',
       danger: true,
       onClick: () =>
         slot.show((close) => (
-          <ActionDialog icon="delete" danger title={`Xóa tính năng · ${f.name}`} body="Cờ này sẽ biến mất khỏi hệ thống; mã nguồn đang đọc cờ sẽ coi như tắt." cta="Xóa" successMessage="Đã xóa tính năng" run={() => act.mutateAsync({ method: 'DELETE', path: `/system/flags/${f.key}` })} onClose={close} />
+          <ActionDialog icon="delete" danger title={t('flags.deleteTitle', { name: f.name })} body={t('flags.deleteBody')} cta={t('common.delete')} successMessage={t('flags.deleted')} run={() => act.mutateAsync({ method: 'DELETE', path: `/system/flags/${f.key}` })} onClose={close} />
         )),
     },
   ];
@@ -109,11 +114,11 @@ export function FlagsView() {
   return (
     <>
       <PageHeader
-        title="Tính năng thử nghiệm"
-        subtitle="Bật hoặc tắt tính năng trên toàn nền tảng."
+        title={t('flags.pageTitle')}
+        subtitle={t('flags.pageSubtitle')}
         actions={
           <AdminButton kind="primary" icon="add" onClick={() => slot.show((close) => <FlagFormDialog onClose={close} />)}>
-            Thêm tính năng
+            {t('flags.add')}
           </AdminButton>
         }
       />
@@ -122,13 +127,13 @@ export function FlagsView() {
         rows={q.data ?? []}
         rowKey={(f) => f.key}
         actions={actions}
-        search={{ value: t.q, onChange: t.onQ, placeholder: 'Tìm tính năng...' }}
-        filters={[{ key: 'stage', label: 'Giai đoạn', value: t.f.stage, options: STAGE_OPTS, onChange: t.setFilter('stage') }]}
-        onClearFilters={t.clear}
+        search={{ value: ts.q, onChange: ts.onQ, placeholder: t('flags.searchPlaceholder') }}
+        filters={[{ key: 'stage', label: t('flags.stageFilter'), value: ts.f.stage, options: STAGE_OPTS, onChange: ts.setFilter('stage') }]}
+        onClearFilters={ts.clear}
         loading={q.isPending}
         error={q.isError ? q.error : null}
         onRetry={() => void q.refetch()}
-        emptyText="Chưa có tính năng nào."
+        emptyText={t('flags.empty')}
       />
       {slot.el}
     </>
@@ -138,35 +143,37 @@ export function FlagsView() {
 /* ============================== Tích hợp ============================== */
 
 const INT_DESC: Record<string, string> = {
-  stripe: 'Thanh toán thẻ và gói đăng ký.',
-  paypal: 'Thanh toán và chi trả quốc tế.',
-  momo: 'Ví điện tử tại Việt Nam.',
-  zoom: 'Phòng họp cho sự kiện cộng đồng.',
-  google_analytics: 'Theo dõi lưu lượng và chuyển đổi.',
-  mailgun: 'Email giao dịch và thông báo.',
-  slack: 'Gửi cảnh báo kiểm duyệt vào kênh nội bộ.',
-  cloudflare: 'CDN và chống DDoS cho media.',
+  stripe: 'integrations.desc.stripe',
+  paypal: 'integrations.desc.paypal',
+  momo: 'integrations.desc.momo',
+  zoom: 'integrations.desc.zoom',
+  google_analytics: 'integrations.desc.googleAnalytics',
+  mailgun: 'integrations.desc.mailgun',
+  slack: 'integrations.desc.slack',
+  cloudflare: 'integrations.desc.cloudflare',
 };
 
 function ConnectDialog({ it, onClose }: { it: Integration; onClose: () => void }) {
+  const { t } = useTranslation('admin-system');
   const act = useAdminAction();
   const [key, setKey] = useState('');
   return (
     <ActionDialog
       icon="link"
-      title={`Kết nối ${it.name}`}
-      body="Khóa bí mật thật vẫn nằm ở biến môi trường của máy chủ; ở đây chỉ lưu 4 ký tự cuối để hiển thị."
-      cta="Kết nối"
-      successMessage={`Đã kết nối ${it.name}`}
+      title={t('integrations.connectTitle', { name: it.name })}
+      body={t('integrations.connectBody')}
+      cta={t('integrations.connect')}
+      successMessage={t('integrations.connected', { name: it.name })}
       run={() => act.mutateAsync({ path: `/system/integrations/${it.key}/connect`, body: { apiKey: key.trim() || undefined } })}
       onClose={onClose}
     >
-      <InputField label="Khóa API (tùy chọn)" value={key} onChange={setKey} placeholder="sk_live_…" mono />
+      <InputField label={t('integrations.apiKeyOptional')} value={key} onChange={setKey} placeholder="sk_live_…" mono />
     </ActionDialog>
   );
 }
 
 function IntegrationCard({ it, onConnect, onDisconnect, onTest, testing }: { it: Integration; onConnect: () => void; onDisconnect: () => void; onTest: () => void; testing: boolean }) {
+  const { t } = useTranslation('admin-system');
   return (
     <div className="flex flex-col gap-3 rounded-[18px] border border-[#f1ebe6] bg-white p-4">
       <div className="flex items-center gap-3">
@@ -175,30 +182,30 @@ function IntegrationCard({ it, onConnect, onDisconnect, onTest, testing }: { it:
         </span>
         <div className="min-w-0 flex-1">
           <div className="truncate text-[15px] font-bold">{it.name}</div>
-          <div className={`mt-0.5 text-[12.5px] font-semibold ${it.connected ? 'text-[#15803d]' : 'text-stone-400'}`}>{it.connected ? 'Đã kết nối' : 'Chưa kết nối'}</div>
+          <div className={`mt-0.5 text-[12.5px] font-semibold ${it.connected ? 'text-[#15803d]' : 'text-stone-400'}`}>{it.connected ? t('integrations.statusConnected') : t('integrations.statusNotConnected')}</div>
         </div>
         <span className="rounded-full bg-[#f5f1ed] px-2 py-0.5 text-[11px] font-semibold text-stone-500">{INTEGRATION_CATEGORY[it.category] ?? it.category}</span>
       </div>
-      <p className="m-0 text-[13px] leading-relaxed text-stone-500">{INT_DESC[it.key] ?? it.description}</p>
+      <p className="m-0 text-[13px] leading-relaxed text-stone-500">{INT_DESC[it.key] ? t(INT_DESC[it.key]!) : it.description}</p>
       {it.connected && (
         <div className="text-xs text-stone-400">
-          {it.secretMask && <span>Khóa {it.secretMask} · </span>}
-          {it.connectedAt && <span>kết nối {formatRelative(it.connectedAt)}</span>}
+          {it.secretMask && <span>{t('integrations.keyMask', { mask: it.secretMask })}</span>}
+          {it.connectedAt && <span>{t('integrations.connectedAt', { when: formatRelative(it.connectedAt) })}</span>}
         </div>
       )}
       <div className="mt-auto flex gap-2">
         {it.connected ? (
           <>
             <AdminButton className="flex-1" onClick={onDisconnect}>
-              Ngắt kết nối
+              {t('integrations.disconnect')}
             </AdminButton>
             <AdminButton icon="network_check" disabled={testing} onClick={onTest}>
-              {testing ? 'Đang thử…' : 'Kiểm tra'}
+              {testing ? t('integrations.testing') : t('integrations.test')}
             </AdminButton>
           </>
         ) : (
           <AdminButton kind="primary" className="flex-1" onClick={onConnect}>
-            Kết nối
+            {t('integrations.connect')}
           </AdminButton>
         )}
       </div>
@@ -207,6 +214,7 @@ function IntegrationCard({ it, onConnect, onDisconnect, onTest, testing }: { it:
 }
 
 export function IntegrationsView() {
+  const { t } = useTranslation('admin-system');
   const q = useAdminData<Integration[]>('system', '/system/integrations');
   const slot = useDialogSlot();
   const toast = useToast();
@@ -217,8 +225,8 @@ export function IntegrationsView() {
     setTesting(it.key);
     try {
       const r = (await act.mutateAsync({ path: `/system/integrations/${it.key}/test`, body: {} })) as { ok: boolean; message: string; latencyMs: number } | undefined;
-      if (r?.ok) toast.success(`${it.name}: kết nối ổn${r.latencyMs != null ? ` (${r.latencyMs} ms)` : ''}`);
-      else toast.error(`${it.name}: ${r?.message ?? 'kiểm tra thất bại'}`);
+      if (r?.ok) toast.success(r.latencyMs != null ? t('integrations.testOkMs', { name: it.name, ms: r.latencyMs }) : t('integrations.testOk', { name: it.name }));
+      else toast.error(t('integrations.testResult', { name: it.name, message: r?.message ?? t('integrations.testFailed') }));
     } catch (e) {
       toast.error(errMessage(e));
     } finally {
@@ -228,11 +236,11 @@ export function IntegrationsView() {
 
   return (
     <>
-      <PageHeader title="Tích hợp" subtitle="Dịch vụ bên thứ ba kết nối với SofinHub." />
-      <Card title="Dịch vụ đã kết nối">
+      <PageHeader title={t('integrations.pageTitle')} subtitle={t('integrations.pageSubtitle')} />
+      <Card title={t('integrations.connectedServices')}>
         {q.isPending && <LoadingBlock />}
         {q.isError && <ErrorBlock error={q.error} onRetry={() => void q.refetch()} />}
-        {q.data && q.data.length === 0 && <EmptyBlock>Chưa có dịch vụ nào.</EmptyBlock>}
+        {q.data && q.data.length === 0 && <EmptyBlock>{t('integrations.empty')}</EmptyBlock>}
         {q.data && q.data.length > 0 && (
           <div className="grid gap-3.5" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(250px,1fr))' }}>
             {q.data.map((it) => (
@@ -244,7 +252,7 @@ export function IntegrationsView() {
                 onTest={() => void test(it)}
                 onDisconnect={() =>
                   slot.show((close) => (
-                    <ActionDialog icon="link_off" danger title={`Ngắt kết nối ${it.name}?`} body="Các tính năng phụ thuộc dịch vụ này có thể ngừng hoạt động." cta="Ngắt kết nối" successMessage={`Đã ngắt kết nối ${it.name}`} run={() => act.mutateAsync({ path: `/system/integrations/${it.key}/disconnect`, body: {} })} onClose={close} />
+                    <ActionDialog icon="link_off" danger title={t('integrations.disconnectTitle', { name: it.name })} body={t('integrations.disconnectBody')} cta={t('integrations.disconnect')} successMessage={t('integrations.disconnected', { name: it.name })} run={() => act.mutateAsync({ path: `/system/integrations/${it.key}/disconnect`, body: {} })} onClose={close} />
                   ))
                 }
               />
@@ -278,15 +286,16 @@ function AlertForm({ title, sub, group, rows, value, onChange, children }: { tit
   );
 }
 
-const AUDIENCES = [
-  { value: 'all', label: 'Mọi người dùng' },
-  { value: 'creators', label: 'Creator' },
-  { value: 'paid_members', label: 'Thành viên trả phí' },
-  { value: 'community', label: 'Một cộng đồng' },
+const audiences = (t: TFunction) => [
+  { value: 'all', label: t('broadcast.audAll') },
+  { value: 'creators', label: t('broadcast.audCreators') },
+  { value: 'paid_members', label: t('broadcast.audPaid') },
+  { value: 'community', label: t('broadcast.audCommunity') },
 ];
-const audLabel = (a: BroadcastAudience) => AUDIENCES.find((x) => x.value === a.type)?.label ?? a.type;
+const audLabel = (t: TFunction, a: BroadcastAudience) => audiences(t).find((x) => x.value === a.type)?.label ?? a.type;
 
 function BroadcastCard() {
+  const { t } = useTranslation('admin-system');
   const act = useAdminAction();
   const toast = useToast();
   const slot = useDialogSlot();
@@ -303,10 +312,10 @@ function BroadcastCard() {
     slot.show((close) => (
       <ActionDialog
         icon="campaign"
-        title="Gửi thông báo hệ thống?"
-        body={`Gửi "${title.trim()}" tới ${audLabel(audience).toLowerCase()}. Thao tác này không thu hồi được.`}
-        cta="Gửi thông báo"
-        successMessage="Đã gửi thông báo"
+        title={t('broadcast.sendTitle')}
+        body={t('broadcast.sendBody', { title: title.trim(), audience: audLabel(t, audience).toLowerCase() })}
+        cta={t('broadcast.send')}
+        successMessage={t('broadcast.sent')}
         run={async () => {
           await act.mutateAsync({ path: '/system/notifications/broadcast', body: { title: title.trim(), body: body.trim(), link: link.trim() || undefined, audience, sendEmail: email } });
           setTitle('');
@@ -320,29 +329,29 @@ function BroadcastCard() {
   const preview = async () => {
     try {
       const r = (await act.mutateAsync({ path: '/system/notifications/preview', body: { audience } })) as { recipientCount: number } | undefined;
-      toast.success(`Thông báo sẽ tới ${(r?.recipientCount ?? 0).toLocaleString('vi-VN')} người`);
+      toast.success(t('broadcast.previewToast', { n: (r?.recipientCount ?? 0).toLocaleString(currentLocale()) }));
     } catch (e) {
       toast.error(errMessage(e));
     }
   };
 
   return (
-    <Card title="Thông báo tới người dùng" sub="Gửi thông báo trong ứng dụng (và email nếu chọn) tới một nhóm người dùng.">
-      <InputField label="Tiêu đề" value={title} onChange={setTitle} maxLength={120} />
-      <TextAreaField label="Nội dung" value={body} onChange={setBody} maxLength={1000} />
-      <InputField label="Liên kết (tùy chọn)" value={link} onChange={setLink} placeholder="/communities/…" />
-      <OptionChips label="Đối tượng nhận" options={AUDIENCES} value={type} onChange={(v) => setType(v as string)} />
-      {type === 'community' && <InputField label="Mã cộng đồng" value={courseId} onChange={setCourseId} placeholder="vd. photo" />}
+    <Card title={t('broadcast.cardTitle')} sub={t('broadcast.cardSubtitle')}>
+      <InputField label={t('broadcast.title')} value={title} onChange={setTitle} maxLength={120} />
+      <TextAreaField label={t('common.content')} value={body} onChange={setBody} maxLength={1000} />
+      <InputField label={t('broadcast.link')} value={link} onChange={setLink} placeholder="/communities/…" />
+      <OptionChips label={t('broadcast.audience')} options={audiences(t)} value={type} onChange={(v) => setType(v as string)} />
+      {type === 'community' && <InputField label={t('broadcast.communityId')} value={courseId} onChange={setCourseId} placeholder={t('broadcast.communityIdPlaceholder')} />}
       <label className="flex items-center gap-2 text-[13.5px]">
-        <Toggle on={email} onChange={setEmail} label="Gửi kèm email" />
-        Gửi kèm email
+        <Toggle on={email} onChange={setEmail} label={t('broadcast.alsoEmail')} />
+        {t('broadcast.alsoEmail')}
       </label>
       <div className="flex flex-wrap gap-2">
         <AdminButton icon="groups" disabled={!ready && type === 'community' && !courseId.trim()} onClick={() => void preview()}>
-          Xem số người nhận
+          {t('broadcast.previewCount')}
         </AdminButton>
         <AdminButton kind="primary" icon="campaign" disabled={!ready} onClick={send}>
-          Gửi thông báo
+          {t('broadcast.send')}
         </AdminButton>
       </div>
       {slot.el}
@@ -351,31 +360,33 @@ function BroadcastCard() {
 }
 
 function BroadcastHistory() {
-  const t = useTableState({});
-  const list = useAdminList<Broadcast>('system', '/system/notifications/broadcasts', { page: t.page, limit: 10 });
+  const { t } = useTranslation('admin-system');
+  const ts = useTableState({});
+  const list = useAdminList<Broadcast>('system', '/system/notifications/broadcasts', { page: ts.page, limit: 10 });
   return (
     <DataTable<Broadcast>
-      title="Lịch sử thông báo đã gửi"
+      title={t('broadcast.historyTitle')}
       columns={[
-        { key: 't', label: 'Thông báo', w: 2, render: (b) => <MainCell name={b.title} sub={b.body} icon="campaign" /> },
-        { key: 'a', label: 'Đối tượng', render: (b) => <TextCell>{audLabel(b.audience)}</TextCell> },
-        { key: 'r', label: 'Người nhận', render: (b) => <TextCell>{b.recipientCount.toLocaleString('vi-VN')}</TextCell> },
-        { key: 'e', label: 'Email', w: 0.7, render: (b) => <TextCell>{b.emailCount.toLocaleString('vi-VN')}</TextCell> },
-        { key: 's', label: 'Người gửi', render: (b) => <TextCell>{b.sentBy.name}</TextCell> },
-        { key: 'c', label: 'Thời gian', render: (b) => <MutedCell>{formatDateTime(b.createdAt)}</MutedCell> },
+        { key: 't', label: t('notifications.rowHistory'), w: 2, render: (b) => <MainCell name={b.title} sub={b.body} icon="campaign" /> },
+        { key: 'a', label: t('broadcast.audienceCol'), render: (b) => <TextCell>{audLabel(t, b.audience)}</TextCell> },
+        { key: 'r', label: t('broadcast.recipientsCol'), render: (b) => <TextCell>{b.recipientCount.toLocaleString(currentLocale())}</TextCell> },
+        { key: 'e', label: 'Email', w: 0.7, render: (b) => <TextCell>{b.emailCount.toLocaleString(currentLocale())}</TextCell> },
+        { key: 's', label: t('broadcast.sentBy'), render: (b) => <TextCell>{b.sentBy.name}</TextCell> },
+        { key: 'c', label: t('broadcast.time'), render: (b) => <MutedCell>{formatDateTime(b.createdAt)}</MutedCell> },
       ]}
       rows={list.data?.data ?? []}
       rowKey={(b) => b.id}
       loading={list.isPending}
       error={list.isError ? list.error : null}
       onRetry={() => void list.refetch()}
-      emptyText="Chưa gửi thông báo nào."
-      page={list.data ? { page: list.data.meta.page, totalPages: list.data.meta.totalPages, total: list.data.meta.total, limit: 10, onPage: t.setPage } : undefined}
+      emptyText={t('broadcast.historyEmpty')}
+      page={list.data ? { page: list.data.meta.page, totalPages: list.data.meta.totalPages, total: list.data.meta.total, limit: 10, onPage: ts.setPage } : undefined}
     />
   );
 }
 
 export function NotificationsView() {
+  const { t } = useTranslation('admin-system');
   const q = useAdminData<NotificationSettings>('system', '/system/notifications/settings');
   const act = useAdminAction();
   const toast = useToast();
@@ -391,7 +402,7 @@ export function NotificationsView() {
     setSaving(true);
     try {
       await act.mutateAsync({ method: 'PUT', path: '/system/notifications/settings', body: draft });
-      toast.success('Đã lưu cấu hình thông báo');
+      toast.success(t('notifications.saved'));
     } catch (e) {
       toast.error(errMessage(e));
     } finally {
@@ -402,17 +413,17 @@ export function NotificationsView() {
   return (
     <>
       <PageHeader
-        title="Thông báo"
-        subtitle="Cảnh báo gửi cho các nhóm quản trị và thông báo tới người dùng."
+        title={t('common.notifications')}
+        subtitle={t('notifications.pageSubtitle')}
         actions={
           <>
             {dirty && (
               <AdminButton onClick={() => q.data && setDraft(q.data)} disabled={saving}>
-                Hoàn tác
+                {t('common.undo')}
               </AdminButton>
             )}
             <AdminButton kind="primary" icon="save" disabled={!dirty || saving} onClick={() => void save()}>
-              {saving ? 'Đang lưu…' : 'Lưu thay đổi'}
+              {saving ? t('common.saving') : t('common.saveChanges')}
             </AdminButton>
           </>
         }
@@ -423,46 +434,46 @@ export function NotificationsView() {
         <>
           <div className="grid items-start gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))' }}>
             <AlertForm
-              title="Cảnh báo kiểm duyệt"
-              sub="Gửi cho nhóm kiểm duyệt."
+              title={t('notifications.moderationTitle')}
+              sub={t('notifications.moderationSub')}
               group="moderation"
               value={draft}
               onChange={setDraft}
               rows={[
-                { key: 'criticalReports', label: 'Báo cáo nghiêm trọng', hint: 'Email + thông báo đẩy' },
-                { key: 'pendingCommunities', label: 'Cộng đồng chờ duyệt' },
-                { key: 'aiFlagged', label: 'Nội dung bị AI gắn cờ' },
+                { key: 'criticalReports', label: t('notifications.criticalReports'), hint: t('notifications.criticalHint') },
+                { key: 'pendingCommunities', label: t('notifications.pendingCommunities') },
+                { key: 'aiFlagged', label: t('notifications.aiFlagged') },
               ]}
             />
             <AlertForm
-              title="Cảnh báo thanh toán"
-              sub="Gửi cho nhóm tài chính."
+              title={t('notifications.paymentsTitle')}
+              sub={t('notifications.paymentsSub')}
               group="payments"
               value={draft}
               onChange={setDraft}
               rows={[
-                { key: 'newChargeback', label: 'Tranh chấp mới' },
-                { key: 'failedPayout', label: 'Chi trả thất bại' },
-                { key: 'refundOver500', label: 'Hoàn tiền trên $500' },
+                { key: 'newChargeback', label: t('notifications.newChargeback') },
+                { key: 'failedPayout', label: t('notifications.failedPayout') },
+                { key: 'refundOver500', label: t('notifications.refundOver500') },
               ]}
             />
           </div>
           <AlertForm
-            title="Báo cáo"
-            sub="Báo cáo định kỳ qua email."
+            title={t('notifications.reportsTitle')}
+            sub={t('notifications.reportsSub')}
             group="reports"
             value={draft}
             onChange={setDraft}
             rows={[
-              { key: 'weeklySummary', label: 'Tổng kết hằng tuần' },
-              { key: 'monthlyBoardReport', label: 'Báo cáo hằng tháng' },
+              { key: 'weeklySummary', label: t('notifications.weeklySummary') },
+              { key: 'monthlyBoardReport', label: t('notifications.monthlyReport') },
             ]}
           >
-            <SettingRow label="Gửi đến" hint="Email nhận báo cáo định kỳ">
-              <SettingInput label="Email nhận báo cáo" value={draft.reports.sendTo} onChange={(v) => setDraft({ ...draft, reports: { ...draft.reports, sendTo: v } })} placeholder="ops@sofinhub.com" />
+            <SettingRow label={t('notifications.sendTo')} hint={t('notifications.sendToHint')}>
+              <SettingInput label={t('notifications.recipientEmail')} value={draft.reports.sendTo} onChange={(v) => setDraft({ ...draft, reports: { ...draft.reports, sendTo: v } })} placeholder="ops@sofinhub.com" />
             </SettingRow>
           </AlertForm>
-          <p className="m-0 text-xs text-stone-400">Hiện hệ thống chỉ lưu cấu hình; chưa có tác vụ tự động gửi các cảnh báo/báo cáo định kỳ này.</p>
+          <p className="m-0 text-xs text-stone-400">{t('notifications.storedOnlyNote')}</p>
         </>
       )}
       <BroadcastCard />
@@ -486,6 +497,7 @@ const OVERRIDE_KEYS: Record<string, string> = {
 };
 
 export function SettingsView() {
+  const { t } = useTranslation('admin-system');
   const q = useAdminData<PlatformSettings>('system', '/system/settings');
   const act = useAdminAction();
   const toast = useToast();
@@ -506,17 +518,17 @@ export function SettingsView() {
     if (!draft) return null;
     const p = draft.payments;
     const checks: [number, number, number, string][] = [
-      [p.commissionPct, 0, 100, 'Hoa hồng nền tảng (0–100%)'],
-      [p.gatewayFeePct, 0, 100, 'Phí cổng thanh toán (0–100%)'],
-      [p.refundWindowDays, 0, 365, 'Thời hạn hoàn tiền (0–365 ngày)'],
-      [p.payoutMinUsd, 0, 100000, 'Mức rút tối thiểu'],
-      [p.trialDays, 0, 365, 'Số ngày dùng thử (0–365)'],
-      [p.subscriptionPeriodDays, 1, 365, 'Chu kỳ gói đăng ký (1–365 ngày)'],
-      [p.gatewayFeeFixedCents, 0, 100000, 'Phí cố định cổng thanh toán'],
+      [p.commissionPct, 0, 100, t('settings.checkCommission')],
+      [p.gatewayFeePct, 0, 100, t('settings.checkGatewayFee')],
+      [p.refundWindowDays, 0, 365, t('settings.checkRefundWindow')],
+      [p.payoutMinUsd, 0, 100000, t('settings.payoutMin')],
+      [p.trialDays, 0, 365, t('settings.checkTrial')],
+      [p.subscriptionPeriodDays, 1, 365, t('settings.checkPeriod')],
+      [p.gatewayFeeFixedCents, 0, 100000, t('settings.checkFixedFee')],
     ];
-    for (const [v, lo, hi, label] of checks) if (!Number.isFinite(v) || v < lo || v > hi) return `${label} không hợp lệ.`;
-    if (!draft.platform.name.trim()) return 'Tên nền tảng không được để trống.';
-    if (!/^\S+@\S+\.\S+$/.test(draft.platform.supportEmail.trim())) return 'Email hỗ trợ không hợp lệ.';
+    for (const [v, lo, hi, label] of checks) if (!Number.isFinite(v) || v < lo || v > hi) return t('settings.invalidField', { label });
+    if (!draft.platform.name.trim()) return t('settings.nameRequired');
+    if (!/^\S+@\S+\.\S+$/.test(draft.platform.supportEmail.trim())) return t('settings.emailInvalid');
     return null;
   };
   const problem = validate();
@@ -531,7 +543,7 @@ export function SettingsView() {
     setSaving(true);
     try {
       await act.mutateAsync({ method: 'PATCH', path: '/system/settings', body: patch });
-      toast.success('Đã lưu cài đặt chung');
+      toast.success(t('settings.saved'));
     } catch (e) {
       toast.error(errMessage(e));
     } finally {
@@ -541,7 +553,7 @@ export function SettingsView() {
 
   const resetKeys = (keys: string[], label: string) =>
     slot.show((close) => (
-      <ActionDialog icon="restart_alt" title={`Khôi phục mặc định · ${label}`} body="Giá trị sẽ quay về mặc định của máy chủ (biến môi trường)." cta="Khôi phục" successMessage="Đã khôi phục giá trị mặc định" run={() => act.mutateAsync({ path: '/system/settings/reset', body: { keys } })} onClose={close} />
+      <ActionDialog icon="restart_alt" title={t('settings.resetTitle', { label })} body={t('settings.resetBody')} cta={t('common.restore')} successMessage={t('settings.resetDone')} run={() => act.mutateAsync({ path: '/system/settings/reset', body: { keys } })} onClose={close} />
     ));
 
   const onMaintenance = (v: boolean) => {
@@ -550,10 +562,10 @@ export function SettingsView() {
       <ActionDialog
         icon="construction"
         danger
-        title="Bật chế độ bảo trì?"
-        body="Mọi API công khai sẽ trả lỗi 503 và thành viên thấy trang bảo trì cho tới khi bạn tắt. Khu vực quản trị và đăng nhập vẫn hoạt động. Thay đổi có hiệu lực sau khi bấm Lưu."
-        cta="Bật khi lưu"
-        successMessage="Đã đặt chế độ bảo trì (nhớ bấm Lưu thay đổi)"
+        title={t('settings.maintenanceTitle')}
+        body={t('settings.maintenanceBody')}
+        cta={t('settings.enableOnSave')}
+        successMessage={t('settings.maintenanceSet')}
         run={async () => setG('security', { maintenanceMode: true })}
         onClose={close}
       />
@@ -564,7 +576,7 @@ export function SettingsView() {
     const o = orig?.overrides[OVERRIDE_KEYS[field] ?? ''];
     return o?.overridden ? (
       <button type="button" className="ml-3 border-0 bg-transparent p-0 text-xs font-semibold text-brand hover:underline" onClick={() => resetKeys([OVERRIDE_KEYS[field]!], field)}>
-        Mặc định: {String(o.default)} · Khôi phục
+        {t('settings.defaultRestore', { value: String(o.default) })}
       </button>
     ) : null;
   };
@@ -586,17 +598,17 @@ export function SettingsView() {
   return (
     <>
       <PageHeader
-        title="Cài đặt chung"
-        subtitle="Cấu hình toàn nền tảng."
+        title={t('settings.pageTitle')}
+        subtitle={t('settings.pageSubtitle')}
         actions={
           <>
             {dirty && (
               <AdminButton disabled={saving} onClick={() => orig && setDraft(orig)}>
-                Hoàn tác
+                {t('common.undo')}
               </AdminButton>
             )}
             <AdminButton kind="primary" icon="save" disabled={!dirty || saving || !!problem} onClick={() => void save()}>
-              {saving ? 'Đang lưu…' : 'Lưu thay đổi'}
+              {saving ? t('common.saving') : t('common.saveChanges')}
             </AdminButton>
           </>
         }
@@ -611,60 +623,60 @@ export function SettingsView() {
       {draft && (
         <>
           <div className="grid items-start gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(340px,1fr))' }}>
-            <Card title="Nền tảng" sub="Tên, liên hệ và thiết lập mặc định.">
-              <SettingRow label="Tên nền tảng">
-                <SettingInput label="Tên nền tảng" value={draft.platform.name} onChange={(v) => setG('platform', { name: v })} />
+            <Card title={t('settings.platform')} sub={t('settings.platformSub')}>
+              <SettingRow label={t('settings.platformName')}>
+                <SettingInput label={t('settings.platformName')} value={draft.platform.name} onChange={(v) => setG('platform', { name: v })} />
               </SettingRow>
-              <SettingRow label="Email hỗ trợ">
-                <SettingInput label="Email hỗ trợ" value={draft.platform.supportEmail} onChange={(v) => setG('platform', { supportEmail: v })} />
+              <SettingRow label={t('settings.supportEmail')}>
+                <SettingInput label={t('settings.supportEmail')} value={draft.platform.supportEmail} onChange={(v) => setG('platform', { supportEmail: v })} />
               </SettingRow>
-              <SettingRow label="Ngôn ngữ mặc định">
+              <SettingRow label={t('settings.defaultLanguage')}>
                 <Segment
-                  label="Ngôn ngữ mặc định"
+                  label={t('settings.defaultLanguage')}
                   value={draft.platform.defaultLanguage}
                   onChange={(v) => setG('platform', { defaultLanguage: v })}
                   options={[
-                    { value: 'en', label: 'Tiếng Anh' },
-                    { value: 'vi', label: 'Tiếng Việt' },
+                    { value: 'en', label: t('settings.langEn') },
+                    { value: 'vi', label: t('settings.langVi') },
                   ]}
                 />
               </SettingRow>
-              <SettingRow label="Múi giờ" hint="Chỉ lưu cấu hình">
-                <SettingInput label="Múi giờ" value={draft.platform.timezone} onChange={(v) => setG('platform', { timezone: v })} />
+              <SettingRow label={t('settings.timezone')} hint={t('common.storedOnly')}>
+                <SettingInput label={t('settings.timezone')} value={draft.platform.timezone} onChange={(v) => setG('platform', { timezone: v })} />
               </SettingRow>
             </Card>
-            <Card title="Bảo mật" sub="Chính sách cho tài khoản quản trị.">
-              <SettingRow label="Bắt buộc 2FA cho quản trị viên" hint="Chỉ lưu cấu hình (chưa có cơ chế thực thi)">
-                <Toggle on={draft.security.require2fa} label="Bắt buộc 2FA" onChange={(v) => setG('security', { require2fa: v })} />
+            <Card title={t('settings.security')} sub={t('settings.securitySub')}>
+              <SettingRow label={t('settings.require2fa')} hint={t('settings.require2faHint')}>
+                <Toggle on={draft.security.require2fa} label={t('settings.require2faShort')} onChange={(v) => setG('security', { require2fa: v })} />
               </SettingRow>
-              <SettingRow label="Tự đăng xuất sau" hint="Chỉ lưu cấu hình">
+              <SettingRow label={t('settings.autoSignOut')} hint={t('common.storedOnly')}>
                 <Segment
-                  label="Tự đăng xuất sau"
+                  label={t('settings.autoSignOut')}
                   value={String(draft.security.sessionTimeoutMin)}
                   onChange={(v) => setG('security', { sessionTimeoutMin: Number(v) })}
                   options={[
-                    { value: '15', label: '15 phút' },
-                    { value: '30', label: '30 phút' },
-                    { value: '120', label: '2 giờ' },
+                    { value: '15', label: t('settings.min15') },
+                    { value: '30', label: t('settings.min30') },
+                    { value: '120', label: t('settings.hours2') },
                   ]}
                 />
               </SettingRow>
-              <SettingRow label="Chế độ bảo trì" hint="Thành viên sẽ thấy trang bảo trì">
-                <Toggle on={draft.security.maintenanceMode} label="Chế độ bảo trì" onChange={onMaintenance} />
+              <SettingRow label={t('settings.maintenance')} hint={t('settings.maintenanceHint')}>
+                <Toggle on={draft.security.maintenanceMode} label={t('settings.maintenance')} onChange={onMaintenance} />
               </SettingRow>
             </Card>
           </div>
-          <Card title="Thanh toán" sub="Phí, thời hạn và lịch chi trả. Các mục có nhãn “áp dụng ngay” ảnh hưởng thanh toán/hoàn tiền/rút tiền mới.">
-            {numRow('payments', 'commissionPct', 'Hoa hồng nền tảng', 'Áp dụng ngay cho thanh toán mới', '%')}
-            {numRow('payments', 'gatewayFeePct', 'Phí cổng thanh toán (%)', 'Áp dụng ngay', '%')}
-            {numRow('payments', 'gatewayFeeFixedCents', 'Phí cổng cố định', 'Áp dụng ngay · đơn vị cent', 'cent')}
-            {numRow('payments', 'refundWindowDays', 'Thời hạn hoàn tiền', 'Áp dụng ngay', 'ngày')}
-            {numRow('payments', 'payoutMinUsd', 'Mức rút tối thiểu', 'Áp dụng ngay', 'USD')}
-            {numRow('payments', 'trialDays', 'Số ngày dùng thử', 'Áp dụng ngay', 'ngày')}
-            {numRow('payments', 'subscriptionPeriodDays', 'Chu kỳ gói đăng ký', 'Áp dụng ngay', 'ngày')}
-            <SettingRow label="Tiền tệ" hint="Chỉ lưu cấu hình">
+          <Card title={t('common.payments')} sub={t('settings.paymentsSub')}>
+            {numRow('payments', 'commissionPct', t('settings.commission'), t('settings.commissionHint'), '%')}
+            {numRow('payments', 'gatewayFeePct', t('settings.gatewayFeePct'), t('common.appliesImmediately'), '%')}
+            {numRow('payments', 'gatewayFeeFixedCents', t('settings.gatewayFeeFixed'), t('settings.gatewayFeeFixedHint'), t('settings.cents'))}
+            {numRow('payments', 'refundWindowDays', t('settings.refundWindow'), t('common.appliesImmediately'), t('common.days'))}
+            {numRow('payments', 'payoutMinUsd', t('settings.payoutMin'), t('common.appliesImmediately'), 'USD')}
+            {numRow('payments', 'trialDays', t('settings.trialDays'), t('common.appliesImmediately'), t('common.days'))}
+            {numRow('payments', 'subscriptionPeriodDays', t('settings.subscriptionPeriod'), t('common.appliesImmediately'), t('common.days'))}
+            <SettingRow label={t('common.currency')} hint={t('common.storedOnly')}>
               <Segment
-                label="Tiền tệ"
+                label={t('common.currency')}
                 value={draft.payments.currency}
                 onChange={(v) => setG('payments', { currency: v })}
                 options={[
@@ -674,14 +686,14 @@ export function SettingsView() {
                 ]}
               />
             </SettingRow>
-            <SettingRow label="Chi trả tự động" hint="Chỉ lưu cấu hình · ngày 1 và 16 hàng tháng">
-              <Toggle on={draft.payments.autoPayouts} label="Chi trả tự động" onChange={(v) => setG('payments', { autoPayouts: v })} />
+            <SettingRow label={t('settings.autoPayouts')} hint={t('settings.autoPayoutsHint')}>
+              <Toggle on={draft.payments.autoPayouts} label={t('settings.autoPayouts')} onChange={(v) => setG('payments', { autoPayouts: v })} />
             </SettingRow>
           </Card>
-          {orig?.updatedAt && <p className="m-0 text-xs text-stone-400">Cập nhật lần cuối {formatDateTime(orig.updatedAt)}.</p>}
+          {orig?.updatedAt && <p className="m-0 text-xs text-stone-400">{t('settings.lastUpdated', { date: formatDateTime(orig.updatedAt) })}</p>}
           <div className="flex">
-            <AdminButton kind="danger" icon="restart_alt" onClick={() => resetKeys([], 'toàn bộ cài đặt')}>
-              Khôi phục toàn bộ về mặc định
+            <AdminButton kind="danger" icon="restart_alt" onClick={() => resetKeys([], t('settings.allSettings'))}>
+              {t('settings.resetAll')}
             </AdminButton>
           </div>
         </>

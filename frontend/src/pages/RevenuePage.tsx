@@ -1,8 +1,7 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
-import { RequireLogin } from '../components/layout/RequireLogin';
-import { MaterialIcon } from '../components/ui/MaterialIcon';
+import { useTranslation } from 'react-i18next';
+import { useParams } from 'react-router-dom';
+import i18n from '../i18n';
 import { Pager } from '../components/ui/Pager';
 import { ApiError } from '../lib/api';
 import { formatCents, formatDate, formatDateTime } from '../lib/datetime';
@@ -10,20 +9,19 @@ import { useCommunityDetail } from '../features/courses/queries';
 import { usePayouts, useRequestPayout, useRevenue } from '../features/payments/queries';
 import type { PayoutStatus } from '../features/payments/types';
 
-const ERR_CODE_TEXT: Record<string, string> = {
-  PAYOUT_BLOCKED: 'Số dư ròng đang âm do hoàn tiền sau khi đã rút — chưa thể rút thêm cho đến khi nợ được bù trừ.',
-  COMMUNITY_LOCKED: 'Cộng đồng đang bị khóa nên không thể rút tiền.',
-};
+const ERR_CODES = ['PAYOUT_BLOCKED', 'COMMUNITY_LOCKED'];
 const errText = (e: unknown) =>
-  e instanceof ApiError ? (e.code && ERR_CODE_TEXT[e.code]) || e.message : 'Đã có lỗi xảy ra, vui lòng thử lại';
+  e instanceof ApiError
+    ? (e.code && ERR_CODES.includes(e.code) && i18n.t(`err.${e.code}`, { ns: 'revenue' })) || e.message
+    : i18n.t('err.generic', { ns: 'revenue' });
 
-const PAYOUT_LABEL: Record<PayoutStatus, { text: string; cls: string }> = {
-  requested: { text: 'Đã yêu cầu', cls: 'bg-amber-500/10 text-amber-700' },
-  approved: { text: 'Đã duyệt', cls: 'bg-blue-500/10 text-blue-700' },
-  paid: { text: 'Đã chi trả', cls: 'bg-green-500/10 text-green-700' },
-  rejected: { text: 'Bị từ chối', cls: 'bg-red-500/10 text-red-600' },
-  failed: { text: 'Thất bại', cls: 'bg-red-500/10 text-red-600' },
-  on_hold: { text: 'Tạm giữ', cls: 'bg-stone-500/10 text-stone-700' },
+const PAYOUT_CLS: Record<PayoutStatus, string> = {
+  requested: 'bg-amber-500/10 text-amber-700',
+  approved: 'bg-blue-500/10 text-blue-700',
+  paid: 'bg-green-500/10 text-green-700',
+  rejected: 'bg-red-500/10 text-red-600',
+  failed: 'bg-red-500/10 text-red-600',
+  on_hold: 'bg-stone-500/10 text-stone-700',
 };
 
 function Stat({ label, value, hint, accent }: { label: string; value: string; hint?: string; accent?: boolean }) {
@@ -37,6 +35,7 @@ function Stat({ label, value, hint, accent }: { label: string; value: string; hi
 }
 
 function PayoutForm({ courseId, available, blocked }: { courseId: string; available: number; blocked: boolean }) {
+  const { t } = useTranslation('revenue');
   const request = useRequestPayout(courseId);
   const [amount, setAmount] = useState('');
   const [bankName, setBankName] = useState('');
@@ -51,10 +50,10 @@ function PayoutForm({ courseId, available, blocked }: { courseId: string; availa
     e.preventDefault();
     setError(null);
     setOk(false);
-    if (blocked) return setError(ERR_CODE_TEXT.PAYOUT_BLOCKED ?? null);
-    if (!Number.isFinite(cents) || cents <= 0) return setError('Nhập số tiền hợp lệ (USD).');
-    if (cents > available) return setError(`Số tiền vượt quá số dư có thể rút (${formatCents(available)}).`);
-    if (!/^\d{6,20}$/.test(accountNumber.trim())) return setError('Số tài khoản phải gồm 6–20 chữ số.');
+    if (blocked) return setError(t('err.PAYOUT_BLOCKED'));
+    if (!Number.isFinite(cents) || cents <= 0) return setError(t('err.invalidAmount'));
+    if (cents > available) return setError(t('err.overBalance', { amount: formatCents(available) }));
+    if (!/^\d{6,20}$/.test(accountNumber.trim())) return setError(t('err.invalidAccount'));
     request.mutate(
       { amountCents: cents, method: { type: 'bank', bankName: bankName.trim(), accountNumber: accountNumber.trim(), accountHolder: accountHolder.trim() } },
       {
@@ -71,28 +70,28 @@ function PayoutForm({ courseId, available, blocked }: { courseId: string; availa
   const input = 'h-11 w-full rounded-xl border border-[rgba(120,60,20,.12)] bg-white px-3 text-[14px] outline-0 focus:border-brand';
   return (
     <form onSubmit={submit} className="glass grid gap-3 rounded-3xl p-5 sm:grid-cols-2">
-      <h2 className="text-lg font-extrabold sm:col-span-2">Yêu cầu rút tiền</h2>
+      <h2 className="text-lg font-extrabold sm:col-span-2">{t('form.title')}</h2>
       <label className="text-[12.5px] font-semibold sm:col-span-2">
-        Số tiền (USD) — có thể rút {formatCents(available)}
+        {t('form.amount', { amount: formatCents(available) })}
         <input type="number" min="0" step="0.01" max={available / 100} disabled={blocked} value={amount} onChange={(e) => setAmount(e.target.value)} className={`${input} mt-1`} required />
       </label>
       <label className="text-[12.5px] font-semibold">
-        Ngân hàng
+        {t('form.bank')}
         <input value={bankName} onChange={(e) => setBankName(e.target.value)} maxLength={100} className={`${input} mt-1`} required />
       </label>
       <label className="text-[12.5px] font-semibold">
-        Số tài khoản
+        {t('form.account')}
         <input value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} inputMode="numeric" autoComplete="off" className={`${input} mt-1`} required />
       </label>
       <label className="text-[12.5px] font-semibold sm:col-span-2">
-        Chủ tài khoản
+        {t('form.holder')}
         <input value={accountHolder} onChange={(e) => setAccountHolder(e.target.value)} maxLength={100} className={`${input} mt-1`} required />
       </label>
       {error && <div role="alert" className="rounded-xl bg-red-50 px-4 py-2 text-sm font-medium text-red-600 sm:col-span-2">{error}</div>}
-      {ok && <div className="rounded-xl bg-green-50 px-4 py-2 text-sm font-medium text-green-700 sm:col-span-2">Đã gửi yêu cầu rút tiền, chờ quản trị viên nền tảng duyệt.</div>}
+      {ok && <div className="rounded-xl bg-green-50 px-4 py-2 text-sm font-medium text-green-700 sm:col-span-2">{t('form.sent')}</div>}
       <div className="sm:col-span-2">
         <button type="submit" disabled={request.isPending || blocked || available <= 0} className="h-11 rounded-xl bg-brand px-6 text-[14px] font-bold text-white disabled:opacity-60">
-          {request.isPending ? 'Đang gửi…' : 'Gửi yêu cầu rút tiền'}
+          {request.isPending ? t('form.sending') : t('form.submit')}
         </button>
       </div>
     </form>
@@ -100,6 +99,7 @@ function PayoutForm({ courseId, available, blocked }: { courseId: string; availa
 }
 
 function RevenueInner() {
+  const { t } = useTranslation('revenue');
   const { id = '' } = useParams();
   const { data: course } = useCommunityDetail(id);
   const [from, setFrom] = useState('');
@@ -114,91 +114,87 @@ function RevenueInner() {
   const forbidden = revenue.error instanceof ApiError && revenue.error.status === 403;
 
   return (
-    <div className="min-h-screen bg-white">
-      <Header />
-      <div className="mx-auto max-w-[960px] px-4 py-8 md:px-0">
-        <Link to={`/communities/${id}/community`} className="inline-flex items-center gap-1 text-[13px] text-stone-500 hover:text-brand">
-          <MaterialIcon name="arrow_back" size={16} /> Về cộng đồng
-        </Link>
-        <h1 className="mt-1 text-2xl font-extrabold">Doanh thu & rút tiền</h1>
+    <div className="min-w-0">
+      <div className="py-2">
+        <h1 className="text-2xl font-extrabold">{t('title')}</h1>
         {course && <p className="text-sm text-stone-500">{course.title}</p>}
 
-        {revenue.isPending && <p className="py-16 text-center text-stone-400">Đang tải…</p>}
-        {forbidden && <p className="glass mt-6 rounded-2xl py-12 text-center text-stone-600">Chỉ chủ cộng đồng (hoặc quản trị viên nền tảng) mới xem được doanh thu.</p>}
+        {revenue.isPending && <p className="py-16 text-center text-stone-400">{t('loading')}</p>}
+        {forbidden && <p className="glass mt-6 rounded-2xl py-12 text-center text-stone-600">{t('forbidden')}</p>}
         {revenue.isError && !forbidden && <p className="py-12 text-center text-red-600">{errText(revenue.error)}</p>}
 
         {d && (
           <>
             <div className="mt-5 flex flex-wrap items-end gap-3">
               <label className="text-[12.5px] font-semibold">
-                Từ ngày
+                {t('from')}
                 <input type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} className="mt-1 block h-10 rounded-xl border border-[rgba(120,60,20,.12)] bg-white px-3 text-[14px]" />
               </label>
               <label className="text-[12.5px] font-semibold">
-                Đến ngày
+                {t('to')}
                 <input type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} className="mt-1 block h-10 rounded-xl border border-[rgba(120,60,20,.12)] bg-white px-3 text-[14px]" />
               </label>
               {(from || to) && (
                 <button type="button" onClick={() => { setFrom(''); setTo(''); }} className="h-10 rounded-xl border border-[rgba(120,60,20,.12)] bg-white px-3.5 text-[13px] font-medium">
-                  Xóa lọc
+                  {t('clearFilter')}
                 </button>
               )}
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
-              <Stat label="Tổng thu (gross)" value={formatCents(d.grossCents)} />
-              <Stat label="Hoàn tiền" value={formatCents(d.refundsCents)} />
-              <Stat label="Hoa hồng nền tảng*" value={formatCents(d.platformCommissionCents)} hint={`tạm tính ${d.assumptions.platformCommissionPct}%`} />
-              <Stat label="Phí cổng thanh toán*" value={formatCents(d.gatewayFeeCents)} hint={`${d.assumptions.gatewayFeePct}% + ${formatCents(d.assumptions.gatewayFeeFixedCents)}`} />
-              <Stat label="Thực nhận (net)" value={formatCents(d.netCents)} accent />
-              <Stat label="Có thể rút ngay" value={formatCents(d.availableBalanceCents)} hint="toàn thời gian" accent />
-              {d.heldCents !== undefined && <Stat label="Đang giữ (chờ hoàn tiền/tranh chấp)" value={formatCents(d.heldCents)} hint={pol ? `rút được sau ${pol.holdDays} ngày` : undefined} />}
-              {d.reserveCents !== undefined && <Stat label="Quỹ dự phòng" value={formatCents(d.reserveCents)} hint={pol ? `giữ lại ${pol.reservePct}%` : undefined} />}
-              <Stat label="MRR" value={formatCents(d.mrrCents)} hint={`${d.activePaidMembers} thành viên trả phí · ${d.trialingMembers} dùng thử`} />
-              <Stat label="Đang chờ rút" value={formatCents(d.payoutRequestedCents)} />
+              <Stat label={t('stats.gross')} value={formatCents(d.grossCents)} />
+              <Stat label={t('stats.refunds')} value={formatCents(d.refundsCents)} />
+              <Stat label={t('stats.commission')} value={formatCents(d.platformCommissionCents)} hint={t('stats.commissionHint', { pct: d.assumptions.platformCommissionPct })} />
+              <Stat label={t('stats.gatewayFee')} value={formatCents(d.gatewayFeeCents)} hint={`${d.assumptions.gatewayFeePct}% + ${formatCents(d.assumptions.gatewayFeeFixedCents)}`} />
+              <Stat label={t('stats.net')} value={formatCents(d.netCents)} accent />
+              <Stat label={t('stats.available')} value={formatCents(d.availableBalanceCents)} hint={t('stats.allTime')} accent />
+              {d.heldCents !== undefined && <Stat label={t('stats.held')} value={formatCents(d.heldCents)} hint={pol ? t('stats.heldHint', { days: pol.holdDays }) : undefined} />}
+              {d.reserveCents !== undefined && <Stat label={t('stats.reserve')} value={formatCents(d.reserveCents)} hint={pol ? t('stats.reserveHint', { pct: pol.reservePct }) : undefined} />}
+              <Stat label="MRR" value={formatCents(d.mrrCents)} hint={t('stats.mrrHint', { paid: d.activePaidMembers, trial: d.trialingMembers })} />
+              <Stat label={t('stats.pending')} value={formatCents(d.payoutRequestedCents)} />
             </div>
             {debt > 0 && (
               <div role="alert" className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-[13px] font-medium text-red-700">
-                Bạn đang còn nợ {formatCents(debt)} do hoàn tiền/chargeback sau khi đã rút. Tính năng rút tiền tạm khóa cho đến khi doanh thu mới bù trừ khoản nợ này.
+                {t('debt', { amount: formatCents(debt) })}
               </div>
             )}
             {pol && (
               <p className="mt-3 rounded-xl bg-stone-50 px-4 py-2.5 text-[12.5px] text-stone-600">
-                Chính sách rút tiền: tiền mới thu chỉ rút được sau {pol.holdDays} ngày (cửa sổ hoàn tiền {pol.refundWindowDays} ngày + tranh chấp {pol.disputeWindowDays} ngày), và luôn giữ lại {pol.reservePct}% làm quỹ dự phòng.
+                {t('policy', { hold: pol.holdDays, refund: pol.refundWindowDays, dispute: pol.disputeWindowDays, reserve: pol.reservePct })}
                 {pol.note ? ` ${pol.note}.` : ''}
               </p>
             )}
             <p className="mt-3 rounded-xl bg-amber-50 px-4 py-2.5 text-[12.5px] text-amber-800">
-              * {d.assumptions.note}. Hoa hồng và phí cổng là giá trị TẠM/mô phỏng, có thể thay đổi khi chốt mô hình doanh thu. Số dư có thể rút không phụ thuộc bộ lọc ngày.
+              * {d.assumptions.note}. {t('estimateNote')}
             </p>
 
-            <h2 className="mt-8 mb-3 text-lg font-extrabold">Giao dịch gần nhất</h2>
+            <h2 className="mt-8 mb-3 text-lg font-extrabold">{t('recent.title')}</h2>
             <div className="glass overflow-x-auto rounded-3xl">
               <table className="w-full min-w-[560px] text-left text-[13px]">
                 <thead>
                   <tr className="border-b border-[rgba(120,60,20,.08)] text-[11.5px] tracking-wide text-stone-500">
-                    <th className="px-4 py-3 font-semibold">THỜI GIAN</th>
-                    <th className="px-2 py-3 font-semibold">LOẠI</th>
-                    <th className="px-2 py-3 font-semibold">HÓA ĐƠN</th>
-                    <th className="px-2 py-3 font-semibold">TRẠNG THÁI</th>
-                    <th className="px-4 py-3 text-right font-semibold">SỐ TIỀN</th>
+                    <th className="px-4 py-3 font-semibold">{t('recent.time')}</th>
+                    <th className="px-2 py-3 font-semibold">{t('recent.type')}</th>
+                    <th className="px-2 py-3 font-semibold">{t('recent.invoice')}</th>
+                    <th className="px-2 py-3 font-semibold">{t('recent.status')}</th>
+                    <th className="px-4 py-3 text-right font-semibold">{t('recent.amount')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {d.recentTransactions.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="py-8 text-center text-stone-500">Chưa có giao dịch.</td>
+                      <td colSpan={5} className="py-8 text-center text-stone-500">{t('recent.empty')}</td>
                     </tr>
                   )}
-                  {d.recentTransactions.map((t) => (
-                    <tr key={t.id} className="border-b border-[rgba(120,60,20,.06)]">
-                      <td className="px-4 py-2.5">{t.confirmedAt ? formatDateTime(t.confirmedAt) : '—'}</td>
-                      <td className="px-2 py-2.5">{t.kind === 'renewal' ? 'Gia hạn' : 'Thanh toán đầu'}</td>
-                      <td className="px-2 py-2.5">{t.invoiceNumber ?? '—'}</td>
-                      <td className="px-2 py-2.5">{t.status === 'refunded' ? 'Đã hoàn' : 'Thành công'}</td>
+                  {d.recentTransactions.map((tx) => (
+                    <tr key={tx.id} className="border-b border-[rgba(120,60,20,.06)]">
+                      <td className="px-4 py-2.5">{tx.confirmedAt ? formatDateTime(tx.confirmedAt) : '—'}</td>
+                      <td className="px-2 py-2.5">{tx.kind === 'renewal' ? t('recent.renewal') : t('recent.initial')}</td>
+                      <td className="px-2 py-2.5">{tx.invoiceNumber ?? '—'}</td>
+                      <td className="px-2 py-2.5">{tx.status === 'refunded' ? t('recent.refunded') : t('recent.success')}</td>
                       <td className="px-4 py-2.5 text-right font-semibold">
-                        {formatCents(t.amountCents)}
-                        {t.refundedCents > 0 && <div className="text-[11.5px] font-normal text-red-600">hoàn {formatCents(t.refundedCents)}</div>}
+                        {formatCents(tx.amountCents)}
+                        {tx.refundedCents > 0 && <div className="text-[11.5px] font-normal text-red-600">{t('recent.refund', { amount: formatCents(tx.refundedCents) })}</div>}
                       </td>
                     </tr>
                   ))}
@@ -210,30 +206,30 @@ function RevenueInner() {
               <PayoutForm courseId={id} available={d.availableBalanceCents} blocked={debt > 0} />
             </div>
 
-            <h2 className="mt-8 mb-3 text-lg font-extrabold">Lệnh rút tiền</h2>
+            <h2 className="mt-8 mb-3 text-lg font-extrabold">{t('payouts.title')}</h2>
             <div className="glass overflow-x-auto rounded-3xl">
               <table className="w-full min-w-[560px] text-left text-[13px]">
                 <thead>
                   <tr className="border-b border-[rgba(120,60,20,.08)] text-[11.5px] tracking-wide text-stone-500">
-                    <th className="px-4 py-3 font-semibold">NGÀY</th>
-                    <th className="px-2 py-3 font-semibold">SỐ TIỀN</th>
-                    <th className="px-2 py-3 font-semibold">TÀI KHOẢN</th>
-                    <th className="px-2 py-3 font-semibold">TRẠNG THÁI</th>
+                    <th className="px-4 py-3 font-semibold">{t('payouts.date')}</th>
+                    <th className="px-2 py-3 font-semibold">{t('payouts.amount')}</th>
+                    <th className="px-2 py-3 font-semibold">{t('payouts.account')}</th>
+                    <th className="px-2 py-3 font-semibold">{t('payouts.status')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {payouts.isPending && (
                     <tr>
-                      <td colSpan={4} className="py-8 text-center text-stone-400">Đang tải…</td>
+                      <td colSpan={4} className="py-8 text-center text-stone-400">{t('loading')}</td>
                     </tr>
                   )}
                   {payouts.data?.data.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="py-8 text-center text-stone-500">Chưa có lệnh rút tiền nào.</td>
+                      <td colSpan={4} className="py-8 text-center text-stone-500">{t('payouts.empty')}</td>
                     </tr>
                   )}
                   {payouts.data?.data.map((p) => {
-                    const st = PAYOUT_LABEL[p.status];
+                    const stCls = PAYOUT_CLS[p.status];
                     return (
                       <tr key={p.id} className="border-b border-[rgba(120,60,20,.06)]">
                         <td className="px-4 py-2.5">{formatDate(p.createdAt)}</td>
@@ -243,8 +239,8 @@ function RevenueInner() {
                           <div className="text-[11.5px] text-stone-500">{p.method.accountHolder}</div>
                         </td>
                         <td className="px-2 py-2.5">
-                          <span className={`inline-flex h-[24px] items-center rounded-lg px-2 text-xs font-medium ${st.cls}`}>{st.text}</span>
-                          {p.note && <div className="mt-1 text-[11.5px] text-stone-500">Ghi chú: {p.note}</div>}
+                          <span className={`inline-flex h-[24px] items-center rounded-lg px-2 text-xs font-medium ${stCls}`}>{t(`payoutStatus.${p.status}`)}</span>
+                          {p.note && <div className="mt-1 text-[11.5px] text-stone-500">{t('payouts.note', { note: p.note })}</div>}
                         </td>
                       </tr>
                     );
@@ -261,9 +257,5 @@ function RevenueInner() {
 }
 
 export function RevenuePage() {
-  return (
-    <RequireLogin>
-      <RevenueInner />
-    </RequireLogin>
-  );
+  return <RevenueInner />;
 }

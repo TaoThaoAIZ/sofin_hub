@@ -1,5 +1,6 @@
 import '@fontsource-variable/jetbrains-mono';
 import { useEffect, useRef, useState } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { useClickOutside } from '../../../lib/useClickOutside';
@@ -15,6 +16,7 @@ import { AdminAvatar, MONO_FONT } from './ui';
 /* ------------------------------ Sidebar ------------------------------ */
 
 function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
+  const { t } = useTranslation('admin-components');
   const { pathname } = useLocation();
   const { group: activeGroup, kid: activeKid } = matchNav(pathname);
   const [open, setOpen] = useState<Record<string, boolean>>({});
@@ -32,7 +34,7 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         </span>
         <span className="rounded-md bg-[#fff1e6] px-[7px] py-[3px] text-[10.5px] font-bold tracking-[.06em] text-[#c2410c]">ADMIN</span>
       </Link>
-      <nav aria-label="Menu quản trị" className="min-h-0 flex-1 overflow-y-auto px-3.5 pt-1.5 pb-4 [scrollbar-width:thin]">
+      <nav aria-label={t('layout.menuAria')} className="min-h-0 flex-1 overflow-y-auto px-3.5 pt-1.5 pb-4 [scrollbar-width:thin]">
         {nav.map((g) => {
           const on = activeGroup.key === g.key;
           const hasKids = !!g.kids;
@@ -97,6 +99,7 @@ function useDebounced<T>(value: T, ms = 300) {
 
 /** Ô tìm kiếm chung: người dùng, cộng đồng, vụ việc — gọi các API danh sách admin thật (`q`), Ctrl/⌘K để focus. */
 function GlobalSearch() {
+  const { t } = useTranslation('admin-components');
   const navigate = useNavigate();
   const [text, setText] = useState('');
   const [open, setOpen] = useState(false);
@@ -132,15 +135,15 @@ function GlobalSearch() {
 
   const groups = [
     {
-      title: 'NGƯỜI DÙNG',
+      title: t('layout.search.users'),
       items: (users.data?.data ?? []).map((u) => ({ icon: 'person', t: u.name, s: u.email, id: USER_STATUS[u.status].label, to: `/admin/users/${u.id}` })),
     },
     {
-      title: 'CỘNG ĐỒNG',
-      items: (coms.data?.data ?? []).map((c) => ({ icon: 'groups', t: c.name, s: `Chủ sở hữu: ${c.owner.name}`, id: c.id, to: `/admin/communities/${c.id}` })),
+      title: t('layout.search.communities'),
+      items: (coms.data?.data ?? []).map((c) => ({ icon: 'groups', t: c.name, s: t('layout.search.owner', { name: c.owner.name }), id: c.id, to: `/admin/communities/${c.id}` })),
     },
     {
-      title: 'VỤ VIỆC KIỂM DUYỆT',
+      title: t('layout.search.cases'),
       items: (cases.data?.data ?? []).map((c) => ({ icon: 'flag', t: c.content.title || c.caseCode, s: c.reportedUser?.name ?? '', id: c.caseCode, to: `/admin/moderation/cases/${c.id}` })),
     },
   ].filter((g) => g.items.length > 0);
@@ -159,18 +162,18 @@ function GlobalSearch() {
             setOpen(true);
           }}
           onFocus={() => setOpen(true)}
-          placeholder={searchable ? 'Tìm người dùng, cộng đồng, vụ việc...' : 'Vai trò của bạn không có quyền tìm kiếm chung'}
+          placeholder={searchable ? t('layout.search.placeholder') : t('layout.search.noPerm')}
           disabled={!searchable}
-          aria-label="Tìm kiếm toàn hệ thống"
+          aria-label={t('layout.search.aria')}
           className="min-w-0 flex-1 border-0 bg-transparent text-[13.5px] font-medium outline-0"
         />
         <span className="hidden rounded-md border border-[#ece5df] px-1.5 py-0.5 text-[11px] text-stone-400 sm:inline">⌘K</span>
       </div>
       {open && (
         <div className="absolute inset-x-0 top-[50px] z-[31] max-h-[70vh] overflow-y-auto rounded-2xl border border-[rgba(120,60,20,.1)] bg-white p-2 shadow-[0_20px_50px_rgba(60,30,10,.16)]">
-          {q.length < 2 && <div className="px-3 py-3.5 text-[13px] leading-relaxed text-stone-500">Tìm theo tên hoặc email người dùng, tên hoặc mã cộng đồng, mã vụ việc (CASE-…) hoặc nội dung bị báo cáo. Nhập ít nhất 2 ký tự.</div>}
-          {q.length >= 2 && loading && groups.length === 0 && <div className="px-3 py-3.5 text-[13px] text-stone-400">Đang tìm…</div>}
-          {q.length >= 2 && !loading && groups.length === 0 && <div className="px-3 py-3.5 text-[13px] text-stone-500">Không có kết quả cho "{q}".</div>}
+          {q.length < 2 && <div className="px-3 py-3.5 text-[13px] leading-relaxed text-stone-500">{t('layout.search.hint')}</div>}
+          {q.length >= 2 && loading && groups.length === 0 && <div className="px-3 py-3.5 text-[13px] text-stone-400">{t('layout.search.searching')}</div>}
+          {q.length >= 2 && !loading && groups.length === 0 && <div className="px-3 py-3.5 text-[13px] text-stone-500">{t('layout.search.none', { q })}</div>}
           {groups.map((g) => (
             <div key={g.title}>
               <div className="px-2.5 pt-2 pb-1 text-[11px] font-bold tracking-[.06em] text-stone-400">{g.title}</div>
@@ -199,18 +202,19 @@ function GlobalSearch() {
 /* ------------------------------ Topbar ------------------------------ */
 
 function Topbar({ onMenu }: { onMenu: () => void }) {
+  const { t } = useTranslation('admin-components');
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { openMenu, menuEl } = useMenu();
   const can = useCan();
   const { me } = useIsPlatformAdmin();
   const summary = useModerationSummary(can('report.resolve'));
-  const name = user ? `${user.firstName} ${user.lastName}`.trim() : 'Quản trị viên';
+  const name = user ? `${user.firstName} ${user.lastName}`.trim() : t('layout.topbar.adminName');
   const circle = 'grid size-10 flex-none place-items-center rounded-full border-0 bg-transparent text-stone-800 hover:bg-[#fff1e6]';
 
   return (
     <header className="sticky top-0 z-20 flex h-[68px] items-center gap-3 border-b border-[rgba(120,60,20,.08)] bg-white px-4 md:px-6">
-      <button type="button" onClick={onMenu} aria-label="Mở menu" className={`${circle} lg:!hidden`}>
+      <button type="button" onClick={onMenu} aria-label={t('layout.topbar.openMenu')} className={`${circle} lg:!hidden`}>
         <MaterialIcon name="menu" size={24} />
       </button>
       <GlobalSearch />
@@ -222,43 +226,43 @@ function Topbar({ onMenu }: { onMenu: () => void }) {
           openMenu(
             e,
             [
-              { perm: 'report.resolve', icon: 'flag', label: 'Duyệt báo cáo', sub: summary.data ? `${summary.data.open} đang chờ` : undefined, onClick: () => navigate('/admin/moderation') },
-              { perm: 'users.view', icon: 'person_search', label: 'Tìm người dùng', onClick: () => navigate('/admin/users') },
-              { perm: 'community.manage', icon: 'travel_explore', label: 'Tìm cộng đồng', onClick: () => navigate('/admin/communities') },
-              { perm: 'community.manage', icon: 'how_to_reg', label: 'Xét duyệt cộng đồng', onClick: () => navigate('/admin/communities/review') },
-              { perm: 'payment.view', icon: 'payments', label: 'Duyệt hoàn tiền', onClick: () => navigate('/admin/payments/refunds') },
-              { perm: 'support.manage', icon: 'support_agent', label: 'Ticket hỗ trợ', onClick: () => navigate('/admin/support/tickets') },
-              { perm: 'audit.view', icon: 'history', label: 'Xem nhật ký', onClick: () => navigate('/admin/system/audit') },
+              { perm: 'report.resolve', icon: 'flag', label: t('layout.topbar.reviewReports'), sub: summary.data ? t('layout.topbar.pending', { count: summary.data.open }) : undefined, onClick: () => navigate('/admin/moderation') },
+              { perm: 'users.view', icon: 'person_search', label: t('layout.topbar.findUsers'), onClick: () => navigate('/admin/users') },
+              { perm: 'community.manage', icon: 'travel_explore', label: t('layout.topbar.findCommunities'), onClick: () => navigate('/admin/communities') },
+              { perm: 'community.manage', icon: 'how_to_reg', label: t('layout.topbar.reviewCommunities'), onClick: () => navigate('/admin/communities/review') },
+              { perm: 'payment.view', icon: 'payments', label: t('layout.topbar.reviewRefunds'), onClick: () => navigate('/admin/payments/refunds') },
+              { perm: 'support.manage', icon: 'support_agent', label: t('layout.topbar.tickets'), onClick: () => navigate('/admin/support/tickets') },
+              { perm: 'audit.view', icon: 'history', label: t('layout.topbar.audit'), onClick: () => navigate('/admin/system/audit') },
             ]
               .filter((m) => can(m.perm))
               .map(({ perm: _p, ...m }) => m),
-            'THAO TÁC NHANH',
+            t('layout.topbar.quickTitle'),
             250,
           )
         }
         className="hidden h-10 flex-none items-center gap-1.5 rounded-[11px] border-[1.5px] border-[#ece5df] bg-white px-3.5 text-[13.5px] font-semibold whitespace-nowrap text-stone-800 hover:bg-[#fff4ec] md:flex"
       >
         <MaterialIcon name="bolt" size={19} filled color="#f26a1b" />
-        Thao tác nhanh
+        {t('layout.topbar.quickActions')}
       </button>
       <div className="grid size-10 flex-none place-items-center rounded-full text-stone-800 hover:bg-[#fff1e6]">
         <NotificationBell />
       </div>
       <button
         type="button"
-        aria-label="Trợ giúp"
+        aria-label={t('layout.topbar.help')}
         aria-haspopup="menu"
         className={`${circle} hidden sm:grid`}
         onClick={(e) =>
           openMenu(
             e,
             [
-              { icon: 'help', label: 'Câu hỏi thường gặp', onClick: () => window.open('/faq', '_blank', 'noopener') },
-              { icon: 'gavel', label: 'Điều khoản sử dụng', onClick: () => window.open('/terms', '_blank', 'noopener') },
-              { icon: 'policy', label: 'Chính sách bảo mật', onClick: () => window.open('/privacy', '_blank', 'noopener') },
-              { icon: 'support_agent', label: 'Liên hệ nền tảng', onClick: () => window.open('/contact', '_blank', 'noopener') },
+              { icon: 'help', label: t('layout.topbar.faq'), onClick: () => window.open('/faq', '_blank', 'noopener') },
+              { icon: 'gavel', label: t('layout.topbar.terms'), onClick: () => window.open('/terms', '_blank', 'noopener') },
+              { icon: 'policy', label: t('layout.topbar.privacy'), onClick: () => window.open('/privacy', '_blank', 'noopener') },
+              { icon: 'support_agent', label: t('layout.topbar.contact'), onClick: () => window.open('/contact', '_blank', 'noopener') },
             ],
-            'TRỢ GIÚP',
+            t('layout.topbar.helpTitle'),
             250,
           )
         }
@@ -268,14 +272,14 @@ function Topbar({ onMenu }: { onMenu: () => void }) {
       <button
         type="button"
         aria-haspopup="menu"
-        aria-label="Tài khoản"
+        aria-label={t('layout.topbar.account')}
         onClick={(e) =>
           openMenu(
             e,
             [
-              { icon: 'badge', label: 'Hồ sơ & cài đặt', sub: user?.email, onClick: () => navigate('/settings') },
-              { icon: 'home', label: 'Về trang chủ', onClick: () => navigate('/') },
-              { icon: 'logout', label: 'Đăng xuất', danger: true, onClick: () => void logout().then(() => navigate('/login')) },
+              { icon: 'badge', label: t('layout.topbar.profile'), sub: user?.email, onClick: () => navigate('/settings') },
+              { icon: 'home', label: t('layout.topbar.home'), onClick: () => navigate('/') },
+              { icon: 'logout', label: t('layout.topbar.logout'), danger: true, onClick: () => void logout().then(() => navigate('/login')) },
             ],
             user?.email,
             240,
@@ -286,7 +290,7 @@ function Topbar({ onMenu }: { onMenu: () => void }) {
         <AdminAvatar name={name} src={user?.avatarUrl} size={36} />
         <span className="hidden text-left leading-tight whitespace-nowrap md:block">
           <span className="block text-[13.5px] font-bold">{name}</span>
-          <span className="block text-[11.5px] text-stone-500">{me?.adminRole ? (ROLE_LABEL[me.adminRole.key] ?? me.adminRole.name) : 'Quản trị nền tảng'}</span>
+          <span className="block text-[11.5px] text-stone-500">{me?.adminRole ? (ROLE_LABEL[me.adminRole.key] ?? me.adminRole.name) : t('layout.topbar.platformAdmin')}</span>
         </span>
         <MaterialIcon name="expand_more" size={18} color="#78716c" className="hidden md:inline-block" />
       </button>
@@ -299,6 +303,7 @@ function Topbar({ onMenu }: { onMenu: () => void }) {
 
 /** Trang hiện tại cần quyền mà vai trò của tôi không có -> thông báo "không đủ quyền" ngay trong khung admin. */
 function GuardedOutlet() {
+  const { t } = useTranslation('admin-components');
   const { pathname } = useLocation();
   const can = useCan();
   const { me } = useIsPlatformAdmin();
@@ -310,12 +315,12 @@ function GuardedOutlet() {
         <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-[#fee2e2]">
           <MaterialIcon name="lock" size={30} filled color="#dc2626" />
         </span>
-        <h1 className="mt-4 mb-1 text-xl font-extrabold">Không đủ quyền</h1>
+        <h1 className="mt-4 mb-1 text-xl font-extrabold">{t('layout.guard.title')}</h1>
         <p className="m-0 text-sm leading-relaxed text-stone-600">
-          Vai trò {me?.adminRole ? <b>{ROLE_LABEL[me.adminRole.key] ?? me.adminRole.name}</b> : 'hiện tại'} của bạn chưa được cấp quyền truy cập mục này. Liên hệ Super Admin nếu bạn cần thêm quyền.
+          {me?.adminRole ? <Trans t={t} i18nKey="layout.guard.withRole" values={{ role: ROLE_LABEL[me.adminRole.key] ?? me.adminRole.name }} components={{ b: <b /> }} /> : t('layout.guard.noRole')}
         </p>
         <Link to="/admin" className="mt-5 inline-flex h-10 items-center rounded-[11px] bg-gradient-to-b from-[#ff8f45] to-[#f26a1b] px-[15px] text-[13.5px] font-semibold text-white no-underline shadow-[0_6px_16px_rgba(242,106,27,.28)]">
-          Về tổng quan
+          {t('layout.guard.backToOverview')}
         </Link>
       </div>
     </div>
@@ -354,6 +359,7 @@ function Shell() {
 
 /** Layout của /admin/*: chỉ Platform Admin vào được; người khác thấy thông báo "không có quyền". */
 export function AdminLayout() {
+  const { t } = useTranslation('admin-components');
   const { status } = useAuth();
   const location = useLocation();
   const { isAdmin, isLoading } = useIsPlatformAdmin();
@@ -361,7 +367,7 @@ export function AdminLayout() {
   if (status === 'loading' || isLoading) {
     return (
       <div role="status" className="grid min-h-screen place-items-center bg-[#faf8f6] text-stone-400">
-        Đang kiểm tra quyền…
+        {t('layout.checking')}
       </div>
     );
   }
@@ -370,9 +376,9 @@ export function AdminLayout() {
       <div className="grid min-h-screen place-items-center bg-[#faf8f6] p-6 text-center">
         <div className="max-w-sm">
           <MaterialIcon name="lock" size={36} filled color="#f26a1b" />
-          <p className="mt-2 mb-4 text-stone-600">Bạn cần đăng nhập để vào khu vực quản trị.</p>
+          <p className="mt-2 mb-4 text-stone-600">{t('layout.needLogin')}</p>
           <Link to="/login" state={{ from: location.pathname + location.search }} className="inline-flex h-10 items-center rounded-[14px] bg-brand px-[18px] text-sm font-semibold text-white no-underline">
-            Đăng nhập
+            {t('layout.login')}
           </Link>
         </div>
       </div>
@@ -383,10 +389,10 @@ export function AdminLayout() {
       <div className="grid min-h-screen place-items-center bg-[#faf8f6] p-6 text-center">
         <div className="max-w-sm">
           <MaterialIcon name="block" size={36} filled color="#dc2626" />
-          <h1 className="mt-2 mb-1 text-xl font-extrabold">Không có quyền truy cập</h1>
-          <p className="m-0 text-stone-600">Bạn không có quyền truy cập khu vực quản trị.</p>
+          <h1 className="mt-2 mb-1 text-xl font-extrabold">{t('layout.noAccess')}</h1>
+          <p className="m-0 text-stone-600">{t('layout.noAccessBody')}</p>
           <Link to="/" className="mt-4 inline-block text-sm font-semibold text-brand">
-            Về trang chủ
+            {t('layout.home')}
           </Link>
         </div>
       </div>

@@ -1,3 +1,4 @@
+import i18n from '../../i18n';
 import { ApiError } from '../../lib/api';
 import type { IdentityBody, MembersBody, BasicsBody } from './api';
 import { defaultForm, parseMoney, type FieldErrors, type WizardForm } from './form';
@@ -105,7 +106,7 @@ const SERVER_FIELD: Record<string, string> = {
 
 /** Đọc `error.details.fieldErrors` của BE ra lỗi theo từng ô; lỗi không gắn được vào ô nào thì trả `general`. */
 export function serverFieldErrors(err: unknown): { fields: FieldErrors; general?: string } {
-  if (!(err instanceof ApiError)) return { fields: {}, general: err instanceof Error ? err.message : 'Có lỗi xảy ra, vui lòng thử lại' };
+  if (!(err instanceof ApiError)) return { fields: {}, general: err instanceof Error ? err.message : i18n.t('errors.generic', { ns: 'wizard' }) };
   const fields: FieldErrors = {};
   const raw = err.details?.fieldErrors;
   if (raw) {
@@ -118,7 +119,7 @@ export function serverFieldErrors(err: unknown): { fields: FieldErrors; general?
       else fields[target] = msg;
     }
   }
-  if (err.code === 'SLUG_TAKEN') fields.slug = 'Đường dẫn này đã có người dùng';
+  if (err.code === 'SLUG_TAKEN') fields.slug = i18n.t('validation.slugTaken', { ns: 'wizard' });
   else if (err.code === 'SLUG_INVALID' || err.code === 'SLUG_RESERVED') fields.slug = err.message;
   if (Object.keys(fields).length) return { fields };
   return { fields, general: err.message };

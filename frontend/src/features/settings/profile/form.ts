@@ -1,3 +1,4 @@
+import i18n from '../../../i18n';
 import type { AuthUser } from '../../auth/types';
 import type { UpdateProfileInput } from '../../account/types';
 
@@ -36,8 +37,8 @@ export const sanitizeHandle = (v: string) => v.toLowerCase().replace(/[^a-z0-9._
 /** Trạng thái định dạng handle phía FE trước khi hỏi BE: '' = để trống (được phép, xóa đường dẫn). */
 export function handleFormatError(h: string): string | null {
   if (!h) return null;
-  if (h.length < 3) return 'Tối thiểu 3 ký tự';
-  if (h.startsWith('.') || h.endsWith('.') || h.includes('..')) return 'Không hợp lệ';
+  if (h.length < 3) return i18n.t('profileForm.handleMin', { ns: 'settings' });
+  if (h.startsWith('.') || h.endsWith('.') || h.includes('..')) return i18n.t('profileForm.invalid', { ns: 'settings' });
   return null;
 }
 
@@ -58,12 +59,12 @@ const isHttpUrl = (v: string) => {
 
 /** Lỗi tiếng Việt đầu tiên của form (null = hợp lệ) — khớp quy tắc ở BE (auth.schema.ts). */
 export function validateForm(f: ProfileForm): string | null {
-  if (!f.first.trim()) return 'Vui lòng nhập tên';
-  if (!f.last.trim()) return 'Vui lòng nhập họ';
-  if (f.bio.length > BIO_MAX) return `Giới thiệu tối đa ${BIO_MAX} ký tự`;
-  if (f.website.trim() && !isHttpUrl(normalizeUrl(f.website))) return 'Website phải là URL hợp lệ';
-  if (f.youtube.trim() && !isHttpUrl(normalizeUrl(f.youtube))) return 'Liên kết YouTube phải là URL hợp lệ';
-  if (f.instagram.trim() && !/^@?[A-Za-z0-9._]{1,30}$/.test(f.instagram.trim())) return 'Tên Instagram không hợp lệ';
+  if (!f.first.trim()) return i18n.t('profileForm.firstRequired', { ns: 'settings' });
+  if (!f.last.trim()) return i18n.t('profileForm.lastRequired', { ns: 'settings' });
+  if (f.bio.length > BIO_MAX) return i18n.t('profileForm.bioMax', { ns: 'settings', max: BIO_MAX });
+  if (f.website.trim() && !isHttpUrl(normalizeUrl(f.website))) return i18n.t('profileForm.websiteInvalid', { ns: 'settings' });
+  if (f.youtube.trim() && !isHttpUrl(normalizeUrl(f.youtube))) return i18n.t('profileForm.youtubeInvalid', { ns: 'settings' });
+  if (f.instagram.trim() && !/^@?[A-Za-z0-9._]{1,30}$/.test(f.instagram.trim())) return i18n.t('profileForm.instagramInvalid', { ns: 'settings' });
   return null;
 }
 

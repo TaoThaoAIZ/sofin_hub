@@ -1,9 +1,10 @@
 import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { useAuth } from '../../auth/AuthContext';
 import { useUpload } from '../../uploads/useUpload';
 import { useCreatePost, useTags } from '../queries';
-import { POST_CATEGORIES, type PostCategory } from '../types';
+import { categoryLabel, POST_CATEGORIES, type PostCategory } from '../types';
 import { absoluteUrl, areaCls, errText, ErrorNote, inputCls, toast } from './contentUi';
 
 const MAX_CONTENT = 4000;
@@ -12,6 +13,7 @@ const MAX_TAGS = 5;
 const normTag = (raw: string) => raw.trim().replace(/^#+/, '').replace(/\s+/g, '').slice(0, 30);
 
 export function PostComposer({ courseId }: { courseId: string }) {
+  const { t } = useTranslation('community');
   const { user } = useAuth();
   const createPost = useCreatePost(courseId);
   const tagsQuery = useTags(courseId);
@@ -34,14 +36,14 @@ export function PostComposer({ courseId }: { courseId: string }) {
   const [error, setError] = useState<string | null>(null);
 
   const addTag = (raw: string) => {
-    const t = normTag(raw);
-    if (!t) return;
-    if (tags.some((x) => x.toLowerCase() === t.toLowerCase())) return;
+    const nt = normTag(raw);
+    if (!nt) return;
+    if (tags.some((x) => x.toLowerCase() === nt.toLowerCase())) return;
     if (tags.length >= MAX_TAGS) {
-      setError(`Tối đa ${MAX_TAGS} thẻ cho mỗi bài viết`);
+      setError(t('composer.maxTags', { max: MAX_TAGS }));
       return;
     }
-    setTags([...tags, t]);
+    setTags([...tags, nt]);
     setTagInput('');
     setError(null);
   };
@@ -70,7 +72,7 @@ export function PostComposer({ courseId }: { courseId: string }) {
 
   const filledOptions = pollOptions.map((o) => o.trim()).filter(Boolean);
   // Tệp đính kèm: API bài viết chưa có trường riêng nên chèn liên kết vào cuối nội dung.
-  const fileBlock = files.length ? `\n\n${files.map((f) => `Tệp đính kèm: ${f.name} — ${f.url}`).join('\n')}` : '';
+  const fileBlock = files.length ? `\n\n${files.map((f) => t('composer.attachmentLine', { name: f.name, url: f.url })).join('\n')}` : '';
   const fullContent = content.trim() + fileBlock;
   const tooLong = fullContent.length > MAX_CONTENT;
   const pollInvalid = showPoll && filledOptions.length < 2;
@@ -79,7 +81,7 @@ export function PostComposer({ courseId }: { courseId: string }) {
   const submit = () => {
     setError(null);
     if (showPoll && pollCloses && new Date(pollCloses).getTime() <= Date.now()) {
-      setError('Hạn đóng bình chọn phải ở tương lai');
+      setError(t('composer.pollFuture'));
       return;
     }
     createPost.mutate(
@@ -110,14 +112,14 @@ export function PostComposer({ courseId }: { courseId: string }) {
           setPollMultiple(false);
           setPollCloses('');
           setShowTags(false);
-          toast('Đã đăng bài viết');
+          toast(t('composer.posted'));
         },
         onError: (e) => setError(errText(e)),
       },
     );
   };
 
-  const suggestions = (tagsQuery.data ?? []).filter((t) => !tags.some((x) => x.toLowerCase() === normTag(t.tag).toLowerCase())).slice(0, 8);
+  const suggestions = (tagsQuery.data ?? []).filter((s) => !tags.some((x) => x.toLowerCase() === normTag(s.tag).toLowerCase())).slice(0, 8);
   const toolBtn = (active: boolean) =>
     `flex h-9 items-center gap-2 rounded-lg px-3 text-[13px] font-medium hover:bg-stone-100 disabled:opacity-50 ${active ? 'bg-brand/10 text-brand' : 'text-stone-700'}`;
 
@@ -131,8 +133,8 @@ export function PostComposer({ courseId }: { courseId: string }) {
           value={content}
           onChange={(e) => setContent(e.target.value)}
           rows={content.includes('\n') || content.length > 80 ? 4 : 2}
-          placeholder="Bạn muốn chia sẻ điều gì?"
-          aria-label="Nội dung bài viết"
+          placeholder={t('composer.placeholder')}
+          aria-label={t('composer.contentAria')}
           className={`${areaCls} min-h-12 flex-1 resize-y bg-[#fbf9f7]`}
         />
       </div>
@@ -143,7 +145,7 @@ export function PostComposer({ courseId }: { courseId: string }) {
           <button
             type="button"
             onClick={() => setImage(null)}
-            aria-label="Bỏ ảnh"
+            aria-label={t('composer.removeImage')}
             className="absolute -top-2 -right-2 grid size-6 place-items-center rounded-full bg-stone-900 text-white"
           >
             <MaterialIcon name="close" size={14} color="#fff" />
@@ -157,22 +159,22 @@ export function PostComposer({ courseId }: { courseId: string }) {
             <li key={f.url} className="flex items-center gap-2 rounded-lg bg-stone-50 px-3 py-1.5 text-[13px]">
               <MaterialIcon name="attach_file" size={16} color="#57534e" />
               <span className="min-w-0 flex-1 truncate">{f.name}</span>
-              <button type="button" aria-label={`Bỏ tệp ${f.name}`} onClick={() => setFiles(files.filter((_, j) => j !== i))} className="text-stone-400 hover:text-stone-700">
+              <button type="button" aria-label={t('composer.removeFile', { name: f.name })} onClick={() => setFiles(files.filter((_, j) => j !== i))} className="text-stone-400 hover:text-stone-700">
                 <MaterialIcon name="close" size={16} />
               </button>
             </li>
           ))}
-          <li className="text-[11.5px] text-stone-400">Tệp sẽ được chèn dưới dạng liên kết vào cuối nội dung bài viết.</li>
+          <li className="text-[11.5px] text-stone-400">{t('composer.fileNote')}</li>
         </ul>
       )}
 
       {showTags && (
         <div className="rounded-xl border border-[rgba(120,60,20,.1)] bg-white p-3">
           <div className="flex flex-wrap items-center gap-1.5">
-            {tags.map((t) => (
-              <span key={t} className="flex items-center gap-1 rounded-lg bg-brand/10 px-2.5 py-1 text-[12.5px] font-semibold text-brand">
-                #{t}
-                <button type="button" aria-label={`Bỏ thẻ ${t}`} onClick={() => setTags(tags.filter((x) => x !== t))}>
+            {tags.map((tg) => (
+              <span key={tg} className="flex items-center gap-1 rounded-lg bg-brand/10 px-2.5 py-1 text-[12.5px] font-semibold text-brand">
+                #{tg}
+                <button type="button" aria-label={t('composer.removeTag', { tag: tg })} onClick={() => setTags(tags.filter((x) => x !== tg))}>
                   <MaterialIcon name="close" size={14} color="#f26a1b" />
                 </button>
               </span>
@@ -186,19 +188,19 @@ export function PostComposer({ courseId }: { courseId: string }) {
                   addTag(tagInput);
                 }
               }}
-              placeholder={tags.length >= MAX_TAGS ? 'Đã đủ thẻ' : 'Nhập thẻ rồi nhấn Enter'}
+              placeholder={tags.length >= MAX_TAGS ? t('composer.tagsFull') : t('composer.tagPh')}
               disabled={tags.length >= MAX_TAGS}
               maxLength={30}
-              aria-label="Nhập thẻ"
+              aria-label={t('composer.tagAria')}
               className="h-8 min-w-[160px] flex-1 border-0 bg-transparent px-1 text-sm outline-0"
             />
           </div>
           {suggestions.length > 0 && (
             <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[12px] text-stone-500">
-              Gợi ý:
-              {suggestions.map((t) => (
-                <button key={t.tag} type="button" onClick={() => addTag(t.tag)} className="rounded-lg bg-stone-100 px-2 py-0.5 hover:bg-brand/10 hover:text-brand">
-                  #{normTag(t.tag)} <span className="text-stone-400">{t.count}</span>
+              {t('composer.suggest')}
+              {suggestions.map((s) => (
+                <button key={s.tag} type="button" onClick={() => addTag(s.tag)} className="rounded-lg bg-stone-100 px-2 py-0.5 hover:bg-brand/10 hover:text-brand">
+                  #{normTag(s.tag)} <span className="text-stone-400">{s.count}</span>
                 </button>
               ))}
             </div>
@@ -208,19 +210,19 @@ export function PostComposer({ courseId }: { courseId: string }) {
 
       {showPoll && (
         <div className="flex flex-col gap-2 rounded-xl border border-[rgba(120,60,20,.1)] bg-white p-3">
-          <input value={pollQuestion} onChange={(e) => setPollQuestion(e.target.value)} maxLength={200} placeholder="Câu hỏi bình chọn (không bắt buộc)" aria-label="Câu hỏi bình chọn" className={inputCls} />
+          <input value={pollQuestion} onChange={(e) => setPollQuestion(e.target.value)} maxLength={200} placeholder={t('composer.pollQuestionPh')} aria-label={t('composer.pollQuestionAria')} className={inputCls} />
           {pollOptions.map((o, i) => (
             <div key={i} className="flex items-center gap-2">
               <input
                 value={o}
                 onChange={(e) => setPollOptions(pollOptions.map((x, j) => (j === i ? e.target.value : x)))}
                 maxLength={100}
-                placeholder={`Lựa chọn ${i + 1}`}
-                aria-label={`Lựa chọn ${i + 1}`}
+                placeholder={t('composer.option', { n: i + 1 })}
+                aria-label={t('composer.option', { n: i + 1 })}
                 className={inputCls}
               />
               {pollOptions.length > 2 && (
-                <button type="button" aria-label={`Xóa lựa chọn ${i + 1}`} onClick={() => setPollOptions(pollOptions.filter((_, j) => j !== i))} className="text-stone-400 hover:text-red-600">
+                <button type="button" aria-label={t('composer.removeOption', { n: i + 1 })} onClick={() => setPollOptions(pollOptions.filter((_, j) => j !== i))} className="text-stone-400 hover:text-red-600">
                   <MaterialIcon name="delete" size={19} />
                 </button>
               )}
@@ -229,18 +231,18 @@ export function PostComposer({ courseId }: { courseId: string }) {
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px]">
             {pollOptions.length < 6 && (
               <button type="button" onClick={() => setPollOptions([...pollOptions, ''])} className="flex items-center gap-1 font-semibold text-brand">
-                <MaterialIcon name="add" size={17} color="#f26a1b" /> Thêm lựa chọn
+                <MaterialIcon name="add" size={17} color="#f26a1b" /> {t('composer.addOption')}
               </button>
             )}
             <label className="flex items-center gap-2">
-              <input type="checkbox" checked={pollMultiple} onChange={(e) => setPollMultiple(e.target.checked)} /> Cho chọn nhiều
+              <input type="checkbox" checked={pollMultiple} onChange={(e) => setPollMultiple(e.target.checked)} /> {t('composer.allowMultiple')}
             </label>
             <label className="flex items-center gap-2">
-              Đóng lúc
+              {t('composer.closesAt')}
               <input type="datetime-local" value={pollCloses} onChange={(e) => setPollCloses(e.target.value)} className="h-9 rounded-lg border border-[rgba(120,60,20,.12)] px-2 text-[13px]" />
             </label>
           </div>
-          {pollInvalid && <p className="m-0 text-[12px] text-stone-500">Cần ít nhất 2 lựa chọn có nội dung (tối đa 6).</p>}
+          {pollInvalid && <p className="m-0 text-[12px] text-stone-500">{t('composer.pollMin')}</p>}
         </div>
       )}
 
@@ -248,26 +250,26 @@ export function PostComposer({ courseId }: { courseId: string }) {
         <input ref={imageInput} type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden onChange={(e) => { void pickImage(e.target.files?.[0]); e.target.value = ''; }} />
         <input ref={fileInput} type="file" hidden onChange={(e) => { void pickFile(e.target.files?.[0]); e.target.value = ''; }} />
         <button type="button" onClick={() => imageInput.current?.click()} disabled={uploading} className={toolBtn(!!image)}>
-          <MaterialIcon name="image" size={19} color="currentColor" /> Ảnh
+          <MaterialIcon name="image" size={19} color="currentColor" /> {t('composer.image')}
         </button>
         <button type="button" onClick={() => fileInput.current?.click()} disabled={uploading} className={toolBtn(files.length > 0)}>
-          <MaterialIcon name="attach_file" size={19} color="currentColor" /> File đính kèm
+          <MaterialIcon name="attach_file" size={19} color="currentColor" /> {t('composer.attachFile')}
         </button>
         <button type="button" onClick={() => setShowTags((s) => !s)} className={toolBtn(showTags || tags.length > 0)}>
-          <MaterialIcon name="sell" size={19} color="currentColor" /> Gắn thẻ{tags.length ? ` (${tags.length})` : ''}
+          <MaterialIcon name="sell" size={19} color="currentColor" /> {t('composer.tagBtn')}{tags.length ? ` (${tags.length})` : ''}
         </button>
         <button type="button" onClick={() => setShowPoll((s) => !s)} className={toolBtn(showPoll)}>
-          <MaterialIcon name="bar_chart" size={19} color="currentColor" /> Poll/Bình chọn
+          <MaterialIcon name="bar_chart" size={19} color="currentColor" /> {t('composer.poll')}
         </button>
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value as PostCategory)}
-          aria-label="Chuyên mục"
+          aria-label={t('composer.category')}
           className="h-9 rounded-lg border border-[rgba(120,60,20,.12)] bg-white px-2 text-[13px] font-medium"
         >
           {POST_CATEGORIES.map((c) => (
             <option key={c} value={c}>
-              {c}
+              {categoryLabel(c)}
             </option>
           ))}
         </select>
@@ -278,11 +280,11 @@ export function PostComposer({ courseId }: { courseId: string }) {
           className="ml-auto flex h-10 items-center gap-2 rounded-xl bg-brand px-4 text-sm font-bold text-white disabled:opacity-50"
         >
           <MaterialIcon name="send" size={17} color="#fff" />
-          {createPost.isPending ? 'Đang đăng…' : uploading ? 'Đang tải lên…' : 'Đăng bài'}
+          {createPost.isPending ? t('composer.posting') : uploading ? t('composer.uploading') : t('composer.submit')}
         </button>
       </div>
       <div className="flex justify-between text-[11.5px] text-stone-400">
-        <span>{tooLong ? <span className="text-red-600">Nội dung quá dài</span> : ''}</span>
+        <span>{tooLong ? <span className="text-red-600">{t('composer.tooLong')}</span> : ''}</span>
         <span className={tooLong ? 'text-red-600' : ''}>
           {fullContent.length}/{MAX_CONTENT}
         </span>

@@ -1,0 +1,77 @@
+{
+  "err": {
+    "PAYOUT_BLOCKED": "Số dư ròng đang âm do hoàn tiền sau khi đã rút — chưa thể rút thêm cho đến khi nợ được bù trừ.",
+    "COMMUNITY_LOCKED": "Cộng đồng đang bị khóa nên không thể rút tiền.",
+    "generic": "Đã có lỗi xảy ra, vui lòng thử lại",
+    "invalidAmount": "Nhập số tiền hợp lệ (USD).",
+    "overBalance": "Số tiền vượt quá số dư có thể rút ({{amount}}).",
+    "invalidAccount": "Số tài khoản phải gồm 6–20 chữ số."
+  },
+  "payoutStatus": {
+    "requested": "Đã yêu cầu",
+    "approved": "Đã duyệt",
+    "paid": "Đã chi trả",
+    "rejected": "Bị từ chối",
+    "failed": "Thất bại",
+    "on_hold": "Tạm giữ"
+  },
+  "form": {
+    "title": "Yêu cầu rút tiền",
+    "amount": "Số tiền (USD) — có thể rút {{amount}}",
+    "bank": "Ngân hàng",
+    "account": "Số tài khoản",
+    "holder": "Chủ tài khoản",
+    "sent": "Đã gửi yêu cầu rút tiền, chờ quản trị viên nền tảng duyệt.",
+    "sending": "Đang gửi…",
+    "submit": "Gửi yêu cầu rút tiền"
+  },
+  "title": "Doanh thu & rút tiền",
+  "loading": "Đang tải…",
+  "forbidden": "Chỉ chủ cộng đồng (hoặc quản trị viên nền tảng) mới xem được doanh thu.",
+  "from": "Từ ngày",
+  "to": "Đến ngày",
+  "clearFilter": "Xóa lọc",
+  "stats": {
+    "gross": "Tổng thu (gross)",
+    "refunds": "Hoàn tiền",
+    "commission": "Hoa hồng nền tảng*",
+    "commissionHint": "tạm tính {{pct}}%",
+    "gatewayFee": "Phí cổng thanh toán*",
+    "net": "Thực nhận (net)",
+    "available": "Có thể rút ngay",
+    "allTime": "toàn thời gian",
+    "held": "Đang giữ (chờ hoàn tiền/tranh chấp)",
+    "heldHint": "rút được sau {{days}} ngày",
+    "reserve": "Quỹ dự phòng",
+    "reserveHint": "giữ lại {{pct}}%",
+    "mrr": "MRR",
+    "mrrHint": "{{paid}} thành viên trả phí · {{trial}} dùng thử",
+    "pending": "Đang chờ rút"
+  },
+  "debt": "Bạn đang còn nợ {{amount}} do hoàn tiền/chargeback sau khi đã rút. Tính năng rút tiền tạm khóa cho đến khi doanh thu mới bù trừ khoản nợ này.",
+  "policy": "Chính sách rút tiền: tiền mới thu chỉ rút được sau {{hold}} ngày (cửa sổ hoàn tiền {{refund}} ngày + tranh chấp {{dispute}} ngày), và luôn giữ lại {{reserve}}% làm quỹ dự phòng.",
+  "estimateNote": "Hoa hồng và phí cổng là giá trị TẠM/mô phỏng, có thể thay đổi khi chốt mô hình doanh thu. Số dư có thể rút không phụ thuộc bộ lọc ngày.",
+  "recent": {
+    "title": "Giao dịch gần nhất",
+    "time": "THỜI GIAN",
+    "type": "LOẠI",
+    "invoice": "HÓA ĐƠN",
+    "status": "TRẠNG THÁI",
+    "amount": "SỐ TIỀN",
+    "empty": "Chưa có giao dịch.",
+    "renewal": "Gia hạn",
+    "initial": "Thanh toán đầu",
+    "refunded": "Đã hoàn",
+    "success": "Thành công",
+    "refund": "hoàn {{amount}}"
+  },
+  "payouts": {
+    "title": "Lệnh rút tiền",
+    "date": "NGÀY",
+    "amount": "SỐ TIỀN",
+    "account": "TÀI KHOẢN",
+    "status": "TRẠNG THÁI",
+    "empty": "Chưa có lệnh rút tiền nào.",
+    "note": "Ghi chú: {{note}}"
+  }
+}

@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams, useSearchParams } from 'react-router-dom';
+import i18n, { currentLocale } from '../../../i18n';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { useClickOutside } from '../../../lib/useClickOutside';
 import { useAuth } from '../../auth/AuthContext';
 import { MemberActionsMenu } from '../../communities/components/MemberActionsMenu';
-import { ROLE_LABEL } from '../../communities/types';
 import { useCommunityDetail } from '../../courses/queries';
 import { useStartConversation } from '../../messages/useStartConversation';
 import { useMembers } from '../queries';
@@ -12,23 +13,28 @@ import type { MemberFilter } from '../types';
 import { AVATAR_PALETTE, CommunityInfoCard, initials, PageBanner } from './shared';
 
 const SORTS = [
-  { key: 'active', label: 'Hoạt động gần nhất' },
-  { key: 'joined', label: 'Mới tham gia' },
+  { key: 'active', labelKey: 'members.sortAsk' },
+  { key: 'joined', labelKey: 'members.sortJoined' },
 ] as const;
 
 const GRID = 'grid grid-cols-[minmax(200px,2.2fr)_1.2fr_1fr_1.2fr_92px] gap-3';
 
 function formatJoined(iso: string) {
   const d = new Date(iso);
-  return `${String(d.getDate()).padStart(2, '0')} Thg ${d.getMonth() + 1}, ${d.getFullYear()}`;
+  return i18n.t('members.joinedFmt', {
+    ns: 'community',
+    day: String(d.getDate()).padStart(2, '0'),
+    month: i18n.language === 'en' ? d.toLocaleString(currentLocale(), { month: 'short' }) : d.getMonth() + 1,
+    year: d.getFullYear(),
+  });
 }
 
 function formatAgo(iso: string) {
   const mins = Math.max(1, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
-  if (mins < 60) return `${mins} phút trước`;
+  if (mins < 60) return i18n.t('members.ago.minutes', { ns: 'community', count: mins });
   const hours = Math.round(mins / 60);
-  if (hours < 24) return `${hours} giờ trước`;
-  return `${Math.round(hours / 24)} ngày trước`;
+  if (hours < 24) return i18n.t('members.ago.hours', { ns: 'community', count: hours });
+  return i18n.t('members.ago.days', { ns: 'community', count: Math.round(hours / 24) });
 }
 
 function pageList(page: number, total: number): (number | '…')[] {
@@ -45,6 +51,7 @@ function pageList(page: number, total: number): (number | '…')[] {
 }
 
 export function MembersTab() {
+  const { t } = useTranslation('community');
   const { id: courseId = '' } = useParams();
   const { data: course } = useCommunityDetail(courseId);
   const [searchParams] = useSearchParams();
@@ -57,8 +64,8 @@ export function MembersTab() {
   const [toast, setToast] = useState<{ message: string; kind: 'ok' | 'error' } | null>(null);
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setToast(null), 4500);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setToast(null), 4500);
+    return () => clearTimeout(timer);
   }, [toast]);
   const sortRef = useRef<HTMLDivElement>(null);
   useClickOutside(sortRef, () => setSortOpen(false));
@@ -67,9 +74,9 @@ export function MembersTab() {
 
   const counts = members.data?.counts;
   const tabs: { key: MemberFilter; label: string; count?: number; dot?: boolean }[] = [
-    { key: 'all', label: 'Tất cả', count: counts?.all },
-    { key: 'online', label: 'Đang trực tuyến', count: counts?.online, dot: true },
-    { key: 'admin', label: 'Quản trị viên', count: counts?.admins },
+    { key: 'all', label: t('members.filterAll'), count: counts?.all },
+    { key: 'online', label: t('members.filterOnline'), count: counts?.online, dot: true },
+    { key: 'admin', label: t('members.filterAdmin'), count: counts?.admins },
   ];
   const totalPages = members.data?.meta.totalPages ?? 1;
 
@@ -79,22 +86,22 @@ export function MembersTab() {
         {chat.error && (
           <div role="alert" className="flex items-start gap-2 rounded-xl bg-red-50 px-4 py-2.5 text-sm font-medium text-red-600">
             <span className="flex-1">{chat.error}</span>
-            <button type="button" onClick={chat.clearError} aria-label="Đóng thông báo">
+            <button type="button" onClick={chat.clearError} aria-label={t('members.closeNotice')}>
               <MaterialIcon name="close" size={17} />
             </button>
           </div>
         )}
-        <PageBanner image="mem-hero-bg.webp" icon="group" title="Thành viên" subtitle="Kết nối, học hỏi và phát triển cùng cộng đồng." />
+        <PageBanner image="mem-hero-bg.webp" icon="group" title={t('members.title')} subtitle={t('members.subtitle')} />
 
         <section className="glass rounded-3xl px-4 pt-3.5 pb-4">
           <div className="mb-2 flex flex-wrap items-center gap-2.5">
-            {tabs.map((t) => {
-              const on = filter === t.key;
+            {tabs.map((tb) => {
+              const on = filter === tb.key;
               return (
                 <button
-                  key={t.key}
+                  key={tb.key}
                   onClick={() => {
-                    setFilter(t.key);
+                    setFilter(tb.key);
                     setPage(1);
                   }}
                   className={`flex h-10 items-center gap-2 rounded-xl border px-4 text-[13.5px] whitespace-nowrap ${
@@ -103,11 +110,11 @@ export function MembersTab() {
                       : 'border-[rgba(120,60,20,.12)] bg-white font-medium text-stone-800'
                   }`}
                 >
-                  {t.dot && <span className="size-2 rounded-full bg-green-500" />}
-                  {t.label}
-                  {t.count !== undefined && (
+                  {tb.dot && <span className="size-2 rounded-full bg-green-500" />}
+                  {tb.label}
+                  {tb.count !== undefined && (
                     <span className={`rounded-full px-[7px] py-0.5 text-xs font-semibold ${on ? 'bg-white/20 text-white' : 'bg-stone-900/5 text-stone-600'}`}>
-                      {t.count.toLocaleString('vi-VN')}
+                      {tb.count.toLocaleString(currentLocale())}
                     </span>
                   )}
                 </button>
@@ -122,14 +129,14 @@ export function MembersTab() {
                     setQ(e.target.value);
                     setPage(1);
                   }}
-                  placeholder="Tìm thành viên..."
+                  placeholder={t('members.searchPlaceholder')}
                   className="min-w-0 flex-1 border-0 bg-transparent text-[13.5px] outline-0"
                 />
               </label>
               <div ref={sortRef} className="relative">
                 <button
                   type="button"
-                  aria-label="Sắp xếp thành viên"
+                  aria-label={t('members.sortAria')}
                   onClick={() => setSortOpen((o) => !o)}
                   className="grid size-10 flex-none place-items-center rounded-[10px] border border-[rgba(120,60,20,.12)] bg-white hover:bg-[#fff7f0]"
                 >
@@ -137,7 +144,7 @@ export function MembersTab() {
                 </button>
                 {sortOpen && (
                   <div className="glass absolute right-0 z-10 mt-2 w-52 rounded-xl bg-white p-1.5 shadow-lg [--glass-bg:#fff]">
-                    <div className="px-2.5 py-1.5 text-[11.5px] font-semibold tracking-wide text-stone-500">SẮP XẾP THEO</div>
+                    <div className="px-2.5 py-1.5 text-[11.5px] font-semibold tracking-wide text-stone-500">{t('members.sortBy')}</div>
                     {SORTS.map((s) => (
                       <button
                         key={s.key}
@@ -148,7 +155,7 @@ export function MembersTab() {
                         }}
                         className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[13.5px] hover:bg-stone-50 ${sort === s.key ? 'font-semibold text-brand' : ''}`}
                       >
-                        {s.label}
+                        {t(s.labelKey)}
                         {sort === s.key && <MaterialIcon name="check" size={17} color="#f26a1b" />}
                       </button>
                     ))}
@@ -161,13 +168,13 @@ export function MembersTab() {
           <div className="overflow-x-auto">
             <div className="min-w-[640px]">
               <div className={`${GRID} border-b border-[rgba(120,60,20,.08)] px-3 pt-3.5 pb-2.5 text-[11.5px] font-semibold tracking-wide text-stone-500`}>
-                <span>THÀNH VIÊN</span>
-                <span>TRẠNG THÁI</span>
-                <span>THAM GIA</span>
-                <span>HOẠT ĐỘNG GẦN NHẤT</span>
+                <span>{t('members.colMember')}</span>
+                <span>{t('members.colStatus')}</span>
+                <span>{t('members.colJoined')}</span>
+                <span>{t('members.colLastActive')}</span>
                 <span />
               </div>
-              {members.isPending && <p className="py-8 text-center text-stone-400">Đang tải thành viên…</p>}
+              {members.isPending && <p className="py-8 text-center text-stone-400">{t('members.loading')}</p>}
               {members.data?.data.map((m, i) => (
                 <div key={m.id} className={`${GRID} items-center border-b border-[rgba(120,60,20,.06)] px-3 py-2.5 hover:bg-[#fff7f0]/80`}>
                   <div className="flex min-w-0 items-center gap-3">
@@ -186,7 +193,7 @@ export function MembersTab() {
                             className={`flex-none rounded-md px-1.5 py-0.5 text-[10.5px] font-bold ${
                               m.roleDetail === 'owner' ? 'bg-amber-100 text-amber-700' : m.roleDetail === 'admin' ? 'bg-brand/10 text-brand' : 'bg-blue-100 text-blue-700'
                             }`}
-                            title={ROLE_LABEL[m.roleDetail]}
+                            title={t(`roles.${m.roleDetail}`)}
                           >
                             {m.roleDetail === 'owner' ? 'Owner' : m.roleDetail === 'admin' ? 'Admin' : 'Mod'}
                           </span>
@@ -202,7 +209,7 @@ export function MembersTab() {
                       }`}
                     >
                       <span className={`size-[7px] rounded-full ${m.online ? 'bg-green-500' : 'bg-stone-400'}`} />
-                      {m.online ? 'Đang trực tuyến' : 'Không hoạt động'}
+                      {m.online ? t('members.filterOnline') : t('members.inactive')}
                     </span>
                   </div>
                   <span className="text-[13px] text-stone-700">{formatJoined(m.enrolledAt)}</span>
@@ -212,8 +219,8 @@ export function MembersTab() {
                       type="button"
                       disabled={m.id === user?.id || m.id.startsWith('seed:') || chat.pendingUserId === m.id}
                       onClick={() => void chat.startConversation(m.id)}
-                      title={m.id === user?.id ? 'Đây là bạn' : m.id.startsWith('seed:') ? 'Thành viên minh họa — không nhắn tin được' : `Nhắn tin cho ${m.name}`}
-                      aria-label={`Nhắn tin cho ${m.name}`}
+                      title={m.id === user?.id ? t('members.isYou') : m.id.startsWith('seed:') ? t('members.demoMember') : t('members.message', { name: m.name })}
+                      aria-label={t('members.message', { name: m.name })}
                       className="grid h-9 w-[38px] place-items-center rounded-[10px] border border-[rgba(120,60,20,.12)] bg-white hover:bg-[#fff7f0] disabled:cursor-default disabled:opacity-50 disabled:hover:bg-white"
                     >
                       <MaterialIcon name="chat_bubble" size={18} color="#1c1917" />
@@ -228,12 +235,12 @@ export function MembersTab() {
                   </div>
                 </div>
               ))}
-              {members.data?.data.length === 0 && <p className="py-8 text-center text-stone-500">Không tìm thấy thành viên nào.</p>}
+              {members.data?.data.length === 0 && <p className="py-8 text-center text-stone-500">{t('members.notFound')}</p>}
             </div>
           </div>
 
           <div className="mt-3.5 flex flex-wrap items-center justify-center gap-1.5">
-            <button disabled={page === 1} onClick={() => setPage(page - 1)} aria-label="Trang trước" className="grid size-[34px] place-items-center text-stone-600 disabled:opacity-40">
+            <button disabled={page === 1} onClick={() => setPage(page - 1)} aria-label={t('members.prevPage')} className="grid size-[34px] place-items-center text-stone-600 disabled:opacity-40">
               <MaterialIcon name="chevron_left" size={20} />
             </button>
             {pageList(page, totalPages).map((n, i) =>
@@ -251,7 +258,7 @@ export function MembersTab() {
                 </button>
               ),
             )}
-            <button disabled={page === totalPages} onClick={() => setPage(page + 1)} aria-label="Trang sau" className="grid size-[34px] place-items-center text-stone-600 disabled:opacity-40">
+            <button disabled={page === totalPages} onClick={() => setPage(page + 1)} aria-label={t('members.nextPage')} className="grid size-[34px] place-items-center text-stone-600 disabled:opacity-40">
               <MaterialIcon name="chevron_right" size={20} />
             </button>
           </div>

@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { MaterialIcon } from '../../components/ui/MaterialIcon';
 import { safeInternalPath } from '../../lib/datetime';
@@ -26,6 +27,7 @@ interface Toast {
  * Gắn trong App (bên trong AuthProvider và Router).
  */
 export function NotificationsProvider({ children }: { children: ReactNode }) {
+  const { t: tr } = useTranslation('notifications');
   const { status } = useAuth();
   const qc = useQueryClient();
   const navigate = useNavigate();
@@ -87,7 +89,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
                 <span className="line-clamp-2 text-[12.5px] text-stone-600">{n.body}</span>
               </span>
             </button>
-            <button type="button" aria-label="Đóng" onClick={() => setToasts((t) => t.filter((x) => x.key !== key))} className="text-stone-400 hover:text-stone-700">
+            <button type="button" aria-label={tr('close')} onClick={() => setToasts((t) => t.filter((x) => x.key !== key))} className="text-stone-400 hover:text-stone-700">
               <MaterialIcon name="close" size={18} />
             </button>
           </div>

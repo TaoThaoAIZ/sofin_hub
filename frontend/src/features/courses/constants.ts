@@ -29,62 +29,62 @@ export const ALL_CATEGORY_ICON = {
   color: '#f26a1b',
 };
 
-export const TAG_UI: Record<CourseTag, { label: string; bg: string; fg: string }> = {
-  hot: { label: 'Hot', bg: '#ef4444', fg: '#fff' },
-  bestseller: { label: 'Bán chạy', bg: '#8b5cf6', fg: '#fff' },
-  new: { label: 'Mới', bg: '#dcfce7', fg: '#166534' },
+export const TAG_UI: Record<CourseTag, { labelKey: string; bg: string; fg: string }> = {
+  hot: { labelKey: 'tag.hot', bg: '#ef4444', fg: '#fff' },
+  bestseller: { labelKey: 'tag.bestseller', bg: '#8b5cf6', fg: '#fff' },
+  new: { labelKey: 'tag.new', bg: '#dcfce7', fg: '#166534' },
 };
 
 type DropdownKey = 'pricing' | 'visibility' | 'status' | 'language' | 'sort';
 
 export interface FilterDropdown {
   key: DropdownKey;
-  label: string;
-  options: { value: NonNullable<CourseFilters[DropdownKey]>; label: string }[];
+  labelKey: string;
+  options: { value: NonNullable<CourseFilters[DropdownKey]>; labelKey: string }[];
 }
 
 export const FILTER_DROPDOWNS: FilterDropdown[] = [
   {
     key: 'pricing',
-    label: 'Giá',
+    labelKey: 'filter.pricing.label',
     options: [
-      { value: 'free', label: 'Miễn phí' },
-      { value: 'paid', label: 'Có phí' },
-      { value: 'trial', label: 'Dùng thử miễn phí' },
+      { value: 'free', labelKey: 'filter.pricing.free' },
+      { value: 'paid', labelKey: 'filter.pricing.paid' },
+      { value: 'trial', labelKey: 'filter.pricing.trial' },
     ],
   },
   {
     key: 'visibility',
-    label: 'Loại',
+    labelKey: 'filter.visibility.label',
     options: [
-      { value: 'public', label: 'Công khai' },
-      { value: 'private', label: 'Riêng tư' },
+      { value: 'public', labelKey: 'filter.visibility.public' },
+      { value: 'private', labelKey: 'filter.visibility.private' },
     ],
   },
   {
     key: 'status',
-    label: 'Trạng thái',
+    labelKey: 'filter.status.label',
     options: [
-      { value: 'open', label: 'Đang mở' },
-      { value: 'soon', label: 'Sắp ra mắt' },
-      { value: 'completed', label: 'Đã hoàn thành' },
+      { value: 'open', labelKey: 'filter.status.open' },
+      { value: 'soon', labelKey: 'filter.status.soon' },
+      { value: 'completed', labelKey: 'filter.status.completed' },
     ],
   },
   {
     key: 'language',
-    label: 'Ngôn ngữ',
+    labelKey: 'filter.language.label',
     options: [
-      { value: 'vi', label: 'Tiếng Việt' },
-      { value: 'en', label: 'English' },
+      { value: 'vi', labelKey: 'filter.language.vi' },
+      { value: 'en', labelKey: 'filter.language.en' },
     ],
   },
   {
     key: 'sort',
-    label: 'Sắp xếp',
+    labelKey: 'filter.sort.label',
     options: [
-      { value: 'trending', label: 'Đang nổi' },
-      { value: 'top', label: 'Hàng đầu' },
-      { value: 'newest', label: 'Mới nhất' },
+      { value: 'trending', labelKey: 'filter.sort.trending' },
+      { value: 'top', labelKey: 'filter.sort.top' },
+      { value: 'newest', labelKey: 'filter.sort.newest' },
     ],
   },
 ];

@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { currentLocale } from '../../../i18n';
 import { Button } from '../../../components/ui/Button';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { SectionTitle } from '../../../components/ui/SectionTitle';
@@ -16,8 +18,9 @@ const colorFor = (id: string) => {
 };
 
 function Stars({ value, size = 16 }: { value: number; size?: number }) {
+  const { t } = useTranslation('communities');
   return (
-    <span className="inline-flex" aria-label={`${value} sao`}>
+    <span className="inline-flex" aria-label={t('reviews.stars', { value })}>
       {[1, 2, 3, 4, 5].map((n) => (
         <MaterialIcon key={n} name="star" size={size} filled={n <= value} color={n <= value ? '#f59e0b' : '#d6d3d1'} />
       ))}
@@ -26,15 +29,16 @@ function Stars({ value, size = 16 }: { value: number; size?: number }) {
 }
 
 function StarPicker({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+  const { t } = useTranslation('communities');
   return (
-    <span className="inline-flex" role="radiogroup" aria-label="Chọn số sao">
+    <span className="inline-flex" role="radiogroup" aria-label={t('reviews.pickStars')}>
       {[1, 2, 3, 4, 5].map((n) => (
         <button
           key={n}
           type="button"
           role="radio"
           aria-checked={value === n}
-          aria-label={`${n} sao`}
+          aria-label={t('reviews.starsN', { n })}
           onClick={() => onChange(n)}
           className="p-0.5"
         >
@@ -45,7 +49,7 @@ function StarPicker({ value, onChange }: { value: number; onChange: (n: number) 
   );
 }
 
-const formatDate = (iso: string) => new Date(iso).toLocaleDateString('vi-VN');
+const formatDate = (iso: string) => new Date(iso).toLocaleDateString(currentLocale());
 
 /** Phần "Đánh giá từ học viên": dữ liệu thật từ GET /courses/:id/reviews + form của thành viên. */
 export function ReviewsSection({
@@ -61,6 +65,7 @@ export function ReviewsSection({
   fallbackRating: number;
   fallbackCount: number;
 }) {
+  const { t } = useTranslation('communities');
   const { confirm } = usePopup();
   const { user } = useAuth();
   const [page, setPage] = useState(1);
@@ -78,12 +83,12 @@ export function ReviewsSection({
   return (
     <div className="glass flex flex-col gap-[22px] rounded-[26px] p-[26px]">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <SectionTitle>Đánh giá từ học viên</SectionTitle>
+        <SectionTitle>{t('reviews.title')}</SectionTitle>
       </div>
       <div className="flex flex-wrap items-center gap-4">
         <span className="text-[48px] leading-none font-extrabold tracking-[-1px]">{summary?.rating ?? fallbackRating}</span>
         <Stars value={Math.round(summary?.rating ?? fallbackRating)} size={24} />
-        <span className="text-[15px] text-stone-600">{summary?.ratingCount ?? fallbackCount} đánh giá</span>
+        <span className="text-[15px] text-stone-600">{t('reviews.count', { count: summary?.ratingCount ?? fallbackCount })}</span>
       </div>
 
       {viewerEnrolled ? (
@@ -100,12 +105,12 @@ export function ReviewsSection({
           deleteError={removeMine.isError ? errorText(removeMine.error) : null}
         />
       ) : (
-        <p className="rounded-2xl bg-white/60 px-4 py-3 text-sm text-stone-600">Tham gia cộng đồng để viết đánh giá của bạn.</p>
+        <p className="rounded-2xl bg-white/60 px-4 py-3 text-sm text-stone-600">{t('reviews.joinToReview')}</p>
       )}
 
-      {reviews.isPending && <p className="text-sm text-stone-500">Đang tải đánh giá…</p>}
-      {reviews.isError && <p className="text-sm text-red-600">{errorText(reviews.error, 'Không tải được đánh giá')}</p>}
-      {reviews.data && rows.length === 0 && <p className="text-sm text-stone-500">Chưa có đánh giá nào. Hãy là người đầu tiên!</p>}
+      {reviews.isPending && <p className="text-sm text-stone-500">{t('reviews.loading')}</p>}
+      {reviews.isError && <p className="text-sm text-red-600">{errorText(reviews.error, t('reviews.loadError'))}</p>}
+      {reviews.data && rows.length === 0 && <p className="text-sm text-stone-500">{t('reviews.empty')}</p>}
 
       <div className="flex flex-col gap-3">
         {rows.map((r) => (
@@ -120,11 +125,11 @@ export function ReviewsSection({
               {user && r.userId !== user.id && canModerate && (
                 <button
                   type="button"
-                  title="Xóa đánh giá này"
-                  aria-label="Xóa đánh giá này"
+                  title={t('reviews.deleteThis')}
+                  aria-label={t('reviews.deleteThis')}
                   disabled={removeOther.isPending}
                   onClick={async () => {
-                    if (await confirm({ title: `Xóa đánh giá của ${r.name}?`, tone: 'danger', confirmText: 'Xóa' })) removeOther.mutate(r.id);
+                    if (await confirm({ title: t('reviews.deleteOfTitle', { name: r.name }), tone: 'danger', confirmText: t('reviews.delete') })) removeOther.mutate(r.id);
                   }}
                   className="grid size-8 place-items-center rounded-lg text-stone-500 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
                 >
@@ -146,10 +151,10 @@ export function ReviewsSection({
             onClick={() => setPage(page - 1)}
             className="h-9 rounded-xl border border-[rgba(120,60,20,.15)] bg-white px-3 font-semibold disabled:opacity-40"
           >
-            Trước
+            {t('reviews.prev')}
           </button>
           <span className="text-stone-600">
-            Trang {page}/{totalPages}
+            {t('reviews.page', { page, total: totalPages })}
           </span>
           <button
             type="button"
@@ -157,7 +162,7 @@ export function ReviewsSection({
             onClick={() => setPage(page + 1)}
             className="h-9 rounded-xl border border-[rgba(120,60,20,.15)] bg-white px-3 font-semibold disabled:opacity-40"
           >
-            Sau
+            {t('reviews.next')}
           </button>
         </div>
       )}
@@ -184,6 +189,7 @@ function ReviewForm({
   deleting: boolean;
   deleteError: string | null;
 }) {
+  const { t } = useTranslation('communities');
   const { confirm } = usePopup();
   const [rating, setRating] = useState(mine?.rating ?? 0);
   const [text, setText] = useState(mine?.text ?? '');
@@ -191,7 +197,7 @@ function ReviewForm({
 
   const submit = () => {
     if (rating < 1) {
-      setLocalError('Vui lòng chọn số sao (1–5)');
+      setLocalError(t('reviews.pickError'));
       return;
     }
     setLocalError(null);
@@ -200,7 +206,7 @@ function ReviewForm({
 
   return (
     <div className="rounded-[18px] border border-brand/15 bg-white/70 p-[18px]">
-      <div className="text-[15px] font-bold">{mine ? 'Đánh giá của bạn' : 'Viết đánh giá'}</div>
+      <div className="text-[15px] font-bold">{mine ? t('reviews.yours') : t('reviews.write')}</div>
       <div className="mt-2">
         <StarPicker value={rating} onChange={setRating} />
       </div>
@@ -209,26 +215,26 @@ function ReviewForm({
         onChange={(e) => setText(e.target.value)}
         maxLength={1000}
         rows={3}
-        placeholder="Chia sẻ trải nghiệm của bạn (không bắt buộc)…"
+        placeholder={t('reviews.placeholder')}
         className="mt-2 w-full resize-none rounded-xl border border-[rgba(120,60,20,.15)] bg-white/90 px-3.5 py-2.5 text-sm outline-0 focus:border-brand"
       />
       <div className="mt-2 flex flex-wrap items-center gap-3">
         <Button onClick={submit} disabled={pending} className="h-10 rounded-xl px-5 text-sm font-bold">
-          {pending ? 'Đang gửi…' : mine ? 'Cập nhật đánh giá' : 'Gửi đánh giá'}
+          {pending ? t('reviews.sending') : mine ? t('reviews.update') : t('reviews.submit')}
         </Button>
         {onDelete && (
           <button
             type="button"
             disabled={deleting}
             onClick={async () => {
-              if (await confirm({ title: 'Xóa đánh giá của bạn?', tone: 'danger', confirmText: 'Xóa' })) onDelete();
+              if (await confirm({ title: t('reviews.deleteMineTitle'), tone: 'danger', confirmText: t('reviews.delete') })) onDelete();
             }}
             className="h-10 rounded-xl border border-red-200 px-4 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
           >
-            {deleting ? 'Đang xóa…' : 'Xóa đánh giá'}
+            {deleting ? t('reviews.deleting') : t('reviews.deleteMine')}
           </button>
         )}
-        {saved && !error && !pending && <span className="text-sm text-green-700">Đã lưu đánh giá</span>}
+        {saved && !error && !pending && <span className="text-sm text-green-700">{t('reviews.saved')}</span>}
       </div>
       {(localError || error || deleteError) && <p className="mt-2 text-sm font-medium text-red-600">{localError ?? error ?? deleteError}</p>}
     </div>

@@ -1,8 +1,10 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
+import i18n from '../../../i18n';
 import { Button } from '../../../components/ui/Button';
 
-export const errorText = (err: unknown, fallback = 'Có lỗi xảy ra, vui lòng thử lại') =>
+export const errorText = (err: unknown, fallback = i18n.t('common.errorFallback', { ns: 'communities' })) =>
   err instanceof Error && err.message ? err.message : fallback;
 
 /** Hộp thoại dùng chung của khu cộng đồng (cùng kiểu với hộp thoại "Khóa học có phí"). */
@@ -39,14 +41,15 @@ export function Modal({
   );
 }
 
-export function CancelButton({ onClick, children = 'Hủy' }: { onClick: () => void; children?: ReactNode }) {
+export function CancelButton({ onClick, children }: { onClick: () => void; children?: ReactNode }) {
+  const { t } = useTranslation('communities');
   return (
     <button
       type="button"
       onClick={onClick}
       className="h-11 flex-1 rounded-xl border border-[rgba(120,60,20,.15)] text-sm font-semibold text-stone-700 hover:bg-stone-50"
     >
-      {children}
+      {children ?? t('common.cancel')}
     </button>
   );
 }

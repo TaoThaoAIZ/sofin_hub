@@ -1,0 +1,25 @@
+{
+  "cta": {
+    "badge": "Dành cho chuyên gia, creator, doanh nghiệp",
+    "title": "Tạo cộng đồng của riêng bạn",
+    "desc": "Biến kiến thức, kinh nghiệm và tầm ảnh hưởng của bạn thành một cộng đồng học tập, cùng phát triển và tạo giá trị bền vững.",
+    "button": "Tạo cộng đồng ngay"
+  },
+  "hero": {
+    "stats": {
+      "learners": "học viên",
+      "courses": "cộng đồng",
+      "instructors": "chủ cộng đồng",
+      "rating": "điểm đánh giá trung bình"
+    },
+    "badge": "NỀN TẢNG HỌC TẬP TRỰC TUYẾN",
+    "title1": "Học kỹ năng mới.",
+    "title2": "Phát triển cùng cộng đồng.",
+    "desc": "Hàng ngàn khóa học thực tế từ chuyên gia trong nhiều lĩnh vực. Học nhanh hơn, ứng dụng ngay và tạo giá trị cho bản thân.",
+    "searchPlaceholder": "Tìm kiếm khóa học, chủ đề, kỹ năng...",
+    "searchAria": "Tìm kiếm khóa học",
+    "searchButton": "Tìm kiếm"
+  },
+  "featured": "Khóa học nổi bật",
+  "viewAll": "Xem tất cả →"
+}

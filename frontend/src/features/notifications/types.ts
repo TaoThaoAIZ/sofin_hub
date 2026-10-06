@@ -1,3 +1,5 @@
+import i18n from '../../i18n';
+
 export const NOTIFICATION_TYPES = [
   'post_liked',
   'post_commented',
@@ -23,20 +25,7 @@ export const MANDATORY_TYPES: readonly NotificationType[] = [
   'report_resolved',
 ];
 
-export const NOTIFICATION_TYPE_LABEL: Record<NotificationType, string> = {
-  post_liked: 'Có người thích bài viết của bạn',
-  post_commented: 'Có bình luận mới trên bài viết của bạn',
-  event_created: 'Sự kiện mới trong cộng đồng',
-  event_reminder: 'Nhắc lịch sự kiện',
-  member_joined: 'Thành viên mới tham gia cộng đồng của bạn',
-  role_changed: 'Thay đổi vai trò của bạn',
-  removed_from_community: 'Bị xóa khỏi cộng đồng',
-  payment_succeeded: 'Thanh toán thành công',
-  payment_failed: 'Thanh toán thất bại',
-  report_resolved: 'Báo cáo của bạn đã được xử lý',
-  message_received: 'Tin nhắn mới',
-  system: 'Thông báo hệ thống',
-};
+export const notificationTypeLabel = (type: NotificationType): string => i18n.t(`types.${type}`, { ns: 'notifications' });
 
 export const NOTIFICATION_TYPE_ICON: Record<NotificationType, string> = {
   post_liked: 'favorite',

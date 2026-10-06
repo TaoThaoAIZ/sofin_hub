@@ -1,0 +1,441 @@
+{
+  "labels": {
+    "userStatus": {
+      "active": "Hoạt động",
+      "restricted": "Bị hạn chế",
+      "suspended": "Tạm ngưng",
+      "banned": "Bị cấm"
+    },
+    "communityStatus": {
+      "pending_review": "Chờ duyệt",
+      "changes_requested": "Đã yêu cầu chỉnh sửa",
+      "rejected": "Đã từ chối",
+      "active": "Hoạt động",
+      "suspended": "Tạm ngưng",
+      "deleted": "Đã xóa"
+    },
+    "caseStatus": {
+      "open": "Mở",
+      "under_review": "Đang xem xét",
+      "resolved": "Đã xử lý",
+      "dismissed": "Bỏ qua"
+    },
+    "caseRisk": {
+      "low": "Thấp",
+      "medium": "Trung bình",
+      "critical": "Nghiêm trọng"
+    },
+    "discovery": {
+      "listed": "Đang hiển thị",
+      "hidden": "Đã ẩn",
+      "unlisted": "Gỡ khỏi khám phá"
+    },
+    "reasonLabel": {
+      "harassment": "Quấy rối",
+      "inappropriate": "Nội dung không phù hợp",
+      "misinformation": "Thông tin sai lệch",
+      "other": "Khác",
+      "hate_speech": "Ngôn từ thù ghét",
+      "scam": "Lừa đảo",
+      "copyright": "Bản quyền",
+      "nsfw": "Nội dung nhạy cảm"
+    },
+    "targetLabel": {
+      "post": "Bài viết",
+      "comment": "Bình luận",
+      "member": "Thành viên"
+    },
+    "roleLabel": {
+      "owner": "Chủ sở hữu",
+      "admin": "Quản trị viên",
+      "mod": "Kiểm duyệt viên",
+      "member": "Thành viên"
+    },
+    "pricingLabel": {
+      "free": "Miễn phí",
+      "paid": "Trả phí",
+      "trial": "Dùng thử"
+    },
+    "restrictionLabel": {
+      "post": "Không được đăng bài",
+      "comment": "Không được bình luận",
+      "dm": "Không được nhắn tin",
+      "create_community": "Không được tạo cộng đồng",
+      "purchase": "Không được mua"
+    },
+    "durationLabel": {
+      "24h": "24 giờ",
+      "7d": "7 ngày",
+      "30d": "30 ngày",
+      "indefinite": "Vô thời hạn"
+    },
+    "purchaseStatus": {
+      "succeeded": "Thành công",
+      "pending": "Đang chờ",
+      "failed": "Thất bại",
+      "refunded": "Đã hoàn tiền"
+    },
+    "auditAction": {
+      "community_approve": "Duyệt cộng đồng",
+      "community_request_changes": "Yêu cầu chỉnh sửa cộng đồng",
+      "community_reject": "Từ chối cộng đồng",
+      "community_suspend": "Tạm ngưng cộng đồng",
+      "community_restore": "Khôi phục cộng đồng sau tạm ngưng",
+      "community_delete": "Xóa cộng đồng",
+      "community_undelete": "Khôi phục cộng đồng đã xóa",
+      "community_lock": "Khóa cộng đồng",
+      "community_unlock": "Mở khóa cộng đồng",
+      "user_restrict": "Hạn chế người dùng",
+      "user_suspend": "Tạm ngưng người dùng",
+      "user_ban": "Cấm người dùng",
+      "user_reinstate": "Khôi phục người dùng",
+      "user_warn": "Cảnh cáo người dùng",
+      "user_revoke_session": "Thu hồi phiên đăng nhập",
+      "case_assign": "Nhận xử lý vụ việc",
+      "case_warn": "Cảnh cáo (vụ việc)",
+      "case_remove_content": "Gỡ nội dung (vụ việc)",
+      "case_restrict_user": "Hạn chế người dùng (vụ việc)",
+      "case_suspend_user": "Tạm ngưng người dùng (vụ việc)",
+      "case_ban_user": "Cấm người dùng (vụ việc)",
+      "case_dismiss": "Bỏ qua vụ việc",
+      "case_escalate": "Nâng mức rủi ro vụ việc",
+      "case_resolve": "Đóng vụ việc",
+      "payment_refund_resolve": "Xử lý hoàn tiền",
+      "payment_payout_resolve": "Xử lý chi trả",
+      "report_resolve": "Xử lý báo cáo"
+    },
+    "decisionLabel": {
+      "warning": "Cảnh cáo",
+      "removal": "Đã gỡ nội dung",
+      "restriction": "Hạn chế",
+      "suspension": "Tạm ngưng",
+      "ban": "Cấm"
+    },
+    "caseEventLabel": {
+      "assign": "đã nhận xử lý vụ việc",
+      "warn": "đã cảnh cáo người dùng",
+      "remove_content": "đã gỡ nội dung",
+      "restrict_user": "đã hạn chế người dùng",
+      "suspend_user": "đã tạm ngưng người dùng",
+      "ban_user": "đã cấm người dùng",
+      "dismiss": "đã đóng vụ việc (không vi phạm)",
+      "escalate": "đã nâng mức rủi ro",
+      "resolve": "đã đóng vụ việc",
+      "created": "đã tạo vụ việc"
+    },
+    "contentStatus": {
+      "published": "Đã xuất bản",
+      "under_review": "Đang xem xét",
+      "hidden": "Đã ẩn",
+      "removed": "Đã gỡ",
+      "draft": "Nháp",
+      "archived": "Đã lưu trữ",
+      "upcoming": "Sắp diễn ra",
+      "live": "Đang diễn ra",
+      "completed": "Hoàn tất",
+      "cancelled": "Đã hủy",
+      "active": "Hoạt động",
+      "flagged": "Bị gắn cờ",
+      "disabled": "Đã tắt"
+    },
+    "txStatus": {
+      "succeeded": "Thành công",
+      "failed": "Thất bại",
+      "pending": "Đang chờ",
+      "refunded": "Đã hoàn tiền"
+    },
+    "subStatus": {
+      "trialing": "Dùng thử",
+      "active": "Hoạt động",
+      "past_due": "Quá hạn",
+      "paused": "Tạm dừng",
+      "canceled": "Đã hủy",
+      "expired": "Hết hạn"
+    },
+    "refundStatus": {
+      "pending": "Yêu cầu mới",
+      "refunding": "Đang hoàn tiền (chờ cổng)",
+      "approved": "Hoàn tất",
+      "rejected": "Đã từ chối"
+    },
+    "chargebackStatus": {
+      "open": "Mở",
+      "under_review": "Đang xem xét",
+      "won": "Thắng"
+    },
+    "chargebackReason": {
+      "fraudulent": "Gian lận",
+      "product_not_received": "Chưa nhận sản phẩm",
+      "duplicate": "Trùng lặp",
+      "subscription_cancelled": "Đã hủy gói",
+      "unrecognized": "Không nhận ra giao dịch",
+      "product_not_as_described": "Sản phẩm không như mô tả"
+    },
+    "payoutStatus": {
+      "requested": "Đang chờ",
+      "approved": "Đang xử lý",
+      "paid": "Đã chi trả",
+      "failed": "Thất bại",
+      "on_hold": "Tạm giữ",
+      "rejected": "Đã từ chối"
+    },
+    "listedStatus": {
+      "listed": "Đang hiển thị",
+      "featured": "Nổi bật",
+      "hidden": "Đã ẩn",
+      "unlisted": "Gỡ khỏi khám phá"
+    },
+    "searchVis": {
+      "searchable": "Cho phép tìm kiếm",
+      "reduced": "Giảm hiển thị",
+      "hidden": "Đã ẩn"
+    },
+    "featuredLabel": {
+      "featured": "Cộng đồng nổi bật",
+      "trending": "Đang thịnh hành",
+      "editors_picks": "Biên tập viên chọn",
+      "new_noteworthy": "Mới & Đáng chú ý"
+    },
+    "factorLabel": {
+      "memberGrowth": "Tăng trưởng thành viên",
+      "engagement": "Tương tác",
+      "retention": "Giữ chân",
+      "rating": "Đánh giá",
+      "reportPenalty": "Trừ điểm báo cáo"
+    },
+    "lessonType": {
+      "text": "Văn bản",
+      "file": "Tệp",
+      "link": "Liên kết"
+    },
+    "mediaKindLabel": {
+      "image": "Hình ảnh",
+      "document": "Tài liệu",
+      "audio": "Âm thanh"
+    },
+    "categoryDefaultName": {
+      "content": "Nội dung",
+      "tech": "Công nghệ",
+      "finance": "Tài chính",
+      "health": "Sức khỏe & Thể hình",
+      "self": "Phát triển bản thân",
+      "hobby": "Sở thích",
+      "relationships": "Các mối quan hệ",
+      "design": "Thiết kế"
+    },
+    "ticketStatus": {
+      "new": "Mới",
+      "open": "Đang mở",
+      "awaiting_reply": "Chờ phản hồi",
+      "resolved": "Đã xử lý",
+      "closed": "Đã đóng"
+    },
+    "ticketPriority": {
+      "low": "Thấp",
+      "medium": "Trung bình",
+      "urgent": "Khẩn cấp"
+    },
+    "ticketCategory": {
+      "user": "Người dùng",
+      "payment": "Thanh toán"
+    },
+    "flagStage": {
+      "draft": "Bản nháp",
+      "beta": "Thử nghiệm",
+      "active": "Đang chạy"
+    },
+    "templateStatus": {
+      "active": "Đang dùng",
+      "draft": "Bản nháp",
+      "disabled": "Đã tắt"
+    },
+    "permissionLabel": {
+      "dashboard_view": "Xem bảng điều khiển",
+      "community_manage": "Quản lý cộng đồng",
+      "report_resolve": "Xử lý báo cáo",
+      "user_ban": "Cấm người dùng",
+      "payment_refund": "Hoàn tiền",
+      "payout_approve": "Duyệt chi trả",
+      "system_flags": "Sửa tính năng thử nghiệm",
+      "admin_manage": "Quản lý quản trị viên",
+      "users_view": "Xem người dùng",
+      "content_manage": "Quản lý nội dung",
+      "payment_view": "Xem thanh toán",
+      "payment_manage": "Quản lý thanh toán",
+      "analytics_view": "Xem phân tích",
+      "support_manage": "Xử lý ticket hỗ trợ",
+      "audit_view": "Xem nhật ký hoạt động",
+      "system_settings": "Cài đặt hệ thống"
+    },
+    "staffRoleLabel": {
+      "moderator": "Kiểm duyệt viên",
+      "support": "Hỗ trợ",
+      "finance": "Tài chính"
+    },
+    "integrationCategory": {
+      "payments": "Thanh toán",
+      "storage": "Lưu trữ",
+      "analytics": "Phân tích"
+    },
+    "segmentLabel": {
+      "free_members": "Thành viên miễn phí",
+      "paid_members": "Thành viên trả phí",
+      "staff": "Quản trị & kiểm duyệt"
+    },
+    "mixLabel": {
+      "likes": "Lượt thích",
+      "comments": "Bình luận",
+      "posts": "Bài viết",
+      "lessons": "Hoàn thành bài học",
+      "lesson_completions": "Hoàn thành bài học",
+      "completions": "Hoàn thành bài học",
+      "rsvps": "Tham gia sự kiện",
+      "events": "Tham gia sự kiện"
+    },
+    "planLabel": {
+      "subscription": "Gói đăng ký",
+      "new_subscription": "Đăng ký mới",
+      "renewal": "Gia hạn",
+      "course": "Khóa học",
+      "event": "Sự kiện",
+      "one_time": "Thanh toán một lần",
+      "trial": "Dùng thử"
+    },
+    "funnelLabel": {
+      "signup": "Tạo tài khoản",
+      "joined": "Tham gia cộng đồng",
+      "trial": "Bắt đầu dùng thử",
+      "paid": "Trở thành trả phí"
+    },
+    "auditPrefix": {
+      "community": "cộng đồng",
+      "user": "người dùng",
+      "case": "vụ việc",
+      "content": "nội dung",
+      "post": "bài viết",
+      "comment": "bình luận",
+      "lesson": "bài học",
+      "course": "khóa học",
+      "event": "sự kiện",
+      "payment": "thanh toán",
+      "refund": "hoàn tiền",
+      "payout": "chi trả",
+      "chargeback": "tranh chấp",
+      "subscription": "gói đăng ký",
+      "discovery": "khám phá",
+      "category": "danh mục",
+      "admin": "quản trị viên",
+      "role": "vai trò",
+      "flag": "tính năng thử nghiệm",
+      "integration": "tích hợp",
+      "notification": "thông báo",
+      "email_template": "mẫu email",
+      "template": "mẫu email",
+      "settings": "cài đặt chung",
+      "setting": "cài đặt chung",
+      "report": "báo cáo"
+    },
+    "auditVerb": {
+      "create": "Tạo",
+      "update": "Cập nhật",
+      "edit": "Sửa",
+      "delete": "Xóa",
+      "remove": "Gỡ",
+      "toggle": "Bật/tắt",
+      "connect": "Kết nối",
+      "disconnect": "Ngắt kết nối",
+      "test": "Kiểm tra",
+      "reply": "Trả lời",
+      "note": "Ghi chú",
+      "resolve": "Xử lý",
+      "close": "Đóng",
+      "reopen": "Mở lại",
+      "escalate": "Chuyển cấp",
+      "suspend": "Tạm ngưng",
+      "enable": "Kích hoạt",
+      "reset": "Khôi phục mặc định",
+      "reset_2fa": "Đặt lại 2FA",
+      "broadcast": "Gửi thông báo",
+      "reorder": "Sắp xếp lại",
+      "move": "Di chuyển",
+      "feature": "Đưa lên nổi bật",
+      "unfeature": "Gỡ khỏi nổi bật",
+      "hide": "Ẩn",
+      "restore": "Khôi phục",
+      "approve": "Duyệt",
+      "reject": "Từ chối",
+      "refund": "Hoàn tiền",
+      "retry": "Thử lại",
+      "cancel": "Hủy",
+      "grant": "Cấp quyền",
+      "revoke": "Thu hồi quyền",
+      "status": "Đổi trạng thái",
+      "export": "Xuất dữ liệu",
+      "assign": "Giao"
+    }
+  },
+  "nav": {
+    "groups": {
+      "dash": "Tổng quan",
+      "communities": "Cộng đồng",
+      "users": "Người dùng",
+      "content": "Nội dung",
+      "moderation": "Kiểm duyệt",
+      "payments": "Thanh toán",
+      "discovery": "Khám phá",
+      "analytics": "Phân tích",
+      "support": "Hỗ trợ",
+      "system": "Hệ thống"
+    },
+    "kids": {
+      "communities_list": "Danh sách cộng đồng",
+      "communities_review": "Xét duyệt",
+      "communities_suspend": "Tạm ngưng",
+      "communities_trash": "Xóa / Khôi phục",
+      "users_all": "Tất cả người dùng",
+      "users_restrict": "Hạn chế / Tạm ngưng",
+      "users_ban": "Cấm",
+      "content_posts": "Bài viết",
+      "content_comments": "Bình luận",
+      "content_courses": "Khóa học",
+      "content_lessons": "Bài học",
+      "content_events": "Sự kiện",
+      "content_media": "Media",
+      "moderation_queue": "Hàng đợi báo cáo",
+      "moderation_warning": "Cảnh cáo",
+      "moderation_remove": "Gỡ nội dung",
+      "moderation_suspend": "Tạm ngưng",
+      "moderation_ban": "Cấm",
+      "payments_tx": "Giao dịch",
+      "payments_subs": "Gói đăng ký",
+      "payments_refunds": "Hoàn tiền",
+      "payments_chargebacks": "Tranh chấp thanh toán",
+      "payments_creator": "Doanh thu creator",
+      "payments_payouts": "Chi trả",
+      "discovery_listed": "Cộng đồng hiển thị",
+      "discovery_categories": "Danh mục",
+      "discovery_featured": "Nổi bật",
+      "discovery_rankings": "Xếp hạng",
+      "discovery_seo": "Hiển thị tìm kiếm",
+      "analytics_users": "Người dùng",
+      "analytics_communities": "Cộng đồng",
+      "analytics_engagement": "Tương tác",
+      "analytics_retention": "Giữ chân",
+      "analytics_revenue": "Doanh thu",
+      "analytics_conversion": "Chuyển đổi",
+      "support_tickets": "Ticket hỗ trợ",
+      "support_user": "Vấn đề người dùng",
+      "support_creator": "Vấn đề creator",
+      "support_payment": "Vấn đề thanh toán",
+      "system_admins": "Tài khoản quản trị",
+      "system_roles": "Vai trò & Quyền",
+      "system_categories": "Danh mục",
+      "system_flags": "Tính năng thử nghiệm",
+      "system_integrations": "Tích hợp",
+      "system_notifications": "Thông báo",
+      "system_email": "Mẫu email",
+      "system_audit": "Nhật ký hoạt động",
+      "system_settings": "Cài đặt chung"
+    }
+  }
+}

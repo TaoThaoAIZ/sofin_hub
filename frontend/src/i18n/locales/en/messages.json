@@ -1,0 +1,57 @@
+{
+  "blocked": {
+    "title": "Blocked users",
+    "close": "Close",
+    "loading": "Loading…",
+    "loadError": "Couldn't load the list.",
+    "empty": "You haven't blocked anyone.",
+    "since": "Blocked since {{date}}",
+    "unblock": "Unblock"
+  },
+  "chat": {
+    "attachmentError": "Couldn't load the attachment",
+    "recall": "Recall message",
+    "maxFiles": "You can attach up to 5 files per message",
+    "back": "Back",
+    "conversation": "Conversation",
+    "blockTitle": "Block {{name}}?",
+    "blockMessage": "Neither of you will be able to message the other.",
+    "block": "Block",
+    "unblock": "Unblock",
+    "loading": "Loading…",
+    "loadOlder": "Load older messages",
+    "loadingMessages": "Loading messages…",
+    "notFound": "We couldn't find this conversation.",
+    "noMessages": "No messages yet. Say hello!",
+    "recallTitle": "Recall this message?",
+    "recallMessage": "The content will be deleted for both of you.",
+    "recallConfirm": "Recall",
+    "youBlocked": "You've blocked this person. Unblock to keep messaging.",
+    "removeFile": "Remove {{name}}",
+    "attach": "Attach file",
+    "attachTitle": "Attach image / file",
+    "placeholder": "Type a message…",
+    "send": "Send",
+    "sentFiles_one": "Sent 1 attachment",
+    "sentFiles_other": "Sent {{count}} attachments"
+  },
+  "button": {
+    "label": "Messages",
+    "labelUnread": "Messages ({{count}} unread)"
+  },
+  "errors": {
+    "forbidden": "You can't message this person (you don't share a community or they're blocked).",
+    "rateLimit": "You're sending messages too fast. Please wait a moment and try again.",
+    "generic": "Something went wrong, please try again"
+  },
+  "page": {
+    "title": "Messages",
+    "loading": "Loading…",
+    "loadError": "Couldn't load conversations.",
+    "empty": "No conversations yet. Open the Members tab of a community and click the chat icon to start messaging.",
+    "blocked": "Blocked",
+    "you": "You: ",
+    "noMessages": "No messages yet",
+    "selectPrompt": "Select a conversation to get started."
+  }
+}

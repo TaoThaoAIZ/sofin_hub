@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../../../components/ui/Button';
 import { CardFields } from '../../../components/ui/CardFields';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
@@ -34,6 +35,7 @@ export function JoinCheckout({
   /** BE trả JOIN_REQUEST_REQUIRED (cộng đồng riêng tư chưa được duyệt) → chuyển sang hộp thoại gửi yêu cầu. */
   onNeedRequest?: () => void;
 }) {
+  const { t } = useTranslation('payments');
   const courseId = course.id;
   const [interval, setIntervalState] = useState<BillingInterval | null>(null);
   // Mặc định chọn gói năm nếu cộng đồng có bán (như thiết kế), ngược lại gói tháng; người dùng bấm thì theo lựa chọn.
@@ -81,8 +83,8 @@ export function JoinCheckout({
         onNeedRequest();
         return;
       }
-      if (code === 'COMMUNITY_LOCKED') setError('Cộng đồng này đang bị khóa bởi quản trị nền tảng nên chưa thể tham gia.');
-      else setError(err instanceof Error && err.message ? err.message : 'Thanh toán thất bại, vui lòng thử lại');
+      if (code === 'COMMUNITY_LOCKED') setError(t('join.locked'));
+      else setError(err instanceof Error && err.message ? err.message : t('join.failed'));
     }
   };
 
@@ -91,18 +93,18 @@ export function JoinCheckout({
   const ownerName = course.instructor.name;
   const lessons = Number(course.facts.find((f) => f.label === 'Bài học')?.value ?? 0);
   const chips = [
-    { icon: 'group', v: `${formatCompact(course.stats.members)}${course.stats.members >= 10 ? '+' : ''}`, l: 'thành viên' },
-    ...(lessons > 0 ? [{ icon: 'menu_book', v: String(lessons), l: 'bài học' }] : []),
-    ...(course.ratingCount > 0 ? [{ icon: 'star', v: String(course.rating), l: `${course.ratingCount} đánh giá` }] : [{ icon: 'wifi_tethering', v: String(course.stats.online), l: 'đang trực tuyến' }]),
+    { icon: 'group', v: `${formatCompact(course.stats.members)}${course.stats.members >= 10 ? '+' : ''}`, l: t('join.chipMembers') },
+    ...(lessons > 0 ? [{ icon: 'menu_book', v: String(lessons), l: t('join.chipLessons') }] : []),
+    ...(course.ratingCount > 0 ? [{ icon: 'star', v: String(course.rating), l: t('join.chipReviews', { count: course.ratingCount }) }] : [{ icon: 'wifi_tethering', v: String(course.stats.online), l: t('join.chipOnline') }]),
   ];
 
-  const cta = trialMode ? 'Bắt đầu dùng thử miễn phí' : quote?.paid === false ? 'Tham gia' : 'Thanh toán';
+  const cta = trialMode ? t('join.ctaTrial') : quote?.paid === false ? t('join.ctaJoin') : t('join.ctaPay');
 
   return (
     <div className="relative overflow-hidden rounded-[28px] bg-white shadow-2xl">
       <div className="bg-[linear-gradient(180deg,#fff1e6,#fff)] px-6 pt-8 pb-5 text-center">
         {onClose && (
-          <button type="button" aria-label="Đóng" onClick={onClose} className="absolute top-4 right-4 grid size-9 place-items-center rounded-full border border-[rgba(120,60,20,.1)] bg-white shadow-sm">
+          <button type="button" aria-label={t('join.close')} onClick={onClose} className="absolute top-4 right-4 grid size-9 place-items-center rounded-full border border-[rgba(120,60,20,.1)] bg-white shadow-sm">
             <MaterialIcon name="close" size={20} />
           </button>
         )}
@@ -116,7 +118,7 @@ export function JoinCheckout({
         </div>
         <h2 className="mt-4 mb-0 text-2xl font-extrabold tracking-[-0.3px]">{course.title}</h2>
         <p className="mt-1 mb-0 text-sm text-stone-600">
-          Cộng đồng {categoryName} · do {ownerName} dẫn dắt
+          {t('join.subtitle', { category: categoryName, owner: ownerName })}
         </p>
         <div className="mt-4 flex flex-wrap justify-center gap-x-5 gap-y-2.5">
           {chips.map((c) => (
@@ -134,35 +136,35 @@ export function JoinCheckout({
       </div>
 
       <div className="border-t border-[rgba(120,60,20,.08)] px-6 pt-5 pb-6">
-        {quoteQuery.isPending && <p className="py-10 text-center text-stone-500">Đang tải bảng giá…</p>}
+        {quoteQuery.isPending && <p className="py-10 text-center text-stone-500">{t('join.quoteLoading')}</p>}
         {quoteQuery.isError && !quote && (
           <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
-            {quoteQuery.error instanceof Error ? quoteQuery.error.message : 'Không tải được bảng giá, vui lòng thử lại'}
+            {quoteQuery.error instanceof Error ? quoteQuery.error.message : t('join.quoteError')}
           </p>
         )}
         {quote && (
           <>
             <div className="flex items-center justify-between gap-3">
-              <h3 className="m-0 text-[17px] font-extrabold">Chọn gói thành viên</h3>
+              <h3 className="m-0 text-[17px] font-extrabold">{t('join.choosePlan')}</h3>
               {maxSavings > 0 && (
                 <span className="flex items-center gap-1.5 rounded-lg bg-green-50 px-3 py-1.5 text-[13px] font-bold text-green-700">
                   <MaterialIcon name="sell" size={16} filled color="#16a34a" />
-                  Tiết kiệm đến {maxSavings}%
+                  {t('join.saveUpTo', { pct: maxSavings })}
                 </span>
               )}
             </div>
 
-            <div role="radiogroup" aria-label="Gói thành viên" className={`mt-4 grid gap-3.5 ${plans.length > 1 ? 'sm:grid-cols-2' : ''}`}>
+            <div role="radiogroup" aria-label={t('join.plansAria')} className={`mt-4 grid gap-3.5 ${plans.length > 1 ? 'sm:grid-cols-2' : ''}`}>
               {plans.map((p) => (
                 <PlanCard key={p.interval} plan={p} on={selected === p.interval} onSelect={() => setIntervalState(p.interval)} currency={quote.currency} />
               ))}
             </div>
 
             <div className="mt-5 flex items-center justify-between gap-3">
-              <h3 className="m-0 text-[17px] font-extrabold">Phương thức thanh toán</h3>
+              <h3 className="m-0 text-[17px] font-extrabold">{t('join.paymentMethod')}</h3>
               <span className="flex items-center gap-1.5 text-xs text-stone-500">
                 <MaterialIcon name="lock" size={15} filled color="#78716c" />
-                Thanh toán an toàn với {quote.provider === 'stripe' ? 'Stripe' : quote.provider}
+                {t('join.securePayment', { provider: quote.provider === 'stripe' ? 'Stripe' : quote.provider })}
               </span>
             </div>
             <div className="mt-3">
@@ -172,7 +174,10 @@ export function JoinCheckout({
             {current && (
               <div className="mt-3.5 flex items-center justify-between gap-3 text-[13px] text-stone-600">
                 <span>
-                  {formatMoney(current.perMonthUsd, quote.currency)}/tháng · {current.interval === 'annual' ? `thanh toán ${formatMoney(current.billedUsd, quote.currency)} mỗi năm` : 'thanh toán hàng tháng'}
+                  {t('join.perMonthLine', {
+                    perMonth: formatMoney(current.perMonthUsd, quote.currency),
+                    billing: current.interval === 'annual' ? t('join.billedAnnually', { amount: formatMoney(current.billedUsd, quote.currency) }) : t('join.billedMonthly'),
+                  })}
                 </span>
                 <b className="text-sm text-stone-900">{formatMoney(current.billedUsd, quote.currency)}</b>
               </div>
@@ -185,7 +190,7 @@ export function JoinCheckout({
             )}
 
             <Button onClick={() => void submit()} disabled={busy || stale || !current} className="mt-4 h-[52px] w-full gap-2.5 rounded-2xl text-base font-bold">
-              {busy ? 'Đang xử lý…' : (
+              {busy ? t('join.processing') : (
                 <>
                   <MaterialIcon name={trialMode ? 'workspace_premium' : 'lock'} size={20} filled color="#fff" />
                   {cta}
@@ -201,15 +206,15 @@ export function JoinCheckout({
               <div className="text-[13px] leading-relaxed text-stone-600">
                 {trialMode ? (
                   <>
-                    <div className="text-sm font-bold text-stone-900">Dùng thử miễn phí {quote.trialDays} ngày</div>
-                    Lần thanh toán đầu tiên của bạn sẽ diễn ra vào ngày {dayMonth(quote.firstChargeDate)} với giá {formatMoney(quote.firstChargeAmountUsd, quote.currency)}.{' '}
-                    {quote.remindDaysBefore > 0 && `Chúng tôi sẽ gửi email nhắc bạn trước ${quote.remindDaysBefore} ngày. `}
-                    {quote.cancelAnytime && 'Hủy bất cứ lúc nào chỉ với 1 lần bấm.'}
+                    <div className="text-sm font-bold text-stone-900">{t('join.trialTitle', { days: quote.trialDays })}</div>
+                    {t('join.trialBody', { date: dayMonth(quote.firstChargeDate), amount: formatMoney(quote.firstChargeAmountUsd, quote.currency) })}{' '}
+                    {quote.remindDaysBefore > 0 && t('join.remind', { days: quote.remindDaysBefore })}
+                    {quote.cancelAnytime && t('join.cancelAnytime')}
                   </>
                 ) : (
                   <>
-                    <div className="text-sm font-bold text-stone-900">Thanh toán hôm nay {formatMoney(quote.dueTodayUsd, quote.currency)}</div>
-                    {quote.cancelAnytime && 'Hủy bất cứ lúc nào chỉ với 1 lần bấm.'}
+                    <div className="text-sm font-bold text-stone-900">{t('join.dueToday', { amount: formatMoney(quote.dueTodayUsd, quote.currency) })}</div>
+                    {quote.cancelAnytime && t('join.cancelAnytime')}
                   </>
                 )}
               </div>
@@ -222,6 +227,7 @@ export function JoinCheckout({
 }
 
 function PlanCard({ plan, on, onSelect, currency }: { plan: QuotePlan; on: boolean; onSelect: () => void; currency: string }) {
+  const { t } = useTranslation('payments');
   return (
     <button
       type="button"
@@ -231,10 +237,10 @@ function PlanCard({ plan, on, onSelect, currency }: { plan: QuotePlan; on: boole
       className={`relative rounded-[18px] p-4 pt-5 text-left ${on ? 'border-2 border-brand bg-[linear-gradient(180deg,#fff,#fff6ee)]' : 'border-[1.5px] border-[#ece5df] bg-[#fdfbf9]'}`}
     >
       {plan.popular && (
-        <span className="absolute -top-px left-3.5 rounded-b-lg bg-brand px-2.5 py-0.5 text-[11px] font-bold text-white">Phổ biến nhất</span>
+        <span className="absolute -top-px left-3.5 rounded-b-lg bg-brand px-2.5 py-0.5 text-[11px] font-bold text-white">{t('join.popular')}</span>
       )}
       {plan.savingsPct > 0 && (
-        <span className="absolute top-2.5 right-2.5 rounded-lg bg-green-100 px-2 py-0.5 text-[11.5px] font-bold text-green-700">Tiết kiệm {plan.savingsPct}%</span>
+        <span className="absolute top-2.5 right-2.5 rounded-lg bg-green-100 px-2 py-0.5 text-[11.5px] font-bold text-green-700">{t('join.savePct', { pct: plan.savingsPct })}</span>
       )}
       <div className="mt-2 flex items-center gap-2.5">
         <MaterialIcon name={on ? 'radio_button_checked' : 'radio_button_unchecked'} size={24} color={on ? '#f26a1b' : '#a8a29e'} />
@@ -242,10 +248,10 @@ function PlanCard({ plan, on, onSelect, currency }: { plan: QuotePlan; on: boole
       </div>
       <div className={`mt-3 text-[34px] leading-none font-extrabold tracking-[-1px] ${on ? 'text-brand' : 'text-stone-900'}`}>
         {formatMoney(plan.perMonthUsd, currency)}
-        <span className="text-base font-medium tracking-normal text-stone-500">/tháng</span>
+        <span className="text-base font-medium tracking-normal text-stone-500">{t('join.perMonth')}</span>
       </div>
       <div className="mt-2 text-[12.5px] text-stone-500">
-        {formatMoney(plan.billedUsd, currency)} thanh toán {plan.interval === 'annual' ? 'hàng năm' : 'hàng tháng'}
+        {t(plan.interval === 'annual' ? 'join.billedPlanAnnual' : 'join.billedPlanMonthly', { amount: formatMoney(plan.billedUsd, currency) })}
       </div>
     </button>
   );
@@ -263,6 +269,7 @@ export function JoinDialog({
   onDone: () => void;
   onNeedRequest?: () => void;
 }) {
+  const { t } = useTranslation('payments');
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
@@ -270,7 +277,7 @@ export function JoinDialog({
   }, [onClose]);
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-stone-900/45 p-4 backdrop-blur-[2px] md:items-center" onClick={onClose}>
-      <div role="dialog" aria-modal="true" aria-label="Chọn gói thành viên" className="w-full max-w-[560px]" onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-label={t('join.choosePlan')} className="w-full max-w-[560px]" onClick={(e) => e.stopPropagation()}>
         <JoinCheckout course={course} onClose={onClose} onDone={onDone} onNeedRequest={onNeedRequest} />
       </div>
     </div>

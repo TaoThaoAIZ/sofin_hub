@@ -1,0 +1,314 @@
+{
+  "ui": {
+    "genericError": "Đã có lỗi xảy ra, vui lòng thử lại",
+    "loadFailed": "Không tải được dữ liệu",
+    "retry": "Thử lại",
+    "loading": "Đang tải…",
+    "noResults": "Không có kết quả phù hợp."
+  },
+  "pageHeader": {
+    "days": "{{count}} ngày",
+    "rangeLabel": "Khoảng thời gian",
+    "admin": "Quản trị"
+  },
+  "overlay": {
+    "close": "Đóng",
+    "cancel": "Hủy",
+    "processing": "Đang xử lý…"
+  },
+  "reasons": {
+    "spam": "Spam",
+    "harassment": "Quấy rối",
+    "hate": "Ngôn từ thù ghét",
+    "scam": "Lừa đảo",
+    "copyright": "Bản quyền",
+    "sensitive": "Nội dung nhạy cảm",
+    "other": "Khác",
+    "policy": "Vi phạm chính sách",
+    "fraud": "Gian lận",
+    "paymentRisk": "Rủi ro thanh toán",
+    "ownerRequest": "Chủ sở hữu yêu cầu",
+    "inactive": "Không hoạt động",
+    "inappropriate": "Nội dung không phù hợp",
+    "misleading": "Thông tin gây hiểu lầm",
+    "duplicate": "Trùng lặp",
+    "topicProfile": "Hồ sơ cộng đồng",
+    "topicDescription": "Mô tả",
+    "topicPrice": "Giá",
+    "topicQuality": "Chất lượng nội dung",
+    "topicCompliance": "Tuân thủ chính sách"
+  },
+  "am": {
+    "reason": "Lý do",
+    "duration": "Thời hạn",
+    "violation": "Vi phạm",
+    "internalNote": "Ghi chú nội bộ",
+    "adminOnly": "Chỉ quản trị viên xem được...",
+    "suspendCommunity": {
+      "title": "Tạm ngưng {{name}}?",
+      "body": "Thành viên mất quyền truy cập ngay lập tức. Thanh toán và chi trả tạm dừng trong thời gian tạm ngưng.",
+      "cta": "Tạm ngưng cộng đồng",
+      "done": "Đã tạm ngưng · {{name}}"
+    },
+    "deleteCommunity": {
+      "title": "Xóa cộng đồng",
+      "body": "Bạn sắp xóa {{name}}.",
+      "cta": "Xóa cộng đồng",
+      "done": "Đã xóa · {{name}}",
+      "warn1": "Mọi thành viên mất quyền truy cập và các gói đang hoạt động bị hủy.",
+      "warn2": "Bài viết, khóa học và sự kiện bị ẩn và lên lịch xóa.",
+      "warn3": "Dữ liệu được giữ 30 ngày, sau đó xóa vĩnh viễn.",
+      "confirmLabel": "Gõ DELETE để xác nhận"
+    },
+    "undelete": {
+      "title": "Khôi phục {{name}}?",
+      "body": "Cộng đồng, nội dung và quyền truy cập của thành viên sẽ được khôi phục. Các gói đã hủy không tự kích hoạt lại."
+    },
+    "restoreCommunity": {
+      "cta": "Khôi phục cộng đồng",
+      "done": "Đã khôi phục · {{name}}",
+      "body": "Cộng đồng hoạt động trở lại và thành viên truy cập được ngay."
+    },
+    "approve": {
+      "title": "Duyệt {{name}}?",
+      "body": "Cộng đồng sẽ chuyển sang hoạt động và hiển thị trên nền tảng.",
+      "cta": "Duyệt cộng đồng",
+      "done": "Đã duyệt · {{name}}",
+      "noteLabel": "Ghi chú xét duyệt",
+      "notePh": "Thêm ghi chú xét duyệt nội bộ..."
+    },
+    "requestChanges": {
+      "title": "Yêu cầu chỉnh sửa · {{name}}",
+      "cta": "Gửi yêu cầu",
+      "done": "Đã yêu cầu chỉnh sửa · {{name}}",
+      "topicsLabel": "Cần chỉnh sửa gì",
+      "msgLabel": "Tin nhắn gửi chủ sở hữu",
+      "msgPh": "Mô tả các thay đổi cần thực hiện..."
+    },
+    "reject": {
+      "title": "Từ chối {{name}}?",
+      "body": "Chủ sở hữu sẽ được thông báo về quyết định này.",
+      "cta": "Từ chối",
+      "done": "Đã từ chối · {{name}}",
+      "noteLabel": "Ghi chú"
+    },
+    "restrict": {
+      "title": "Hạn chế {{name}}",
+      "body": "Chọn những việc người dùng không được làm. Họ vẫn đọc được nội dung.",
+      "cta": "Hạn chế người dùng",
+      "done": "Đã hạn chế · {{name}}",
+      "pick": "Chọn hạn chế"
+    },
+    "suspendUser": {
+      "title": "Tạm ngưng {{name}}?",
+      "body": "Tài khoản không thể đăng nhập trong thời gian tạm ngưng.",
+      "cta": "Tạm ngưng người dùng",
+      "done": "Đã tạm ngưng · {{name}}",
+      "notePh": "Bằng chứng, link vụ việc...",
+      "notify": "Thông báo cho người dùng"
+    },
+    "ban": {
+      "title": "Cấm vĩnh viễn {{name}}?",
+      "body": "Người dùng bị chặn đăng nhập. Bạn có thể khôi phục lại sau bằng thao tác “Khôi phục”.",
+      "cta": "Cấm vĩnh viễn",
+      "done": "Đã cấm · {{name}}",
+      "evidence": "Bằng chứng",
+      "evidencePh": "Link vụ việc, ảnh chụp màn hình...",
+      "confirmLabel": "Gõ BAN để xác nhận"
+    },
+    "reinstate": {
+      "title": "Khôi phục {{name}}?",
+      "body": "Tài khoản trở lại trạng thái hoạt động, mọi hạn chế/tạm ngưng/cấm được gỡ.",
+      "cta": "Khôi phục truy cập",
+      "done": "Đã khôi phục · {{name}}"
+    },
+    "warn": {
+      "title": "Gửi cảnh cáo",
+      "body": "Đến {{name}}",
+      "cta": "Gửi cảnh cáo",
+      "done": "Đã gửi cảnh cáo · {{name}}",
+      "msgLabel": "Tin nhắn gửi người dùng",
+      "msgPh": "Giải thích quy định bị vi phạm và hậu quả tiếp theo..."
+    },
+    "remove": {
+      "title": "Gỡ nội dung",
+      "cta": "Gỡ nội dung",
+      "done": "Đã gỡ nội dung",
+      "notifyAuthor": "Thông báo cho tác giả"
+    },
+    "banSummary": {
+      "communities": "Cộng đồng",
+      "paidPlan": "Gói trả phí",
+      "yes": "Có",
+      "no": "Không",
+      "revenue": "Doanh thu",
+      "reports": "Báo cáo hiện có"
+    },
+    "trash": {
+      "deletedBy": "Xóa bởi",
+      "owner": "Chủ sở hữu",
+      "deletedAt": "Ngày xóa",
+      "reason": "Lý do",
+      "purgeAt": "Hạn lưu dữ liệu"
+    }
+  },
+  "ca": {
+    "view": "Duyệt",
+    "assign": "Nhận xử lý",
+    "dismiss": "Bỏ qua",
+    "remove": "Gỡ nội dung",
+    "warn": "Cảnh cáo",
+    "suspend": "Tạm ngưng người dùng",
+    "userFallback": "người dùng",
+    "assigned": "Đã nhận xử lý · {{code}}",
+    "dismissModal": {
+      "title": "Bỏ qua {{code}}?",
+      "body": "Vụ việc được đóng với kết luận không vi phạm.",
+      "cta": "Bỏ qua vụ việc",
+      "done": "Đã đóng · không vi phạm · {{code}}"
+    },
+    "resolveModal": {
+      "title": "Đóng {{code}}?",
+      "body": "Vụ việc được đóng mà không kèm hành động xử phạt.",
+      "cta": "Đóng vụ việc",
+      "done": "Đã đóng · {{code}}"
+    },
+    "escalateModal": {
+      "title": "Nâng mức rủi ro {{code}}?",
+      "body": "Mức rủi ro của vụ việc tăng một bậc và chuyển sang trạng thái đang xem xét.",
+      "cta": "Nâng mức",
+      "done": "Đã nâng mức · {{code}}"
+    }
+  },
+  "cc": {
+    "code": "Mã vụ việc",
+    "content": "Nội dung",
+    "noContent": "(không có nội dung)",
+    "reportedUser": "Người bị báo cáo",
+    "reason": "Lý do",
+    "reports": "Báo cáo",
+    "risk": "Rủi ro",
+    "assignee": "Người phụ trách",
+    "unassigned": "Chưa phân công",
+    "status": "Trạng thái",
+    "created": "Tạo lúc"
+  },
+  "cma": {
+    "view": "Xem",
+    "open": "Mở cộng đồng",
+    "review": "Xét duyệt",
+    "suspend": "Tạm ngưng",
+    "restore": "Khôi phục",
+    "delete": "Xóa"
+  },
+  "ua": {
+    "view": "Xem",
+    "restrict": "Hạn chế",
+    "suspend": "Tạm ngưng",
+    "ban": "Cấm",
+    "restore": "Khôi phục",
+    "warn": "Cảnh cáo"
+  },
+  "tabs": {
+    "cancel": "Hủy",
+    "processing": "Đang xử lý…",
+    "notePh": "Ghi chú (tùy chọn)…",
+    "all": "Tất cả",
+    "loading": "Đang tải…",
+    "confirm": "Xác nhận",
+    "refund": {
+      "pending": "Chờ duyệt",
+      "approved": "Đã duyệt",
+      "rejected": "Từ chối",
+      "empty": "Không có yêu cầu hoàn tiền.",
+      "auto": "Tự duyệt",
+      "reasonLine": "Lý do: {{reason}}",
+      "ids": "Giao dịch {{paymentId}} · Cộng đồng {{courseId}} · Người dùng {{userId}}",
+      "noteLine": "Ghi chú: {{note}}",
+      "approveBtn": "Duyệt hoàn tiền",
+      "rejectBtn": "Từ chối",
+      "approveTitle": "Duyệt hoàn tiền",
+      "rejectTitle": "Từ chối hoàn tiền",
+      "approveConfirm": "Duyệt"
+    },
+    "payout": {
+      "requested": "Đã yêu cầu",
+      "approved": "Đã duyệt",
+      "paid": "Đã chi trả",
+      "rejected": "Từ chối",
+      "failed": "Thất bại",
+      "on_hold": "Tạm giữ",
+      "empty": "Không có lệnh rút tiền.",
+      "ids": "Cộng đồng {{courseId}} · Chủ {{ownerId}}",
+      "approveBtn": "Duyệt",
+      "markPaidBtn": "Đã chi trả",
+      "rejectBtn": "Từ chối",
+      "titleApprove": "Duyệt lệnh rút tiền",
+      "titleMarkPaid": "Đánh dấu đã chi trả",
+      "titleReject": "Từ chối lệnh rút tiền"
+    },
+    "lock": {
+      "needId": "Nhập id hoặc slug cộng đồng.",
+      "needReason": "Nhập lý do khóa (tối thiểu 3 ký tự).",
+      "locked": "Đã khóa cộng đồng \"{{id}}\".",
+      "unlocked": "Đã mở khóa cộng đồng \"{{id}}\".",
+      "info": "Cộng đồng bị khóa: thành viên không tham gia/đăng bài mới được. Nhập id hoặc slug của cộng đồng (ví dụ phần cuối của đường dẫn /communities/…).",
+      "idLabel": "Id / slug cộng đồng",
+      "reasonLabel": "Lý do (bắt buộc khi khóa)",
+      "lockBtn": "Khóa cộng đồng",
+      "unlockBtn": "Mở khóa"
+    }
+  },
+  "layout": {
+    "menuAria": "Menu quản trị",
+    "search": {
+      "users": "NGƯỜI DÙNG",
+      "communities": "CỘNG ĐỒNG",
+      "cases": "VỤ VIỆC KIỂM DUYỆT",
+      "owner": "Chủ sở hữu: {{name}}",
+      "placeholder": "Tìm người dùng, cộng đồng, vụ việc...",
+      "noPerm": "Vai trò của bạn không có quyền tìm kiếm chung",
+      "aria": "Tìm kiếm toàn hệ thống",
+      "hint": "Tìm theo tên hoặc email người dùng, tên hoặc mã cộng đồng, mã vụ việc (CASE-…) hoặc nội dung bị báo cáo. Nhập ít nhất 2 ký tự.",
+      "searching": "Đang tìm…",
+      "none": "Không có kết quả cho \"{{q}}\"."
+    },
+    "topbar": {
+      "adminName": "Quản trị viên",
+      "openMenu": "Mở menu",
+      "quickActions": "Thao tác nhanh",
+      "quickTitle": "THAO TÁC NHANH",
+      "reviewReports": "Duyệt báo cáo",
+      "pending": "{{count}} đang chờ",
+      "findUsers": "Tìm người dùng",
+      "findCommunities": "Tìm cộng đồng",
+      "reviewCommunities": "Xét duyệt cộng đồng",
+      "reviewRefunds": "Duyệt hoàn tiền",
+      "tickets": "Ticket hỗ trợ",
+      "audit": "Xem nhật ký",
+      "help": "Trợ giúp",
+      "helpTitle": "TRỢ GIÚP",
+      "faq": "Câu hỏi thường gặp",
+      "terms": "Điều khoản sử dụng",
+      "privacy": "Chính sách bảo mật",
+      "contact": "Liên hệ nền tảng",
+      "account": "Tài khoản",
+      "profile": "Hồ sơ & cài đặt",
+      "home": "Về trang chủ",
+      "logout": "Đăng xuất",
+      "platformAdmin": "Quản trị nền tảng"
+    },
+    "guard": {
+      "title": "Không đủ quyền",
+      "withRole": "Vai trò <b>{{role}}</b> của bạn chưa được cấp quyền truy cập mục này. Liên hệ Super Admin nếu bạn cần thêm quyền.",
+      "noRole": "Vai trò hiện tại của bạn chưa được cấp quyền truy cập mục này. Liên hệ Super Admin nếu bạn cần thêm quyền.",
+      "backToOverview": "Về tổng quan"
+    },
+    "checking": "Đang kiểm tra quyền…",
+    "needLogin": "Bạn cần đăng nhập để vào khu vực quản trị.",
+    "login": "Đăng nhập",
+    "noAccess": "Không có quyền truy cập",
+    "noAccessBody": "Bạn không có quyền truy cập khu vực quản trị.",
+    "home": "Về trang chủ"
+  }
+}

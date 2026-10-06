@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { formatDateTime } from '../../../lib/datetime';
 import { ActionDialog, PreviewDialog, PreviewKv, useDialogSlot, useTableState } from '../components/Batch2Parts';
 import { PermissionMatrix, type MatrixPermission, type MatrixRole } from '../components/Batch3Parts';
@@ -16,6 +17,7 @@ const roleName = (key: string, fallback: string) => ROLE_LABEL[key] ?? fallback;
 /* ============================== Tài khoản quản trị ============================== */
 
 function CreateAdminDialog({ roles, onClose }: { roles: RoleDef[]; onClose: () => void }) {
+  const { t } = useTranslation('admin-pages2');
   const act = useAdminAction();
   const [email, setEmail] = useState('');
   const [first, setFirst] = useState('');
@@ -25,11 +27,11 @@ function CreateAdminDialog({ roles, onClose }: { roles: RoleDef[]; onClose: () =
   return (
     <ActionDialog
       icon="person_add"
-      title="Tạo quản trị viên"
-      body="Nếu email đã có tài khoản thì chỉ cấp vai trò. Nếu chưa có, hệ thống tạo tài khoản mời và gửi email đặt lại mật khẩu."
-      cta="Gửi lời mời"
+      title={t('access.admins.create.title')}
+      body={t('access.admins.create.body')}
+      cta={t('access.admins.create.cta')}
       disabledExtra={!/^\S+@\S+\.\S+$/.test(email.trim()) || !roleKey}
-      successMessage="Đã gửi lời mời quản trị viên"
+      successMessage={t('access.admins.create.success')}
       run={() =>
         act.mutateAsync({
           path: '/system/admins',
@@ -38,42 +40,44 @@ function CreateAdminDialog({ roles, onClose }: { roles: RoleDef[]; onClose: () =
       }
       onClose={onClose}
     >
-      <InputField label="Email công việc" value={email} onChange={setEmail} placeholder="name@sofinhub.com" />
+      <InputField label={t('access.admins.create.email')} value={email} onChange={setEmail} placeholder="name@sofinhub.com" />
       <div className="grid grid-cols-2 gap-3">
-        <InputField label="Tên (nếu chưa có tài khoản)" value={first} onChange={setFirst} maxLength={60} />
-        <InputField label="Họ" value={last} onChange={setLast} maxLength={60} />
+        <InputField label={t('access.admins.create.firstName')} value={first} onChange={setFirst} maxLength={60} />
+        <InputField label={t('access.admins.create.lastName')} value={last} onChange={setLast} maxLength={60} />
       </div>
-      <OptionChips label="Vai trò" options={roles.map((r) => ({ value: r.key, label: roleName(r.key, r.name) }))} value={roleKey} onChange={(v) => setRoleKey(v as string)} />
-      <CheckField text="Bắt buộc 2FA ở lần đăng nhập đầu" checked={tfa} onChange={setTfa} />
+      <OptionChips label={t('access.role')} options={roles.map((r) => ({ value: r.key, label: roleName(r.key, r.name) }))} value={roleKey} onChange={(v) => setRoleKey(v as string)} />
+      <CheckField text={t('access.admins.create.require2fa')} checked={tfa} onChange={setTfa} />
     </ActionDialog>
   );
 }
 
 function EditRoleDialog({ admin, roles, onClose }: { admin: AdminAccount; roles: RoleDef[]; onClose: () => void }) {
+  const { t } = useTranslation('admin-pages2');
   const act = useAdminAction();
   const [roleKey, setRoleKey] = useState(admin.role.key);
   return (
     <ActionDialog
       icon="manage_accounts"
-      title={`Đổi vai trò · ${admin.name}`}
-      cta="Lưu vai trò"
+      title={t('access.admins.editRole.title', { name: admin.name })}
+      cta={t('access.admins.editRole.cta')}
       disabledExtra={roleKey === admin.role.key}
-      successMessage={`Đã cập nhật vai trò · ${admin.name}`}
+      successMessage={t('access.admins.editRole.success', { name: admin.name })}
       run={() => act.mutateAsync({ method: 'PATCH', path: `/system/admins/${admin.id}`, body: { roleKey } })}
       onClose={onClose}
     >
-      <OptionChips label="Vai trò" options={roles.map((r) => ({ value: r.key, label: roleName(r.key, r.name) }))} value={roleKey} onChange={(v) => setRoleKey(v as string)} />
+      <OptionChips label={t('access.role')} options={roles.map((r) => ({ value: r.key, label: roleName(r.key, r.name) }))} value={roleKey} onChange={(v) => setRoleKey(v as string)} />
     </ActionDialog>
   );
 }
 
 export function AdminAccountsView() {
-  const t = useTableState({ role: '', status: '' });
+  const { t } = useTranslation('admin-pages2');
+  const ts = useTableState({ role: '', status: '' });
   const slot = useDialogSlot();
   const toast = useToast();
   const act = useAdminAction();
   const roles = useAdminData<RolesData>('system', '/system/roles');
-  const list = useAdminList<AdminAccount>('system', '/system/admins', { q: t.q || undefined, role: t.f.role || undefined, status: t.f.status || undefined, page: t.page, limit: LIMIT });
+  const list = useAdminList<AdminAccount>('system', '/system/admins', { q: ts.q || undefined, role: ts.f.role || undefined, status: ts.f.status || undefined, page: ts.page, limit: LIMIT });
   const roleList = roles.data?.roles ?? [];
 
   const quick = (a: AdminAccount, path: string, ok: string, method?: 'POST' | 'DELETE') =>
@@ -83,45 +87,45 @@ export function AdminAccountsView() {
     );
 
   const columns: Column<AdminAccount>[] = [
-    { key: 'admin', label: 'Quản trị viên', w: 1.8, render: (a) => <MainCell name={a.name} sub={a.email} avatar avatarSrc={a.avatarUrl} seed={a.id} /> },
-    { key: 'role', label: 'Vai trò', render: (a) => <StatusBadge tone={a.role.key === 'super_admin' ? 'o' : 'b'}>{roleName(a.role.key, a.role.name)}</StatusBadge> },
+    { key: 'admin', label: t('access.admins.col.admin'), w: 1.8, render: (a) => <MainCell name={a.name} sub={a.email} avatar avatarSrc={a.avatarUrl} seed={a.id} /> },
+    { key: 'role', label: t('access.role'), render: (a) => <StatusBadge tone={a.role.key === 'super_admin' ? 'o' : 'b'}>{roleName(a.role.key, a.role.name)}</StatusBadge> },
     { key: 'tfa', label: '2FA', w: 0.6, render: (a) => <MaterialIcon name={a.twoFactorEnabled ? 'check_circle' : 'cancel'} size={20} filled color={a.twoFactorEnabled ? '#16a34a' : '#d6d3d1'} /> },
-    { key: 'last', label: 'Đăng nhập gần nhất', render: (a) => <MutedCell>{a.lastLoginAt ? formatDateTime(a.lastLoginAt) : 'Chưa đăng nhập'}</MutedCell> },
-    { key: 'st', label: 'Trạng thái', w: 0.8, render: (a) => <StatusBadge tone={a.status === 'active' ? 'g' : 'r'}>{a.status === 'active' ? 'Hoạt động' : 'Tạm ngưng'}</StatusBadge> },
+    { key: 'last', label: t('access.admins.lastLogin'), render: (a) => <MutedCell>{a.lastLoginAt ? formatDateTime(a.lastLoginAt) : t('access.admins.neverLoggedIn')}</MutedCell> },
+    { key: 'st', label: t('access.admins.status'), w: 0.8, render: (a) => <StatusBadge tone={a.status === 'active' ? 'g' : 'r'}>{a.status === 'active' ? t('access.admins.active') : t('access.admins.suspended')}</StatusBadge> },
   ];
 
   const actions = (a: AdminAccount): RowAction[] => {
     const lockedNote = a.locked;
     return [
-      { label: 'Đổi vai trò', icon: 'manage_accounts', disabled: lockedNote, onClick: () => slot.show((close) => <EditRoleDialog admin={a} roles={roleList} onClose={close} />) },
+      { label: t('access.admins.action.changeRole'), icon: 'manage_accounts', disabled: lockedNote, onClick: () => slot.show((close) => <EditRoleDialog admin={a} roles={roleList} onClose={close} />) },
       {
-        label: 'Đặt lại 2FA',
+        label: t('access.admins.action.reset2fa'),
         icon: 'phonelink_lock',
         onClick: () =>
           slot.show((close) => (
-            <ActionDialog icon="phonelink_lock" title={`Đặt lại 2FA · ${a.name}`} body="Tắt cờ 2FA của tài khoản này và gửi email thông báo cho họ." cta="Đặt lại 2FA" successMessage={`Đã đặt lại 2FA · ${a.name}`} run={() => act.mutateAsync({ path: `/system/admins/${a.id}/reset-2fa`, body: {} })} onClose={close} />
+            <ActionDialog icon="phonelink_lock" title={t('access.admins.reset2fa.title', { name: a.name })} body={t('access.admins.reset2fa.body')} cta={t('access.admins.action.reset2fa')} successMessage={t('access.admins.reset2fa.success', { name: a.name })} run={() => act.mutateAsync({ path: `/system/admins/${a.id}/reset-2fa`, body: {} })} onClose={close} />
           )),
       },
       a.status === 'suspended'
-        ? { label: 'Kích hoạt lại', icon: 'check_circle', disabled: lockedNote, onClick: () => void quick(a, '/enable', `Đã kích hoạt lại ${a.name}`, 'POST') }
+        ? { label: t('access.admins.action.reactivate'), icon: 'check_circle', disabled: lockedNote, onClick: () => void quick(a, '/enable', t('access.admins.reactivated', { name: a.name }), 'POST') }
         : {
-            label: 'Tạm ngưng',
+            label: t('access.admins.suspended'),
             icon: 'block',
             danger: true,
             disabled: lockedNote,
             onClick: () =>
               slot.show((close) => (
-                <ActionDialog icon="block" danger title={`Tạm ngưng · ${a.name}`} body="Tài khoản này không truy cập được khu vực quản trị cho tới khi kích hoạt lại." cta="Tạm ngưng" noteLabel="Lý do (tùy chọn)" successMessage={`Đã tạm ngưng ${a.name}`} run={(v) => act.mutateAsync({ path: `/system/admins/${a.id}/suspend`, body: { reason: v.note || undefined } })} onClose={close} />
+                <ActionDialog icon="block" danger title={t('access.admins.suspend.title', { name: a.name })} body={t('access.admins.suspend.body')} cta={t('access.admins.suspended')} noteLabel={t('access.admins.suspend.reason')} successMessage={t('access.admins.suspend.success', { name: a.name })} run={(v) => act.mutateAsync({ path: `/system/admins/${a.id}/suspend`, body: { reason: v.note || undefined } })} onClose={close} />
               )),
           },
       {
-        label: 'Gỡ quyền quản trị',
+        label: t('access.admins.action.revoke'),
         icon: 'person_remove',
         danger: true,
         disabled: lockedNote,
         onClick: () =>
           slot.show((close) => (
-            <ActionDialog icon="person_remove" danger title={`Gỡ quyền quản trị · ${a.name}`} body="Người này vẫn giữ tài khoản thành viên nhưng không còn vào được khu vực quản trị." cta="Gỡ quyền" successMessage={`Đã gỡ quyền của ${a.name}`} run={() => act.mutateAsync({ method: 'DELETE', path: `/system/admins/${a.id}` })} onClose={close} />
+            <ActionDialog icon="person_remove" danger title={t('access.admins.revoke.title', { name: a.name })} body={t('access.admins.revoke.body')} cta={t('access.admins.revoke.cta')} successMessage={t('access.admins.revoke.success', { name: a.name })} run={() => act.mutateAsync({ method: 'DELETE', path: `/system/admins/${a.id}` })} onClose={close} />
           )),
       },
     ];
@@ -130,11 +134,11 @@ export function AdminAccountsView() {
   return (
     <>
       <PageHeader
-        title="Tài khoản quản trị"
-        subtitle="Những người có quyền truy cập trang quản trị."
+        title={t('access.admins.title')}
+        subtitle={t('access.admins.subtitle')}
         actions={
           <AdminButton kind="primary" icon="person_add" disabled={roles.isPending || roles.isError} onClick={() => slot.show((close) => <CreateAdminDialog roles={roleList} onClose={close} />)}>
-            Tạo quản trị viên
+            {t('access.admins.create.title')}
           </AdminButton>
         }
       />
@@ -147,39 +151,39 @@ export function AdminAccountsView() {
             <PreviewDialog title={a.name} sub={a.email} onClose={close}>
               <PreviewKv
                 items={[
-                  ['Vai trò', roleName(a.role.key, a.role.name)],
-                  ['Nguồn', a.source === 'env' ? 'Cấu hình hệ thống (Super Admin gốc)' : 'Nhân viên được cấp quyền'],
-                  ['2FA', a.twoFactorEnabled ? 'Đã bật' : 'Chưa bật'],
-                  ['Đăng nhập gần nhất', a.lastLoginAt ? formatDateTime(a.lastLoginAt) : 'Chưa đăng nhập'],
-                  ['Tham gia', formatDateTime(a.createdAt)],
-                  ['Trạng thái', a.status === 'active' ? 'Hoạt động' : 'Tạm ngưng'],
+                  [t('access.role'), roleName(a.role.key, a.role.name)],
+                  [t('access.admins.detail.source'), a.source === 'env' ? t('access.admins.detail.sourceEnv') : t('access.admins.detail.sourceStaff')],
+                  ['2FA', a.twoFactorEnabled ? t('access.admins.detail.on') : t('access.admins.detail.off')],
+                  [t('access.admins.lastLogin'), a.lastLoginAt ? formatDateTime(a.lastLoginAt) : t('access.admins.neverLoggedIn')],
+                  [t('access.admins.detail.joined'), formatDateTime(a.createdAt)],
+                  [t('access.admins.status'), a.status === 'active' ? t('access.admins.active') : t('access.admins.suspended')],
                 ]}
               />
-              {a.locked && <div className="rounded-xl bg-[#faf7f4] px-3.5 py-2.5 text-[13px] text-stone-500">Tài khoản này được khóa: không thể đổi vai trò, tạm ngưng hay gỡ quyền (tài khoản gốc hoặc chính bạn).</div>}
+              {a.locked && <div className="rounded-xl bg-[#faf7f4] px-3.5 py-2.5 text-[13px] text-stone-500">{t('access.admins.detail.locked')}</div>}
             </PreviewDialog>
           ))
         }
         actions={actions}
-        search={{ value: t.q, onChange: t.onQ, placeholder: 'Tìm quản trị viên...' }}
+        search={{ value: ts.q, onChange: ts.onQ, placeholder: t('access.admins.searchPlaceholder') }}
         filters={[
-          { key: 'role', label: 'Vai trò', value: t.f.role, options: roleList.map((r) => ({ value: r.key, label: roleName(r.key, r.name) })), onChange: t.setFilter('role') },
+          { key: 'role', label: t('access.role'), value: ts.f.role, options: roleList.map((r) => ({ value: r.key, label: roleName(r.key, r.name) })), onChange: ts.setFilter('role') },
           {
             key: 'status',
-            label: 'Trạng thái',
-            value: t.f.status,
+            label: t('access.admins.status'),
+            value: ts.f.status,
             options: [
-              { value: 'active', label: 'Hoạt động' },
-              { value: 'suspended', label: 'Tạm ngưng' },
+              { value: 'active', label: t('access.admins.active') },
+              { value: 'suspended', label: t('access.admins.suspended') },
             ],
-            onChange: t.setFilter('status'),
+            onChange: ts.setFilter('status'),
           },
         ]}
-        onClearFilters={t.clear}
+        onClearFilters={ts.clear}
         loading={list.isPending}
         error={list.isError ? list.error : null}
         onRetry={() => void list.refetch()}
-        emptyText="Chưa có quản trị viên nào."
-        page={list.data ? { page: list.data.meta.page, totalPages: list.data.meta.totalPages, total: list.data.meta.total, limit: LIMIT, onPage: t.setPage } : undefined}
+        emptyText={t('access.admins.empty')}
+        page={list.data ? { page: list.data.meta.page, totalPages: list.data.meta.totalPages, total: list.data.meta.total, limit: LIMIT, onPage: ts.setPage } : undefined}
       />
       {slot.el}
     </>
@@ -189,6 +193,7 @@ export function AdminAccountsView() {
 /* ============================== Vai trò & Quyền ============================== */
 
 function CreateRoleDialog({ perms, onClose }: { perms: MatrixPermission[]; onClose: () => void }) {
+  const { t } = useTranslation('admin-pages2');
   const act = useAdminAction();
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
@@ -196,42 +201,44 @@ function CreateRoleDialog({ perms, onClose }: { perms: MatrixPermission[]; onClo
   return (
     <ActionDialog
       icon="add_moderator"
-      title="Tạo vai trò"
-      body="Vai trò tùy chỉnh gồm các quyền bạn chọn. Quyền quản lý quản trị viên chỉ dành cho Super Admin."
-      cta="Tạo vai trò"
+      title={t('access.roles.create.title')}
+      body={t('access.roles.create.body')}
+      cta={t('access.roles.create.title')}
       disabledExtra={!name.trim() || sel.length === 0}
-      successMessage="Đã tạo vai trò"
+      successMessage={t('access.roles.create.success')}
       run={() => act.mutateAsync({ path: '/system/roles', body: { name: name.trim(), description: desc.trim() || undefined, permissions: sel } })}
       onClose={onClose}
     >
-      <InputField label="Tên vai trò" value={name} onChange={setName} maxLength={60} />
-      <TextAreaField label="Mô tả (tùy chọn)" value={desc} onChange={setDesc} maxLength={300} />
-      <OptionChips multi label="Quyền" options={perms.filter((p) => p.key !== 'admin.manage').map((p) => ({ value: p.key, label: p.label }))} value={sel} onChange={(v) => setSel(v as string[])} />
+      <InputField label={t('access.roles.name')} value={name} onChange={setName} maxLength={60} />
+      <TextAreaField label={t('access.roles.descOptional')} value={desc} onChange={setDesc} maxLength={300} />
+      <OptionChips multi label={t('access.roles.permissions')} options={perms.filter((p) => p.key !== 'admin.manage').map((p) => ({ value: p.key, label: p.label }))} value={sel} onChange={(v) => setSel(v as string[])} />
     </ActionDialog>
   );
 }
 
 function EditRoleInfoDialog({ role, onClose }: { role: RoleDef; onClose: () => void }) {
+  const { t } = useTranslation('admin-pages2');
   const act = useAdminAction();
   const [name, setName] = useState(role.name);
   const [desc, setDesc] = useState(role.description ?? '');
   return (
     <ActionDialog
       icon="edit"
-      title={`Sửa vai trò · ${role.name}`}
-      cta="Lưu"
+      title={t('access.roles.edit.title', { name: role.name })}
+      cta={t('access.roles.save')}
       disabledExtra={!name.trim()}
-      successMessage="Đã cập nhật vai trò"
+      successMessage={t('access.roles.edit.success')}
       run={() => act.mutateAsync({ method: 'PATCH', path: `/system/roles/${role.key}`, body: { name: name.trim(), description: desc.trim() } })}
       onClose={onClose}
     >
-      <InputField label="Tên vai trò" value={name} onChange={setName} maxLength={60} />
-      <TextAreaField label="Mô tả" value={desc} onChange={setDesc} maxLength={300} />
+      <InputField label={t('access.roles.name')} value={name} onChange={setName} maxLength={60} />
+      <TextAreaField label={t('access.roles.desc')} value={desc} onChange={setDesc} maxLength={300} />
     </ActionDialog>
   );
 }
 
 export function RolesView() {
+  const { t } = useTranslation('admin-pages2');
   const q = useAdminData<RolesData>('system', '/system/roles');
   const act = useAdminAction();
   const toast = useToast();
@@ -245,14 +252,14 @@ export function RolesView() {
 
   const toggle = async (role: MatrixRole, perm: MatrixPermission, next: boolean) => {
     if (perm.key === 'admin.manage' && role.key !== 'super_admin') {
-      toast.error('Quyền quản lý quản trị viên chỉ dành cho Super Admin.');
+      toast.error(t('access.roles.adminManageOnlySuper'));
       return;
     }
     const id = `${role.key}:${perm.key}`;
     setBusy(id);
     try {
       await act.mutateAsync({ method: 'PATCH', path: `/system/roles/${role.key}`, body: { permission: perm.key, granted: next } });
-      toast.success(`${next ? 'Đã cấp' : 'Đã thu hồi'} "${perm.label}" cho ${role.label}`);
+      toast.success(next ? t('access.roles.granted', { perm: perm.label, role: role.label }) : t('access.roles.revoked', { perm: perm.label, role: role.label }));
     } catch (e) {
       toast.error(errMessage(e));
     } finally {
@@ -263,11 +270,11 @@ export function RolesView() {
   return (
     <>
       <PageHeader
-        title="Vai trò & Quyền"
-        subtitle="Bấm vào ô để cấp hoặc thu hồi quyền."
+        title={t('access.roles.title')}
+        subtitle={t('access.roles.subtitle')}
         actions={
           <AdminButton kind="primary" icon="add" disabled={!data} onClick={() => slot.show((close) => <CreateRoleDialog perms={perms} onClose={close} />)}>
-            Tạo vai trò
+            {t('access.roles.create.title')}
           </AdminButton>
         }
       />
@@ -277,37 +284,37 @@ export function RolesView() {
         {data && <PermissionMatrix roles={roles} permissions={perms} granted={granted} busyCell={busy} onToggle={(r, p, n) => void toggle(r, p, n)} />}
       </section>
       {data && (
-        <Card title="Vai trò" sub="Super Admin luôn đủ quyền và không sửa được. Vai trò hệ thống không xóa được.">
+        <Card title={t('access.role')} sub={t('access.roles.cardSub')}>
           <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))' }}>
             {data.roles.map((r) => (
               <div key={r.key} className="flex flex-col gap-2 rounded-[14px] border border-[#f1ebe6] p-3.5">
                 <div className="flex items-center gap-2">
                   <span className="min-w-0 flex-1 truncate text-sm font-bold">{roleName(r.key, r.name)}</span>
                   {r.locked && <MaterialIcon name="lock" size={16} color="#a8a29e" />}
-                  {r.isSystem ? <StatusBadge tone="x">Hệ thống</StatusBadge> : <StatusBadge tone="b">Tùy chỉnh</StatusBadge>}
+                  {r.isSystem ? <StatusBadge tone="x">{t('access.roles.system')}</StatusBadge> : <StatusBadge tone="b">{t('access.roles.custom')}</StatusBadge>}
                 </div>
                 {r.description && <div className="text-xs leading-normal text-stone-500">{r.description}</div>}
                 <div className="text-xs text-stone-400">
-                  {r.memberCount} thành viên · {r.permissions.length} quyền
+                  {t('access.roles.counts', { members: r.memberCount, perms: r.permissions.length })}
                 </div>
                 {!r.locked && (
                   <div className="mt-auto flex gap-1.5 pt-1">
                     <button type="button" className="h-[30px] rounded-[9px] border border-[#e7e0da] bg-white px-3 text-[12.5px] font-semibold hover:bg-[#fff4ec]" onClick={() => slot.show((close) => <EditRoleInfoDialog role={r} onClose={close} />)}>
-                      Sửa
+                      {t('access.roles.edit.button')}
                     </button>
                     {!r.isSystem && (
                       <button
                         type="button"
                         disabled={r.memberCount > 0}
-                        title={r.memberCount > 0 ? 'Vai trò đang được dùng' : undefined}
+                        title={r.memberCount > 0 ? t('access.roles.inUse') : undefined}
                         className="h-[30px] rounded-[9px] border border-[#fecaca] bg-white px-3 text-[12.5px] font-semibold text-[#b91c1c] hover:bg-[#fef2f2] disabled:opacity-40"
                         onClick={() =>
                           slot.show((close) => (
-                            <ActionDialog icon="delete" danger title={`Xóa vai trò · ${r.name}`} body="Vai trò sẽ bị xóa vĩnh viễn." cta="Xóa" successMessage="Đã xóa vai trò" run={() => act.mutateAsync({ method: 'DELETE', path: `/system/roles/${r.key}` })} onClose={close} />
+                            <ActionDialog icon="delete" danger title={t('access.roles.delete.title', { name: r.name })} body={t('access.roles.delete.body')} cta={t('access.roles.delete.cta')} successMessage={t('access.roles.delete.success')} run={() => act.mutateAsync({ method: 'DELETE', path: `/system/roles/${r.key}` })} onClose={close} />
                           ))
                         }
                       >
-                        Xóa
+                        {t('access.roles.delete.cta')}
                       </button>
                     )}
                   </div>

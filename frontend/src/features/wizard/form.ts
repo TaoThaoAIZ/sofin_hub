@@ -1,3 +1,5 @@
+import i18n from '../../i18n';
+
 /** Trạng thái form của wizard tạo cộng đồng (BE là nguồn sự thật: mỗi bước lưu vào bản nháp qua PATCH). */
 export interface WizardRule {
   title: string;
@@ -36,7 +38,8 @@ export interface WizardForm {
   terms: boolean;
 }
 
-export const STEP_LABELS = ['Thông tin cơ bản', 'Chọn gói & dùng thử', 'Nhận diện & giới thiệu', 'Thành viên & giá', 'Ra mắt'] as const;
+/** Khóa dịch của nhãn từng bước: `wizard:steps.<key>`. */
+export const STEP_LABEL_KEYS = ['basics', 'plan', 'identity', 'members', 'launch'] as const;
 export const STEP_KEYS = ['basics', 'plan', 'identity', 'members'] as const;
 export type StepKey = (typeof STEP_KEYS)[number];
 
@@ -71,6 +74,8 @@ export const defaultForm = (): WizardForm => ({
   rulesAutoApprovePaid: true,
   terms: false,
 });
+
+const tw = (key: string, opts?: Record<string, unknown>) => i18n.t(key, { ns: 'wizard', ...opts });
 
 export type FieldErrors = Partial<Record<string, string>>;
 
@@ -114,40 +119,40 @@ export function validateStep(step: number, f: WizardForm, ctx: ValidateCtx): Fie
   const e: FieldErrors = {};
   if (step === 0) {
     const name = f.name.trim();
-    if (name.length < 3) e.name = 'Tên cộng đồng tối thiểu 3 ký tự';
-    else if (name.length > 30) e.name = 'Tên cộng đồng tối đa 30 ký tự';
-    if (!f.slug) e.slug = 'Vui lòng nhập đường dẫn';
-    else if (f.slug.length < 3) e.slug = 'Đường dẫn tối thiểu 3 ký tự';
-    else if (!SLUG_RE.test(f.slug)) e.slug = 'Chỉ dùng chữ thường, số và dấu gạch ngang';
-    else if (ctx.slugAvailable === false) e.slug = 'Đường dẫn này đã có người dùng';
-    else if (ctx.slugChecking) e.slug = 'Đang kiểm tra đường dẫn, vui lòng đợi giây lát';
-    if (!f.description.trim()) e.description = 'Vui lòng nhập mô tả ngắn';
-    if (!f.category) e.category = 'Vui lòng chọn danh mục';
+    if (name.length < 3) e.name = tw('validation.nameMin');
+    else if (name.length > 30) e.name = tw('validation.nameMax');
+    if (!f.slug) e.slug = tw('validation.slugRequired');
+    else if (f.slug.length < 3) e.slug = tw('validation.slugMin');
+    else if (!SLUG_RE.test(f.slug)) e.slug = tw('validation.slugFormat');
+    else if (ctx.slugAvailable === false) e.slug = tw('validation.slugTaken');
+    else if (ctx.slugChecking) e.slug = tw('validation.slugChecking');
+    if (!f.description.trim()) e.description = tw('validation.descriptionRequired');
+    if (!f.category) e.category = tw('validation.categoryRequired');
   }
   if (step === 1 && f.hostPlan === 'pro' && !ctx.hostCardReady) {
-    e.hostCard = 'Vui lòng nhập thông tin thẻ để bắt đầu dùng thử';
+    e.hostCard = tw('validation.hostCard');
   }
   if (step === 2) {
-    if (f.promise.trim().length > 100) e.promise = 'Lời hứa tối đa 100 ký tự';
-    if (f.videoUrl.trim() && !isUrl(f.videoUrl.trim())) e.videoUrl = 'Đường dẫn video không hợp lệ (dán link YouTube hoặc Vimeo)';
+    if (f.promise.trim().length > 100) e.promise = tw('validation.promiseMax');
+    if (f.videoUrl.trim() && !isUrl(f.videoUrl.trim())) e.videoUrl = tw('validation.videoUrl');
   }
   if (step === 3) {
     if (f.billing !== 'free') {
       const m = parseMoney(f.priceMonthly);
-      if (!(m > 0)) e.priceMonthly = 'Nhập giá thành viên hàng tháng lớn hơn 0';
-      else if (m > MAX_PRICE_USD) e.priceMonthly = `Giá tối đa ${MAX_PRICE_USD.toLocaleString('en-US')} USD`;
+      if (!(m > 0)) e.priceMonthly = tw('validation.priceMonthlyRequired');
+      else if (m > MAX_PRICE_USD) e.priceMonthly = tw('validation.priceMax', { max: MAX_PRICE_USD.toLocaleString('en-US') });
       if (f.billing === 'year') {
         const a = parseMoney(f.priceAnnual);
-        if (!(a > 0)) e.priceAnnual = 'Nhập giá thành viên hàng năm lớn hơn 0';
-        else if (m > 0 && a > m * 12) e.priceAnnual = 'Giá năm không được cao hơn 12 tháng cộng lại';
+        if (!(a > 0)) e.priceAnnual = tw('validation.priceAnnualRequired');
+        else if (m > 0 && a > m * 12) e.priceAnnual = tw('validation.priceAnnualTooHigh');
       }
     }
     f.questions.forEach((q, i) => {
       const t = q.trim();
-      if (t.length < 3) e[`question-${i}`] = 'Câu hỏi tối thiểu 3 ký tự (hoặc xóa câu hỏi này)';
-      else if (t.length > 200) e[`question-${i}`] = 'Câu hỏi tối đa 200 ký tự';
+      if (t.length < 3) e[`question-${i}`] = tw('validation.questionMin');
+      else if (t.length > 200) e[`question-${i}`] = tw('validation.questionMax');
     });
   }
-  if (step === 4 && !f.terms) e.terms = 'Bạn cần đồng ý với Điều khoản dành cho chủ cộng đồng';
+  if (step === 4 && !f.terms) e.terms = tw('validation.terms');
   return e;
 }

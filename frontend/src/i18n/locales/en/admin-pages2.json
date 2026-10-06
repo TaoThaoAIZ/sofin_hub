@@ -1,0 +1,551 @@
+{
+  "emailTemplates": {
+    "lang": {
+      "en": "English",
+      "vi": "Vietnamese"
+    },
+    "sample": {
+      "name": "Alex Nguyen",
+      "reason": "Violation of community standards"
+    },
+    "toast": {
+      "created": "Email template created",
+      "saved": "Email template saved",
+      "missingVars": "Missing variables: {{vars}}",
+      "testSent": "Test email sent to {{to}}",
+      "enabled": "Enabled \"{{name}}\"",
+      "disabled": "Disabled \"{{name}}\""
+    },
+    "yourEmail": "your email",
+    "varNameInvalid": "Variable names may only contain letters, numbers and underscores (starting with a letter).",
+    "editor": {
+      "createTitle": "Create email template",
+      "editTitle": "Edit template · {{name}}",
+      "varName": "variable_name",
+      "subtitle": "Use {{example}} to insert dynamic data. The preview on the right updates as you type.",
+      "back": "Back",
+      "saving": "Saving…",
+      "save": "Save template",
+      "contentTitle": "Content",
+      "contentSub": "English is required; Vietnamese is used when the recipient picks that language.",
+      "keyLabel": "Template key (a-z, 0-9, _)",
+      "keyPlaceholder": "e.g. course_invite",
+      "nameLabel": "Template name",
+      "descLabel": "Description",
+      "statusLabel": "Status",
+      "languageLabel": "Language",
+      "subjectLabel": "Subject ({{lang}})",
+      "subjectAria": "Subject",
+      "bodyLabel": "Body ({{lang}})",
+      "bodyAria": "Body",
+      "undeclared": "Undeclared variables: {{vars}}",
+      "declareVars": "Declare variables",
+      "removeVar": "Remove variable {{name}}",
+      "varPlaceholder": "variable_name",
+      "addVarAria": "Add variable",
+      "addVar": "Add variable",
+      "previewTitle": "Preview",
+      "previewSub": "Uses the sample data below.",
+      "serverRender": "Server render",
+      "serverPreview": "Preview from server",
+      "testSend": "Send me a test",
+      "savedNote": "“Preview from server” and “Send me a test” use the saved content. Save before testing.",
+      "sampleTitle": "Sample data",
+      "sampleSub": "Values filled into the variables when previewing."
+    },
+    "title": "Email templates",
+    "createShort": "Create template",
+    "col": {
+      "template": "Email template",
+      "subject": "Subject",
+      "language": "Languages",
+      "updated": "Updated",
+      "status": "Status"
+    },
+    "action": {
+      "edit": "Edit",
+      "disable": "Disable",
+      "enable": "Enable",
+      "delete": "Delete"
+    },
+    "delete": {
+      "title": "Delete template · {{name}}",
+      "body": "The template will be permanently deleted.",
+      "cta": "Delete",
+      "success": "Email template deleted"
+    },
+    "subtitle": "System emails sent to members and creators.",
+    "searchPlaceholder": "Search email templates...",
+    "empty": "No email templates yet."
+  },
+  "moderation": {
+    "queue": {
+      "title": "Report queue",
+      "subtitle": "Triage reported content and users by risk level.",
+      "kpi": {
+        "open": "Open reports",
+        "critical": "Critical",
+        "underReview": "Under review",
+        "resolvedToday": "Resolved today"
+      },
+      "tab": {
+        "all": "All",
+        "open": "Open",
+        "underReview": "Under review",
+        "closed": "Closed"
+      },
+      "searchPlaceholder": "Search case ID, content, user...",
+      "filter": {
+        "risk": "Risk",
+        "reason": "Reason",
+        "assignee": "Assignee",
+        "me": "Me",
+        "unassigned": "Unassigned",
+        "sort": "Sort",
+        "byRisk": "By risk"
+      },
+      "emptyOpen": "No reports awaiting action."
+    },
+    "log": {
+      "subtitle": "Every decision is recorded as: Case → Decision → Admin → Reason → Evidence.",
+      "user": "User",
+      "content": "Content",
+      "warnings": {
+        "title": "Warnings",
+        "empty": "No warnings yet."
+      },
+      "removals": {
+        "title": "Removed content",
+        "type": "Content removed",
+        "empty": "No content has been removed."
+      },
+      "suspensions": {
+        "title": "Suspensions",
+        "restriction": "Restrictions",
+        "empty": "No decisions yet."
+      },
+      "bans": {
+        "title": "Bans",
+        "type": "Ban",
+        "empty": "No bans yet."
+      },
+      "col": {
+        "caseCode": "Case ID",
+        "decision": "Decision",
+        "admin": "Admin",
+        "reason": "Reason",
+        "evidence": "Evidence",
+        "date": "Date"
+      },
+      "searchPlaceholder": "Search cases..."
+    }
+  },
+  "users": {
+    "sort": {
+      "oldest": "Oldest",
+      "name": "Name A–Z",
+      "revenue": "Highest revenue",
+      "reports": "Most reports"
+    },
+    "col": {
+      "status": "Status",
+      "plan": "Plan",
+      "user": "User",
+      "communities": "Communities",
+      "revenue": "Revenue",
+      "reports": "Reports",
+      "joined": "Joined",
+      "reason": "Reason"
+    },
+    "filter": {
+      "role": "Role",
+      "sort": "Sort"
+    },
+    "role": {
+      "member": "Member"
+    },
+    "plan": {
+      "free": "Free",
+      "paid": "Paid"
+    },
+    "title": "Users",
+    "subtitle": "Search, review and manage every account on the platform.",
+    "kpi": {
+      "total": "Total users",
+      "active": "Active",
+      "new": "New",
+      "last30d": "Last 30 days",
+      "paid": "Paid",
+      "restricted": "Restricted",
+      "suspended": "Suspended",
+      "banned": "Banned"
+    },
+    "searchPlaceholder": "Search name, email, user ID...",
+    "restricted": {
+      "cannotLogin": "Cannot sign in",
+      "until": "Until {{date}}",
+      "indefinite": "Indefinite",
+      "title": "Restricted / Suspended",
+      "subtitle": "Users with limited permissions on the platform.",
+      "col": {
+        "restriction": "Restriction",
+        "duration": "Duration",
+        "by": "Performed by",
+        "since": "Since"
+      },
+      "searchPlaceholder": "Search users...",
+      "empty": "No users are currently restricted or suspended."
+    },
+    "banned": {
+      "title": "Banned users",
+      "subtitle": "Permanently banned accounts. Every ban is recorded in the log.",
+      "col": {
+        "id": "ID",
+        "by": "Banned by",
+        "date": "Date"
+      },
+      "searchPlaceholder": "Search banned users...",
+      "empty": "No banned users yet."
+    }
+  },
+  "support": {
+    "tab": {
+      "all": "All",
+      "new": "New",
+      "open": "Open",
+      "awaitingReply": "Awaiting reply",
+      "resolved": "Resolved"
+    },
+    "title": {
+      "all": "Support tickets",
+      "user": "User issues",
+      "creator": "Creator issues",
+      "payment": "Payment issues"
+    },
+    "toast": {
+      "assignedMe": "You took over {{code}}",
+      "reopened": "Reopened {{code}}"
+    },
+    "resolve": {
+      "title": "Mark as resolved · {{code}}",
+      "body": "The ticket moves to Resolved. The requester can still reply to reopen it.",
+      "cta": "Resolved",
+      "success": "Resolved {{code}}"
+    },
+    "noteOptional": "Note (optional)",
+    "close": {
+      "title": "Close ticket · {{code}}",
+      "body": "A closed ticket accepts no further replies (it can be reopened).",
+      "cta": "Close ticket",
+      "success": "Closed {{code}}"
+    },
+    "escalate": {
+      "title": "Escalate · {{code}}",
+      "body": "The ticket is flagged as escalated and its priority is raised.",
+      "cta": "Escalate",
+      "reason": "Escalation reason",
+      "success": "Escalated {{code}}"
+    },
+    "assign": {
+      "none": "Unassign",
+      "title": "Assign ticket · {{code}}",
+      "success": "Assignee updated",
+      "label": "Assignee"
+    },
+    "save": "Save",
+    "edit": {
+      "title": "Edit ticket · {{code}}",
+      "success": "Ticket updated"
+    },
+    "field": {
+      "subject": "Subject",
+      "priority": "Priority",
+      "category": "Category",
+      "message": "Message"
+    },
+    "create": {
+      "title": "Create ticket on behalf of a customer",
+      "body": "Use this when a customer contacts you through another channel. If the email matches an account, the ticket is linked to that account.",
+      "cta": "Create ticket",
+      "success": "Ticket created",
+      "emailLabel": "Customer email (optional)",
+      "emailPlaceholder": "customer@email.com",
+      "nameLabel": "Customer name (optional)"
+    },
+    "kind": {
+      "customer": "Customer",
+      "staff": "Staff",
+      "internalNote": "Internal note",
+      "system": "System"
+    },
+    "reply": {
+      "noteAdded": "Internal note added",
+      "sent": "Reply sent to the requester",
+      "closed": "This ticket is closed. Reopen it to keep replying.",
+      "replyCustomer": "Reply to customer",
+      "notePlaceholder": "Visible to staff only...",
+      "replyPlaceholder": "Message sent to the requester (by email and in-app notification)...",
+      "keepOpen": "Keep open",
+      "sending": "Sending…",
+      "saveNote": "Save note",
+      "send": "Send reply"
+    },
+    "escalated": "Escalated",
+    "createdAgo": "created {{time}}",
+    "detail": {
+      "assignee": "Assignee: {{name}}",
+      "assign": "Assign owner",
+      "close": "Close",
+      "conversation": "Conversation ({{count}})",
+      "reply": "Reply",
+      "history": "Activity history"
+    },
+    "action": {
+      "reopen": "Reopen",
+      "edit": "Edit",
+      "viewUser": "View user",
+      "view": "View",
+      "reply": "Reply",
+      "takeOver": "Take over",
+      "assignTo": "Assign to…"
+    },
+    "kpi": {
+      "openCat": "Open ({{cat}})",
+      "open": "Open",
+      "newToday": "New today",
+      "firstResponse": "Avg. first response",
+      "minutes": "{{n}} min",
+      "resolved7d": "Resolved (7 days)"
+    },
+    "escalatedSuffix": " · escalated",
+    "col": {
+      "requester": "Requester",
+      "assignee": "Assignee",
+      "updated": "Updated",
+      "status": "Status",
+      "ticket": "Ticket"
+    },
+    "unassigned": "Unassigned",
+    "filter": {
+      "mine": "Mine"
+    },
+    "subtitle": "Support requests from members and creators.",
+    "searchPlaceholder": "Search tickets...",
+    "empty": "No tickets."
+  },
+  "access": {
+    "role": "Role",
+    "admins": {
+      "create": {
+        "title": "Create admin",
+        "body": "If the email already has an account, only the role is granted. Otherwise an invited account is created and a password-reset email is sent.",
+        "cta": "Send invitation",
+        "success": "Admin invitation sent",
+        "email": "Work email",
+        "firstName": "First name (if no account yet)",
+        "lastName": "Last name",
+        "require2fa": "Require 2FA on first sign-in"
+      },
+      "editRole": {
+        "title": "Change role · {{name}}",
+        "cta": "Save role",
+        "success": "Role updated · {{name}}"
+      },
+      "col": {
+        "admin": "Admin"
+      },
+      "lastLogin": "Last sign-in",
+      "neverLoggedIn": "Never signed in",
+      "status": "Status",
+      "active": "Active",
+      "suspended": "Suspended",
+      "action": {
+        "changeRole": "Change role",
+        "reset2fa": "Reset 2FA",
+        "reactivate": "Reactivate",
+        "revoke": "Remove admin access"
+      },
+      "reset2fa": {
+        "title": "Reset 2FA · {{name}}",
+        "body": "Turns off the 2FA flag on this account and sends them a notification email.",
+        "success": "2FA reset · {{name}}"
+      },
+      "reactivated": "Reactivated {{name}}",
+      "suspend": {
+        "title": "Suspend · {{name}}",
+        "body": "This account cannot access the admin area until it is reactivated.",
+        "reason": "Reason (optional)",
+        "success": "Suspended {{name}}"
+      },
+      "revoke": {
+        "title": "Remove admin access · {{name}}",
+        "body": "This person keeps their member account but can no longer access the admin area.",
+        "cta": "Remove access",
+        "success": "Removed access for {{name}}"
+      },
+      "title": "Admin accounts",
+      "subtitle": "People with access to the admin area.",
+      "detail": {
+        "source": "Source",
+        "sourceEnv": "System configuration (original Super Admin)",
+        "sourceStaff": "Staff member granted access",
+        "on": "Enabled",
+        "off": "Not enabled",
+        "joined": "Joined",
+        "locked": "This account is locked: its role cannot be changed, suspended or removed (original account or yourself)."
+      },
+      "searchPlaceholder": "Search admins...",
+      "empty": "No admins yet."
+    },
+    "roles": {
+      "create": {
+        "title": "Create role",
+        "body": "A custom role made of the permissions you choose. Managing admins is reserved for Super Admin.",
+        "success": "Role created"
+      },
+      "name": "Role name",
+      "descOptional": "Description (optional)",
+      "permissions": "Permissions",
+      "edit": {
+        "title": "Edit role · {{name}}",
+        "success": "Role updated",
+        "button": "Edit"
+      },
+      "save": "Save",
+      "desc": "Description",
+      "adminManageOnlySuper": "Managing admins is reserved for Super Admin.",
+      "granted": "Granted \"{{perm}}\" to {{role}}",
+      "revoked": "Revoked \"{{perm}}\" from {{role}}",
+      "title": "Roles & permissions",
+      "subtitle": "Click a cell to grant or revoke a permission.",
+      "cardSub": "Super Admin always has every permission and cannot be edited. System roles cannot be deleted.",
+      "system": "System",
+      "custom": "Custom",
+      "counts": "{{members}} members · {{perms}} permissions",
+      "inUse": "Role is in use",
+      "delete": {
+        "title": "Delete role · {{name}}",
+        "body": "The role will be permanently deleted.",
+        "cta": "Delete",
+        "success": "Role deleted"
+      }
+    }
+  },
+  "userDetail": {
+    "tab": {
+      "overview": "Overview",
+      "communities": "Joined communities",
+      "activity": "Activity",
+      "purchases": "Purchase history",
+      "reports": "Reports / Violations",
+      "security": "Security"
+    },
+    "activity": {
+      "all": "All",
+      "login": "Sign-in",
+      "community": "Community",
+      "content": "Content",
+      "payment": "Payment",
+      "moderation": "Moderation",
+      "timeline": "Activity timeline",
+      "empty": "No activity yet."
+    },
+    "kpi": {
+      "communities": "Communities",
+      "posts": "Posts",
+      "comments": "Comments",
+      "purchases": "Purchases",
+      "reports": "Reports",
+      "received": "Received",
+      "clean": "Clean record"
+    },
+    "profile": {
+      "title": "Profile",
+      "location": "Location",
+      "joined": "Joined",
+      "verification": "Verification status",
+      "role": "Role",
+      "member": "Member",
+      "plan": "Plan"
+    },
+    "lastLogin": "Last sign-in",
+    "verified": "Verified",
+    "unverified": "Unverified",
+    "paid": "Paid",
+    "free": "Free",
+    "recent": {
+      "title": "Recent activity",
+      "viewAll": "View all"
+    },
+    "account": {
+      "title": "Account status",
+      "status": "Status",
+      "restrictions": "Restrictions",
+      "reason": "Reason",
+      "until": "Effective until",
+      "indefinite": "Indefinite",
+      "by": "Performed by",
+      "at": "At"
+    },
+    "communities": {
+      "col": {
+        "community": "Community",
+        "membership": "Membership"
+      },
+      "role": {
+        "owner": "Owner",
+        "admin": "Admin",
+        "mod": "Moderator"
+      },
+      "paidPrice": "Paid · ${{price}}/month",
+      "empty": "This user has not joined any communities.",
+      "open": "Open community"
+    },
+    "lastActive": "Last active",
+    "status": "Status",
+    "purchases": {
+      "totalSpend": "Lifetime spend",
+      "activeSubs": "Active subscriptions",
+      "refunds": "Refunds",
+      "col": {
+        "transaction": "Transaction",
+        "amount": "Amount",
+        "refunded": "Refunded",
+        "method": "Method",
+        "date": "Date"
+      },
+      "empty": "This user has no transactions yet."
+    },
+    "reports": {
+      "received": "Reports received",
+      "confirmed": "Confirmed violations",
+      "warnings": "Warnings",
+      "suspensions": "Suspensions",
+      "empty": "This user has not been reported.",
+      "review": "Review"
+    },
+    "security": {
+      "emailVerification": "Email verification",
+      "activeSessions": "Active sessions",
+      "device": "Device",
+      "unknown": "Unknown",
+      "createdAt": "Created",
+      "active": "Active",
+      "noSessions": "No active sessions.",
+      "revoke": "Revoke",
+      "revoked": "Session revoked"
+    },
+    "title": "User details",
+    "lastLoginAgo": "Last sign-in {{time}}",
+    "neverLoggedIn": "Never signed in",
+    "action": {
+      "message": "Message",
+      "warn": "Warn",
+      "restrict": "Restrict",
+      "suspend": "Suspend",
+      "ban": "Ban",
+      "reinstate": "Restore access"
+    },
+    "protected": "This is a Platform Admin account and cannot be restricted, suspended or banned."
+  }
+}

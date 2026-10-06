@@ -1,0 +1,57 @@
+{
+  "close": "Close",
+  "bell": {
+    "label": "Notifications",
+    "labelUnread": "Notifications ({{count}} unread)",
+    "title": "Notifications",
+    "markAll": "Mark all as read",
+    "loading": "Loading…",
+    "loadError": "Couldn't load notifications.",
+    "empty": "You don't have any notifications yet.",
+    "viewAll": "View all notifications"
+  },
+  "types": {
+    "post_liked": "Someone liked your post",
+    "post_commented": "New comment on your post",
+    "event_created": "New event in the community",
+    "event_reminder": "Event reminder",
+    "member_joined": "A new member joined your community",
+    "role_changed": "Your role changed",
+    "removed_from_community": "Removed from a community",
+    "payment_succeeded": "Payment succeeded",
+    "payment_failed": "Payment failed",
+    "report_resolved": "Your report has been resolved",
+    "message_received": "New message",
+    "system": "System notification"
+  },
+  "page": {
+    "title": "Notifications",
+    "unread": "Unread",
+    "unreadCount": "Unread ({{count}})",
+    "markAll": "Mark all as read",
+    "actionFailed": "Action failed",
+    "loading": "Loading notifications…",
+    "loadError": "Couldn't load notifications.",
+    "noUnread": "No unread notifications left.",
+    "empty": "You don't have any notifications yet.",
+    "unreadAria": "Unread",
+    "deleteAria": "Delete notification",
+    "deleteTitle": "Delete",
+    "deleteFailed": "Couldn't delete the notification"
+  },
+  "prefs": {
+    "digest": {
+      "off": "Off",
+      "daily": "Daily",
+      "weekly": "Weekly"
+    },
+    "saveFailed": "Couldn't save your preferences",
+    "title": "Notification preferences",
+    "desc": "Turn each type of notification on or off. Notifications about money, permissions and moderation are always sent.",
+    "loading": "Loading…",
+    "loadError": "Couldn't load your preferences.",
+    "mandatory": "Required",
+    "emailDigest": "Email digest",
+    "note": "(Preferences are saved; digest emails are not actually sent yet.)"
+  }
+}

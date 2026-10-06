@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { RequireLogin } from '../components/layout/RequireLogin';
@@ -10,14 +11,10 @@ import { useMyCommunities, useSearch } from '../features/search/queries';
 import type { SearchResult, SearchType } from '../features/search/types';
 import { Highlight, RESULT_ICON, resultHref } from '../features/search/utils';
 
-const TABS: { key: SearchType; label: string }[] = [
-  { key: 'all', label: 'Tất cả' },
-  { key: 'courses', label: 'Khóa học' },
-  { key: 'posts', label: 'Bài viết' },
-  { key: 'members', label: 'Thành viên' },
-];
+const TABS: { key: SearchType }[] = [{ key: 'all' }, { key: 'courses' }, { key: 'posts' }, { key: 'members' }];
 
 function ResultRow({ r }: { r: SearchResult }) {
+  const { t } = useTranslation('search');
   return (
     <Link to={resultHref(r)} className="flex items-start gap-3 border-b border-[rgba(120,60,20,.06)] px-4 py-3.5 hover:bg-[#fff7f0]">
       <span className="grid size-10 flex-none place-items-center rounded-full bg-brand/10">
@@ -32,7 +29,7 @@ function ResultRow({ r }: { r: SearchResult }) {
             <span className="block text-[13px] text-stone-600">
               <Highlight segments={r.snippet} />
             </span>
-            <span className="text-[11.5px] text-stone-400">Khóa học</span>
+            <span className="text-[11.5px] text-stone-400">{t('row.course')}</span>
           </>
         )}
         {r.type === 'member' && (
@@ -41,7 +38,7 @@ function ResultRow({ r }: { r: SearchResult }) {
               <Highlight segments={r.name} /> <span className="text-[12.5px] font-normal text-stone-500">@{r.handle}</span>
             </span>
             <span className="text-[12px] text-stone-500">
-              Thành viên · {r.role} · {r.courseTitle}
+              {t('row.member', { role: r.role, course: r.courseTitle })}
             </span>
           </>
         )}
@@ -51,7 +48,7 @@ function ResultRow({ r }: { r: SearchResult }) {
               <Highlight segments={r.snippet} />
             </span>
             <span className="text-[12px] text-stone-500">
-              Bài viết của {r.author} · {r.courseTitle} · {formatRelative(r.createdAt)}
+              {t('row.post', { author: r.author, course: r.courseTitle, time: formatRelative(r.createdAt) })}
             </span>
           </>
         )}
@@ -61,6 +58,7 @@ function ResultRow({ r }: { r: SearchResult }) {
 }
 
 function SearchInner() {
+  const { t: tr } = useTranslation('search');
   const [params, setParams] = useSearchParams();
   const q = params.get('q') ?? '';
   const type = (TABS.find((t) => t.key === params.get('type'))?.key ?? 'all') as SearchType;
@@ -101,13 +99,13 @@ function SearchInner() {
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Tìm khóa học, bài viết, thành viên..."
+            placeholder={tr('page.placeholder')}
             maxLength={100}
             autoFocus
             className="min-w-0 flex-1 border-0 bg-transparent text-[15px] outline-0"
           />
           <button type="submit" className="h-8 rounded-xl bg-brand px-4 text-[13px] font-bold text-white">
-            Tìm
+            {tr('page.submit')}
           </button>
         </form>
 
@@ -121,17 +119,17 @@ function SearchInner() {
                 type === t.key ? 'border-transparent bg-brand font-bold text-white' : 'border-[rgba(120,60,20,.12)] bg-white font-medium'
               }`}
             >
-              {t.label}
+              {tr(`tabs.${t.key}`)}
               {countOf[t.key] !== undefined && <span className="text-[11.5px] opacity-80">{countOf[t.key]}</span>}
             </button>
           ))}
           <select
             value={courseId}
             onChange={(e) => update({ courseId: e.target.value || null, page: null })}
-            aria-label="Lọc theo cộng đồng"
+            aria-label={tr('page.filterAria')}
             className="ml-auto h-9 max-w-[220px] rounded-xl border border-[rgba(120,60,20,.12)] bg-white px-3 text-[13px]"
           >
-            <option value="">Mọi cộng đồng</option>
+            <option value="">{tr('page.allCommunities')}</option>
             {communities.data?.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.title}
@@ -141,18 +139,18 @@ function SearchInner() {
         </div>
 
         <div className="glass mt-4 overflow-hidden rounded-3xl">
-          {tooShort && <p className="py-12 text-center text-stone-500">Nhập ít nhất 2 ký tự để tìm kiếm.</p>}
-          {!tooShort && result.isPending && <p className="py-12 text-center text-stone-400">Đang tìm…</p>}
+          {tooShort && <p className="py-12 text-center text-stone-500">{tr('page.tooShort')}</p>}
+          {!tooShort && result.isPending && <p className="py-12 text-center text-stone-400">{tr('page.searching')}</p>}
           {err && (
             <p className="px-4 py-12 text-center text-red-600">
               {err.status === 429
-                ? 'Bạn tìm kiếm quá nhiều lần, vui lòng thử lại sau ít phút.'
+                ? tr('page.rateLimit')
                 : err.status === 403
-                  ? 'Bạn không phải thành viên của cộng đồng đã chọn nên không thể tìm trong đó.'
+                  ? tr('page.forbidden')
                   : err.message}
             </p>
           )}
-          {result.data?.data.length === 0 && <p className="py-12 text-center text-stone-500">Không có kết quả cho "{q}".</p>}
+          {result.data?.data.length === 0 && <p className="py-12 text-center text-stone-500">{tr('page.noResults', { q })}</p>}
           {result.data?.data.map((r) => <ResultRow key={`${r.type}:${r.id}:${r.type === 'member' ? r.courseId : ''}`} r={r} />)}
         </div>
         <Pager page={page} totalPages={result.data?.meta.totalPages ?? 1} onChange={(p) => update({ page: p > 1 ? String(p) : null })} />

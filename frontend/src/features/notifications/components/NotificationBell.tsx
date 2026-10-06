@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { formatRelative } from '../../../lib/datetime';
@@ -18,6 +19,7 @@ export function CountBadge({ count }: { count: number }) {
 
 /** Chuông thông báo: badge chưa đọc + dropdown 10 thông báo gần nhất. `variant` chỉ đổi kiểu nút cho hợp Header/Topbar. */
 export function NotificationBell({ variant = 'topbar' }: { variant?: 'topbar' | 'header' }) {
+  const { t } = useTranslation('notifications');
   const { unreadCount, open } = useNotificationsContext();
   const [isOpen, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -32,7 +34,7 @@ export function NotificationBell({ variant = 'topbar' }: { variant?: 'topbar' | 
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        aria-label={unreadCount > 0 ? `Thông báo (${unreadCount} chưa đọc)` : 'Thông báo'}
+        aria-label={unreadCount > 0 ? t('bell.labelUnread', { count: unreadCount }) : t('bell.label')}
         aria-expanded={isOpen}
         className={`relative ${btnClass}`}
       >
@@ -42,20 +44,20 @@ export function NotificationBell({ variant = 'topbar' }: { variant?: 'topbar' | 
       {isOpen && (
         <div className="absolute top-[calc(100%+10px)] right-[-60px] z-50 flex max-h-[70vh] w-[min(380px,calc(100vw-24px))] flex-col rounded-2xl border border-[rgba(120,60,20,.12)] bg-white shadow-xl sm:right-0">
           <div className="flex items-center justify-between border-b border-[rgba(120,60,20,.08)] px-4 py-3">
-            <span className="text-[15px] font-bold">Thông báo</span>
+            <span className="text-[15px] font-bold">{t('bell.title')}</span>
             <button
               type="button"
               disabled={unreadCount === 0 || markAll.isPending}
               onClick={() => markAll.mutate()}
               className="text-[12.5px] font-semibold text-brand disabled:text-stone-400"
             >
-              Đọc tất cả
+              {t('bell.markAll')}
             </button>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto">
-            {list.isPending && <p className="py-8 text-center text-sm text-stone-400">Đang tải…</p>}
-            {list.isError && <p className="py-8 text-center text-sm text-red-600">Không tải được thông báo.</p>}
-            {list.data?.data.length === 0 && <p className="py-8 text-center text-sm text-stone-500">Bạn chưa có thông báo nào.</p>}
+            {list.isPending && <p className="py-8 text-center text-sm text-stone-400">{t('bell.loading')}</p>}
+            {list.isError && <p className="py-8 text-center text-sm text-red-600">{t('bell.loadError')}</p>}
+            {list.data?.data.length === 0 && <p className="py-8 text-center text-sm text-stone-500">{t('bell.empty')}</p>}
             {list.data?.data.map((n) => (
               <button
                 key={n.id}
@@ -83,7 +85,7 @@ export function NotificationBell({ variant = 'topbar' }: { variant?: 'topbar' | 
             onClick={() => setOpen(false)}
             className="block rounded-b-2xl border-t border-[rgba(120,60,20,.08)] px-4 py-2.5 text-center text-[13px] font-semibold text-brand hover:bg-brand/5"
           >
-            Xem tất cả thông báo
+            {t('bell.viewAll')}
           </Link>
         </div>
       )}

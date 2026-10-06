@@ -2,6 +2,8 @@
 // và "tokenise" giả cho cổng thanh toán mock. KHÔNG bao giờ gửi/lưu số thẻ hay CVC thô đi đâu cả —
 // chỉ token + thương hiệu + 4 số cuối + hạn được gửi lên server.
 
+import i18n from '../i18n';
+
 export type CardBrand = 'visa' | 'mastercard' | 'amex' | 'discover' | 'jcb' | 'unknown';
 
 export const digitsOnly = (s: string) => s.replace(/\D/g, '');
@@ -16,14 +18,15 @@ export function detectBrand(number: string): CardBrand {
   return 'unknown';
 }
 
-export const BRAND_LABEL: Record<CardBrand, string> = {
+const BRAND_NAME: Record<Exclude<CardBrand, 'unknown'>, string> = {
   visa: 'Visa',
   mastercard: 'Mastercard',
   amex: 'American Express',
   discover: 'Discover',
   jcb: 'JCB',
-  unknown: 'Thẻ',
 };
+
+export const brandLabel = (brand: CardBrand): string => (brand === 'unknown' ? i18n.t('card.brandUnknown', { ns: 'misc' }) : BRAND_NAME[brand]);
 
 /** Định dạng số thẻ theo nhóm 4 (Amex: 4-6-5). */
 export function formatCardNumber(input: string): string {
@@ -76,24 +79,25 @@ export interface CardForm {
 export type CardErrors = Partial<Record<keyof CardForm, string>>;
 
 export function validateCard(card: CardForm, now = new Date()): CardErrors {
+  const tr = (key: string, opts?: Record<string, unknown>) => i18n.t(key, { ns: 'misc', ...opts });
   const errors: CardErrors = {};
   const digits = digitsOnly(card.number);
   const brand = detectBrand(digits);
   const len = brand === 'amex' ? 15 : 16;
-  if (!digits) errors.number = 'Vui lòng nhập số thẻ';
-  else if (digits.length < 13 || (brand !== 'unknown' && digits.length !== len && digits.length < len)) errors.number = 'Số thẻ chưa đủ chữ số';
-  else if (!luhn(digits)) errors.number = 'Số thẻ không hợp lệ';
+  if (!digits) errors.number = tr('card.numberRequired');
+  else if (digits.length < 13 || (brand !== 'unknown' && digits.length !== len && digits.length < len)) errors.number = tr('card.numberIncomplete');
+  else if (!luhn(digits)) errors.number = tr('card.numberInvalid');
 
   const exp = parseExpiry(card.expiry);
-  if (!digitsOnly(card.expiry)) errors.expiry = 'Nhập ngày hết hạn';
-  else if (!exp) errors.expiry = 'Ngày hết hạn không hợp lệ (MM / YY)';
-  else if (exp.year < now.getFullYear() || (exp.year === now.getFullYear() && exp.month < now.getMonth() + 1)) errors.expiry = 'Thẻ đã hết hạn';
-  else if (exp.year > now.getFullYear() + 20) errors.expiry = 'Ngày hết hạn không hợp lệ';
+  if (!digitsOnly(card.expiry)) errors.expiry = tr('card.expiryRequired');
+  else if (!exp) errors.expiry = tr('card.expiryFormat');
+  else if (exp.year < now.getFullYear() || (exp.year === now.getFullYear() && exp.month < now.getMonth() + 1)) errors.expiry = tr('card.expired');
+  else if (exp.year > now.getFullYear() + 20) errors.expiry = tr('card.expiryInvalid');
 
   const cvcLen = brand === 'amex' ? 4 : 3;
   const cvc = digitsOnly(card.cvc);
-  if (!cvc) errors.cvc = 'Nhập mã CVC';
-  else if (cvc.length !== cvcLen) errors.cvc = `CVC gồm ${cvcLen} chữ số`;
+  if (!cvc) errors.cvc = tr('card.cvcRequired');
+  else if (cvc.length !== cvcLen) errors.cvc = tr('card.cvcLength', { count: cvcLen });
   return errors;
 }
 

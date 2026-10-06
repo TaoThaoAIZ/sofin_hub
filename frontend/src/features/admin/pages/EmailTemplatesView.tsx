@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { formatRelative } from '../../../lib/datetime';
 import { ActionDialog, useDialogSlot, useTableState } from '../components/Batch2Parts';
 import { EmailPreview, VariableChips, renderTemplate, useInsertable } from '../components/Batch3Parts';
@@ -9,18 +11,18 @@ import { AdminButton, Card, ErrorBlock, LoadingBlock, MONO_FONT, StatusBadge, er
 import { useAdminAction, useAdminData } from '../queries.batch2';
 import { TEMPLATE_STATUS, type EmailTemplate, type EmailTemplateDetail, type EmailTemplateStatus, type TemplatePreview } from '../types.batch3';
 
-const LANG_LABEL: Record<string, string> = { en: 'Tiếng Anh', vi: 'Tiếng Việt' };
-const STATUS_OPTS = (Object.keys(TEMPLATE_STATUS) as EmailTemplateStatus[]).map((k) => ({ value: k, label: TEMPLATE_STATUS[k].label }));
+const langLabel = (t: TFunction): Record<string, string> => ({ en: t('emailTemplates.lang.en'), vi: t('emailTemplates.lang.vi') });
+const statusOpts = () => (Object.keys(TEMPLATE_STATUS) as EmailTemplateStatus[]).map((k) => ({ value: k, label: TEMPLATE_STATUS[k].label }));
 
 /** Dữ liệu mẫu cho xem trước tại chỗ; biến chưa biết hiện `[tên]`. */
-const SAMPLE_DEFAULT: Record<string, string> = {
-  name: 'Nguyễn Văn A',
+const sampleDefault = (t: TFunction): Record<string, string> => ({
+  name: t('emailTemplates.sample.name'),
   community: 'Growth Hackers VN',
   id: '10234',
   amount: '$120.00',
   link: 'https://sofinhub.com/…',
-  reason: 'Vi phạm tiêu chuẩn cộng đồng',
-};
+  reason: t('emailTemplates.sample.reason'),
+});
 
 const VAR_RE = /^[A-Za-z][\w.]*$/;
 
@@ -38,6 +40,9 @@ function TemplateEditor({ tkey, onBack }: { tkey: string | 'new'; onBack: () => 
 }
 
 function EditorForm({ initial, act, toast, onBack }: { initial?: EmailTemplateDetail; act: ReturnType<typeof useAdminAction>; toast: ReturnType<typeof useToast>; onBack: () => void }) {
+  const { t } = useTranslation('admin-pages2');
+  const LANG_LABEL = langLabel(t);
+  const STATUS_OPTS = statusOpts();
   const isNew = !initial;
   const [key, setKey] = useState(initial?.key ?? '');
   const [name, setName] = useState(initial?.name ?? '');
@@ -49,7 +54,7 @@ function EditorForm({ initial, act, toast, onBack }: { initial?: EmailTemplateDe
   const [lang, setLang] = useState(langs[0] ?? 'en');
   const [subject, setSubject] = useState<Record<string, string>>({ en: '', vi: '', ...(initial?.subject ?? {}) });
   const [body, setBody] = useState<Record<string, string>>({ en: '', vi: '', ...(initial?.body ?? {}) });
-  const [sample, setSample] = useState<Record<string, string>>(SAMPLE_DEFAULT);
+  const [sample, setSample] = useState<Record<string, string>>(() => sampleDefault(t));
   const [pending, setPending] = useState(false);
   const [server, setServer] = useState<TemplatePreview | null>(null);
 
@@ -73,7 +78,7 @@ function EditorForm({ initial, act, toast, onBack }: { initial?: EmailTemplateDe
     try {
       if (isNew) await act.mutateAsync({ path: '/system/email-templates', body: { key, ...payload } });
       else await act.mutateAsync({ method: 'PATCH', path: `/system/email-templates/${initial.key}`, body: payload });
-      toast.success(isNew ? 'Đã tạo mẫu email' : 'Đã lưu mẫu email');
+      toast.success(isNew ? t('emailTemplates.toast.created') : t('emailTemplates.toast.saved'));
       onBack();
     } catch (e) {
       toast.error(errMessage(e));
@@ -87,7 +92,7 @@ function EditorForm({ initial, act, toast, onBack }: { initial?: EmailTemplateDe
     try {
       const r = (await act.mutateAsync({ path: `/system/email-templates/${initial.key}/preview`, body: { language: lang, variables: sample } })) as TemplatePreview | undefined;
       setServer(r ?? null);
-      if (r?.missingVariables?.length) toast.error(`Còn thiếu biến: ${r.missingVariables.join(', ')}`);
+      if (r?.missingVariables?.length) toast.error(t('emailTemplates.toast.missingVars', { vars: r.missingVariables.join(', ') }));
     } catch (e) {
       toast.error(errMessage(e));
     }
@@ -97,7 +102,7 @@ function EditorForm({ initial, act, toast, onBack }: { initial?: EmailTemplateDe
     if (!initial) return;
     try {
       const r = (await act.mutateAsync({ path: `/system/email-templates/${initial.key}/test-send`, body: { language: lang, variables: sample } })) as { to: string } | undefined;
-      toast.success(`Đã gửi thử tới ${r?.to ?? 'email của bạn'}`);
+      toast.success(t('emailTemplates.toast.testSent', { to: r?.to ?? t('emailTemplates.yourEmail') }));
     } catch (e) {
       toast.error(errMessage(e));
     }
@@ -105,7 +110,7 @@ function EditorForm({ initial, act, toast, onBack }: { initial?: EmailTemplateDe
 
   const addVar = () => {
     const v = newVar.trim();
-    if (!VAR_RE.test(v)) return toast.error('Tên biến chỉ gồm chữ, số, gạch dưới (bắt đầu bằng chữ).');
+    if (!VAR_RE.test(v)) return toast.error(t('emailTemplates.varNameInvalid'));
     if (!vars.includes(v)) setVars([...vars, v]);
     setNewVar('');
   };
@@ -117,95 +122,95 @@ function EditorForm({ initial, act, toast, onBack }: { initial?: EmailTemplateDe
   return (
     <>
       <PageHeader
-        title={isNew ? 'Tạo mẫu email' : `Sửa mẫu · ${initial.name}`}
-        subtitle="Dùng {{tên_biến}} để chèn dữ liệu động. Xem trước bên phải cập nhật ngay khi bạn gõ."
-        trail={[{ label: 'Mẫu email' }, { label: isNew ? 'Tạo mẫu' : initial.name }]}
+        title={isNew ? t('emailTemplates.editor.createTitle') : t('emailTemplates.editor.editTitle', { name: initial.name })}
+        subtitle={t('emailTemplates.editor.subtitle', { example: `{{${t('emailTemplates.editor.varName')}}}` })}
+        trail={[{ label: t('emailTemplates.title') }, { label: isNew ? t('emailTemplates.createShort') : initial.name }]}
         actions={
           <>
             <AdminButton disabled={pending} onClick={onBack}>
-              Quay lại
+              {t('emailTemplates.editor.back')}
             </AdminButton>
             <AdminButton kind="primary" icon="save" disabled={!valid || pending} onClick={() => void save()}>
-              {pending ? 'Đang lưu…' : 'Lưu mẫu'}
+              {pending ? t('emailTemplates.editor.saving') : t('emailTemplates.editor.save')}
             </AdminButton>
           </>
         }
       />
       <div className="grid items-start gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(340px,1fr))' }}>
-        <Card title="Nội dung" sub="Tiếng Anh là bắt buộc; tiếng Việt dùng khi người nhận chọn ngôn ngữ này.">
-          {isNew && <InputField label="Khóa mẫu (a-z, 0-9, _)" value={key} onChange={(v) => setKey(v.toLowerCase())} placeholder="vd. course_invite" mono maxLength={60} />}
-          <InputField label="Tên mẫu" value={name} onChange={setName} maxLength={80} />
-          <InputField label="Mô tả" value={desc} onChange={setDesc} maxLength={200} />
-          <OptionChips label="Trạng thái" options={STATUS_OPTS} value={status} onChange={(v) => setStatus(v as string)} />
-          <Segment label="Ngôn ngữ" value={lang} onChange={setLang} options={['en', 'vi'].map((l) => ({ value: l, label: LANG_LABEL[l] ?? l }))} />
+        <Card title={t('emailTemplates.editor.contentTitle')} sub={t('emailTemplates.editor.contentSub')}>
+          {isNew && <InputField label={t('emailTemplates.editor.keyLabel')} value={key} onChange={(v) => setKey(v.toLowerCase())} placeholder={t('emailTemplates.editor.keyPlaceholder')} mono maxLength={60} />}
+          <InputField label={t('emailTemplates.editor.nameLabel')} value={name} onChange={setName} maxLength={80} />
+          <InputField label={t('emailTemplates.editor.descLabel')} value={desc} onChange={setDesc} maxLength={200} />
+          <OptionChips label={t('emailTemplates.editor.statusLabel')} options={STATUS_OPTS} value={status} onChange={(v) => setStatus(v as string)} />
+          <Segment label={t('emailTemplates.editor.languageLabel')} value={lang} onChange={setLang} options={['en', 'vi'].map((l) => ({ value: l, label: LANG_LABEL[l] ?? l }))} />
           <div className="flex flex-col gap-2">
-            <FieldLabel>Tiêu đề ({LANG_LABEL[lang]})</FieldLabel>
+            <FieldLabel>{t('emailTemplates.editor.subjectLabel', { lang: LANG_LABEL[lang] })}</FieldLabel>
             <input
               ref={subj.ref as React.RefObject<HTMLInputElement>}
               value={subject[lang] ?? ''}
               onChange={(e) => setSubject((s) => ({ ...s, [lang]: e.target.value }))}
               onFocus={() => setTarget('subject')}
-              aria-label="Tiêu đề"
+              aria-label={t('emailTemplates.editor.subjectAria')}
               maxLength={200}
               className={`${inputCls} h-11`}
             />
           </div>
           <div className="flex flex-col gap-2">
-            <FieldLabel>Nội dung ({LANG_LABEL[lang]})</FieldLabel>
+            <FieldLabel>{t('emailTemplates.editor.bodyLabel', { lang: LANG_LABEL[lang] })}</FieldLabel>
             <textarea
               ref={bod.ref as React.RefObject<HTMLTextAreaElement>}
               value={body[lang] ?? ''}
               onChange={(e) => setBody((s) => ({ ...s, [lang]: e.target.value }))}
               onFocus={() => setTarget('body')}
-              aria-label="Nội dung"
+              aria-label={t('emailTemplates.editor.bodyAria')}
               className={`${inputCls} min-h-[220px] resize-y py-2.5 leading-relaxed`}
             />
           </div>
           <VariableChips variables={vars} onInsert={insert} />
-          {undeclared.length > 0 && <div className="rounded-xl bg-[#fffbeb] px-3 py-2 text-xs text-[#92400e]">Biến chưa khai báo: {undeclared.map((v) => `{{${v}}}`).join(', ')}</div>}
+          {undeclared.length > 0 && <div className="rounded-xl bg-[#fffbeb] px-3 py-2 text-xs text-[#92400e]">{t('emailTemplates.editor.undeclared', { vars: undeclared.map((v) => `{{${v}}}`).join(', ') })}</div>}
           <div className="flex flex-col gap-2">
-            <FieldLabel>Khai báo biến</FieldLabel>
+            <FieldLabel>{t('emailTemplates.editor.declareVars')}</FieldLabel>
             <div className="flex flex-wrap gap-1.5">
               {vars.map((v) => (
                 <span key={v} className="flex h-7 items-center gap-1.5 rounded-lg bg-[#f5f1ed] pr-1 pl-2.5 text-xs font-semibold" style={{ fontFamily: MONO_FONT }}>
                   {v}
-                  <button type="button" aria-label={`Bỏ biến ${v}`} className="grid size-5 place-items-center rounded-md border-0 bg-transparent text-stone-400 hover:text-[#dc2626]" onClick={() => setVars(vars.filter((x) => x !== v))}>
+                  <button type="button" aria-label={t('emailTemplates.editor.removeVar', { name: v })} className="grid size-5 place-items-center rounded-md border-0 bg-transparent text-stone-400 hover:text-[#dc2626]" onClick={() => setVars(vars.filter((x) => x !== v))}>
                     ×
                   </button>
                 </span>
               ))}
             </div>
             <div className="flex gap-2">
-              <input value={newVar} onChange={(e) => setNewVar(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addVar()} placeholder="tên_biến" aria-label="Thêm biến" className={`${inputCls} h-10 flex-1`} style={{ fontFamily: MONO_FONT }} />
+              <input value={newVar} onChange={(e) => setNewVar(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addVar()} placeholder={t('emailTemplates.editor.varPlaceholder')} aria-label={t('emailTemplates.editor.addVarAria')} className={`${inputCls} h-10 flex-1`} style={{ fontFamily: MONO_FONT }} />
               <AdminButton onClick={addVar} disabled={!newVar.trim()}>
-                Thêm biến
+                {t('emailTemplates.editor.addVar')}
               </AdminButton>
             </div>
           </div>
         </Card>
         <div className="flex flex-col gap-4">
-          <Card title="Xem trước" sub="Dùng dữ liệu mẫu bên dưới.">
+          <Card title={t('emailTemplates.editor.previewTitle')} sub={t('emailTemplates.editor.previewSub')}>
             <EmailPreview subject={renderTemplate(subject[lang] ?? '', sample)} body={renderTemplate(body[lang] ?? '', sample)} />
             {server && (
               <div className="flex flex-col gap-2">
-                <div className="text-[11.5px] font-bold tracking-[.06em] text-stone-400 uppercase">Bản dựng từ máy chủ</div>
+                <div className="text-[11.5px] font-bold tracking-[.06em] text-stone-400 uppercase">{t('emailTemplates.editor.serverRender')}</div>
                 <EmailPreview subject={server.subject} body={server.text} />
               </div>
             )}
             {!isNew && (
               <div className="flex flex-wrap gap-2">
                 <AdminButton icon="visibility" onClick={() => void serverPreview()}>
-                  Xem bản từ máy chủ
+                  {t('emailTemplates.editor.serverPreview')}
                 </AdminButton>
                 <AdminButton icon="send" onClick={() => void testSend()}>
-                  Gửi thử cho tôi
+                  {t('emailTemplates.editor.testSend')}
                 </AdminButton>
               </div>
             )}
-            {!isNew && <div className="text-xs text-stone-400">“Xem bản từ máy chủ” và “Gửi thử” dùng nội dung đã lưu. Hãy lưu trước khi kiểm tra.</div>}
+            {!isNew && <div className="text-xs text-stone-400">{t('emailTemplates.editor.savedNote')}</div>}
           </Card>
           {vars.length > 0 && (
-            <Card title="Dữ liệu mẫu" sub="Giá trị điền vào các biến khi xem trước.">
+            <Card title={t('emailTemplates.editor.sampleTitle')} sub={t('emailTemplates.editor.sampleSub')}>
               <div className="grid grid-cols-2 gap-3">
                 {vars.map((v) => (
                   <InputField key={v} label={`{{${v}}}`} value={sample[v] ?? ''} onChange={(x) => setSample((s) => ({ ...s, [v]: x }))} placeholder={`[${v}]`} />
@@ -222,42 +227,44 @@ function EditorForm({ initial, act, toast, onBack }: { initial?: EmailTemplateDe
 /* ============================== Danh sách ============================== */
 
 export function EmailTemplatesView() {
-  const t = useTableState({ status: '' });
+  const { t } = useTranslation('admin-pages2');
+  const STATUS_OPTS = statusOpts();
+  const ts = useTableState({ status: '' });
   const slot = useDialogSlot();
   const toast = useToast();
   const act = useAdminAction();
   const [editing, setEditing] = useState<string | null>(null);
-  const q = useAdminData<EmailTemplate[]>('system', '/system/email-templates', { q: t.q || undefined, status: t.f.status || undefined });
+  const q = useAdminData<EmailTemplate[]>('system', '/system/email-templates', { q: ts.q || undefined, status: ts.f.status || undefined });
 
   if (editing) return <TemplateEditor tkey={editing} onBack={() => setEditing(null)} />;
 
   const setStatus = (e: EmailTemplate, status: EmailTemplateStatus) =>
     act.mutateAsync({ method: 'PATCH', path: `/system/email-templates/${e.key}`, body: { status } }).then(
-      () => toast.success(status === 'active' ? `Đã bật "${e.name}"` : `Đã tắt "${e.name}"`),
+      () => toast.success(status === 'active' ? t('emailTemplates.toast.enabled', { name: e.name }) : t('emailTemplates.toast.disabled', { name: e.name })),
       (err) => toast.error(errMessage(err)),
     );
 
   const columns: Column<EmailTemplate>[] = [
-    { key: 't', label: 'Mẫu email', w: 1.8, render: (e) => <MainCell name={e.name} sub={e.key} icon="mail" /> },
-    { key: 's', label: 'Tiêu đề', w: 2, render: (e) => <TextCell>{e.subject.vi || e.subject.en || '—'}</TextCell> },
-    { key: 'l', label: 'Ngôn ngữ', w: 0.9, render: (e) => <TextCell>{e.languages.map((l) => l.toUpperCase()).join(' · ')}</TextCell> },
-    { key: 'u', label: 'Cập nhật', render: (e) => <MutedCell>{formatRelative(e.updatedAt)}</MutedCell> },
-    { key: 'st', label: 'Trạng thái', render: (e) => <StatusBadge tone={TEMPLATE_STATUS[e.status]?.tone ?? 'x'}>{TEMPLATE_STATUS[e.status]?.label ?? e.status}</StatusBadge> },
+    { key: 't', label: t('emailTemplates.col.template'), w: 1.8, render: (e) => <MainCell name={e.name} sub={e.key} icon="mail" /> },
+    { key: 's', label: t('emailTemplates.col.subject'), w: 2, render: (e) => <TextCell>{e.subject.vi || e.subject.en || '—'}</TextCell> },
+    { key: 'l', label: t('emailTemplates.col.language'), w: 0.9, render: (e) => <TextCell>{e.languages.map((l) => l.toUpperCase()).join(' · ')}</TextCell> },
+    { key: 'u', label: t('emailTemplates.col.updated'), render: (e) => <MutedCell>{formatRelative(e.updatedAt)}</MutedCell> },
+    { key: 'st', label: t('emailTemplates.col.status'), render: (e) => <StatusBadge tone={TEMPLATE_STATUS[e.status]?.tone ?? 'x'}>{TEMPLATE_STATUS[e.status]?.label ?? e.status}</StatusBadge> },
   ];
 
   const actions = (e: EmailTemplate): RowAction[] => {
     const list: RowAction[] = [
-      { label: 'Sửa', icon: 'edit', onClick: () => setEditing(e.key) },
-      e.status === 'active' ? { label: 'Tắt', icon: 'block', onClick: () => void setStatus(e, 'disabled') } : { label: 'Bật', icon: 'check_circle', onClick: () => void setStatus(e, 'active') },
+      { label: t('emailTemplates.action.edit'), icon: 'edit', onClick: () => setEditing(e.key) },
+      e.status === 'active' ? { label: t('emailTemplates.action.disable'), icon: 'block', onClick: () => void setStatus(e, 'disabled') } : { label: t('emailTemplates.action.enable'), icon: 'check_circle', onClick: () => void setStatus(e, 'active') },
     ];
     if (!e.isSystem)
       list.push({
-        label: 'Xóa',
+        label: t('emailTemplates.action.delete'),
         icon: 'delete',
         danger: true,
         onClick: () =>
           slot.show((close) => (
-            <ActionDialog icon="delete" danger title={`Xóa mẫu · ${e.name}`} body="Mẫu sẽ bị xóa vĩnh viễn." cta="Xóa" successMessage="Đã xóa mẫu email" run={() => act.mutateAsync({ method: 'DELETE', path: `/system/email-templates/${e.key}` })} onClose={close} />
+            <ActionDialog icon="delete" danger title={t('emailTemplates.delete.title', { name: e.name })} body={t('emailTemplates.delete.body')} cta={t('emailTemplates.delete.cta')} successMessage={t('emailTemplates.delete.success')} run={() => act.mutateAsync({ method: 'DELETE', path: `/system/email-templates/${e.key}` })} onClose={close} />
           )),
       });
     return list;
@@ -266,11 +273,11 @@ export function EmailTemplatesView() {
   return (
     <>
       <PageHeader
-        title="Mẫu email"
-        subtitle="Email hệ thống gửi cho thành viên và creator."
+        title={t('emailTemplates.title')}
+        subtitle={t('emailTemplates.subtitle')}
         actions={
           <AdminButton kind="primary" icon="add" onClick={() => setEditing('new')}>
-            Tạo mẫu
+            {t('emailTemplates.createShort')}
           </AdminButton>
         }
       />
@@ -280,13 +287,13 @@ export function EmailTemplatesView() {
         rowKey={(e) => e.key}
         onRow={(e) => setEditing(e.key)}
         actions={actions}
-        search={{ value: t.q, onChange: t.onQ, placeholder: 'Tìm mẫu email...' }}
-        filters={[{ key: 'status', label: 'Trạng thái', value: t.f.status, options: STATUS_OPTS, onChange: t.setFilter('status') }]}
-        onClearFilters={t.clear}
+        search={{ value: ts.q, onChange: ts.onQ, placeholder: t('emailTemplates.searchPlaceholder') }}
+        filters={[{ key: 'status', label: t('emailTemplates.col.status'), value: ts.f.status, options: STATUS_OPTS, onChange: ts.setFilter('status') }]}
+        onClearFilters={ts.clear}
         loading={q.isPending}
         error={q.isError ? q.error : null}
         onRetry={() => void q.refetch()}
-        emptyText="Chưa có mẫu email nào."
+        emptyText={t('emailTemplates.empty')}
       />
       {slot.el}
     </>

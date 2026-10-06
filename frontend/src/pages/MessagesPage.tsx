@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { RequireLogin } from '../components/layout/RequireLogin';
@@ -10,6 +11,7 @@ import { ChatPanel } from '../features/messages/components/ChatPanel';
 import { useConversations } from '../features/messages/queries';
 
 function MessagesInner() {
+  const { t } = useTranslation('messages');
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -24,23 +26,23 @@ function MessagesInner() {
         <div className="glass grid h-full grid-cols-1 overflow-hidden rounded-3xl md:grid-cols-[320px_minmax(0,1fr)]">
           <aside className={`min-h-0 flex-col border-r border-[rgba(120,60,20,.08)] ${id ? 'hidden md:flex' : 'flex'}`}>
             <div className="flex items-center justify-between px-4 py-3.5">
-              <h1 className="text-lg font-extrabold">Tin nhắn</h1>
+              <h1 className="text-lg font-extrabold">{t('page.title')}</h1>
               <button
                 type="button"
                 onClick={() => setShowBlocks(true)}
-                title="Người dùng đã chặn"
-                aria-label="Người dùng đã chặn"
+                title={t('blocked.title')}
+                aria-label={t('blocked.title')}
                 className="grid size-9 place-items-center rounded-xl text-stone-600 hover:bg-stone-900/5"
               >
                 <MaterialIcon name="block" size={20} />
               </button>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto">
-              {conversations.isPending && <p className="py-10 text-center text-stone-400">Đang tải…</p>}
-              {conversations.isError && <p className="py-10 text-center text-red-600">Không tải được danh sách hội thoại.</p>}
+              {conversations.isPending && <p className="py-10 text-center text-stone-400">{t('page.loading')}</p>}
+              {conversations.isError && <p className="py-10 text-center text-red-600">{t('page.loadError')}</p>}
               {conversations.data?.length === 0 && (
                 <p className="px-6 py-10 text-center text-[13.5px] text-stone-500">
-                  Chưa có cuộc trò chuyện nào. Vào tab Thành viên của một cộng đồng và bấm biểu tượng chat để bắt đầu nhắn tin.
+                  {t('page.empty')}
                 </p>
               )}
               {conversations.data?.map((c) => {
@@ -63,10 +65,10 @@ function MessagesInner() {
                       <span className="flex items-center gap-2">
                         <span className={`min-w-0 flex-1 truncate text-[12.5px] ${c.unreadCount > 0 ? 'font-semibold text-stone-800' : 'text-stone-500'}`}>
                           {c.blockedByMe
-                            ? 'Đã chặn'
+                            ? t('page.blocked')
                             : c.lastMessage
-                              ? `${mine ? 'Bạn: ' : ''}${c.lastMessage.content}`
-                              : 'Chưa có tin nhắn'}
+                              ? `${mine ? t('page.you') : ''}${c.lastMessage.content}`
+                              : t('page.noMessages')}
                         </span>
                         {c.unreadCount > 0 && (
                           <span className="grid min-w-[20px] flex-none place-items-center rounded-full bg-brand px-1.5 text-[11px] leading-5 font-bold text-white">
@@ -88,7 +90,7 @@ function MessagesInner() {
               <div className="grid h-full place-items-center text-center text-stone-500">
                 <div>
                   <MaterialIcon name="forum" size={48} color="#d6d3d1" />
-                  <p className="mt-2 text-sm">Chọn một cuộc trò chuyện để bắt đầu.</p>
+                  <p className="mt-2 text-sm">{t('page.selectPrompt')}</p>
                 </div>
               </div>
             )}

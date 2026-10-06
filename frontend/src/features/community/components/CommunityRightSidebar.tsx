@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { formatCompact } from '../../../lib/format';
@@ -15,6 +16,7 @@ function initials(name: string) {
 }
 
 export function CommunityRightSidebar({ course }: { course: CommunityDetail }) {
+  const { t } = useTranslation('community');
   const members = useMembers(course.id, {});
   const suggested = useCommunities({ page: 1, limit: 4, sort: 'trending' });
   const shownMembers = members.data?.data.slice(0, 6) ?? [];
@@ -32,19 +34,19 @@ export function CommunityRightSidebar({ course }: { course: CommunityDetail }) {
         </div>
         <div className="px-[18px] pt-9 pb-[18px]">
           <div className="truncate text-[17px] font-extrabold">{course.title}</div>
-          <div className="mt-1 truncate text-[12.5px] text-stone-500">Bởi {course.instructor.name}</div>
+          <div className="mt-1 truncate text-[12.5px] text-stone-500">{t('rightSidebar.by', { name: course.instructor.name })}</div>
           <div className="mt-2.5 grid grid-cols-3 border-t border-[rgba(120,60,20,.08)] pt-3 text-center">
             <div>
               <div className="text-[15px] font-bold">{formatCompact(course.stats.members)}</div>
-              <div className="mt-0.5 text-[11px] text-stone-500">Thành viên</div>
+              <div className="mt-0.5 text-[11px] text-stone-500">{t('info.members')}</div>
             </div>
             <div className="border-x border-[rgba(120,60,20,.08)]">
               <div className="text-[15px] font-bold">{course.stats.online}</div>
-              <div className="mt-0.5 text-[11px] text-stone-500">Trực tuyến</div>
+              <div className="mt-0.5 text-[11px] text-stone-500">{t('info.online')}</div>
             </div>
             <div>
               <div className="text-[15px] font-bold">{course.stats.admins}</div>
-              <div className="mt-0.5 text-[11px] text-stone-500">Quản trị viên</div>
+              <div className="mt-0.5 text-[11px] text-stone-500">{t('info.admins')}</div>
             </div>
           </div>
 
@@ -70,7 +72,7 @@ export function CommunityRightSidebar({ course }: { course: CommunityDetail }) {
               className="flex h-[42px] flex-1 items-center justify-center gap-2 rounded-2xl bg-brand/10 text-[13.5px] font-bold text-brand disabled:cursor-default"
             >
               <MaterialIcon name="check_circle" size={20} filled color="#f26a1b" />
-              Đã tham gia
+              {t('rightSidebar.joined')}
             </button>
           </div>
         </div>
@@ -79,9 +81,9 @@ export function CommunityRightSidebar({ course }: { course: CommunityDetail }) {
       {suggestedCourses.length > 0 && (
         <div className="glass rounded-[22px] p-4 pb-2.5">
           <div className="mb-1.5 flex items-center justify-between">
-            <span className="text-[14.5px] font-bold">Cộng đồng được đề xuất</span>
+            <span className="text-[14.5px] font-bold">{t('rightSidebar.suggested')}</span>
             <Link to="/#courses" className="text-[12.5px] text-brand">
-              Xem tất cả →
+              {t('rightSidebar.viewAll')}
             </Link>
           </div>
           {suggestedCourses.map((c, i) => (
@@ -94,10 +96,10 @@ export function CommunityRightSidebar({ course }: { course: CommunityDetail }) {
               </span>
               <div className="min-w-0 flex-1">
                 <div className="truncate text-[13.5px] font-medium">{c.title}</div>
-                <div className="text-xs text-stone-500">{formatCompact(c.students)} thành viên</div>
+                <div className="text-xs text-stone-500">{t('rightSidebar.membersCount', { n: formatCompact(c.students) })}</div>
               </div>
               <span className="flex-none rounded-full border border-brand/20 bg-brand-soft px-3 py-1.5 text-[12.5px] font-semibold text-brand">
-                + Tham gia
+                {t('rightSidebar.join')}
               </span>
             </Link>
           ))}
@@ -109,26 +111,26 @@ export function CommunityRightSidebar({ course }: { course: CommunityDetail }) {
           <MaterialIcon name="workspace_premium" size={26} filled color="#f59e0b" />
         </span>
         <div>
-          <div className="text-[14.5px] font-extrabold">Trở thành thành viên Premium</div>
+          <div className="text-[14.5px] font-extrabold">{t('rightSidebar.premiumTitle')}</div>
           <div className="mt-2.5 flex flex-col gap-1.5 text-left text-[12.5px] text-stone-600">
             <span className="flex items-center gap-2">
-              <MaterialIcon name="check" size={16} color="#f26a1b" /> Truy cập khóa học độc quyền
+              <MaterialIcon name="check" size={16} color="#f26a1b" /> {t('rightSidebar.premium1')}
             </span>
             <span className="flex items-center gap-2">
-              <MaterialIcon name="check" size={16} color="#f26a1b" /> Tài liệu chuyên sâu
+              <MaterialIcon name="check" size={16} color="#f26a1b" /> {t('rightSidebar.premium2')}
             </span>
             <span className="flex items-center gap-2">
-              <MaterialIcon name="check" size={16} color="#f26a1b" /> Hỗ trợ 1:1 từ chuyên gia
+              <MaterialIcon name="check" size={16} color="#f26a1b" /> {t('rightSidebar.premium3')}
             </span>
           </div>
         </div>
         <button
           type="button"
           disabled
-          title="Sắp ra mắt — Giai đoạn 8 trong PLAN.md (chưa chốt cổng thanh toán gói Premium)"
+          title={t('rightSidebar.comingSoonTitle')}
           className="flex h-11 items-center justify-center gap-2 rounded-xl bg-brand text-[13.5px] font-bold text-white opacity-60"
         >
-          <MaterialIcon name="arrow_forward" size={17} color="#fff" /> Nâng cấp (sắp ra mắt)
+          <MaterialIcon name="arrow_forward" size={17} color="#fff" /> {t('rightSidebar.upgrade')}
         </button>
       </div>
     </aside>

@@ -6,6 +6,7 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { PopupProvider } from './components/ui/PopupProvider';
 import { AuthProvider } from './features/auth/AuthContext';
+import './i18n';
 import './index.css';
 
 const queryClient = new QueryClient({

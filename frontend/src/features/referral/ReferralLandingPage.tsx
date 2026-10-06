@@ -1,14 +1,16 @@
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { saveReferralCode } from './storage';
 
 /** /gioi-thieu/:code — lưu mã giới thiệu rồi chuyển sang trang đăng ký. */
 export function ReferralLandingPage() {
+  const { t } = useTranslation('referral');
   const { code = '' } = useParams();
   const navigate = useNavigate();
   useEffect(() => {
     saveReferralCode(code);
     navigate('/register', { replace: true });
   }, [code, navigate]);
-  return <div role="status" className="grid min-h-screen place-items-center text-stone-400">Đang chuyển hướng…</div>;
+  return <div role="status" className="grid min-h-screen place-items-center text-stone-400">{t('redirecting')}</div>;
 }

@@ -1,0 +1,17 @@
+{
+  "nav": { "discover": "Khám phá", "courses": "Khóa học", "myCommunities": "Cộng đồng của tôi" },
+  "header": {
+    "profileSettings": "Cài đặt hồ sơ",
+    "admin": "Quản trị",
+    "logout": "Đăng xuất",
+    "login": "Đăng nhập",
+    "createCommunity": "Tạo cộng đồng",
+    "language": "Ngôn ngữ"
+  },
+  "time": {
+    "justNow": "vừa xong",
+    "minutesAgo": "{{count}} phút trước",
+    "hoursAgo": "{{count}} giờ trước",
+    "daysAgo": "{{count}} ngày trước"
+  }
+}

@@ -1,0 +1,131 @@
+{
+  "list": {
+    "all": "Tất cả",
+    "free": "Miễn phí",
+    "perMonth": "/tháng",
+    "view": "Xem khóa học {{title}}",
+    "retry": "Thử lại",
+    "notFound": "Không tìm thấy khóa học phù hợp.",
+    "clearFilters": "Xóa bộ lọc",
+    "grid": "Lưới",
+    "listView": "Danh sách",
+    "found": "Tìm thấy <b>{{total}}</b> khóa học",
+    "pagination": "Phân trang",
+    "prevPage": "Trang trước",
+    "nextPage": "Trang sau",
+    "loginToJoin": "Bạn cần đăng nhập để tham gia khóa học"
+  },
+  "tag": {
+    "hot": "Hot",
+    "bestseller": "Bán chạy",
+    "new": "Mới"
+  },
+  "filter": {
+    "pricing": {
+      "label": "Giá",
+      "free": "Miễn phí",
+      "paid": "Có phí",
+      "trial": "Dùng thử miễn phí"
+    },
+    "visibility": {
+      "label": "Loại",
+      "public": "Công khai",
+      "private": "Riêng tư"
+    },
+    "status": {
+      "label": "Trạng thái",
+      "open": "Đang mở",
+      "soon": "Sắp ra mắt",
+      "completed": "Đã hoàn thành"
+    },
+    "language": {
+      "label": "Ngôn ngữ",
+      "vi": "Tiếng Việt",
+      "en": "English"
+    },
+    "sort": {
+      "label": "Sắp xếp",
+      "trending": "Đang nổi",
+      "top": "Hàng đầu",
+      "newest": "Mới nhất"
+    }
+  },
+  "detail": {
+    "tabs": {
+      "overview": "Tổng quan",
+      "content": "Nội dung",
+      "reviews": "Đánh giá",
+      "faq": "Câu hỏi thường gặp"
+    },
+    "perkLessons": "{{n}} bài học trong lớp học",
+    "perkDiscuss": "Thảo luận và kết nối cùng thành viên cộng đồng",
+    "loading": "Đang tải khóa học…",
+    "notFoundTitle": "Không tìm thấy khóa học",
+    "notFoundDesc": "Khóa học này có thể đã bị xóa hoặc không tồn tại.",
+    "home": "Về trang chủ",
+    "free": "Miễn phí",
+    "locked": "Cộng đồng này đang bị khóa bởi quản trị nền tảng nên chưa thể tham gia.",
+    "leaveTitle": "Rời cộng đồng có phí này?",
+    "leaveConfirm": "Rời cộng đồng",
+    "leaveCancel": "Ở lại",
+    "leaveMessage": "Bạn sẽ mất quyền truy cập ngay, gói thành viên sẽ bị hủy vào cuối kỳ hiện tại (không bị tính phí kỳ sau) và khoản đã thanh toán cho kỳ này không được hoàn lại. Bạn có thể vào lại miễn phí trong kỳ đã trả.",
+    "homeAria": "Trang chủ",
+    "by": "Bởi <b>{{name}}</b>",
+    "perMonth": "/tháng",
+    "perMonthSpaced": "/ tháng",
+    "members": "Thành viên",
+    "online": "Trực tuyến",
+    "admins": "Quản trị viên",
+    "lockedBanner": "Cộng đồng này đang bị khóa bởi quản trị nền tảng.",
+    "enter": "Vào cộng đồng",
+    "joined": "Đã tham gia",
+    "requestPending": "Đã gửi yêu cầu – chờ duyệt",
+    "requestJoin": "Gửi yêu cầu tham gia",
+    "joinNow": "Tham gia ngay",
+    "privateNote": "Cộng đồng riêng tư — cần quản trị viên duyệt yêu cầu.",
+    "reviewNote": "Quản trị viên sẽ xem xét yêu cầu của bạn và thông báo kết quả.",
+    "canceling": "Đang hủy…",
+    "cancelRequest": "Hủy yêu cầu",
+    "settings": "Cài đặt cộng đồng",
+    "youGet": "Bạn sẽ nhận được",
+    "needHelp": "Cần hỗ trợ?",
+    "contactUs": "Liên hệ với chúng tôi nếu bạn có bất kỳ câu hỏi nào.",
+    "sendMessage": "Gửi tin nhắn",
+    "aboutCourse": "Về khóa học",
+    "whatYouGet": "Bạn sẽ nhận được gì?",
+    "cost": "Chi phí tham gia",
+    "contentSome": "Cộng đồng có {{n}} bài học trong Lớp học. Nội dung chi tiết hiển thị cho thành viên.",
+    "contentNone": "Cộng đồng này chưa có bài học nào trong Lớp học.",
+    "openClassroom": "Mở Lớp học →"
+  },
+  "lesson": {
+    "loadingAttachment": "{{name}} (đang tải…)",
+    "invalidLink": "{{name}} (liên kết không hợp lệ)",
+    "loading": "Đang tải bài học…",
+    "lockedTitle": "Module này đang bị khóa",
+    "openFailed": "Không mở được bài học",
+    "lockedDesc": "Hoàn thành module trước đó (hoặc đạt đủ cấp độ yêu cầu) để mở khóa bài học này.",
+    "notFound": "Bài học không tồn tại hoặc bạn không có quyền xem.",
+    "backToList": "Về danh sách lớp học",
+    "completedToast": "Đã hoàn thành bài học",
+    "uncompletedToast": "Đã bỏ đánh dấu hoàn thành",
+    "breadcrumb": "Đường dẫn",
+    "classroom": "Lớp học",
+    "progress": "Tiến độ khóa học",
+    "lessonsCount": "{{done}}/{{total}} bài",
+    "noVideo": "Bài học này chưa có video.",
+    "meta": "{{n}} phút · {{type}}",
+    "typeVideo": "Video",
+    "typeFile": "Tệp",
+    "typeText": "Bài đọc",
+    "saving": "Đang lưu…",
+    "uncomplete": "Bỏ hoàn thành",
+    "complete": "Hoàn thành",
+    "youCompleted": "Bạn đã hoàn thành bài này",
+    "attachments": "Tệp đính kèm",
+    "prev": "Bài trước",
+    "next": "Bài sau",
+    "toClassroom": "Về lớp học",
+    "loadingShort": "Đang tải…"
+  }
+}

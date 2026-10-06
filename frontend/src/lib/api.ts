@@ -1,3 +1,5 @@
+import i18n from '../i18n';
+
 const API_URL = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/$/, '');
 
 export class ApiError extends Error {
@@ -18,7 +20,7 @@ type RequestOptions = { signal?: AbortSignal; token?: string; skipAuthRetry?: bo
 
 async function parseErrorBody(res: Response): Promise<never> {
   const body = (await res.json().catch(() => null)) as { error?: { message?: string; code?: string; details?: ApiError['details'] } } | null;
-  throw new ApiError(res.status, body?.error?.message ?? `Yêu cầu thất bại (${res.status})`, body?.error?.code, body?.error?.details);
+  throw new ApiError(res.status, body?.error?.message ?? i18n.t('api.requestFailed', { ns: 'misc', status: res.status }), body?.error?.code, body?.error?.details);
 }
 
 // ---- Giữ phiên đăng nhập giữa các request ----

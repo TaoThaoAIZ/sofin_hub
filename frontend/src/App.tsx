@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 import { LegacyCourseRedirect } from './components/LegacyCourseRedirect';
 import { ScrollToTop } from './components/ScrollToTop';
 import { ReferralCapture } from './features/referral/ReferralCapture';
@@ -50,6 +51,7 @@ import { MembersTab } from './features/community/components/MembersTab';
 const AdminRoutes = lazy(() => import('./pages/admin/AdminRoutes'));
 
 export default function App() {
+  const { t } = useTranslation('layout');
   return (
     <NotificationsProvider>
       <MessagesProvider>
@@ -76,6 +78,7 @@ export default function App() {
           <Route path="thanh-vien" element={<MembersTab />} />
           <Route path="xep-hang" element={<LeaderboardTab />} />
           <Route path="gioi-thieu" element={<AboutTab />} />
+          <Route path="doanh-thu" element={<RevenuePage />} />
         </Route>
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
@@ -98,12 +101,12 @@ export default function App() {
         <Route path="/search" element={<SearchPage />} />
         <Route path="/billing" element={<Navigate to="/settings/thanh-toan" replace />} />
         <Route path="/gioi-thieu/:code" element={<ReferralLandingPage />} />
-        <Route path="/communities/:id/revenue-dashboard" element={<RevenuePage />} />
+        <Route path="/communities/:id/revenue-dashboard" element={<LegacyRevenueRedirect />} />
         <Route path="/admin/reports" element={<Navigate to="/admin/moderation" replace />} />
         <Route
           path="/admin/*"
           element={
-            <Suspense fallback={<div role="status" className="grid min-h-screen place-items-center text-stone-400">Đang tải…</div>}>
+            <Suspense fallback={<div role="status" className="grid min-h-screen place-items-center text-stone-400">{t('loading')}</div>}>
               <AdminRoutes />
             </Suspense>
           }
@@ -116,4 +119,9 @@ export default function App() {
       </MessagesProvider>
     </NotificationsProvider>
   );
+}
+
+function LegacyRevenueRedirect() {
+  const { id = '' } = useParams();
+  return <Navigate to={`/communities/${id}/community/doanh-thu`} replace />;
 }

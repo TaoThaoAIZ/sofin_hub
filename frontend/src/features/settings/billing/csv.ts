@@ -1,16 +1,17 @@
+import i18n from '../../../i18n';
 import { formatDate } from '../../../lib/datetime';
 import type { PaymentRecord } from '../../payments/types';
 
 export const PAY_STATUS: Record<string, { text: string; color: string; dot: string }> = {
-  succeeded: { text: 'Đã thanh toán', color: '#15803d', dot: '#16a34a' },
-  pending: { text: 'Đang chờ', color: '#b45309', dot: '#f59e0b' },
-  failed: { text: 'Thất bại', color: '#b91c1c', dot: '#dc2626' },
-  refunded: { text: 'Đã hoàn tiền', color: '#57534e', dot: '#a8a29e' },
+  succeeded: { get text() { return i18n.t('csv.statusPaid', { ns: 'settings' }); }, color: '#15803d', dot: '#16a34a' },
+  pending: { get text() { return i18n.t('csv.statusPending', { ns: 'settings' }); }, color: '#b45309', dot: '#f59e0b' },
+  failed: { get text() { return i18n.t('csv.statusFailed', { ns: 'settings' }); }, color: '#b91c1c', dot: '#dc2626' },
+  refunded: { get text() { return i18n.t('csv.statusRefunded', { ns: 'settings' }); }, color: '#57534e', dot: '#a8a29e' },
 };
 
 export function paymentDescription(p: PaymentRecord): string {
-  const kind = p.kind === 'renewal' ? 'Gia hạn' : 'Thanh toán đầu';
-  return `${p.courseTitle ?? p.courseId} · ${kind}${p.interval === 'annual' ? ' · gói năm' : ''}`;
+  const kind = p.kind === 'renewal' ? i18n.t('csv.renewal', { ns: 'settings' }) : i18n.t('csv.firstPayment', { ns: 'settings' });
+  return `${p.courseTitle ?? p.courseId} · ${kind}${p.interval === 'annual' ? i18n.t('csv.annualPlan', { ns: 'settings' }) : ''}`;
 }
 
 /** BOM UTF-8 để Excel mở đúng tiếng Việt. */
@@ -19,7 +20,7 @@ const cell = (v: string | number) => `"${String(v).replaceAll('"', '""')}"`;
 
 /** CSV lịch sử thanh toán (BOM để Excel mở đúng tiếng Việt). Số tiền theo USD, 2 chữ số thập phân. */
 export function buildPaymentsCsv(rows: PaymentRecord[]): string {
-  const head = ['Ngày', 'Mô tả', 'Số tiền (USD)', 'Đã hoàn (USD)', 'Trạng thái', 'Số hóa đơn'];
+  const head = ['csv.colDate', 'csv.colDesc', 'csv.colAmount', 'csv.colRefunded', 'csv.colStatus', 'csv.colInvoice'].map((k) => i18n.t(k, { ns: 'settings' }));
   const lines = rows.map((p) => {
     const cents = p.amountCents ?? Math.round(p.amountUsd * 100);
     return [

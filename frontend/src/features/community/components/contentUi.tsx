@@ -1,10 +1,12 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import i18n, { currentLocale } from '../../../i18n';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { resolveApiPath } from '../../../lib/api';
 
 // Tiện ích dùng chung cho các thành phần nội dung (bài viết, lịch, lớp học, kiểm duyệt).
 
-export const errText = (err: unknown, fallback = 'Có lỗi xảy ra, vui lòng thử lại') =>
+export const errText = (err: unknown, fallback = i18n.t('ui.genericError', { ns: 'community' })) =>
   err instanceof Error && err.message ? err.message : fallback;
 
 export type ViewerRole = 'member' | 'mod' | 'admin' | 'owner' | 'platform_admin' | null | undefined;
@@ -29,7 +31,7 @@ export function safeUrl(url: string | undefined): string | null {
   }
 }
 
-export const fmtDateTime = (iso: string) => new Date(iso).toLocaleString('vi-VN');
+export const fmtDateTime = (iso: string) => new Date(iso).toLocaleString(currentLocale());
 
 /** ISO -> giá trị cho <input type="datetime-local"> theo giờ máy. */
 export function toLocalInput(iso: string): string {
@@ -124,6 +126,7 @@ export function Dialog({
   footer?: ReactNode;
   wide?: boolean;
 }) {
+  const { t } = useTranslation('community');
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div
@@ -135,7 +138,7 @@ export function Dialog({
       >
         <div className="flex items-start justify-between gap-3">
           <h2 className="m-0 text-lg font-extrabold">{title}</h2>
-          <button type="button" onClick={onClose} aria-label="Đóng" className="text-stone-400 hover:text-stone-700">
+          <button type="button" onClick={onClose} aria-label={t('ui.close')} className="text-stone-400 hover:text-stone-700">
             <MaterialIcon name="close" size={22} />
           </button>
         </div>
@@ -165,6 +168,7 @@ export function ConfirmDialog({
   onConfirm: () => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation('community');
   return (
     <Dialog
       title={title}
@@ -172,10 +176,10 @@ export function ConfirmDialog({
       footer={
         <>
           <button type="button" onClick={onClose} className={ghostBtn}>
-            Hủy
+            {t('ui.cancel')}
           </button>
           <button type="button" onClick={onConfirm} disabled={pending} className={danger ? dangerBtn : primaryBtn}>
-            {pending ? 'Đang xử lý…' : confirmLabel}
+            {pending ? t('ui.processing') : confirmLabel}
           </button>
         </>
       }

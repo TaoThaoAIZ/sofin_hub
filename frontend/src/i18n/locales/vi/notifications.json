@@ -1,0 +1,57 @@
+{
+  "close": "Đóng",
+  "bell": {
+    "label": "Thông báo",
+    "labelUnread": "Thông báo ({{count}} chưa đọc)",
+    "title": "Thông báo",
+    "markAll": "Đọc tất cả",
+    "loading": "Đang tải…",
+    "loadError": "Không tải được thông báo.",
+    "empty": "Bạn chưa có thông báo nào.",
+    "viewAll": "Xem tất cả thông báo"
+  },
+  "types": {
+    "post_liked": "Có người thích bài viết của bạn",
+    "post_commented": "Có bình luận mới trên bài viết của bạn",
+    "event_created": "Sự kiện mới trong cộng đồng",
+    "event_reminder": "Nhắc lịch sự kiện",
+    "member_joined": "Thành viên mới tham gia cộng đồng của bạn",
+    "role_changed": "Thay đổi vai trò của bạn",
+    "removed_from_community": "Bị xóa khỏi cộng đồng",
+    "payment_succeeded": "Thanh toán thành công",
+    "payment_failed": "Thanh toán thất bại",
+    "report_resolved": "Báo cáo của bạn đã được xử lý",
+    "message_received": "Tin nhắn mới",
+    "system": "Thông báo hệ thống"
+  },
+  "page": {
+    "title": "Thông báo",
+    "unread": "Chưa đọc",
+    "unreadCount": "Chưa đọc ({{count}})",
+    "markAll": "Đọc tất cả",
+    "actionFailed": "Thao tác thất bại",
+    "loading": "Đang tải thông báo…",
+    "loadError": "Không tải được thông báo.",
+    "noUnread": "Không còn thông báo chưa đọc.",
+    "empty": "Bạn chưa có thông báo nào.",
+    "unreadAria": "Chưa đọc",
+    "deleteAria": "Xóa thông báo",
+    "deleteTitle": "Xóa",
+    "deleteFailed": "Không xóa được thông báo"
+  },
+  "prefs": {
+    "digest": {
+      "off": "Tắt",
+      "daily": "Hằng ngày",
+      "weekly": "Hằng tuần"
+    },
+    "saveFailed": "Không lưu được tuỳ chọn",
+    "title": "Tuỳ chọn thông báo",
+    "desc": "Bật/tắt từng loại thông báo. Các loại liên quan đến tiền, quyền và kiểm duyệt luôn được gửi.",
+    "loading": "Đang tải…",
+    "loadError": "Không tải được tuỳ chọn.",
+    "mandatory": "Bắt buộc",
+    "emailDigest": "Email tổng hợp",
+    "note": "(Lưu tuỳ chọn; email tổng hợp chưa được gửi thật.)"
+  }
+}

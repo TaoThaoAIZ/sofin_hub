@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import i18n from '../../../i18n';
 import { formatDateTime } from '../../../lib/datetime';
 import { PreviewDialog, PreviewKv, PreviewSection, DateInput, useDialogSlot, useTableState } from '../components/Batch2Parts';
 import { DataTable, MainCell, MonoCell, MutedCell, TextCell } from '../components/DataTable';
@@ -13,37 +15,19 @@ import { useAuditLogs } from '../queries';
 import { AUDIT_ACTION, type AuditItem } from '../types';
 
 const LIMIT = 30;
-export const AUDIT_GROUPS = [
-  { value: 'community.', label: 'Cộng đồng' },
-  { value: 'user.', label: 'Người dùng' },
-  { value: 'case.', label: 'Vụ việc kiểm duyệt' },
-  { value: 'content.', label: 'Nội dung' },
-  { value: 'payment.', label: 'Thanh toán' },
-  { value: 'discovery.', label: 'Khám phá' },
-  { value: 'support.', label: 'Hỗ trợ' },
-  { value: 'system.', label: 'Hệ thống' },
-  { value: 'report.', label: 'Báo cáo' },
+const NS = 'admin-pages1';
+export const auditGroups = () => [
+  { value: 'community.', label: i18n.t('audit.group.community', { ns: NS }) },
+  { value: 'user.', label: i18n.t('audit.group.user', { ns: NS }) },
+  { value: 'case.', label: i18n.t('audit.group.case', { ns: NS }) },
+  { value: 'content.', label: i18n.t('audit.group.content', { ns: NS }) },
+  { value: 'payment.', label: i18n.t('audit.group.payment', { ns: NS }) },
+  { value: 'discovery.', label: i18n.t('audit.group.discovery', { ns: NS }) },
+  { value: 'support.', label: i18n.t('audit.group.support', { ns: NS }) },
+  { value: 'system.', label: i18n.t('audit.group.system', { ns: NS }) },
+  { value: 'report.', label: i18n.t('audit.group.report', { ns: NS }) },
 ];
-const TARGET: Record<string, string> = {
-  community: 'Cộng đồng',
-  user: 'Người dùng',
-  case: 'Vụ việc',
-  content: 'Nội dung',
-  post: 'Bài viết',
-  comment: 'Bình luận',
-  payment: 'Thanh toán',
-  refund: 'Hoàn tiền',
-  payout: 'Chi trả',
-  report: 'Báo cáo',
-  ticket: 'Ticket',
-  admin: 'Quản trị viên',
-  role: 'Vai trò',
-  flag: 'Tính năng thử nghiệm',
-  setting: 'Cài đặt',
-  integration: 'Tích hợp',
-  template: 'Mẫu email',
-  category: 'Danh mục',
-};
+const targetLabel = (type: string) => i18n.t(`audit.target.${type}`, { ns: NS, defaultValue: type });
 const actionLabel = (a: string) => auditLabel(a, AUDIT_ACTION);
 
 /** Ngày yyyy-mm-dd -> đầu / cuối ngày (ISO) để lọc theo khoảng. */
@@ -51,29 +35,30 @@ const dayStart = (d: string) => (d ? `${d}T00:00:00.000Z` : undefined);
 const dayEnd = (d: string) => (d ? `${d}T23:59:59.999Z` : undefined);
 
 function AuditDetail({ a, onClose }: { a: AuditItem; onClose: () => void }) {
+  const { t } = useTranslation(NS);
   const navigate = useNavigate();
   const meta = a.metadata && Object.keys(a.metadata).length > 0 ? a.metadata : null;
   return (
-    <PreviewDialog title={actionLabel(a.action)} sub={`${a.actor?.name ?? 'Hệ thống'} · ${formatDateTime(a.createdAt)}`} onClose={onClose}>
+    <PreviewDialog title={actionLabel(a.action)} sub={`${a.actor?.name ?? t('audit.system')} · ${formatDateTime(a.createdAt)}`} onClose={onClose}>
       <PreviewKv
         items={[
-          ['Quản trị viên', a.actor ? `${a.actor.name}${a.actor.email ? ` (${a.actor.email})` : ''}${a.actor.role ? ` · ${ROLE_LABEL[a.actor.role.key] ?? a.actor.role.name}` : ''}` : 'Hệ thống'],
-          ['Hành động', <span key="a" style={{ fontFamily: MONO_FONT }}>{a.action}</span>],
-          ['Đối tượng', `${a.targetLabel || a.targetId} (${TARGET[a.targetType] ?? a.targetType})`],
-          ['Địa chỉ IP', a.ip ? <span key="ip" style={{ fontFamily: MONO_FONT }}>{a.ip}</span> : null],
-          ['Mã đối tượng', <span key="t" style={{ fontFamily: MONO_FONT }}>{a.targetId}</span>],
-          ['Lý do', a.reason],
-          ['Ghi chú', a.note],
-          ['Bằng chứng', a.evidence],
-          ['Vụ việc', a.caseId ? (
+          [t('audit.admin'), a.actor ? `${a.actor.name}${a.actor.email ? ` (${a.actor.email})` : ''}${a.actor.role ? ` · ${ROLE_LABEL[a.actor.role.key] ?? a.actor.role.name}` : ''}` : t('audit.system')],
+          [t('audit.action'), <span key="a" style={{ fontFamily: MONO_FONT }}>{a.action}</span>],
+          [t('audit.targetCol'), `${a.targetLabel || a.targetId} (${targetLabel(a.targetType)})`],
+          [t('audit.ip'), a.ip ? <span key="ip" style={{ fontFamily: MONO_FONT }}>{a.ip}</span> : null],
+          [t('audit.targetId'), <span key="t" style={{ fontFamily: MONO_FONT }}>{a.targetId}</span>],
+          [t('audit.reason'), a.reason],
+          [t('audit.note'), a.note],
+          [t('audit.evidence'), a.evidence],
+          [t('audit.case'), a.caseId ? (
             <button key="c" type="button" className="border-0 bg-transparent p-0 font-semibold text-brand hover:underline" onClick={() => navigate(`/admin/moderation/cases/${a.caseId}`)}>
-              Mở vụ việc
+              {t('audit.openCase')}
             </button>
           ) : null],
         ]}
       />
       {meta && (
-        <PreviewSection title="Dữ liệu kèm theo">
+        <PreviewSection title={t('audit.metadata')}>
           <pre className="m-0 max-h-60 overflow-auto rounded-xl bg-[#faf7f4] p-3 text-xs break-words whitespace-pre-wrap" style={{ fontFamily: MONO_FONT }}>
             {JSON.stringify(meta, null, 2)}
           </pre>
@@ -85,6 +70,7 @@ function AuditDetail({ a, onClose }: { a: AuditItem; onClose: () => void }) {
 
 /** Nhật ký hoạt động của quản trị viên (GET /admin/audit-logs): tìm kiếm, lọc theo nhóm hành động + khoảng ngày, xem chi tiết. */
 export function AuditView() {
+  const { t: tr } = useTranslation(NS);
   const t = useTableState({ action: '', actor: '', group: '' });
   const toast = useToast();
   const filters = useAdminData<AuditFilters>('audit', '/audit-logs/filters');
@@ -99,7 +85,7 @@ export function AuditView() {
     try {
       const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v) as [string, string][]).toString();
       await apiDownload(`/admin/audit-logs/export${qs ? `?${qs}` : ''}`, `nhat-ky-hoat-dong-${new Date().toISOString().slice(0, 10)}.csv`);
-      toast.success('Đã xuất nhật ký (tối đa 5.000 dòng)');
+      toast.success(tr('audit.exported'));
     } catch (e) {
       toast.error(errMessage(e));
     } finally {
@@ -114,46 +100,46 @@ export function AuditView() {
   return (
     <>
       <PageHeader
-        title="Nhật ký hoạt động"
-        subtitle="Mọi thao tác quản trị đều được ghi lại: ai làm, làm gì, trên đối tượng nào và vì sao."
+        title={tr('audit.title')}
+        subtitle={tr('audit.subtitle')}
         actions={
           <AdminButton icon="download" disabled={exporting} onClick={() => void exportCsv()}>
-            {exporting ? 'Đang xuất…' : 'Xuất CSV'}
+            {exporting ? tr('audit.exporting') : tr('audit.exportCsv')}
           </AdminButton>
         }
       />
       <DataTable<AuditItem>
         headTools={
           <div className="flex flex-wrap items-center gap-1.5 text-xs text-stone-500">
-            Từ
-            <DateInput label="Từ ngày" value={from} onChange={(v) => { setFrom(v); t.setPage(1); }} />
-            đến
-            <DateInput label="Đến ngày" value={to} min={from} onChange={(v) => { setTo(v); t.setPage(1); }} />
+            {tr('audit.from')}
+            <DateInput label={tr('audit.fromDate')} value={from} onChange={(v) => { setFrom(v); t.setPage(1); }} />
+            {tr('audit.to')}
+            <DateInput label={tr('audit.toDate')} value={to} min={from} onChange={(v) => { setTo(v); t.setPage(1); }} />
           </div>
         }
         columns={[
-          { key: 'time', label: 'Thời gian', w: 1.2, render: (a) => <MutedCell>{formatDateTime(a.createdAt)}</MutedCell> },
-          { key: 'actor', label: 'Quản trị viên', w: 1.5, render: (a) => <MainCell name={a.actor?.name ?? 'Hệ thống'} sub={a.actor?.role ? (ROLE_LABEL[a.actor.role.key] ?? a.actor.role.name) : a.actor?.email} avatar seed={a.actor?.id} /> },
-          { key: 'action', label: 'Hành động', w: 1.6, render: (a) => <TextCell>{actionLabel(a.action)}</TextCell> },
-          { key: 'target', label: 'Đối tượng', w: 1.5, render: (a) => <TextCell>{`${a.targetLabel || a.targetId} (${TARGET[a.targetType] ?? a.targetType})`}</TextCell> },
-          { key: 'case', label: 'Vụ việc', w: 0.9, render: (a) => (a.caseId ? <MonoCell>{a.caseId.slice(0, 8)}</MonoCell> : <MutedCell>—</MutedCell>) },
-          { key: 'ip', label: 'IP', w: 1, render: (a) => (a.ip ? <MonoCell>{a.ip}</MonoCell> : <MutedCell>—</MutedCell>) },
+          { key: 'time', label: tr('audit.colTime'), w: 1.2, render: (a) => <MutedCell>{formatDateTime(a.createdAt)}</MutedCell> },
+          { key: 'actor', label: tr('audit.admin'), w: 1.5, render: (a) => <MainCell name={a.actor?.name ?? tr('audit.system')} sub={a.actor?.role ? (ROLE_LABEL[a.actor.role.key] ?? a.actor.role.name) : a.actor?.email} avatar seed={a.actor?.id} /> },
+          { key: 'action', label: tr('audit.action'), w: 1.6, render: (a) => <TextCell>{actionLabel(a.action)}</TextCell> },
+          { key: 'target', label: tr('audit.targetCol'), w: 1.5, render: (a) => <TextCell>{`${a.targetLabel || a.targetId} (${targetLabel(a.targetType)})`}</TextCell> },
+          { key: 'case', label: tr('audit.case'), w: 0.9, render: (a) => (a.caseId ? <MonoCell>{a.caseId.slice(0, 8)}</MonoCell> : <MutedCell>—</MutedCell>) },
+          { key: 'ip', label: tr('audit.colIp'), w: 1, render: (a) => (a.ip ? <MonoCell>{a.ip}</MonoCell> : <MutedCell>—</MutedCell>) },
         ]}
         rows={list.data?.data ?? []}
         rowKey={(a) => a.id}
         onRow={(a) => slot.show((close) => <AuditDetail a={a} onClose={close} />)}
-        actions={(a) => [{ label: 'Chi tiết', onClick: () => slot.show((close) => <AuditDetail a={a} onClose={close} />) }]}
-        search={{ value: t.q, onChange: t.onQ, placeholder: 'Tìm quản trị viên, hành động, đối tượng...' }}
+        actions={(a) => [{ label: tr('audit.details'), onClick: () => slot.show((close) => <AuditDetail a={a} onClose={close} />) }]}
+        search={{ value: t.q, onChange: t.onQ, placeholder: tr('audit.searchPlaceholder') }}
         filters={[
-          { key: 'actor', label: 'Quản trị viên', value: t.f.actor, options: (filters.data?.actors ?? []).map((x) => ({ value: x.id, label: x.name })), onChange: t.setFilter('actor') },
-          { key: 'group', label: 'Nhóm hành động', value: t.f.group, options: AUDIT_GROUPS, onChange: t.setFilter('group') },
-          { key: 'action', label: 'Hành động', value: t.f.action, options: (filters.data?.actions ?? []).map((x) => ({ value: x, label: actionLabel(x) })), onChange: t.setFilter('action') },
+          { key: 'actor', label: tr('audit.admin'), value: t.f.actor, options: (filters.data?.actors ?? []).map((x) => ({ value: x.id, label: x.name })), onChange: t.setFilter('actor') },
+          { key: 'group', label: tr('audit.actionGroup'), value: t.f.group, options: auditGroups(), onChange: t.setFilter('group') },
+          { key: 'action', label: tr('audit.action'), value: t.f.action, options: (filters.data?.actions ?? []).map((x) => ({ value: x, label: actionLabel(x) })), onChange: t.setFilter('action') },
         ]}
         onClearFilters={clear}
         loading={list.isPending}
         error={list.isError ? list.error : null}
         onRetry={() => void list.refetch()}
-        emptyText="Chưa có thao tác nào được ghi lại."
+        emptyText={tr('audit.empty')}
         page={list.data ? { page: list.data.meta.page, totalPages: list.data.meta.totalPages, total: list.data.meta.total, limit: LIMIT, onPage: t.setPage } : undefined}
       />
       {slot.el}

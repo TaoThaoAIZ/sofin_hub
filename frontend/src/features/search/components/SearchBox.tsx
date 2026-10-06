@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import i18n from '../../../i18n';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { ApiError } from '../../../lib/api';
 import { useClickOutside } from '../../../lib/useClickOutside';
@@ -17,13 +19,14 @@ function useDebounced(value: string, ms: number) {
 }
 
 function subtitle(r: SearchResult) {
-  if (r.type === 'course') return 'Khóa học';
-  if (r.type === 'member') return `Thành viên · ${r.courseTitle}`;
-  return `Bài viết · ${r.courseTitle}`;
+  if (r.type === 'course') return i18n.t('row.course', { ns: 'search' });
+  if (r.type === 'member') return i18n.t('box.subtitleMember', { ns: 'search', course: r.courseTitle });
+  return i18n.t('box.subtitlePost', { ns: 'search', course: r.courseTitle });
 }
 
 /** Ô tìm kiếm có gợi ý (debounce 250ms, điều hướng bàn phím, ⌘K / Ctrl+K để focus). Enter -> /search?q=. */
-export function SearchBox({ placeholder = 'Tìm kiếm bài viết, thành viên, chủ đề...' }: { placeholder?: string }) {
+export function SearchBox({ placeholder }: { placeholder?: string }) {
+  const { t } = useTranslation('search');
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
   const wrapRef = useRef<HTMLFormElement>(null);
@@ -91,7 +94,7 @@ export function SearchBox({ placeholder = 'Tìm kiếm bài viết, thành viên
             inputRef.current?.blur();
           }
         }}
-        placeholder={placeholder}
+        placeholder={placeholder ?? t('box.placeholder')}
         role="combobox"
         aria-expanded={showPanel}
         aria-autocomplete="list"
@@ -101,14 +104,14 @@ export function SearchBox({ placeholder = 'Tìm kiếm bài viết, thành viên
 
       {showPanel && (
         <div className="absolute top-[calc(100%+6px)] right-0 left-0 z-40 overflow-hidden rounded-2xl border border-[rgba(120,60,20,.12)] bg-white shadow-xl">
-          {suggest.isFetching && items.length === 0 && <p className="px-4 py-3 text-[13px] text-stone-400">Đang tìm…</p>}
+          {suggest.isFetching && items.length === 0 && <p className="px-4 py-3 text-[13px] text-stone-400">{t('box.searching')}</p>}
           {err && (
             <p className="px-4 py-3 text-[13px] text-red-600">
-              {err.status === 429 ? 'Bạn tìm kiếm quá nhanh, vui lòng thử lại sau ít giây.' : err.message}
+              {err.status === 429 ? t('box.rateLimit') : err.message}
             </p>
           )}
           {!err && !suggest.isFetching && items.length === 0 && debounced === q.trim() && (
-            <p className="px-4 py-3 text-[13px] text-stone-500">Không có gợi ý phù hợp.</p>
+            <p className="px-4 py-3 text-[13px] text-stone-500">{t('box.noSuggestions')}</p>
           )}
           {items.map((r, i) => (
             <button
@@ -133,7 +136,7 @@ export function SearchBox({ placeholder = 'Tìm kiếm bài viết, thành viên
           ))}
           <button type="button" onClick={goSearch} className="flex w-full items-center gap-2 border-t border-[rgba(120,60,20,.08)] px-4 py-2.5 text-left text-[13px] font-semibold text-brand hover:bg-brand/5">
             <MaterialIcon name="search" size={17} color="#f26a1b" />
-            Xem tất cả kết quả cho "{q.trim()}"
+            {t('box.viewAll', { q: q.trim() })}
           </button>
         </div>
       )}

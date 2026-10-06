@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useIsPlatformAdmin } from '../../features/admin/queries';
 import { useAuth } from '../../features/auth/AuthContext';
@@ -9,13 +10,14 @@ import { ButtonLink } from '../ui/Button';
 import { GlobeIcon } from '../ui/icons';
 
 // Chỉ giữ các mục có route thật.
-const NAV_ITEMS: { label: string; to: string }[] = [
-  { label: 'Khám phá', to: '/' },
-  { label: 'Khóa học', to: '/#courses' },
-  { label: 'Cộng đồng của tôi', to: '/me/communities' },
+const NAV_ITEMS: { key: string; to: string }[] = [
+  { key: 'discover', to: '/' },
+  { key: 'courses', to: '/#courses' },
+  { key: 'myCommunities', to: '/me/communities' },
 ];
 
-export function Header({ active = 'Khám phá' }: { active?: string }) {
+export function Header({ active = 'discover' }: { active?: string }) {
+  const { t, i18n } = useTranslation('common');
   const { user, status, logout } = useAuth();
   const { isAdmin } = useIsPlatformAdmin();
   const navigate = useNavigate();
@@ -38,10 +40,10 @@ export function Header({ active = 'Khám phá' }: { active?: string }) {
 
       <nav className="hidden h-[22px] min-w-0 flex-1 flex-wrap items-center justify-center gap-x-[clamp(16px,2.5vw,40px)] gap-y-10 overflow-hidden text-[15px] leading-[22px] font-medium whitespace-nowrap md:flex">
         {NAV_ITEMS.map((item) => {
-          const className = item.label === active ? 'font-semibold text-brand' : 'text-stone-900 hover:text-brand';
+          const className = item.key === active ? 'font-semibold text-brand' : 'text-stone-900 hover:text-brand';
           return (
-            <Link key={item.label} to={item.to} className={className}>
-              {item.label}
+            <Link key={item.key} to={item.to} className={className}>
+              {t(`nav.${item.key}`)}
             </Link>
           );
         })}
@@ -54,10 +56,16 @@ export function Header({ active = 'Khám phá' }: { active?: string }) {
             <NotificationBell variant="header" />
           </div>
         )}
-        <div className="hidden items-center gap-1.5 px-2 text-sm font-medium lg:flex">
+        <button
+          type="button"
+          onClick={() => void i18n.changeLanguage(i18n.language === 'en' ? 'vi' : 'en')}
+          aria-label={t('header.language')}
+          title={t('header.language')}
+          className="flex items-center gap-1.5 rounded-xl px-2 py-1 text-sm font-medium hover:bg-brand/10 hover:text-brand"
+        >
           <GlobeIcon size={18} />
-          VI
-        </div>
+          {i18n.language === 'en' ? 'EN' : 'VI'}
+        </button>
 
         {status === 'authenticated' && user ? (
           <div ref={menuRef} className="relative">
@@ -79,8 +87,8 @@ export function Header({ active = 'Khám phá' }: { active?: string }) {
               <div className="absolute top-[calc(100%+8px)] right-0 z-30 flex w-56 flex-col gap-1 rounded-2xl border border-[rgba(120,60,20,.1)] bg-white p-2 text-sm shadow-[0_16px_40px_rgba(120,60,20,.18)]">
                 <div className="truncate px-3 py-1.5 text-stone-500">{user.email}</div>
                 {[
-                  { label: 'Cài đặt hồ sơ', to: '/settings' },
-                  ...(isAdmin ? [{ label: 'Quản trị', to: '/admin' }] : []),
+                  { label: t('header.profileSettings'), to: '/settings' },
+                  ...(isAdmin ? [{ label: t('header.admin'), to: '/admin' }] : []),
                 ].map((item) => (
                   <Link
                     key={item.to}
@@ -96,7 +104,7 @@ export function Header({ active = 'Khám phá' }: { active?: string }) {
                   onClick={doLogout}
                   className="rounded-xl px-3 py-2 text-left font-medium text-stone-900 hover:bg-brand/10 hover:text-brand"
                 >
-                  Đăng xuất
+                  {t('header.logout')}
                 </button>
               </div>
             )}
@@ -107,12 +115,12 @@ export function Header({ active = 'Khám phá' }: { active?: string }) {
             state={{ from: location.pathname }}
             className="glass hidden h-10 items-center rounded-[14px] px-4 text-sm font-medium sm:flex"
           >
-            Đăng nhập
+            {t('header.login')}
           </Link>
         )}
 
         <ButtonLink to="/communities/new" className="h-10 rounded-[14px] px-[18px] text-sm font-semibold">
-          Tạo cộng đồng
+          {t('header.createCommunity')}
         </ButtonLink>
       </div>
     </header>

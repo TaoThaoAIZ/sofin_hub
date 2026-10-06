@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Button, ButtonLink } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
@@ -9,6 +10,7 @@ import { AuthShell } from '../features/account/components/AuthShell';
 import { Alert } from '../features/account/components/Field';
 
 export function ResetPasswordPage() {
+  const { t } = useTranslation('auth');
   const [params] = useSearchParams();
   const token = params.get('token') ?? '';
   const [password, setPassword] = useState('');
@@ -23,7 +25,7 @@ export function ResetPasswordPage() {
     e.preventDefault();
     const next = {
       password: validateNewPassword(password) ?? undefined,
-      confirm: confirm !== password ? 'Mật khẩu nhập lại không khớp' : undefined,
+      confirm: confirm !== password ? t('reset.mismatch') : undefined,
     };
     setErrors(next);
     if (next.password || next.confirm) return;
@@ -38,7 +40,7 @@ export function ResetPasswordPage() {
         setTokenInvalid(true);
         setError(err.message);
       } else {
-        setError(err instanceof ApiError ? err.message : 'Đặt lại mật khẩu thất bại, vui lòng thử lại');
+        setError(err instanceof ApiError ? err.message : t('reset.fail'));
       }
     } finally {
       setSubmitting(false);
@@ -47,13 +49,13 @@ export function ResetPasswordPage() {
 
   if (!token || tokenInvalid) {
     return (
-      <AuthShell title="Liên kết không hợp lệ" subtitle="Liên kết đặt lại mật khẩu đã hết hạn, đã được sử dụng hoặc không đúng.">
+      <AuthShell title={t('reset.invalidTitle')} subtitle={t('reset.invalidSubtitle')}>
         {error && <Alert kind="error">{error}</Alert>}
         <ButtonLink to="/forgot-password" className="h-[52px] rounded-2xl text-base font-bold">
-          Yêu cầu liên kết mới
+          {t('reset.requestNew')}
         </ButtonLink>
         <Link to="/login" className="text-center text-[15px] font-medium">
-          Quay lại đăng nhập
+          {t('common.backToLogin')}
         </Link>
       </AuthShell>
     );
@@ -61,16 +63,16 @@ export function ResetPasswordPage() {
 
   if (done) {
     return (
-      <AuthShell title="Đã đặt lại mật khẩu" subtitle="Các phiên đăng nhập cũ đã bị đăng xuất. Hãy đăng nhập bằng mật khẩu mới.">
+      <AuthShell title={t('reset.doneTitle')} subtitle={t('reset.doneSubtitle')}>
         <ButtonLink to="/login" className="h-[52px] rounded-2xl text-base font-bold">
-          Đăng nhập
+          {t('reset.signIn')}
         </ButtonLink>
       </AuthShell>
     );
   }
 
   return (
-    <AuthShell title="Đặt lại mật khẩu" subtitle="Nhập mật khẩu mới: tối thiểu 8 ký tự, có chữ in hoa và ký tự đặc biệt.">
+    <AuthShell title={t('reset.title')} subtitle={t('reset.subtitle')}>
       <form onSubmit={submit} noValidate className="flex flex-col gap-4">
         <FormField
           type="password"
@@ -80,7 +82,7 @@ export function ResetPasswordPage() {
             setPassword(v);
             setErrors((x) => ({ ...x, password: undefined }));
           }}
-          placeholder="Mật khẩu mới"
+          placeholder={t('reset.newPassword')}
           error={errors.password}
         />
         <FormField
@@ -91,12 +93,12 @@ export function ResetPasswordPage() {
             setConfirm(v);
             setErrors((x) => ({ ...x, confirm: undefined }));
           }}
-          placeholder="Nhập lại mật khẩu mới"
+          placeholder={t('reset.repeatPassword')}
           error={errors.confirm}
         />
         {error && <Alert kind="error">{error}</Alert>}
         <Button type="submit" disabled={submitting} className="h-[56px] rounded-2xl text-base font-bold">
-          {submitting ? 'Đang lưu…' : 'Đặt lại mật khẩu'}
+          {submitting ? t('reset.saving') : t('reset.submit')}
         </Button>
       </form>
     </AuthShell>

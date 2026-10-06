@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
 import { CardFields } from '../../components/ui/CardFields';
@@ -16,7 +17,7 @@ import {
   parseMoney,
   SLUG_RE,
   slugify,
-  STEP_LABELS,
+  STEP_LABEL_KEYS,
   validateStep,
   type FieldErrors,
   type WizardForm,
@@ -29,14 +30,6 @@ import { StepHostPlan } from './StepHostPlan';
 import { LaunchView, StepSummary, type SummaryRow } from './StepLaunch';
 import { StepMembers, type PayoutValues } from './StepMembers';
 import type { DraftView, FeeInfo, HostPlanInfo, PayoutInfo, PublishedCommunity } from './types';
-
-const HEAD: { a: string; b: string; c?: string; lead: string }[] = [
-  { a: 'Cộng đồng của bạn', b: 'tên là gì?', lead: 'Đặt tên theo kết quả thành viên nhận được, không phải theo tên bạn – người lạ tìm thấy bạn dễ hơn trên trang Khám phá.' },
-  { a: 'Dùng thử', b: '{n} ngày', c: ', chưa trừ đồng nào', lead: 'Chọn gói bạn muốn tiếp tục sau thời gian dùng thử. Chúng tôi nhắc bạn trước khi hết hạn.' },
-  { a: 'Để người lạ hiểu ngay', b: 'vì sao nên tham gia', lead: 'Hoàn thiện nhận diện và giới thiệu ngắn gọn về cộng đồng của bạn.' },
-  { a: 'Ai được vào, và vào với', b: 'giá bao nhiêu?', lead: 'Thiết lập quyền tham gia, mức giá và một số câu hỏi để hiểu thành viên của bạn hơn.' },
-  { a: 'Sẵn sàng', b: 'ra mắt!', lead: 'Kiểm tra lại thông tin trước khi mở cộng đồng.' },
-];
 
 const NEXT_STEP_INDEX: Record<DraftView['nextStep'], number> = { basics: 0, plan: 1, identity: 2, members: 3, launch: 4 };
 
@@ -68,6 +61,7 @@ function formatDay(iso: Date): string {
 }
 
 export function CreateWizard() {
+  const { t } = useTranslation('wizard');
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const draftParam = params.get('draft');
@@ -137,13 +131,13 @@ export function CreateWizard() {
   if (form.slug) {
     if (!slugLocalOk) {
       slugStatus = 'invalid';
-      slugReason = form.slug.length < 3 ? 'Đường dẫn tối thiểu 3 ký tự' : 'Chỉ dùng chữ thường, số và dấu gạch ngang';
+      slugReason = form.slug.length < 3 ? t('wizard.slugMin') : t('wizard.slugFormat');
     } else if (debouncedSlug !== form.slug || slugQuery.isFetching || !slugQuery.data) {
       slugStatus = slugQuery.isError && debouncedSlug === form.slug ? 'idle' : 'checking';
     } else if (slugQuery.data.available) slugStatus = 'available';
     else {
       slugStatus = slugQuery.data.reason === 'taken' ? 'taken' : 'invalid';
-      slugReason = `${slugQuery.data.message}${slugQuery.data.suggestion ? ` Gợi ý: ${slugQuery.data.suggestion}` : ''}`;
+      slugReason = slugQuery.data.suggestion ? t('wizard.slugSuggestion', { message: slugQuery.data.message, suggestion: slugQuery.data.suggestion }) : slugQuery.data.message;
     }
   }
 
@@ -320,16 +314,16 @@ export function CreateWizard() {
     setErrors(e);
     if (Object.keys(e).length) return;
     if (step < 4 && !(step === 1 && form.hostPlan === 'pro' && !savedCardReady && !typedCardOk) && !(await saveStep(step))) return;
-    showToast('Đã lưu nháp');
+    showToast(t('wizard.draftSaved'));
     navigate('/me/communities');
   };
 
   const connectPayout = async (v: PayoutValues) => {
-    if (!draft) throw new Error('Hãy hoàn tất bước 1 trước');
+    if (!draft) throw new Error(t('wizard.finishStep1'));
     setPayoutError(undefined);
     await payoutApi.connect.mutateAsync({ id: draft.id, ...v });
     setDraft((d) => (d ? { ...d, payout: { status: 'connected', accountMasked: undefined, bankName: v.bankName } } : d));
-    showToast('Đã kết nối tài khoản nhận tiền');
+    showToast(t('wizard.payoutConnected'));
   };
   const skipPayout = async () => {
     if (!draft) return;
@@ -338,7 +332,7 @@ export function CreateWizard() {
       await payoutApi.skip.mutateAsync(draft.id);
       setDraft((d) => (d ? { ...d, payout: { status: 'skipped' } } : d));
     } catch (err) {
-      setPayoutError(err instanceof Error ? err.message : 'Không thực hiện được, vui lòng thử lại');
+      setPayoutError(err instanceof Error ? err.message : t('wizard.actionFailed'));
     }
   };
   const payoutInfo: PayoutInfo = draft?.payout
@@ -349,89 +343,95 @@ export function CreateWizard() {
   const copyInvite = async () => {
     try {
       await navigator.clipboard.writeText(inviteUrl);
-      showToast('Đã sao chép link mời');
+      showToast(t('wizard.inviteCopied'));
     } catch {
-      showToast('Không sao chép được, hãy chép link thủ công');
+      showToast(t('wizard.copyFailed'));
     }
   };
 
   const initials = (form.name.trim().split(/\s+/).map((w) => w[0]).join('').slice(0, 2) || 'SH').toUpperCase();
   const priceLabel =
     furthest < 3 && step < 3
-      ? 'Giá đặt ở bước 4'
+      ? t('wizard.priceAtStep4')
       : form.billing === 'free'
-        ? 'Miễn phí'
+        ? t('wizard.free')
         : form.billing === 'month'
-          ? `${formatMoney(parseMoney(form.priceMonthly) || 0)}/tháng`
-          : `${formatMoney(parseMoney(form.priceAnnual) || 0)}/năm`;
+          ? t('wizard.perMonth', { amount: formatMoney(parseMoney(form.priceMonthly) || 0) })
+          : t('wizard.perYear', { amount: formatMoney(parseMoney(form.priceAnnual) || 0) });
 
   const trialDaysMember = draft?.members.trialDays ?? 0;
   const summary: SummaryRow[] = [
-    { label: 'Tên cộng đồng', value: form.name, step: 0 },
-    { label: 'Đường dẫn', value: `sofinhub.com/${form.slug}`, step: 0 },
-    { label: 'Danh mục', value: categories.find((c) => c.id === form.category)?.name ?? form.category, step: 0 },
+    { label: t('summary.name'), value: form.name, step: 0 },
+    { label: t('summary.slug'), value: `sofinhub.com/${form.slug}`, step: 0 },
+    { label: t('summary.category'), value: categories.find((c) => c.id === form.category)?.name ?? form.category, step: 0 },
     {
-      label: 'Gói',
+      label: t('summary.plan'),
       value:
         form.hostPlan === 'pro' && proPlan
-          ? `${proPlan.name} · ${form.hostCycle === 'annual' ? 'theo năm' : 'theo tháng'}${hostTrialDays ? ` · dùng thử ${hostTrialDays} ngày` : ''}`
-          : `${hostData?.plans.find((p) => p.free)?.name ?? 'Khởi đầu'} · miễn phí`,
+          ? `${t('summary.planPro', { name: proPlan.name, cycle: form.hostCycle === 'annual' ? t('summary.cycleAnnual') : t('summary.cycleMonthly') })}${hostTrialDays ? t('summary.trialDays', { days: hostTrialDays }) : ''}`
+          : t('summary.planFree', { name: hostData?.plans.find((p) => p.free)?.name ?? t('summary.startFallback') }),
       step: 1,
     },
-    { label: 'Lời hứa', value: form.promise || 'Chưa có', step: 2 },
-    { label: 'Lợi ích', value: `${form.benefits.filter((b) => b.trim()).length} điều thành viên nhận được`, step: 2 },
-    { label: 'Quyền truy cập', value: `${form.visibility === 'public' ? 'Công khai' : 'Riêng tư'} · ${form.questions.filter((q) => q.trim()).length} câu hỏi gia nhập`, step: 3 },
+    { label: t('summary.promise'), value: form.promise || t('summary.promiseNone'), step: 2 },
+    { label: t('summary.benefits'), value: t('summary.benefitsValue', { count: form.benefits.filter((b) => b.trim()).length }), step: 2 },
+    { label: t('summary.access'), value: t('summary.accessValue', { visibility: form.visibility === 'public' ? t('summary.public') : t('summary.private'), count: form.questions.filter((q) => q.trim()).length }), step: 3 },
     {
-      label: 'Giá',
+      label: t('summary.price'),
       value:
         form.billing === 'free'
-          ? 'Miễn phí'
-          : `${formatMoney(parseMoney(form.priceMonthly) || 0)}/tháng${form.billing === 'year' ? ` · ${formatMoney(parseMoney(form.priceAnnual) || 0)}/năm` : ''}${form.trialEnabled && trialDaysMember ? ` · dùng thử ${trialDaysMember} ngày` : ''}`,
+          ? t('wizard.free')
+          : `${t('wizard.perMonth', { amount: formatMoney(parseMoney(form.priceMonthly) || 0) })}${form.billing === 'year' ? t('summary.priceYear', { amount: formatMoney(parseMoney(form.priceAnnual) || 0) }) : ''}${form.trialEnabled && trialDaysMember ? t('summary.trialDays', { days: trialDaysMember }) : ''}`,
       step: 3,
     },
   ];
 
   // ---- Giao diện ----
-  if (draftParam && draftQuery.isPending) return <p className="py-24 text-center text-stone-500">Đang tải bản nháp…</p>;
+  if (draftParam && draftQuery.isPending) return <p className="py-24 text-center text-stone-500">{t('wizard.loadingDraft')}</p>;
   if (draftParam && (draftQuery.isError || !draftQuery.data)) {
     return (
       <div className="mx-auto max-w-[520px] px-4 py-24 text-center">
-        <p className="text-xl font-bold">Không tìm thấy bản nháp</p>
-        <p className="mt-2 text-stone-600">Bản nháp có thể đã được ra mắt hoặc đã bị xóa.</p>
-        <Link to="/communities/new" className="mt-4 inline-block font-semibold text-brand hover:underline">Tạo cộng đồng mới</Link>
+        <p className="text-xl font-bold">{t('wizard.draftNotFound')}</p>
+        <p className="mt-2 text-stone-600">{t('wizard.draftNotFoundDesc')}</p>
+        <Link to="/communities/new" className="mt-4 inline-block font-semibold text-brand hover:underline">{t('wizard.createNew')}</Link>
       </div>
     );
   }
 
-  const head = HEAD[step] ?? HEAD[0]!;
+  const headStep = Math.min(step, 4);
+  const head = {
+    a: t(`head.${headStep}.a`),
+    b: t(`head.${headStep}.b`, { n: String(hostTrialDays || '') }),
+    c: headStep === 1 ? t('head.1.c') : undefined,
+    lead: t(`head.${headStep}.lead`),
+  };
   const busy = saving || createDraft.isPending || patchStep.isPending || publish.isPending;
   const tip =
     published
       ? null
       : step === 3
-        ? { t: 'Mẹo đặt giá', s: 'Hãy cân nhắc giá trị bạn mang lại cho thành viên để chọn mức giá phù hợp.' }
+        ? { t: t('tips.price.t'), s: t('tips.price.s') }
         : step === 1
-          ? { t: 'Đổi gói bất cứ lúc nào', s: 'Nâng hoặc hạ gói trong Cài đặt cộng đồng, áp dụng từ kỳ thanh toán kế tiếp.' }
+          ? { t: t('tips.plan.t'), s: t('tips.plan.s') }
           : step === 2
-            ? { t: 'Trang giới thiệu = trang bán hàng', s: 'Logo, ảnh bìa, mô tả và các lợi ích nổi bật sẽ hiển thị trên trang cộng đồng của bạn.' }
+            ? { t: t('tips.identity.t'), s: t('tips.identity.s') }
             : step === 4
-              ? { t: 'Sắp xong rồi', s: 'Mọi thứ ở đây đều sửa được sau trong Cài đặt cộng đồng.' }
-              : { t: 'Khoảng 10 phút', s: 'Mọi thứ ở đây đều sửa được sau trong Cài đặt cộng đồng.' };
+              ? { t: t('tips.almost.t'), s: t('tips.almost.s') }
+              : { t: t('tips.start.t'), s: t('tips.start.s') };
 
   return (
     <div className="mx-auto grid w-full max-w-[1320px] gap-4 px-4 pt-6 pb-10 md:px-10 lg:grid-cols-[260px_minmax(0,1fr)]">
       <aside className="flex flex-col gap-1.5 rounded-[20px] border border-[rgba(120,60,20,.07)] bg-white p-3.5 lg:self-start">
         <div className="flex items-center gap-3.5 px-2 pt-1 pb-3.5">
-          <span className="text-xl font-extrabold tracking-[-0.02em]">Tạo cộng đồng</span>
+          <span className="text-xl font-extrabold tracking-[-0.02em]">{t('wizard.title')}</span>
           <MaterialIcon name="auto_awesome" size={20} color="#fbbf24" filled />
         </div>
-        <ol aria-label="Các bước" className="m-0 flex list-none flex-col gap-1.5 p-0 max-lg:flex-row max-lg:overflow-x-auto">
-          {STEP_LABELS.map((label, i) => {
+        <ol aria-label={t('wizard.stepsAria')} className="m-0 flex list-none flex-col gap-1.5 p-0 max-lg:flex-row max-lg:overflow-x-auto">
+          {STEP_LABEL_KEYS.map((labelKey, i) => {
             const on = i === (published ? 4 : step);
             const done = published ? true : i < step;
             const clickable = !published && i <= furthest;
             return (
-              <li key={label}>
+              <li key={labelKey}>
                 <button
                   type="button"
                   aria-current={on ? 'step' : undefined}
@@ -442,7 +442,7 @@ export function CreateWizard() {
                   <span className={`grid size-[38px] flex-none place-items-center rounded-full text-[15px] font-bold ${on || done ? 'bg-brand-gradient border-0 text-white' : 'border-[1.5px] border-[#e7e0da] bg-white text-stone-700'} ${on ? 'shadow-[0_6px_14px_rgba(242,106,27,.3)]' : ''}`}>
                     {done ? '✓' : i + 1}
                   </span>
-                  <span className={`text-[15px] ${on ? 'font-bold text-stone-900' : 'font-medium text-stone-600'}`}>{label}</span>
+                  <span className={`text-[15px] ${on ? 'font-bold text-stone-900' : 'font-medium text-stone-600'}`}>{t(`steps.${labelKey}`)}</span>
                 </button>
               </li>
             );
@@ -459,7 +459,7 @@ export function CreateWizard() {
         )}
         {!published && (
           <button type="button" onClick={() => void saveAndExit()} disabled={busy} className="flex items-center gap-1.5 border-0 bg-transparent px-2.5 pt-3 pb-0.5 text-left text-sm font-semibold underline disabled:opacity-60">
-            Lưu nháp &amp; thoát
+            {t('wizard.saveExit')}
             <MaterialIcon name="arrow_forward" size={18} />
           </button>
         )}
@@ -474,13 +474,13 @@ export function CreateWizard() {
               inviteUrl={inviteUrl}
               checklist={checklist.data}
               loading={checklist.isPending}
-              error={checklist.isError ? 'Không tải được danh sách ra mắt' : undefined}
+              error={checklist.isError ? t('wizard.launchChecklistError') : undefined}
               onCopy={() => void copyInvite()}
             />
           ) : (
             <>
               <div className="flex items-center gap-3.5 text-[13px] text-stone-500">
-                <span className="flex-none">Bước {step + 1} / 5</span>
+                <span className="flex-none">{t('wizard.stepOf', { step: step + 1 })}</span>
                 <div className="h-[5px] flex-1 overflow-hidden rounded-full bg-[#efeae6]">
                   <div className="h-full rounded-full bg-[linear-gradient(90deg,#ff8f45,#f26a1b)] transition-[width]" style={{ width: `${(step + 1) * 20}%` }} />
                 </div>
@@ -503,7 +503,7 @@ export function CreateWizard() {
                       errors={errors}
                       plans={hostData?.plans ?? []}
                       plansLoading={ownerPlans.isPending}
-                      plansError={ownerPlans.isError ? 'Không tải được danh sách gói, vui lòng thử lại' : undefined}
+                      plansError={ownerPlans.isError ? t('wizard.plansError') : undefined}
                       fees={hostData?.fees}
                       trialEndLabel={hostTrialEnd}
                       cardSlot={
@@ -511,14 +511,14 @@ export function CreateWizard() {
                           <div className="flex items-center justify-between gap-3 text-sm">
                             <span className="flex items-center gap-2 font-semibold">
                               <MaterialIcon name="credit_card" size={22} color="#f26a1b" filled />
-                              Thẻ {draft.plan.paymentMethod.brand} •••• {draft.plan.paymentMethod.last4} đã được lưu
+                              {t('wizard.cardSaved', { brand: draft.plan.paymentMethod.brand, last4: draft.plan.paymentMethod.last4 })}
                             </span>
                             <button
                               type="button"
                               onClick={() => setDraft((d) => (d && d.plan ? { ...d, plan: { ...d.plan, paymentMethod: null } } : d))}
                               className="border-0 bg-transparent font-semibold text-brand underline"
                             >
-                              Dùng thẻ khác
+                              {t('wizard.useOtherCard')}
                             </button>
                           </div>
                         ) : (
@@ -536,7 +536,7 @@ export function CreateWizard() {
                       currency="USD"
                       annualDiscountPct={annualDiscountPct}
                       net={netUsd !== undefined ? { monthly: netUsd, annual: netUsd } : undefined}
-                      feeNote={estimate.data ? `Hoa hồng nền tảng ${estimate.data.commissionPct}% + phí cổng thanh toán ${estimate.data.gatewayFeePct}%` : undefined}
+                      feeNote={estimate.data ? t('wizard.feeNote', { commission: estimate.data.commissionPct, gateway: estimate.data.gatewayFeePct }) : undefined}
                       trialDays={draft?.members.trialDays}
                       maxQuestions={MAX_QUESTIONS}
                       payout={payoutInfo}
@@ -568,20 +568,20 @@ export function CreateWizard() {
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-[rgba(120,60,20,.07)] bg-white px-5 py-3">
             <button type="button" onClick={back} disabled={busy} className="flex h-12 items-center gap-2 rounded-xl border-[1.5px] border-[#e7e0da] bg-white px-7 text-[15px] font-bold disabled:opacity-60">
               {step > 0 && <MaterialIcon name="arrow_back" size={19} />}
-              {step === 0 ? 'Hủy' : 'Quay lại'}
+              {step === 0 ? t('wizard.cancel') : t('wizard.back')}
             </button>
             {(general || Object.keys(errors).some((k) => errors[k])) && (
               <span role="alert" className="min-w-0 flex-1 text-[13.5px] font-semibold text-red-700">
-                {general ?? 'Vui lòng kiểm tra các ô được đánh dấu đỏ.'}
+                {general ?? t('wizard.checkFields')}
               </span>
             )}
             {step === 2 && (
               <button type="button" onClick={() => { setErrors({}); setStep(3); setFurthest((f) => Math.max(f, 3)); }} className="ml-auto h-12 rounded-xl border-[1.5px] border-[#e7e0da] bg-white px-6 text-[15px] font-bold">
-                Bỏ qua, làm sau
+                {t('wizard.skipLater')}
               </button>
             )}
             <Button onClick={() => void next()} disabled={busy} className="h-12 gap-2 rounded-xl px-9 text-base font-bold">
-              {busy ? 'Đang lưu…' : step === 4 ? 'Ra mắt cộng đồng' : step === 3 ? 'Tạo cộng đồng' : step === 1 && form.hostPlan === 'pro' ? 'Bắt đầu dùng thử' : 'Tiếp tục'}
+              {busy ? t('wizard.saving') : step === 4 ? t('wizard.launchBtn') : step === 3 ? t('wizard.createBtn') : step === 1 && form.hostPlan === 'pro' ? t('wizard.startTrial') : t('wizard.continue')}
               {!busy && <MaterialIcon name="arrow_forward" size={20} color="#fff" />}
             </Button>
           </div>

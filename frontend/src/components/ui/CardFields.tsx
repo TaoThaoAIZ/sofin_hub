@@ -1,5 +1,6 @@
 import { useId } from 'react';
-import { BRAND_LABEL, detectBrand, formatCardNumber, formatExpiry, digitsOnly, type CardBrand, type CardErrors, type CardForm } from '../../lib/card';
+import { useTranslation } from 'react-i18next';
+import { brandLabel, detectBrand, formatCardNumber, formatExpiry, digitsOnly, type CardBrand, type CardErrors, type CardForm } from '../../lib/card';
 import { MaterialIcon } from './MaterialIcon';
 import { FieldError } from './FieldMessage';
 
@@ -17,7 +18,7 @@ export function CardBrandIcon({ brand, size = 24 }: { brand: CardBrand; size?: n
   if (brand === 'unknown') return <MaterialIcon name="credit_card" size={size} filled color="#78716c" />;
   return (
     <span
-      title={BRAND_LABEL[brand]}
+      title={brandLabel(brand)}
       className="inline-grid h-5 min-w-[34px] place-items-center rounded px-1 text-[10px] font-extrabold tracking-wide"
       style={{ background: s.bg, color: s.fg }}
     >
@@ -45,6 +46,7 @@ export function CardFields({
   variant?: 'inline' | 'stacked';
   disabled?: boolean;
 }) {
+  const { t } = useTranslation('layout');
   const id = useId();
   const brand = detectBrand(value.number);
   const cvcMax = brand === 'amex' ? 4 : 3;
@@ -59,8 +61,8 @@ export function CardFields({
       value={value.number}
       disabled={disabled}
       onChange={(e) => set({ number: formatCardNumber(e.target.value) })}
-      placeholder={variant === 'inline' ? 'Số thẻ' : '1234 1234 1234 1234'}
-      aria-label="Số thẻ"
+      placeholder={variant === 'inline' ? t('card.number') : '1234 1234 1234 1234'}
+      aria-label={t('card.number')}
       aria-invalid={!!errors.number}
       className="min-w-0 flex-1 border-0 bg-transparent text-[15px] font-medium outline-0"
     />
@@ -76,7 +78,7 @@ export function CardFields({
       onChange={(e) => set({ expiry: formatExpiry(e.target.value) })}
       placeholder="MM / YY"
       maxLength={7}
-      aria-label="Ngày hết hạn (MM / YY)"
+      aria-label={t('card.expiryAria')}
       aria-invalid={!!errors.expiry}
       className="min-w-0 flex-1 border-0 bg-transparent text-[15px] font-medium outline-0"
     />
@@ -92,7 +94,7 @@ export function CardFields({
       onChange={(e) => set({ cvc: digitsOnly(e.target.value).slice(0, cvcMax) })}
       placeholder="CVC"
       maxLength={cvcMax}
-      aria-label="Mã CVC"
+      aria-label={t('card.cvcAria')}
       aria-invalid={!!errors.cvc}
       className="min-w-0 flex-1 border-0 bg-transparent text-[15px] font-medium outline-0"
     />
@@ -126,7 +128,7 @@ export function CardFields({
           <span className="grid size-8 place-items-center rounded-full bg-[#fff1e6]">
             <MaterialIcon name="credit_card" size={18} color="#f26a1b" />
           </span>
-          Thông tin thanh toán
+          {t('card.paymentInfo')}
         </label>
         <div className={box(errors.number)}>
           {numberInput}
@@ -135,7 +137,7 @@ export function CardFields({
         {errors.number && <FieldError>{errors.number}</FieldError>}
       </div>
       <div>
-        <label htmlFor={`${id}-exp`} className="mb-2.5 block text-[15px] font-bold">Hết hạn</label>
+        <label htmlFor={`${id}-exp`} className="mb-2.5 block text-[15px] font-bold">{t('card.expiry')}</label>
         <div className={box(errors.expiry)}>
           {expInput}
           <MaterialIcon name="calendar_today" size={20} color="#78716c" />

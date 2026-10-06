@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { MONO_FONT } from './ui';
 
@@ -161,6 +162,7 @@ export function ModalShell({
   onClose: () => void;
   children?: ReactNode;
 }) {
+  const { t } = useTranslation('admin-components');
   const titleId = useId();
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && !pending && onClose();
@@ -191,7 +193,7 @@ export function ModalShell({
             </div>
             {body && <div className="mt-1 text-[13.5px] leading-relaxed text-stone-600">{body}</div>}
           </div>
-          <button type="button" onClick={onClose} disabled={pending} aria-label="Đóng" className="border-0 bg-transparent p-0 text-stone-400 hover:text-stone-700">
+          <button type="button" onClick={onClose} disabled={pending} aria-label={t('overlay.close')} className="border-0 bg-transparent p-0 text-stone-400 hover:text-stone-700">
             <MaterialIcon name="close" size={22} />
           </button>
         </div>
@@ -203,7 +205,7 @@ export function ModalShell({
         )}
         <div className="mt-1 flex gap-2.5">
           <button type="button" onClick={onClose} disabled={pending} className="h-[46px] flex-1 rounded-[13px] border-[1.5px] border-[#e7e0da] bg-white text-sm font-semibold disabled:opacity-50">
-            Hủy
+            {t('overlay.cancel')}
           </button>
           <button
             type="button"
@@ -211,7 +213,7 @@ export function ModalShell({
             disabled={blocked}
             className={`h-[46px] flex-1 rounded-[13px] border-0 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-45 ${danger ? 'bg-[#dc2626]' : 'bg-gradient-to-b from-[#ff8f45] to-[#f26a1b]'}`}
           >
-            {pending ? 'Đang xử lý…' : cta}
+            {pending ? t('overlay.processing') : cta}
           </button>
         </div>
       </div>

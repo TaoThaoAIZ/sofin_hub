@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useCreateJoinRequest } from '../queries';
 import type { JoinRequest } from '../types';
 import { CancelButton, ErrorLine, errorText, INPUT_CLASS, Modal, PrimaryButton } from './Modal';
@@ -21,6 +22,7 @@ export function JoinRequestDialog({
   onClose: () => void;
   onSent: (req: JoinRequest) => void;
 }) {
+  const { t } = useTranslation('communities');
   const [message, setMessage] = useState('');
   const [answers, setAnswers] = useState<string[]>(() => questions.map(() => ''));
   const [accepted, setAccepted] = useState(false);
@@ -30,8 +32,8 @@ export function JoinRequestDialog({
 
   const submit = () => {
     // Kiểm tra trước ở FE cho nhanh; BE vẫn xác thực lại (JOIN_ANSWERS_REQUIRED / RULES_NOT_ACCEPTED).
-    if (answers.some((a) => !a.trim())) return setLocalError('Vui lòng trả lời đủ các câu hỏi gia nhập');
-    if (needRules && !accepted) return setLocalError('Vui lòng đồng ý với nội quy cộng đồng để gửi yêu cầu');
+    if (answers.some((a) => !a.trim())) return setLocalError(t('joinRequest.errAnswers'));
+    if (needRules && !accepted) return setLocalError(t('joinRequest.errRules'));
     setLocalError(null);
     create.mutate({ message: message.trim(), answers: questions.length ? answers.map((a) => a.trim()) : undefined, acceptRules: needRules ? accepted : undefined }, {
       onSuccess: (req) => {
@@ -43,29 +45,27 @@ export function JoinRequestDialog({
 
   return (
     <Modal
-      title="Cộng đồng riêng tư"
+      title={t('joinRequest.title')}
       icon="lock"
       onClose={onClose}
       footer={
         <>
           <CancelButton onClick={onClose} />
           <PrimaryButton onClick={submit} disabled={create.isPending}>
-            {create.isPending ? 'Đang gửi…' : 'Gửi yêu cầu'}
+            {create.isPending ? t('joinRequest.sending') : t('joinRequest.send')}
           </PrimaryButton>
         </>
       }
     >
-      <p>
-        "{courseTitle}" là cộng đồng riêng tư. Hãy gửi yêu cầu kèm lời nhắn, quản trị viên sẽ xem xét và thông báo cho bạn.
-      </p>
+      <p>{t('joinRequest.intro', { title: courseTitle })}</p>
       <label className="mt-3 block text-[13px] font-semibold text-stone-700">
-        Lời nhắn (không bắt buộc)
+        {t('joinRequest.messageLabel')}
         <textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           maxLength={500}
           rows={4}
-          placeholder="Giới thiệu ngắn về bạn và lý do muốn tham gia…"
+          placeholder={t('joinRequest.messagePlaceholder')}
           className={`${INPUT_CLASS} mt-1.5 resize-none font-normal`}
         />
       </label>
@@ -96,7 +96,7 @@ export function JoinRequestDialog({
           </div>
           <label className="mt-2 flex cursor-pointer items-center gap-2 text-[13px] font-semibold text-stone-700">
             <input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} className="size-4 accent-[#f26a1b]" />
-            Tôi đồng ý với nội quy cộng đồng
+            {t('joinRequest.agreeRules')}
           </label>
         </div>
       )}

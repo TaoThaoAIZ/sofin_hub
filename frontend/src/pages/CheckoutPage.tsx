@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { useCommunityDetail } from '../features/courses/queries';
@@ -10,17 +11,18 @@ import { RequireAuth } from '../features/auth/RequireAuth';
  * cho link trực tiếp / luồng cũ.
  */
 export function CheckoutPage() {
+  const { t } = useTranslation('payments');
   const { id = '' } = useParams();
   const navigate = useNavigate();
   const { data: course, isPending } = useCommunityDetail(id);
 
   return (
     <div className="min-h-screen bg-[#faf8f6]">
-      <Header active="Khóa học" />
+      <Header active="courses" />
       <RequireAuth>
         <div className="mx-auto max-w-[560px] px-4 py-10">
-          {isPending && <p className="py-24 text-center text-stone-500">Đang tải…</p>}
-          {!isPending && !course && <p className="py-24 text-center text-stone-500">Không tìm thấy cộng đồng.</p>}
+          {isPending && <p className="py-24 text-center text-stone-500">{t('checkout.loading')}</p>}
+          {!isPending && !course && <p className="py-24 text-center text-stone-500">{t('checkout.notFound')}</p>}
           {course && (
             <JoinCheckout
               course={course}

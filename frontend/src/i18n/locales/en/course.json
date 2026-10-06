@@ -1,0 +1,131 @@
+{
+  "list": {
+    "all": "All",
+    "free": "Free",
+    "perMonth": "/month",
+    "view": "View course {{title}}",
+    "retry": "Retry",
+    "notFound": "No matching courses found.",
+    "clearFilters": "Clear filters",
+    "grid": "Grid",
+    "listView": "List",
+    "found": "Found <b>{{total}}</b> courses",
+    "pagination": "Pagination",
+    "prevPage": "Previous page",
+    "nextPage": "Next page",
+    "loginToJoin": "You need to log in to join this course"
+  },
+  "tag": {
+    "hot": "Hot",
+    "bestseller": "Bestseller",
+    "new": "New"
+  },
+  "filter": {
+    "pricing": {
+      "label": "Price",
+      "free": "Free",
+      "paid": "Paid",
+      "trial": "Free trial"
+    },
+    "visibility": {
+      "label": "Type",
+      "public": "Public",
+      "private": "Private"
+    },
+    "status": {
+      "label": "Status",
+      "open": "Open",
+      "soon": "Coming soon",
+      "completed": "Completed"
+    },
+    "language": {
+      "label": "Language",
+      "vi": "Tiếng Việt",
+      "en": "English"
+    },
+    "sort": {
+      "label": "Sort",
+      "trending": "Trending",
+      "top": "Top",
+      "newest": "Newest"
+    }
+  },
+  "detail": {
+    "tabs": {
+      "overview": "Overview",
+      "content": "Content",
+      "reviews": "Reviews",
+      "faq": "FAQ"
+    },
+    "perkLessons": "{{n}} lessons in the classroom",
+    "perkDiscuss": "Discuss and connect with community members",
+    "loading": "Loading course…",
+    "notFoundTitle": "Course not found",
+    "notFoundDesc": "This course may have been deleted or does not exist.",
+    "home": "Back to home",
+    "free": "Free",
+    "locked": "This community has been locked by the platform admins, so you cannot join yet.",
+    "leaveTitle": "Leave this paid community?",
+    "leaveConfirm": "Leave community",
+    "leaveCancel": "Stay",
+    "leaveMessage": "You will lose access immediately, your membership will be canceled at the end of the current period (no further charges), and the payment for this period is non-refundable. You can rejoin for free during the period you paid for.",
+    "homeAria": "Home",
+    "by": "By <b>{{name}}</b>",
+    "perMonth": "/month",
+    "perMonthSpaced": "/ month",
+    "members": "Members",
+    "online": "Online",
+    "admins": "Admins",
+    "lockedBanner": "This community is locked by the platform admins.",
+    "enter": "Enter community",
+    "joined": "Joined",
+    "requestPending": "Request sent – awaiting approval",
+    "requestJoin": "Request to join",
+    "joinNow": "Join now",
+    "privateNote": "Private community — an admin must approve your request.",
+    "reviewNote": "An admin will review your request and let you know the result.",
+    "canceling": "Canceling…",
+    "cancelRequest": "Cancel request",
+    "settings": "Community settings",
+    "youGet": "What you will get",
+    "needHelp": "Need help?",
+    "contactUs": "Contact us if you have any questions.",
+    "sendMessage": "Send a message",
+    "aboutCourse": "About this course",
+    "whatYouGet": "What will you get?",
+    "cost": "Cost to join",
+    "contentSome": "This community has {{n}} lessons in the Classroom. Detailed content is shown to members.",
+    "contentNone": "This community has no lessons in the Classroom yet.",
+    "openClassroom": "Open Classroom →"
+  },
+  "lesson": {
+    "loadingAttachment": "{{name}} (loading…)",
+    "invalidLink": "{{name}} (invalid link)",
+    "loading": "Loading lesson…",
+    "lockedTitle": "This module is locked",
+    "openFailed": "Could not open the lesson",
+    "lockedDesc": "Complete the previous module (or reach the required level) to unlock this lesson.",
+    "notFound": "The lesson does not exist or you do not have permission to view it.",
+    "backToList": "Back to classroom",
+    "completedToast": "Lesson completed",
+    "uncompletedToast": "Completion mark removed",
+    "breadcrumb": "Breadcrumb",
+    "classroom": "Classroom",
+    "progress": "Course progress",
+    "lessonsCount": "{{done}}/{{total}} lessons",
+    "noVideo": "This lesson has no video yet.",
+    "meta": "{{n}} min · {{type}}",
+    "typeVideo": "Video",
+    "typeFile": "File",
+    "typeText": "Reading",
+    "saving": "Saving…",
+    "uncomplete": "Mark incomplete",
+    "complete": "Mark complete",
+    "youCompleted": "You have completed this lesson",
+    "attachments": "Attachments",
+    "prev": "Previous lesson",
+    "next": "Next lesson",
+    "toClassroom": "Back to classroom",
+    "loadingShort": "Loading…"
+  }
+}

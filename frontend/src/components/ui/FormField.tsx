@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { EyeIcon, LockIcon, MailIcon, UserGlyphIcon } from './icons';
 import { FieldError, FieldHint } from './FieldMessage';
 
@@ -24,6 +25,7 @@ interface FormFieldProps {
 
 /** Ô nhập kiểu "pill" có icon đầu dòng, viền đỏ + thông báo lỗi khi có `error`; mật khẩu tự có nút hiện/ẩn. */
 export function FormField({ type, value, onChange, placeholder, error, hint, autoComplete, minLength, icon }: FormFieldProps) {
+  const { t } = useTranslation('layout');
   const [showPassword, setShowPassword] = useState(false);
   const isPassword = type === 'password';
 
@@ -48,7 +50,7 @@ export function FormField({ type, value, onChange, placeholder, error, hint, aut
           <button
             type="button"
             onClick={() => setShowPassword((s) => !s)}
-            aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+            aria-label={showPassword ? t('formField.hidePassword') : t('formField.showPassword')}
             className="grid place-items-center border-0 bg-transparent p-1"
           >
             <EyeIcon open={showPassword} />

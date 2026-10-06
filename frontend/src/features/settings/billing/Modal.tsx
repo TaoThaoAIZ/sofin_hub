@@ -1,4 +1,5 @@
 import { useEffect, useId, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 
@@ -19,6 +20,7 @@ export function SettingsModal({
   footer?: ReactNode;
   busy?: boolean;
 }) {
+  const { t } = useTranslation('settings');
   const titleId = useId();
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && !busy && onClose();
@@ -42,7 +44,7 @@ export function SettingsModal({
             </div>
             {body && <div className="mt-1 text-[13.5px] leading-[1.55] text-stone-600">{body}</div>}
           </div>
-          <button type="button" aria-label="Đóng" onClick={onClose} disabled={busy} className="border-0 bg-transparent p-0 text-[#a8a29e] hover:text-stone-700">
+          <button type="button" aria-label={t('common.close')} onClick={onClose} disabled={busy} className="border-0 bg-transparent p-0 text-[#a8a29e] hover:text-stone-700">
             <MaterialIcon name="close" size={22} />
           </button>
         </div>
@@ -56,7 +58,7 @@ export function SettingsModal({
 
 /** Hàng 2 nút: [Hủy] [CTA]. `danger` = CTA đỏ (hủy gói, xóa thẻ). */
 export function ModalActions({
-  cancelLabel = 'Hủy',
+  cancelLabel,
   okLabel,
   onCancel,
   onOk,
@@ -72,10 +74,11 @@ export function ModalActions({
   danger?: boolean;
   disabled?: boolean;
 }) {
+  const { t } = useTranslation('settings');
   return (
     <div className="mt-1 flex gap-2.5">
       <button type="button" onClick={onCancel} disabled={pending} className="h-[46px] flex-1 rounded-xl border-[1.5px] border-[#e7e0da] bg-white text-sm font-bold disabled:opacity-50">
-        {cancelLabel}
+        {cancelLabel ?? t('common.cancel')}
       </button>
       <button
         type="button"
@@ -83,7 +86,7 @@ export function ModalActions({
         disabled={pending || disabled}
         className={`h-[46px] flex-1 rounded-xl border-0 text-sm font-bold text-white disabled:opacity-60 ${danger ? 'bg-[#dc2626]' : 'bg-gradient-to-b from-[#ff8f45] to-[#f26a1b]'}`}
       >
-        {pending ? 'Đang xử lý…' : okLabel}
+        {pending ? t('common.processing') : okLabel}
       </button>
     </div>
   );

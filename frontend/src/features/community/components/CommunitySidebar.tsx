@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Link, NavLink, useParams } from 'react-router-dom';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { useCommunityDetail } from '../../courses/queries';
@@ -16,22 +17,23 @@ const NAV_ICONS = {
 export interface CommunityNavItem {
   key: string;
   to: string;
-  label: string;
+  labelKey: string;
   icon: keyof typeof NAV_ICONS;
   end?: boolean;
 }
 
 // Nhãn tab đầu tiên là "Cộng đồng" (đúng theo file thiết kế gốc) dù nội dung hiển thị là Bảng tin.
 export const COMMUNITY_NAV_ITEMS: CommunityNavItem[] = [
-  { key: 'feed', to: '', label: 'Cộng đồng', icon: 'feed', end: true },
-  { key: 'classroom', to: 'lop-hoc', label: 'Lớp học', icon: 'classroom' },
-  { key: 'calendar', to: 'lich', label: 'Lịch sự kiện', icon: 'calendar' },
-  { key: 'members', to: 'thanh-vien', label: 'Thành viên', icon: 'members' },
-  { key: 'leaderboard', to: 'xep-hang', label: 'Bảng xếp hạng', icon: 'leaderboard' },
-  { key: 'about', to: 'gioi-thieu', label: 'Giới thiệu', icon: 'about' },
+  { key: 'feed', to: '', labelKey: 'sidebar.nav.feed', icon: 'feed', end: true },
+  { key: 'classroom', to: 'lop-hoc', labelKey: 'sidebar.nav.classroom', icon: 'classroom' },
+  { key: 'calendar', to: 'lich', labelKey: 'sidebar.nav.calendar', icon: 'calendar' },
+  { key: 'members', to: 'thanh-vien', labelKey: 'sidebar.nav.members', icon: 'members' },
+  { key: 'leaderboard', to: 'xep-hang', labelKey: 'sidebar.nav.leaderboard', icon: 'leaderboard' },
+  { key: 'about', to: 'gioi-thieu', labelKey: 'sidebar.nav.about', icon: 'about' },
 ];
 
 export function CommunitySidebar({ courseTitle }: { courseTitle: string }) {
+  const { t } = useTranslation('community');
   const { id: courseId = '' } = useParams();
   const { data: viewerCourse } = useCommunityDetail(courseId);
   return (
@@ -59,7 +61,7 @@ export function CommunitySidebar({ courseTitle }: { courseTitle: string }) {
             {({ isActive }) => (
               <>
                 <MaterialIcon name={NAV_ICONS[item.icon]} size={21} weight={isActive ? 500 : 400} color="currentColor" />
-                {item.label}
+                {t(item.labelKey)}
               </>
             )}
           </NavLink>
@@ -74,17 +76,21 @@ export function CommunitySidebar({ courseTitle }: { courseTitle: string }) {
             }
           >
             <MaterialIcon name="shield" size={21} color="currentColor" />
-            Kiểm duyệt
+            {t('sidebar.moderation')}
           </NavLink>
         )}
         {(viewerCourse?.viewerRole === 'owner' || viewerCourse?.viewerRole === 'platform_admin') && (
-          <Link
-            to={`/communities/${courseId}/revenue-dashboard`}
-            className="flex h-11 items-center gap-3.5 rounded-xl px-3.5 text-[14.5px] font-normal text-stone-900 hover:bg-stone-50"
+          <NavLink
+            to="doanh-thu"
+            className={({ isActive }) =>
+              `flex h-11 items-center gap-3.5 rounded-xl px-3.5 text-[14.5px] ${
+                isActive ? 'bg-brand-soft font-semibold text-brand' : 'font-normal text-stone-900 hover:bg-stone-50'
+              }`
+            }
           >
             <MaterialIcon name="payments" size={21} color="currentColor" />
-            Doanh thu & rút tiền
-          </Link>
+            {t('sidebar.revenue')}
+          </NavLink>
         )}
       </nav>
 
@@ -173,15 +179,15 @@ export function CommunitySidebar({ courseTitle }: { courseTitle: string }) {
             <MaterialIcon name="favorite" size={22} filled color="#ff8a3d" />
           </span>
         </div>
-        <div className="mt-2.5 text-[14px] font-extrabold text-stone-900">Xây dựng cộng đồng của riêng bạn</div>
+        <div className="mt-2.5 text-[14px] font-extrabold text-stone-900">{t('sidebar.ctaTitle')}</div>
         <p className="mt-1 text-[12px] leading-relaxed text-stone-600">
-          Kết nối mọi người xung quanh đam mê của bạn và nhận tiền.
+          {t('sidebar.ctaDesc')}
         </p>
         <Link
           to="/communities/new"
           className="mt-3 flex h-10 w-full items-center justify-center gap-1.5 rounded-xl bg-brand text-[13.5px] font-bold text-white hover:bg-brand-dark"
         >
-          Bắt đầu
+          {t('sidebar.ctaButton')}
           <MaterialIcon name="arrow_forward" size={17} color="#fff" />
         </Link>
       </div>

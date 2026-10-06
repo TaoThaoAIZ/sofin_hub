@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { ButtonLink } from '../components/ui/Button';
 import { ApiError } from '../lib/api';
@@ -10,10 +11,11 @@ import { Alert } from '../features/account/components/Field';
 type State = { kind: 'loading' } | { kind: 'ok' } | { kind: 'error'; message: string };
 
 export function VerifyEmailPage() {
+  const { t } = useTranslation('auth');
   const [params] = useSearchParams();
   const token = params.get('token') ?? '';
   const { status, user, updateUser } = useAuth();
-  const [state, setState] = useState<State>(token ? { kind: 'loading' } : { kind: 'error', message: 'Liên kết xác thực thiếu mã.' });
+  const [state, setState] = useState<State>(token ? { kind: 'loading' } : { kind: 'error', message: t('verify.missingToken') });
   const started = useRef(false);
 
   // Token dùng 1 lần: chỉ gọi đúng 1 lần dù StrictMode chạy effect hai lần.
@@ -27,18 +29,18 @@ export function VerifyEmailPage() {
         setState({ kind: 'ok' });
       })
       .catch((err) => {
-        setState({ kind: 'error', message: err instanceof ApiError ? err.message : 'Xác thực thất bại, vui lòng thử lại' });
+        setState({ kind: 'error', message: err instanceof ApiError ? err.message : t('verify.fail') });
       });
-  }, [token, status, user, updateUser]);
+  }, [token, status, user, updateUser, t]);
 
   return (
-    <AuthShell title="Xác thực email">
-      {state.kind === 'loading' && <p className="m-0 text-center text-stone-500">Đang xác thực…</p>}
+    <AuthShell title={t('verify.title')}>
+      {state.kind === 'loading' && <p className="m-0 text-center text-stone-500">{t('verify.loading')}</p>}
       {state.kind === 'ok' && (
         <>
-          <Alert kind="success">Email của bạn đã được xác thực thành công.</Alert>
+          <Alert kind="success">{t('verify.success')}</Alert>
           <ButtonLink to={status === 'authenticated' ? '/' : '/login'} className="h-[52px] rounded-2xl text-base font-bold">
-            {status === 'authenticated' ? 'Về trang chủ' : 'Đăng nhập'}
+            {status === 'authenticated' ? t('verify.home') : t('verify.signIn')}
           </ButtonLink>
         </>
       )}
@@ -46,10 +48,10 @@ export function VerifyEmailPage() {
         <>
           <Alert kind="error">{state.message}</Alert>
           <p className="m-0 text-center text-sm text-stone-600">
-            Liên kết có thể đã hết hạn (24 giờ) hoặc đã được dùng. Đăng nhập rồi vào Cài đặt tài khoản để gửi lại email xác thực.
+            {t('verify.expiredHint')}
           </p>
           <ButtonLink to="/settings" className="h-[52px] rounded-2xl text-base font-bold">
-            Mở Cài đặt tài khoản
+            {t('verify.openSettings')}
           </ButtonLink>
         </>
       )}

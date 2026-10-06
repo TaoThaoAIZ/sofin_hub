@@ -1,0 +1,347 @@
+{
+  "steps": {
+    "basics": "Thông tin cơ bản",
+    "plan": "Chọn gói & dùng thử",
+    "identity": "Nhận diện & giới thiệu",
+    "members": "Thành viên & giá",
+    "launch": "Ra mắt"
+  },
+  "validation": {
+    "nameMin": "Tên cộng đồng tối thiểu 3 ký tự",
+    "nameMax": "Tên cộng đồng tối đa 30 ký tự",
+    "slugRequired": "Vui lòng nhập đường dẫn",
+    "slugMin": "Đường dẫn tối thiểu 3 ký tự",
+    "slugFormat": "Chỉ dùng chữ thường, số và dấu gạch ngang",
+    "slugTaken": "Đường dẫn này đã có người dùng",
+    "slugChecking": "Đang kiểm tra đường dẫn, vui lòng đợi giây lát",
+    "descriptionRequired": "Vui lòng nhập mô tả ngắn",
+    "categoryRequired": "Vui lòng chọn danh mục",
+    "hostCard": "Vui lòng nhập thông tin thẻ để bắt đầu dùng thử",
+    "promiseMax": "Lời hứa tối đa 100 ký tự",
+    "videoUrl": "Đường dẫn video không hợp lệ (dán link YouTube hoặc Vimeo)",
+    "priceMonthlyRequired": "Nhập giá thành viên hàng tháng lớn hơn 0",
+    "priceMax": "Giá tối đa {{max}} USD",
+    "priceAnnualRequired": "Nhập giá thành viên hàng năm lớn hơn 0",
+    "priceAnnualTooHigh": "Giá năm không được cao hơn 12 tháng cộng lại",
+    "questionMin": "Câu hỏi tối thiểu 3 ký tự (hoặc xóa câu hỏi này)",
+    "questionMax": "Câu hỏi tối đa 200 ký tự",
+    "terms": "Bạn cần đồng ý với Điều khoản dành cho chủ cộng đồng"
+  },
+  "errors": {
+    "generic": "Có lỗi xảy ra, vui lòng thử lại"
+  },
+  "ui": {
+    "optional": "(không bắt buộc)"
+  },
+  "imageSlot": {
+    "uploading": "Đang tải lên…",
+    "remove": "Gỡ ảnh"
+  },
+  "basics": {
+    "name": "Tên cộng đồng",
+    "nameHint": "Ví dụ hay: “Viết Content Ra Đơn”, “Chạy Bộ 5K Cho Người Mới”",
+    "namePlaceholder": "Ví dụ: Lớp Gốm Cuối Tuần",
+    "slug": "Đường dẫn",
+    "slugHint": "Đổi đường dẫn sau này sẽ làm hỏng các link cũ – nên chốt ngay từ đầu.",
+    "slugPlaceholder": "ten-cong-dong",
+    "description": "Mô tả ngắn",
+    "descriptionHint": "Hiện trên thẻ cộng đồng ở trang Khám phá",
+    "descriptionPlaceholder": "Một câu nói rõ thành viên nhận được gì",
+    "category": "Danh mục",
+    "slugChecking": "Đang kiểm tra",
+    "slugAvailable": "Còn trống",
+    "slugTaken": "Đã có người dùng",
+    "slugInvalid": "Không hợp lệ"
+  },
+  "brand": {
+    "logo": "Logo cộng đồng",
+    "logoPlaceholder": "Tải lên logo (Vuông 1:1)",
+    "logoAria": "Tải lên logo",
+    "cover": "Ảnh bìa",
+    "coverPlaceholder": "Kéo thả ảnh vào đây · 16:9 · tối thiểu 1280×720",
+    "coverAria": "Tải lên ảnh bìa",
+    "color": "Màu chủ đạo",
+    "colorAria": "Màu {{color}}",
+    "custom": "Tùy chọn",
+    "customAria": "Chọn màu tùy ý",
+    "promise": "Lời hứa (dòng đầu tiên)",
+    "promisePlaceholder": "Thành viên sẽ đạt được gì?",
+    "benefitsTitle": "{{count}} điều thành viên nhận được",
+    "benefitsTitle_one": "{{count}} điều thành viên nhận được",
+    "benefitsTitle_other": "{{count}} điều thành viên nhận được",
+    "benefitAria": "Lợi ích {{n}}",
+    "benefitPlaceholder": "Thêm một kết quả cụ thể...",
+    "removeBenefit": "Xóa lợi ích",
+    "addBenefit": "+ Thêm lợi ích khác",
+    "video": "Video giới thiệu",
+    "videoPlaceholder": "Dán link YouTube, Vimeo..."
+  },
+  "preview": {
+    "coverFallback": "Ảnh bìa",
+    "aboutTitle": "Xem trước trang giới thiệu",
+    "communityName": "Tên cộng đồng",
+    "private": "Riêng tư",
+    "public": "Công khai",
+    "oneMember": "1 thành viên",
+    "promiseFallback": "Lời hứa của cộng đồng sẽ hiện ở đây",
+    "benefitFallback": "Lợi ích thành viên nhận được",
+    "join": "Tham gia",
+    "discoverTitle": "Xem trước trên Khám phá",
+    "coverStep3": "Ảnh bìa ở bước 3",
+    "descriptionFallback": "Mô tả ngắn sẽ hiện ở đây."
+  },
+  "hostPlan": {
+    "loading": "Đang tải các gói…",
+    "monthly": "Theo tháng",
+    "annual": "Theo năm",
+    "save": "Tiết kiệm {{pct}}%",
+    "popular": "Phổ biến nhất",
+    "perYear": "năm",
+    "perMonth": "tháng",
+    "selected": "Đã chọn",
+    "choose": "Chọn gói này",
+    "compareTitle": "Gói nào lợi hơn?",
+    "revenueLabel": "Doanh thu thành viên dự kiến mỗi tháng",
+    "freeFallback": "Miễn phí",
+    "freeRule": "Phí giao dịch {{pct}}%",
+    "proRule": "Phí gói + {{pct}}% giao dịch",
+    "tip": "{{name}} có lợi hơn khi doanh thu vượt {{amount}}/tháng.",
+    "tipSave": " Với doanh thu này bạn tiết kiệm {{amount}}/tháng.",
+    "todayLabel": "Hôm nay: {{amount}}.",
+    "trialUntil": "Thử miễn phí {{days}} ngày tới {{date}}. Hủy trước ngày đó, bạn không mất phí.",
+    "trialNoDate": "Thử miễn phí {{days}} ngày. Hủy trước ngày đó, bạn không mất phí.",
+    "noTrial": "Gói sẽ được tính phí từ kỳ đầu tiên.",
+    "totalFee": "Tổng phí"
+  },
+  "members": {
+    "privacy": "Quyền riêng tư",
+    "private": "Riêng tư",
+    "privateSub": "Chỉ thành viên thấy nội dung. Trang giới thiệu vẫn công khai.",
+    "public": "Công khai",
+    "publicSub": "Ai cũng xem được bài đăng, chỉ thành viên mới đăng bài.",
+    "price": "Giá thành viên",
+    "free": "Miễn phí",
+    "monthly": "Hàng tháng",
+    "yearly": "Hàng năm",
+    "save": "Tiết kiệm {{pct}}%",
+    "priceMonthly": "Giá hàng tháng",
+    "perMonth": "/ tháng",
+    "priceYearly": "Giá hàng năm",
+    "perYear": "/ năm",
+    "trialOffer": "Cho thành viên mới dùng thử {{days}} ngày",
+    "yearSavings": "Giá năm tiết kiệm {{pct}}% so với trả theo tháng.",
+    "netLine": "Bạn nhận về khoảng <b>{{amount}}</b> mỗi thành viên sau phí giao dịch.",
+    "questionsTitle": "Câu hỏi khi xin gia nhập",
+    "questionsCount": "{{count}} / {{max}} câu",
+    "questionAria": "Câu hỏi {{n}}",
+    "questionPlaceholder": "Nhập câu hỏi...",
+    "removeQuestion": "Xóa câu hỏi",
+    "addQuestion": "+ Thêm câu hỏi",
+    "payoutTitle": "Kết nối tài khoản nhận tiền",
+    "payoutConnected": "Đã kết nối tài khoản nhận tiền",
+    "payoutSkipped": "Bạn có thể kết nối sau trong Cài đặt cộng đồng. Cộng đồng trả phí cần tài khoản nhận tiền để rút doanh thu.",
+    "payoutPrompt": "Làm ngay hôm nay: lần chi trả đầu tiên cần xét duyệt danh tính và có thể mất vài ngày làm việc.",
+    "connecting": "Đang kết nối…",
+    "connectNow": "Kết nối ngay",
+    "skip": "Bỏ qua, làm sau",
+    "rulesTitle": "Nội quy cộng đồng",
+    "requireRules": "Yêu cầu đồng ý nội quy",
+    "autoApprovePaid": "Tự duyệt người trả phí",
+    "editRules": "Sửa nội quy mẫu",
+    "payoutDialog": {
+      "errBank": "Nhập tên ngân hàng",
+      "errHolder": "Nhập tên chủ tài khoản",
+      "errNumber": "Số tài khoản gồm 6–20 chữ số",
+      "connect": "Kết nối",
+      "bank": "Ngân hàng",
+      "bankPlaceholder": "Ví dụ: Vietcombank",
+      "holder": "Chủ tài khoản",
+      "holderPlaceholder": "Họ và tên in trên tài khoản",
+      "number": "Số tài khoản",
+      "numberPlaceholder": "6–20 chữ số",
+      "note": "Chúng tôi chỉ lưu 4 số cuối của số tài khoản."
+    },
+    "rulesDialog": {
+      "title": "Sửa nội quy mẫu",
+      "save": "Lưu nội quy",
+      "intro": "Mỗi mục là một điều trong nội quy; thành viên mới sẽ thấy khi xin gia nhập.",
+      "titleAria": "Tiêu đề điều {{n}}",
+      "bodyAria": "Nội dung điều {{n}}",
+      "titlePlaceholder": "Tiêu đề điều khoản",
+      "bodyPlaceholder": "Mô tả ngắn (không bắt buộc)",
+      "remove": "Xóa điều này",
+      "add": "+ Thêm điều"
+    },
+    "increase": "Tăng giá",
+    "decrease": "Giảm giá"
+  },
+  "summary": {
+    "edit": "Sửa",
+    "terms": "Tôi đồng ý với Điều khoản dành cho chủ cộng đồng",
+    "viewTerms": "Xem điều khoản",
+    "name": "Tên cộng đồng",
+    "slug": "Đường dẫn",
+    "category": "Danh mục",
+    "plan": "Gói",
+    "planPro": "{{name}} · {{cycle}}",
+    "cycleAnnual": "theo năm",
+    "cycleMonthly": "theo tháng",
+    "trialDays": " · dùng thử {{days}} ngày",
+    "planFree": "{{name}} · miễn phí",
+    "startFallback": "Khởi đầu",
+    "promise": "Lời hứa",
+    "promiseNone": "Chưa có",
+    "benefits": "Lợi ích",
+    "benefitsValue": "{{count}} điều thành viên nhận được",
+    "benefitsValue_one": "{{count}} điều thành viên nhận được",
+    "benefitsValue_other": "{{count}} điều thành viên nhận được",
+    "access": "Quyền truy cập",
+    "accessValue": "{{visibility}} · {{count}} câu hỏi gia nhập",
+    "accessValue_one": "{{visibility}} · {{count}} câu hỏi gia nhập",
+    "accessValue_other": "{{visibility}} · {{count}} câu hỏi gia nhập",
+    "public": "Công khai",
+    "private": "Riêng tư",
+    "price": "Giá",
+    "priceYear": " · {{amount}}/năm"
+  },
+  "launch": {
+    "items": {
+      "created": {
+        "title": "Tạo cộng đồng & chọn gói",
+        "sub": "Hoàn tất bước tạo cộng đồng"
+      },
+      "identity": {
+        "title": "Logo, ảnh bìa & trang giới thiệu",
+        "sub": "Cộng đồng có nhận diện riêng",
+        "btn": "Cập nhật"
+      },
+      "payout": {
+        "title": "Kết nối tài khoản nhận tiền",
+        "sub": "Cần có để rút doanh thu từ cộng đồng trả phí",
+        "btn": "Kết nối"
+      },
+      "first_lesson": {
+        "title": "Thêm bài học đầu tiên",
+        "sub": "Một học phần hoàn chỉnh tốt hơn mười học phần trống",
+        "btn": "Mở Lớp học"
+      },
+      "welcome_post": {
+        "title": "Viết bài chào mừng & ghim lên đầu",
+        "sub": "Kèm một câu hỏi để thành viên mới trả lời ngay",
+        "btn": "Viết bài"
+      },
+      "invite_members": {
+        "title": "Mời 10 thành viên đầu tiên",
+        "titleN": "Mời {{count}} thành viên đầu tiên",
+        "sub": "Bạn bè, khách cũ, người theo dõi trên mạng xã hội",
+        "btn": "Mời"
+      }
+    },
+    "conditions": {
+      "has_description_and_promise": "Có mô tả & trang giới thiệu",
+      "has_cover": "Có ảnh bìa",
+      "min_members": "Ít nhất {{n}} thành viên",
+      "recent_post": "Có bài đăng trong 7 ngày qua"
+    },
+    "created": "Đã tạo cộng đồng",
+    "ready": "đã sẵn sàng!",
+    "readyDesc": "Cộng đồng đã hoạt động. Hoàn thành các việc dưới đây trước khi mời người đầu tiên – thành viên mới thấy lớp trống sẽ rời đi rất nhanh.",
+    "enter": "Vào cộng đồng",
+    "checklistTitle": "Danh sách ra mắt",
+    "progress": "{{done}} / {{total}} xong",
+    "loading": "Đang tải danh sách…",
+    "inviteLink": "Link mời",
+    "copyInvite": "Sao chép link mời",
+    "discoverTitle": "Lên trang Khám phá",
+    "discoverIntro": "Cộng đồng được đề xuất khi đủ các điều kiện:",
+    "eligible": "Cộng đồng của bạn đã đủ điều kiện để được đề xuất.",
+    "notEligible": "Hoàn thành các điều kiện còn lại để tăng cơ hội được đề xuất."
+  },
+  "head": {
+    "0": {
+      "a": "Cộng đồng của bạn",
+      "b": "tên là gì?",
+      "lead": "Đặt tên theo kết quả thành viên nhận được, không phải theo tên bạn – người lạ tìm thấy bạn dễ hơn trên trang Khám phá."
+    },
+    "1": {
+      "a": "Dùng thử",
+      "b": "{{n}} ngày",
+      "c": ", chưa trừ đồng nào",
+      "lead": "Chọn gói bạn muốn tiếp tục sau thời gian dùng thử. Chúng tôi nhắc bạn trước khi hết hạn."
+    },
+    "2": {
+      "a": "Để người lạ hiểu ngay",
+      "b": "vì sao nên tham gia",
+      "lead": "Hoàn thiện nhận diện và giới thiệu ngắn gọn về cộng đồng của bạn."
+    },
+    "3": {
+      "a": "Ai được vào, và vào với",
+      "b": "giá bao nhiêu?",
+      "lead": "Thiết lập quyền tham gia, mức giá và một số câu hỏi để hiểu thành viên của bạn hơn."
+    },
+    "4": {
+      "a": "Sẵn sàng",
+      "b": "ra mắt!",
+      "lead": "Kiểm tra lại thông tin trước khi mở cộng đồng."
+    }
+  },
+  "wizard": {
+    "slugMin": "Đường dẫn tối thiểu 3 ký tự",
+    "slugFormat": "Chỉ dùng chữ thường, số và dấu gạch ngang",
+    "slugSuggestion": "{{message}} Gợi ý: {{suggestion}}",
+    "draftSaved": "Đã lưu nháp",
+    "finishStep1": "Hãy hoàn tất bước 1 trước",
+    "payoutConnected": "Đã kết nối tài khoản nhận tiền",
+    "actionFailed": "Không thực hiện được, vui lòng thử lại",
+    "inviteCopied": "Đã sao chép link mời",
+    "copyFailed": "Không sao chép được, hãy chép link thủ công",
+    "priceAtStep4": "Giá đặt ở bước 4",
+    "free": "Miễn phí",
+    "perMonth": "{{amount}}/tháng",
+    "perYear": "{{amount}}/năm",
+    "loadingDraft": "Đang tải bản nháp…",
+    "draftNotFound": "Không tìm thấy bản nháp",
+    "draftNotFoundDesc": "Bản nháp có thể đã được ra mắt hoặc đã bị xóa.",
+    "createNew": "Tạo cộng đồng mới",
+    "title": "Tạo cộng đồng",
+    "stepsAria": "Các bước",
+    "saveExit": "Lưu nháp & thoát",
+    "launchChecklistError": "Không tải được danh sách ra mắt",
+    "stepOf": "Bước {{step}} / 5",
+    "plansError": "Không tải được danh sách gói, vui lòng thử lại",
+    "cardSaved": "Thẻ {{brand}} •••• {{last4}} đã được lưu",
+    "useOtherCard": "Dùng thẻ khác",
+    "feeNote": "Hoa hồng nền tảng {{commission}}% + phí cổng thanh toán {{gateway}}%",
+    "cancel": "Hủy",
+    "back": "Quay lại",
+    "checkFields": "Vui lòng kiểm tra các ô được đánh dấu đỏ.",
+    "skipLater": "Bỏ qua, làm sau",
+    "saving": "Đang lưu…",
+    "launchBtn": "Ra mắt cộng đồng",
+    "createBtn": "Tạo cộng đồng",
+    "startTrial": "Bắt đầu dùng thử",
+    "continue": "Tiếp tục"
+  },
+  "tips": {
+    "price": {
+      "t": "Mẹo đặt giá",
+      "s": "Hãy cân nhắc giá trị bạn mang lại cho thành viên để chọn mức giá phù hợp."
+    },
+    "plan": {
+      "t": "Đổi gói bất cứ lúc nào",
+      "s": "Nâng hoặc hạ gói trong Cài đặt cộng đồng, áp dụng từ kỳ thanh toán kế tiếp."
+    },
+    "identity": {
+      "t": "Trang giới thiệu = trang bán hàng",
+      "s": "Logo, ảnh bìa, mô tả và các lợi ích nổi bật sẽ hiển thị trên trang cộng đồng của bạn."
+    },
+    "almost": {
+      "t": "Sắp xong rồi",
+      "s": "Mọi thứ ở đây đều sửa được sau trong Cài đặt cộng đồng."
+    },
+    "start": {
+      "t": "Khoảng 10 phút",
+      "s": "Mọi thứ ở đây đều sửa được sau trong Cài đặt cộng đồng."
+    }
+  }
+}

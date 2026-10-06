@@ -1,0 +1,314 @@
+{
+  "ui": {
+    "genericError": "Something went wrong. Please try again.",
+    "loadFailed": "Could not load data",
+    "retry": "Try again",
+    "loading": "Loading…",
+    "noResults": "No matching results."
+  },
+  "pageHeader": {
+    "days": "{{count}} days",
+    "rangeLabel": "Time range",
+    "admin": "Admin"
+  },
+  "overlay": {
+    "close": "Close",
+    "cancel": "Cancel",
+    "processing": "Processing…"
+  },
+  "reasons": {
+    "spam": "Spam",
+    "harassment": "Harassment",
+    "hate": "Hate speech",
+    "scam": "Scam",
+    "copyright": "Copyright",
+    "sensitive": "Sensitive content",
+    "other": "Other",
+    "policy": "Policy violation",
+    "fraud": "Fraud",
+    "paymentRisk": "Payment risk",
+    "ownerRequest": "Requested by owner",
+    "inactive": "Inactive",
+    "inappropriate": "Inappropriate content",
+    "misleading": "Misleading information",
+    "duplicate": "Duplicate",
+    "topicProfile": "Community profile",
+    "topicDescription": "Description",
+    "topicPrice": "Price",
+    "topicQuality": "Content quality",
+    "topicCompliance": "Policy compliance"
+  },
+  "am": {
+    "reason": "Reason",
+    "duration": "Duration",
+    "violation": "Violation",
+    "internalNote": "Internal note",
+    "adminOnly": "Only admins can see this...",
+    "suspendCommunity": {
+      "title": "Suspend {{name}}?",
+      "body": "Members lose access immediately. Payments and payouts are paused during the suspension.",
+      "cta": "Suspend community",
+      "done": "Suspended · {{name}}"
+    },
+    "deleteCommunity": {
+      "title": "Delete community",
+      "body": "You are about to delete {{name}}.",
+      "cta": "Delete community",
+      "done": "Deleted · {{name}}",
+      "warn1": "All members lose access and active plans are canceled.",
+      "warn2": "Posts, courses and events are hidden and scheduled for deletion.",
+      "warn3": "Data is kept for 30 days, then permanently deleted.",
+      "confirmLabel": "Type DELETE to confirm"
+    },
+    "undelete": {
+      "title": "Restore {{name}}?",
+      "body": "The community, its content and member access will be restored. Canceled plans are not reactivated automatically."
+    },
+    "restoreCommunity": {
+      "cta": "Restore community",
+      "done": "Restored · {{name}}",
+      "body": "The community is active again and members can access it right away."
+    },
+    "approve": {
+      "title": "Approve {{name}}?",
+      "body": "The community will become active and visible on the platform.",
+      "cta": "Approve community",
+      "done": "Approved · {{name}}",
+      "noteLabel": "Review note",
+      "notePh": "Add an internal review note..."
+    },
+    "requestChanges": {
+      "title": "Request changes · {{name}}",
+      "cta": "Send request",
+      "done": "Changes requested · {{name}}",
+      "topicsLabel": "What needs to change",
+      "msgLabel": "Message to the owner",
+      "msgPh": "Describe the changes needed..."
+    },
+    "reject": {
+      "title": "Reject {{name}}?",
+      "body": "The owner will be notified of this decision.",
+      "cta": "Reject",
+      "done": "Rejected · {{name}}",
+      "noteLabel": "Note"
+    },
+    "restrict": {
+      "title": "Restrict {{name}}",
+      "body": "Choose what the user is not allowed to do. They can still read content.",
+      "cta": "Restrict user",
+      "done": "Restricted · {{name}}",
+      "pick": "Select restrictions"
+    },
+    "suspendUser": {
+      "title": "Suspend {{name}}?",
+      "body": "The account cannot sign in during the suspension.",
+      "cta": "Suspend user",
+      "done": "Suspended · {{name}}",
+      "notePh": "Evidence, case link...",
+      "notify": "Notify the user"
+    },
+    "ban": {
+      "title": "Permanently ban {{name}}?",
+      "body": "The user is blocked from signing in. You can restore them later with the “Restore” action.",
+      "cta": "Ban permanently",
+      "done": "Banned · {{name}}",
+      "evidence": "Evidence",
+      "evidencePh": "Case link, screenshots...",
+      "confirmLabel": "Type BAN to confirm"
+    },
+    "reinstate": {
+      "title": "Restore {{name}}?",
+      "body": "The account returns to active status and all restrictions, suspensions and bans are lifted.",
+      "cta": "Restore access",
+      "done": "Restored · {{name}}"
+    },
+    "warn": {
+      "title": "Send warning",
+      "body": "To {{name}}",
+      "cta": "Send warning",
+      "done": "Warning sent · {{name}}",
+      "msgLabel": "Message to the user",
+      "msgPh": "Explain the rule that was violated and the consequences going forward..."
+    },
+    "remove": {
+      "title": "Remove content",
+      "cta": "Remove content",
+      "done": "Content removed",
+      "notifyAuthor": "Notify the author"
+    },
+    "banSummary": {
+      "communities": "Communities",
+      "paidPlan": "Paid plan",
+      "yes": "Yes",
+      "no": "No",
+      "revenue": "Revenue",
+      "reports": "Current reports"
+    },
+    "trash": {
+      "deletedBy": "Deleted by",
+      "owner": "Owner",
+      "deletedAt": "Deleted on",
+      "reason": "Reason",
+      "purgeAt": "Data retained until"
+    }
+  },
+  "ca": {
+    "view": "Review",
+    "assign": "Take case",
+    "dismiss": "Dismiss",
+    "remove": "Remove content",
+    "warn": "Warn",
+    "suspend": "Suspend user",
+    "userFallback": "user",
+    "assigned": "Case taken · {{code}}",
+    "dismissModal": {
+      "title": "Dismiss {{code}}?",
+      "body": "The case is closed with a no-violation finding.",
+      "cta": "Dismiss case",
+      "done": "Closed · no violation · {{code}}"
+    },
+    "resolveModal": {
+      "title": "Close {{code}}?",
+      "body": "The case is closed without any penalty.",
+      "cta": "Close case",
+      "done": "Closed · {{code}}"
+    },
+    "escalateModal": {
+      "title": "Escalate risk of {{code}}?",
+      "body": "The case risk level goes up one step and the case moves to under review.",
+      "cta": "Escalate",
+      "done": "Escalated · {{code}}"
+    }
+  },
+  "cc": {
+    "code": "Case ID",
+    "content": "Content",
+    "noContent": "(no content)",
+    "reportedUser": "Reported user",
+    "reason": "Reason",
+    "reports": "Reports",
+    "risk": "Risk",
+    "assignee": "Assignee",
+    "unassigned": "Unassigned",
+    "status": "Status",
+    "created": "Created"
+  },
+  "cma": {
+    "view": "View",
+    "open": "Open community",
+    "review": "Review",
+    "suspend": "Suspend",
+    "restore": "Restore",
+    "delete": "Delete"
+  },
+  "ua": {
+    "view": "View",
+    "restrict": "Restrict",
+    "suspend": "Suspend",
+    "ban": "Ban",
+    "restore": "Restore",
+    "warn": "Warn"
+  },
+  "tabs": {
+    "cancel": "Cancel",
+    "processing": "Processing…",
+    "notePh": "Note (optional)…",
+    "all": "All",
+    "loading": "Loading…",
+    "confirm": "Confirm",
+    "refund": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "empty": "No refund requests.",
+      "auto": "Auto-approved",
+      "reasonLine": "Reason: {{reason}}",
+      "ids": "Transaction {{paymentId}} · Community {{courseId}} · User {{userId}}",
+      "noteLine": "Note: {{note}}",
+      "approveBtn": "Approve refund",
+      "rejectBtn": "Reject",
+      "approveTitle": "Approve refund",
+      "rejectTitle": "Reject refund",
+      "approveConfirm": "Approve"
+    },
+    "payout": {
+      "requested": "Requested",
+      "approved": "Approved",
+      "paid": "Paid",
+      "rejected": "Rejected",
+      "failed": "Failed",
+      "on_hold": "On hold",
+      "empty": "No payout requests.",
+      "ids": "Community {{courseId}} · Owner {{ownerId}}",
+      "approveBtn": "Approve",
+      "markPaidBtn": "Mark as paid",
+      "rejectBtn": "Reject",
+      "titleApprove": "Approve payout",
+      "titleMarkPaid": "Mark as paid",
+      "titleReject": "Reject payout"
+    },
+    "lock": {
+      "needId": "Enter the community id or slug.",
+      "needReason": "Enter a reason for locking (at least 3 characters).",
+      "locked": "Community \"{{id}}\" locked.",
+      "unlocked": "Community \"{{id}}\" unlocked.",
+      "info": "A locked community: members cannot join or post. Enter the community id or slug (for example the last part of the /communities/… path).",
+      "idLabel": "Community id / slug",
+      "reasonLabel": "Reason (required when locking)",
+      "lockBtn": "Lock community",
+      "unlockBtn": "Unlock"
+    }
+  },
+  "layout": {
+    "menuAria": "Admin menu",
+    "search": {
+      "users": "USERS",
+      "communities": "COMMUNITIES",
+      "cases": "MODERATION CASES",
+      "owner": "Owner: {{name}}",
+      "placeholder": "Search users, communities, cases...",
+      "noPerm": "Your role does not have permission to use global search",
+      "aria": "Search everything",
+      "hint": "Search by user name or email, community name or ID, case ID (CASE-…) or reported content. Enter at least 2 characters.",
+      "searching": "Searching…",
+      "none": "No results for \"{{q}}\"."
+    },
+    "topbar": {
+      "adminName": "Administrator",
+      "openMenu": "Open menu",
+      "quickActions": "Quick actions",
+      "quickTitle": "QUICK ACTIONS",
+      "reviewReports": "Review reports",
+      "pending": "{{count}} pending",
+      "findUsers": "Find users",
+      "findCommunities": "Find communities",
+      "reviewCommunities": "Review communities",
+      "reviewRefunds": "Review refunds",
+      "tickets": "Support tickets",
+      "audit": "View audit log",
+      "help": "Help",
+      "helpTitle": "HELP",
+      "faq": "FAQ",
+      "terms": "Terms of Service",
+      "privacy": "Privacy Policy",
+      "contact": "Contact the platform",
+      "account": "Account",
+      "profile": "Profile & settings",
+      "home": "Back to home",
+      "logout": "Log out",
+      "platformAdmin": "Platform admin"
+    },
+    "guard": {
+      "title": "Insufficient permissions",
+      "withRole": "Your role <b>{{role}}</b> does not have access to this section. Contact a Super Admin if you need more permissions.",
+      "noRole": "Your current role does not have access to this section. Contact a Super Admin if you need more permissions.",
+      "backToOverview": "Back to overview"
+    },
+    "checking": "Checking permissions…",
+    "needLogin": "You need to sign in to access the admin area.",
+    "login": "Sign in",
+    "noAccess": "Access denied",
+    "noAccessBody": "You do not have permission to access the admin area.",
+    "home": "Back to home"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "nav": { "discover": "Discover", "courses": "Courses", "myCommunities": "My communities" },
+  "header": {
+    "profileSettings": "Profile settings",
+    "admin": "Admin",
+    "logout": "Log out",
+    "login": "Log in",
+    "createCommunity": "Create community",
+    "language": "Language"
+  },
+  "time": {
+    "justNow": "just now",
+    "minutesAgo": "{{count}} min ago",
+    "hoursAgo": "{{count}} h ago",
+    "daysAgo": "{{count}} d ago"
+  }
+}

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { ApiError } from '../../../lib/api';
 import { formatDateTime } from '../../../lib/datetime';
@@ -15,8 +16,9 @@ function formatSize(bytes: number) {
 
 function ChatAttachment({ a, mine }: { a: MessageView['attachments'][number]; mine: boolean }) {
   // File tin nhắn là riêng tư: dùng URL ký hạn ngắn do BE cấp (<img>/<a> không gửi được Authorization).
+  const { t } = useTranslation('messages');
   const href = useFileUrl(a.url);
-  if (href === null) return <div className="mt-1.5 text-[12px] opacity-70">Không tải được tệp đính kèm</div>;
+  if (href === null) return <div className="mt-1.5 text-[12px] opacity-70">{t('chat.attachmentError')}</div>;
   if (a.contentType.startsWith('image/')) {
     return href ? (
       <a href={href} target="_blank" rel="noreferrer" className="mt-1.5 block">
@@ -42,6 +44,7 @@ function ChatAttachment({ a, mine }: { a: MessageView['attachments'][number]; mi
 }
 
 function Bubble({ m, mine, onRecall, recalling }: { m: MessageView; mine: boolean; onRecall: () => void; recalling: boolean }) {
+  const { t } = useTranslation('messages');
   return (
     <div className={`group flex ${mine ? 'justify-end' : 'justify-start'}`}>
       {mine && !m.deleted && (
@@ -49,8 +52,8 @@ function Bubble({ m, mine, onRecall, recalling }: { m: MessageView; mine: boolea
           type="button"
           onClick={onRecall}
           disabled={recalling}
-          title="Thu hồi tin nhắn"
-          aria-label="Thu hồi tin nhắn"
+          title={t('chat.recall')}
+          aria-label={t('chat.recall')}
           className="mr-1 self-center text-stone-400 opacity-0 group-hover:opacity-100 hover:text-red-600 focus:opacity-100 max-md:opacity-100"
         >
           <MaterialIcon name="undo" size={17} />
@@ -68,6 +71,7 @@ function Bubble({ m, mine, onRecall, recalling }: { m: MessageView; mine: boolea
 }
 
 export function ChatPanel({ conversationId, conversation, onBack }: { conversationId: string; conversation?: ConversationView; onBack: () => void }) {
+  const { t } = useTranslation('messages');
   const { confirm } = usePopup();
   const { user } = useAuth();
   const thread = useThread(conversationId);
@@ -108,7 +112,7 @@ export function ChatPanel({ conversationId, conversation, onBack }: { conversati
     setError(null);
     for (const f of Array.from(list)) {
       if (files.length >= 5) {
-        setError('Chỉ đính kèm tối đa 5 tệp mỗi tin nhắn');
+        setError(t('chat.maxFiles'));
         break;
       }
       try {
@@ -122,7 +126,7 @@ export function ChatPanel({ conversationId, conversation, onBack }: { conversati
   };
 
   const submit = () => {
-    const content = text.trim() || (files.length ? `Đã gửi ${files.length} tệp đính kèm` : '');
+    const content = text.trim() || (files.length ? t('chat.sentFiles', { count: files.length }) : '');
     if (!content || send.isPending || uploading) return;
     setError(null);
     send.mutate(
@@ -143,26 +147,26 @@ export function ChatPanel({ conversationId, conversation, onBack }: { conversati
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center gap-3 border-b border-[rgba(120,60,20,.08)] px-4 py-3">
-        <button type="button" onClick={onBack} aria-label="Quay lại" className="md:hidden">
+        <button type="button" onClick={onBack} aria-label={t('chat.back')} className="md:hidden">
           <MaterialIcon name="arrow_back" size={22} />
         </button>
         <span className="grid size-9 flex-none place-items-center rounded-full bg-[#f5dcc8] text-[13px] font-bold">
           {(conversation?.other.name ?? '?').charAt(0).toUpperCase()}
         </span>
-        <div className="min-w-0 flex-1 truncate text-[15px] font-bold">{conversation?.other.name ?? 'Cuộc trò chuyện'}</div>
+        <div className="min-w-0 flex-1 truncate text-[15px] font-bold">{conversation?.other.name ?? t('chat.conversation')}</div>
         {conversation && (
           <button
             type="button"
             disabled={blockToggle.isPending}
             onClick={async () => {
-              if (!blocked && !(await confirm({ title: `Chặn ${conversation.other.name}?`, message: 'Hai bên sẽ không nhắn tin cho nhau được nữa.', tone: 'danger', confirmText: 'Chặn' }))) return;
+              if (!blocked && !(await confirm({ title: t('chat.blockTitle', { name: conversation.other.name }), message: t('chat.blockMessage'), tone: 'danger', confirmText: t('chat.block') }))) return;
               setError(null);
               blockToggle.mutate({ userId: conversation.other.id, block: !blocked }, { onError: (e) => setError(messageErrorText(e)) });
             }}
             className="flex h-9 items-center gap-1.5 rounded-xl border border-[rgba(120,60,20,.12)] px-3 text-[12.5px] font-medium hover:bg-[#fff7f0] disabled:opacity-50"
           >
             <MaterialIcon name={blocked ? 'lock_open' : 'block'} size={16} />
-            {blocked ? 'Bỏ chặn' : 'Chặn'}
+            {blocked ? t('chat.unblock') : t('chat.block')}
           </button>
         )}
       </div>
@@ -184,14 +188,14 @@ export function ChatPanel({ conversationId, conversation, onBack }: { conversati
               }}
               className="rounded-full border border-[rgba(120,60,20,.12)] bg-white px-4 py-1.5 text-[12.5px] font-medium hover:bg-[#fff7f0] disabled:opacity-50"
             >
-              {thread.isFetchingNextPage ? 'Đang tải…' : 'Tải tin cũ hơn'}
+              {thread.isFetchingNextPage ? t('chat.loading') : t('chat.loadOlder')}
             </button>
           </div>
         )}
-        {thread.isPending && <p className="py-10 text-center text-stone-400">Đang tải tin nhắn…</p>}
-        {notFound && <p className="py-10 text-center text-stone-500">Không tìm thấy cuộc trò chuyện này.</p>}
+        {thread.isPending && <p className="py-10 text-center text-stone-400">{t('chat.loadingMessages')}</p>}
+        {notFound && <p className="py-10 text-center text-stone-500">{t('chat.notFound')}</p>}
         {thread.isError && !notFound && <p className="py-10 text-center text-red-600">{messageErrorText(thread.error)}</p>}
-        {thread.isSuccess && messages.length === 0 && <p className="py-10 text-center text-stone-500">Chưa có tin nhắn nào. Hãy gửi lời chào!</p>}
+        {thread.isSuccess && messages.length === 0 && <p className="py-10 text-center text-stone-500">{t('chat.noMessages')}</p>}
         {messages.map((m) => (
           <Bubble
             key={m.id}
@@ -199,7 +203,7 @@ export function ChatPanel({ conversationId, conversation, onBack }: { conversati
             mine={m.senderId === user?.id}
             recalling={recall.isPending}
             onRecall={async () => {
-              if (await confirm({ title: 'Thu hồi tin nhắn này?', message: 'Nội dung sẽ bị xóa với cả hai bên.', tone: 'danger', confirmText: 'Thu hồi' })) {
+              if (await confirm({ title: t('chat.recallTitle'), message: t('chat.recallMessage'), tone: 'danger', confirmText: t('chat.recallConfirm') })) {
                 setError(null);
                 recall.mutate(m.id, { onError: (e) => setError(messageErrorText(e)) });
               }
@@ -214,7 +218,7 @@ export function ChatPanel({ conversationId, conversation, onBack }: { conversati
         </div>
       )}
       {blocked ? (
-        <p className="border-t border-[rgba(120,60,20,.08)] px-4 py-3 text-center text-[13px] text-stone-500">Bạn đã chặn người này. Bỏ chặn để tiếp tục nhắn tin.</p>
+        <p className="border-t border-[rgba(120,60,20,.08)] px-4 py-3 text-center text-[13px] text-stone-500">{t('chat.youBlocked')}</p>
       ) : (
         <div className="border-t border-[rgba(120,60,20,.08)] px-3 py-3">
           {files.length > 0 && (
@@ -223,7 +227,7 @@ export function ChatPanel({ conversationId, conversation, onBack }: { conversati
                 <span key={f.key} className="flex max-w-[200px] items-center gap-1.5 rounded-lg bg-stone-900/5 px-2 py-1 text-[12px]">
                   <MaterialIcon name={f.contentType.startsWith('image/') ? 'image' : 'attach_file'} size={15} />
                   <span className="truncate">{f.name}</span>
-                  <button type="button" aria-label={`Bỏ ${f.name}`} onClick={() => setFiles((cur) => cur.filter((x) => x.key !== f.key))}>
+                  <button type="button" aria-label={t('chat.removeFile', { name: f.name })} onClick={() => setFiles((cur) => cur.filter((x) => x.key !== f.key))}>
                     <MaterialIcon name="close" size={14} />
                   </button>
                 </span>
@@ -236,8 +240,8 @@ export function ChatPanel({ conversationId, conversation, onBack }: { conversati
               type="button"
               disabled={uploading || files.length >= 5}
               onClick={() => fileRef.current?.click()}
-              aria-label="Đính kèm tệp"
-              title="Đính kèm ảnh / tệp"
+              aria-label={t('chat.attach')}
+              title={t('chat.attachTitle')}
               className="grid size-10 flex-none place-items-center rounded-xl border border-[rgba(120,60,20,.12)] bg-white hover:bg-[#fff7f0] disabled:opacity-50"
             >
               <MaterialIcon name={uploading ? 'progress_activity' : 'attach_file'} size={20} />
@@ -253,14 +257,14 @@ export function ChatPanel({ conversationId, conversation, onBack }: { conversati
               }}
               maxLength={2000}
               rows={1}
-              placeholder="Nhập tin nhắn…"
+              placeholder={t('chat.placeholder')}
               className="max-h-32 min-h-10 min-w-0 flex-1 resize-none rounded-xl border border-[rgba(120,60,20,.12)] bg-white px-3 py-2 text-[14px] outline-0 focus:border-brand"
             />
             <button
               type="button"
               onClick={submit}
               disabled={send.isPending || uploading || (!text.trim() && files.length === 0)}
-              aria-label="Gửi"
+              aria-label={t('chat.send')}
               className="grid size-10 flex-none place-items-center rounded-xl bg-brand text-white disabled:opacity-50"
             >
               <MaterialIcon name="send" size={19} />

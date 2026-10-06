@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { MaterialIcon } from '../../../../components/ui/MaterialIcon';
 import { useAuth } from '../../../auth/AuthContext';
@@ -21,11 +22,12 @@ function Zone({ title, desc, children }: { title: string; desc: string; children
 const dangerBtn = 'h-10 rounded-xl border border-red-300 bg-white px-5 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50';
 
 export function DangerTab({ course, viewerRole }: { course: CommunityDetail; viewerRole: ViewerRole }) {
+  const { t } = useTranslation('communities');
   const isOwner = ROLE_RANK[viewerRole] >= ROLE_RANK.owner;
   const isPlatformAdmin = viewerRole === 'platform_admin';
   return (
     <section className="glass flex flex-col gap-4 rounded-[26px] p-6">
-      <h2 className="m-0 text-lg font-extrabold text-red-700">Vùng nguy hiểm</h2>
+      <h2 className="m-0 text-lg font-extrabold text-red-700">{t('danger.title')}</h2>
       {isOwner && <TransferZone course={course} />}
       {isOwner && <DeleteZone course={course} />}
       {isPlatformAdmin && <LockZone course={course} />}
@@ -34,6 +36,7 @@ export function DangerTab({ course, viewerRole }: { course: CommunityDetail; vie
 }
 
 function TransferZone({ course }: { course: CommunityDetail }) {
+  const { t } = useTranslation('communities');
   const { user } = useAuth();
   const [q, setQ] = useState('');
   const [target, setTarget] = useState<{ id: string; name: string } | null>(null);
@@ -46,11 +49,11 @@ function TransferZone({ course }: { course: CommunityDetail }) {
   const candidates = (members.data?.data ?? []).filter((m) => !m.id.startsWith('seed:') && m.id !== user?.id && m.roleDetail !== 'owner');
 
   return (
-    <Zone title="Chuyển quyền chủ cộng đồng" desc="Người nhận trở thành chủ cộng đồng; bạn sẽ trở thành quản trị viên. Bạn không thể tự hoàn tác.">
-      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Tìm thành viên theo tên…" className={INPUT_CLASS} />
+    <Zone title={t('danger.transfer.title')} desc={t('danger.transfer.desc')}>
+      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('danger.transfer.searchPlaceholder')} className={INPUT_CLASS} />
       <div className="mt-2 max-h-52 overflow-y-auto rounded-xl border border-[rgba(120,60,20,.1)] bg-white">
-        {members.isPending && <p className="p-3 text-sm text-stone-500">Đang tải…</p>}
-        {members.data && candidates.length === 0 && <p className="p-3 text-sm text-stone-500">Không có thành viên phù hợp để nhận quyền.</p>}
+        {members.isPending && <p className="p-3 text-sm text-stone-500">{t('danger.transfer.loading')}</p>}
+        {members.data && candidates.length === 0 && <p className="p-3 text-sm text-stone-500">{t('danger.transfer.noCandidates')}</p>}
         {candidates.map((m) => (
           <button
             key={m.id}
@@ -64,14 +67,14 @@ function TransferZone({ course }: { course: CommunityDetail }) {
         ))}
       </div>
       <button type="button" disabled={!target || transfer.isPending} onClick={() => setConfirming(true)} className={`${dangerBtn} mt-3`}>
-        {target ? `Chuyển quyền cho ${target.name}` : 'Chọn một thành viên'}
+        {target ? t('danger.transfer.toName', { name: target.name }) : t('danger.transfer.pick')}
       </button>
-      {done && <p className="mt-2 text-sm text-green-700">Đã chuyển quyền chủ cộng đồng.</p>}
+      {done && <p className="mt-2 text-sm text-green-700">{t('danger.transfer.done')}</p>}
       {transfer.isError && !confirming && <ErrorLine>{errorText(transfer.error)}</ErrorLine>}
 
       {confirming && target && (
         <Modal
-          title="Xác nhận chuyển quyền"
+          title={t('danger.transfer.confirmTitle')}
           icon="swap_horiz"
           onClose={() => setConfirming(false)}
           footer={
@@ -91,12 +94,12 @@ function TransferZone({ course }: { course: CommunityDetail }) {
                   })
                 }
               >
-                {transfer.isPending ? 'Đang chuyển…' : 'Chuyển quyền'}
+                {transfer.isPending ? t('danger.transfer.transferring') : t('danger.transfer.confirm')}
               </PrimaryButton>
             </>
           }
         >
-          Chuyển quyền chủ "{course.title}" cho <b>{target.name}</b>? Bạn sẽ trở thành quản trị viên và mất quyền đổi giá, xóa cộng đồng.
+          <Trans ns="communities" i18nKey="danger.transfer.confirmBody" values={{ title: course.title, name: target.name }} components={{ b: <b /> }} />
         </Modal>
       )}
     </Zone>
@@ -104,6 +107,7 @@ function TransferZone({ course }: { course: CommunityDetail }) {
 }
 
 function DeleteZone({ course }: { course: CommunityDetail }) {
+  const { t } = useTranslation('communities');
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState('');
@@ -111,26 +115,26 @@ function DeleteZone({ course }: { course: CommunityDetail }) {
   const matches = typed.trim() === course.title.trim();
 
   return (
-    <Zone title="Xóa cộng đồng" desc="Cộng đồng sẽ bị ẩn khỏi nền tảng và mọi thành viên được thông báo. Hành động này không thể hoàn tác.">
+    <Zone title={t('danger.delete.title')} desc={t('danger.delete.desc')}>
       <button type="button" onClick={() => setOpen(true)} className={dangerBtn}>
-        Xóa cộng đồng
+        {t('danger.delete.title')}
       </button>
       {open && (
         <Modal
-          title="Xóa cộng đồng"
+          title={t('danger.delete.title')}
           icon="delete_forever"
           onClose={() => setOpen(false)}
           footer={
             <>
               <CancelButton onClick={() => setOpen(false)} />
               <PrimaryButton danger disabled={!matches || del.isPending} onClick={() => del.mutate(undefined, { onSuccess: () => navigate('/', { replace: true }) })}>
-                {del.isPending ? 'Đang xóa…' : 'Xóa vĩnh viễn'}
+                {del.isPending ? t('danger.delete.deleting') : t('danger.delete.confirm')}
               </PrimaryButton>
             </>
           }
         >
-          Để xác nhận, hãy nhập chính xác tên cộng đồng: <b className="break-words">{course.title}</b>
-          <input value={typed} onChange={(e) => setTyped(e.target.value)} className={`${INPUT_CLASS} mt-3`} aria-label="Nhập tên cộng đồng để xác nhận" />
+          <Trans ns="communities" i18nKey="danger.delete.typeName" values={{ title: course.title }} components={{ b: <b className="break-words" /> }} />
+          <input value={typed} onChange={(e) => setTyped(e.target.value)} className={`${INPUT_CLASS} mt-3`} aria-label={t('danger.delete.typeNameAria')} />
           {del.isError && <ErrorLine>{errorText(del.error)}</ErrorLine>}
         </Modal>
       )}
@@ -139,6 +143,7 @@ function DeleteZone({ course }: { course: CommunityDetail }) {
 }
 
 function LockZone({ course }: { course: CommunityDetail }) {
+  const { t } = useTranslation('communities');
   const [reason, setReason] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
   const lock = useLockCommunity(course.id);
@@ -146,32 +151,32 @@ function LockZone({ course }: { course: CommunityDetail }) {
 
   return (
     <Zone
-      title={locked ? 'Cộng đồng đang bị khóa' : 'Khóa cộng đồng (Quản trị nền tảng)'}
+      title={locked ? t('danger.lock.lockedTitle') : t('danger.lock.lockTitle')}
       desc={
         locked
-          ? 'Thành viên không thể truy cập nội dung. Mở khóa để cộng đồng hoạt động lại.'
-          : 'Khóa sẽ ẩn cộng đồng khỏi danh sách và chặn thành viên truy cập. Chủ cộng đồng được thông báo kèm lý do.'
+          ? t('danger.lock.lockedDesc')
+          : t('danger.lock.lockDesc')
       }
     >
       {locked ? (
         <button type="button" disabled={lock.isPending} onClick={() => lock.mutate({ lock: false })} className={dangerBtn}>
           <MaterialIcon name="lock_open" size={16} color="#dc2626" className="mr-1.5 align-middle" />
-          {lock.isPending ? 'Đang mở khóa…' : 'Mở khóa cộng đồng'}
+          {lock.isPending ? t('danger.lock.unlocking') : t('danger.lock.unlock')}
         </button>
       ) : (
         <>
-          <textarea value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} rows={2} placeholder="Lý do khóa (bắt buộc)" className={`${INPUT_CLASS} resize-none`} />
+          <textarea value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} rows={2} placeholder={t('danger.lock.reasonPlaceholder')} className={`${INPUT_CLASS} resize-none`} />
           <button
             type="button"
             disabled={lock.isPending}
             onClick={() => {
-              if (!reason.trim()) return setLocalError('Vui lòng nhập lý do khóa');
+              if (!reason.trim()) return setLocalError(t('danger.lock.reasonRequired'));
               setLocalError(null);
               lock.mutate({ lock: true, reason: reason.trim() }, { onSuccess: () => setReason('') });
             }}
             className={`${dangerBtn} mt-2`}
           >
-            {lock.isPending ? 'Đang khóa…' : 'Khóa cộng đồng'}
+            {lock.isPending ? t('danger.lock.locking') : t('danger.lock.lock')}
           </button>
         </>
       )}

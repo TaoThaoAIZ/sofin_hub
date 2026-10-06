@@ -1,0 +1,56 @@
+{
+  "blocked": {
+    "title": "Người dùng đã chặn",
+    "close": "Đóng",
+    "loading": "Đang tải…",
+    "loadError": "Không tải được danh sách.",
+    "empty": "Bạn chưa chặn ai.",
+    "since": "Chặn từ {{date}}",
+    "unblock": "Bỏ chặn"
+  },
+  "chat": {
+    "attachmentError": "Không tải được tệp đính kèm",
+    "recall": "Thu hồi tin nhắn",
+    "maxFiles": "Chỉ đính kèm tối đa 5 tệp mỗi tin nhắn",
+    "sentFiles": "Đã gửi {{count}} tệp đính kèm",
+    "back": "Quay lại",
+    "conversation": "Cuộc trò chuyện",
+    "blockTitle": "Chặn {{name}}?",
+    "blockMessage": "Hai bên sẽ không nhắn tin cho nhau được nữa.",
+    "block": "Chặn",
+    "unblock": "Bỏ chặn",
+    "loading": "Đang tải…",
+    "loadOlder": "Tải tin cũ hơn",
+    "loadingMessages": "Đang tải tin nhắn…",
+    "notFound": "Không tìm thấy cuộc trò chuyện này.",
+    "noMessages": "Chưa có tin nhắn nào. Hãy gửi lời chào!",
+    "recallTitle": "Thu hồi tin nhắn này?",
+    "recallMessage": "Nội dung sẽ bị xóa với cả hai bên.",
+    "recallConfirm": "Thu hồi",
+    "youBlocked": "Bạn đã chặn người này. Bỏ chặn để tiếp tục nhắn tin.",
+    "removeFile": "Bỏ {{name}}",
+    "attach": "Đính kèm tệp",
+    "attachTitle": "Đính kèm ảnh / tệp",
+    "placeholder": "Nhập tin nhắn…",
+    "send": "Gửi"
+  },
+  "button": {
+    "label": "Tin nhắn",
+    "labelUnread": "Tin nhắn ({{count}} chưa đọc)"
+  },
+  "errors": {
+    "forbidden": "Bạn không thể nhắn tin cho người này (không chung cộng đồng hoặc đã bị chặn).",
+    "rateLimit": "Bạn gửi tin quá nhanh, vui lòng chờ một chút rồi thử lại.",
+    "generic": "Đã có lỗi xảy ra, vui lòng thử lại"
+  },
+  "page": {
+    "title": "Tin nhắn",
+    "loading": "Đang tải…",
+    "loadError": "Không tải được danh sách hội thoại.",
+    "empty": "Chưa có cuộc trò chuyện nào. Vào tab Thành viên của một cộng đồng và bấm biểu tượng chat để bắt đầu nhắn tin.",
+    "blocked": "Đã chặn",
+    "you": "Bạn: ",
+    "noMessages": "Chưa có tin nhắn",
+    "selectPrompt": "Chọn một cuộc trò chuyện để bắt đầu."
+  }
+}

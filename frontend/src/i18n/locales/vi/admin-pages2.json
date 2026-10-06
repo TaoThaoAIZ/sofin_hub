@@ -1,0 +1,551 @@
+{
+  "emailTemplates": {
+    "lang": {
+      "en": "Tiếng Anh",
+      "vi": "Tiếng Việt"
+    },
+    "sample": {
+      "name": "Nguyễn Văn A",
+      "reason": "Vi phạm tiêu chuẩn cộng đồng"
+    },
+    "toast": {
+      "created": "Đã tạo mẫu email",
+      "saved": "Đã lưu mẫu email",
+      "missingVars": "Còn thiếu biến: {{vars}}",
+      "testSent": "Đã gửi thử tới {{to}}",
+      "enabled": "Đã bật \"{{name}}\"",
+      "disabled": "Đã tắt \"{{name}}\""
+    },
+    "yourEmail": "email của bạn",
+    "varNameInvalid": "Tên biến chỉ gồm chữ, số, gạch dưới (bắt đầu bằng chữ).",
+    "editor": {
+      "createTitle": "Tạo mẫu email",
+      "editTitle": "Sửa mẫu · {{name}}",
+      "varName": "tên_biến",
+      "subtitle": "Dùng {{example}} để chèn dữ liệu động. Xem trước bên phải cập nhật ngay khi bạn gõ.",
+      "back": "Quay lại",
+      "saving": "Đang lưu…",
+      "save": "Lưu mẫu",
+      "contentTitle": "Nội dung",
+      "contentSub": "Tiếng Anh là bắt buộc; tiếng Việt dùng khi người nhận chọn ngôn ngữ này.",
+      "keyLabel": "Khóa mẫu (a-z, 0-9, _)",
+      "keyPlaceholder": "vd. course_invite",
+      "nameLabel": "Tên mẫu",
+      "descLabel": "Mô tả",
+      "statusLabel": "Trạng thái",
+      "languageLabel": "Ngôn ngữ",
+      "subjectLabel": "Tiêu đề ({{lang}})",
+      "subjectAria": "Tiêu đề",
+      "bodyLabel": "Nội dung ({{lang}})",
+      "bodyAria": "Nội dung",
+      "undeclared": "Biến chưa khai báo: {{vars}}",
+      "declareVars": "Khai báo biến",
+      "removeVar": "Bỏ biến {{name}}",
+      "varPlaceholder": "tên_biến",
+      "addVarAria": "Thêm biến",
+      "addVar": "Thêm biến",
+      "previewTitle": "Xem trước",
+      "previewSub": "Dùng dữ liệu mẫu bên dưới.",
+      "serverRender": "Bản dựng từ máy chủ",
+      "serverPreview": "Xem bản từ máy chủ",
+      "testSend": "Gửi thử cho tôi",
+      "savedNote": "“Xem bản từ máy chủ” và “Gửi thử” dùng nội dung đã lưu. Hãy lưu trước khi kiểm tra.",
+      "sampleTitle": "Dữ liệu mẫu",
+      "sampleSub": "Giá trị điền vào các biến khi xem trước."
+    },
+    "title": "Mẫu email",
+    "createShort": "Tạo mẫu",
+    "col": {
+      "template": "Mẫu email",
+      "subject": "Tiêu đề",
+      "language": "Ngôn ngữ",
+      "updated": "Cập nhật",
+      "status": "Trạng thái"
+    },
+    "action": {
+      "edit": "Sửa",
+      "disable": "Tắt",
+      "enable": "Bật",
+      "delete": "Xóa"
+    },
+    "delete": {
+      "title": "Xóa mẫu · {{name}}",
+      "body": "Mẫu sẽ bị xóa vĩnh viễn.",
+      "cta": "Xóa",
+      "success": "Đã xóa mẫu email"
+    },
+    "subtitle": "Email hệ thống gửi cho thành viên và creator.",
+    "searchPlaceholder": "Tìm mẫu email...",
+    "empty": "Chưa có mẫu email nào."
+  },
+  "moderation": {
+    "queue": {
+      "title": "Hàng đợi báo cáo",
+      "subtitle": "Phân loại nội dung và người dùng bị báo cáo theo mức rủi ro.",
+      "kpi": {
+        "open": "Báo cáo mở",
+        "critical": "Nghiêm trọng",
+        "underReview": "Đang xem xét",
+        "resolvedToday": "Xử lý hôm nay"
+      },
+      "tab": {
+        "all": "Tất cả",
+        "open": "Mở",
+        "underReview": "Đang xem xét",
+        "closed": "Đã xử lý"
+      },
+      "searchPlaceholder": "Tìm mã vụ việc, nội dung, người dùng...",
+      "filter": {
+        "risk": "Rủi ro",
+        "reason": "Lý do",
+        "assignee": "Người phụ trách",
+        "me": "Tôi",
+        "unassigned": "Chưa phân công",
+        "sort": "Sắp xếp",
+        "byRisk": "Theo rủi ro"
+      },
+      "emptyOpen": "Không có báo cáo nào đang chờ xử lý."
+    },
+    "log": {
+      "subtitle": "Mọi quyết định được lưu theo: Vụ việc → Quyết định → Quản trị viên → Lý do → Bằng chứng.",
+      "user": "Người dùng",
+      "content": "Nội dung",
+      "warnings": {
+        "title": "Cảnh cáo",
+        "empty": "Chưa có cảnh cáo nào."
+      },
+      "removals": {
+        "title": "Nội dung đã gỡ",
+        "type": "Đã gỡ nội dung",
+        "empty": "Chưa có nội dung nào bị gỡ."
+      },
+      "suspensions": {
+        "title": "Tạm ngưng",
+        "restriction": "Hạn chế",
+        "empty": "Chưa có quyết định nào."
+      },
+      "bans": {
+        "title": "Lệnh cấm",
+        "type": "Cấm",
+        "empty": "Chưa có lệnh cấm nào."
+      },
+      "col": {
+        "caseCode": "Mã vụ việc",
+        "decision": "Quyết định",
+        "admin": "Quản trị viên",
+        "reason": "Lý do",
+        "evidence": "Bằng chứng",
+        "date": "Ngày"
+      },
+      "searchPlaceholder": "Tìm vụ việc..."
+    }
+  },
+  "users": {
+    "sort": {
+      "oldest": "Cũ nhất",
+      "name": "Tên A–Z",
+      "revenue": "Doanh thu cao nhất",
+      "reports": "Nhiều báo cáo nhất"
+    },
+    "col": {
+      "status": "Trạng thái",
+      "plan": "Gói đăng ký",
+      "user": "Người dùng",
+      "communities": "Cộng đồng",
+      "revenue": "Doanh thu",
+      "reports": "Báo cáo",
+      "joined": "Tham gia",
+      "reason": "Lý do"
+    },
+    "filter": {
+      "role": "Vai trò",
+      "sort": "Sắp xếp"
+    },
+    "role": {
+      "member": "Thành viên"
+    },
+    "plan": {
+      "free": "Miễn phí",
+      "paid": "Trả phí"
+    },
+    "title": "Người dùng",
+    "subtitle": "Tìm kiếm, xem xét và quản lý mọi tài khoản trên nền tảng.",
+    "kpi": {
+      "total": "Tổng người dùng",
+      "active": "Hoạt động",
+      "new": "Mới",
+      "last30d": "30 ngày qua",
+      "paid": "Trả phí",
+      "restricted": "Bị hạn chế",
+      "suspended": "Tạm ngưng",
+      "banned": "Bị cấm"
+    },
+    "searchPlaceholder": "Tìm tên, email, mã người dùng...",
+    "restricted": {
+      "cannotLogin": "Không thể đăng nhập",
+      "until": "Đến {{date}}",
+      "indefinite": "Vô thời hạn",
+      "title": "Hạn chế / Tạm ngưng",
+      "subtitle": "Người dùng bị giới hạn quyền trên nền tảng.",
+      "col": {
+        "restriction": "Hạn chế",
+        "duration": "Thời hạn",
+        "by": "Thực hiện bởi",
+        "since": "Từ ngày"
+      },
+      "searchPlaceholder": "Tìm người dùng...",
+      "empty": "Không có người dùng nào đang bị hạn chế hoặc tạm ngưng."
+    },
+    "banned": {
+      "title": "Người dùng bị cấm",
+      "subtitle": "Tài khoản bị cấm vĩnh viễn. Mọi lệnh cấm đều được ghi vào nhật ký.",
+      "col": {
+        "id": "Mã",
+        "by": "Cấm bởi",
+        "date": "Ngày"
+      },
+      "searchPlaceholder": "Tìm người dùng bị cấm...",
+      "empty": "Chưa có người dùng nào bị cấm."
+    }
+  },
+  "support": {
+    "tab": {
+      "all": "Tất cả",
+      "new": "Mới",
+      "open": "Đang mở",
+      "awaitingReply": "Chờ phản hồi",
+      "resolved": "Đã xử lý"
+    },
+    "title": {
+      "all": "Ticket hỗ trợ",
+      "user": "Vấn đề người dùng",
+      "creator": "Vấn đề creator",
+      "payment": "Vấn đề thanh toán"
+    },
+    "toast": {
+      "assignedMe": "Bạn đã nhận xử lý {{code}}",
+      "reopened": "Đã mở lại {{code}}"
+    },
+    "resolve": {
+      "title": "Đánh dấu đã xử lý · {{code}}",
+      "body": "Ticket chuyển sang Đã xử lý. Người gửi vẫn có thể trả lời để mở lại.",
+      "cta": "Đã xử lý",
+      "success": "Đã xử lý {{code}}"
+    },
+    "noteOptional": "Ghi chú (tùy chọn)",
+    "close": {
+      "title": "Đóng ticket · {{code}}",
+      "body": "Ticket đóng sẽ không nhận thêm phản hồi (có thể mở lại).",
+      "cta": "Đóng ticket",
+      "success": "Đã đóng {{code}}"
+    },
+    "escalate": {
+      "title": "Chuyển cấp trên · {{code}}",
+      "body": "Ticket được đánh dấu chuyển cấp và nâng mức ưu tiên.",
+      "cta": "Chuyển cấp trên",
+      "reason": "Lý do chuyển cấp",
+      "success": "Đã chuyển cấp {{code}}"
+    },
+    "assign": {
+      "none": "Bỏ gán",
+      "title": "Giao ticket · {{code}}",
+      "success": "Đã cập nhật người phụ trách",
+      "label": "Người phụ trách"
+    },
+    "save": "Lưu",
+    "edit": {
+      "title": "Sửa ticket · {{code}}",
+      "success": "Đã cập nhật ticket"
+    },
+    "field": {
+      "subject": "Chủ đề",
+      "priority": "Ưu tiên",
+      "category": "Nhóm",
+      "message": "Nội dung"
+    },
+    "create": {
+      "title": "Tạo ticket hộ khách",
+      "body": "Dùng khi khách liên hệ qua kênh khác. Nếu email trùng với tài khoản, ticket được liên kết với tài khoản đó.",
+      "cta": "Tạo ticket",
+      "success": "Đã tạo ticket",
+      "emailLabel": "Email khách (tùy chọn)",
+      "emailPlaceholder": "khach@email.com",
+      "nameLabel": "Tên khách (tùy chọn)"
+    },
+    "kind": {
+      "customer": "Khách",
+      "staff": "Nhân viên",
+      "internalNote": "Ghi chú nội bộ",
+      "system": "Hệ thống"
+    },
+    "reply": {
+      "noteAdded": "Đã thêm ghi chú nội bộ",
+      "sent": "Đã gửi phản hồi tới người gửi",
+      "closed": "Ticket đã đóng. Mở lại để tiếp tục phản hồi.",
+      "replyCustomer": "Trả lời khách",
+      "notePlaceholder": "Chỉ nhân viên xem được...",
+      "replyPlaceholder": "Nội dung gửi tới người gửi (qua email và thông báo trong app)...",
+      "keepOpen": "Giữ đang mở",
+      "sending": "Đang gửi…",
+      "saveNote": "Lưu ghi chú",
+      "send": "Gửi phản hồi"
+    },
+    "escalated": "Đã chuyển cấp",
+    "createdAgo": "tạo {{time}}",
+    "detail": {
+      "assignee": "Phụ trách: {{name}}",
+      "assign": "Giao người phụ trách",
+      "close": "Đóng",
+      "conversation": "Hội thoại ({{count}})",
+      "reply": "Trả lời",
+      "history": "Lịch sử thao tác"
+    },
+    "action": {
+      "reopen": "Mở lại",
+      "edit": "Sửa",
+      "viewUser": "Xem người dùng",
+      "view": "Xem",
+      "reply": "Trả lời",
+      "takeOver": "Nhận xử lý",
+      "assignTo": "Giao cho…"
+    },
+    "kpi": {
+      "openCat": "Đang mở ({{cat}})",
+      "open": "Đang mở",
+      "newToday": "Mới hôm nay",
+      "firstResponse": "Phản hồi đầu TB",
+      "minutes": "{{n}} phút",
+      "resolved7d": "Đã xử lý (7 ngày)"
+    },
+    "escalatedSuffix": " · đã chuyển cấp",
+    "col": {
+      "requester": "Người gửi",
+      "assignee": "Phụ trách",
+      "updated": "Cập nhật",
+      "status": "Trạng thái",
+      "ticket": "Ticket"
+    },
+    "unassigned": "Chưa giao",
+    "filter": {
+      "mine": "Của tôi"
+    },
+    "subtitle": "Yêu cầu hỗ trợ từ thành viên và creator.",
+    "searchPlaceholder": "Tìm ticket...",
+    "empty": "Không có ticket nào."
+  },
+  "access": {
+    "role": "Vai trò",
+    "admins": {
+      "create": {
+        "title": "Tạo quản trị viên",
+        "body": "Nếu email đã có tài khoản thì chỉ cấp vai trò. Nếu chưa có, hệ thống tạo tài khoản mời và gửi email đặt lại mật khẩu.",
+        "cta": "Gửi lời mời",
+        "success": "Đã gửi lời mời quản trị viên",
+        "email": "Email công việc",
+        "firstName": "Tên (nếu chưa có tài khoản)",
+        "lastName": "Họ",
+        "require2fa": "Bắt buộc 2FA ở lần đăng nhập đầu"
+      },
+      "editRole": {
+        "title": "Đổi vai trò · {{name}}",
+        "cta": "Lưu vai trò",
+        "success": "Đã cập nhật vai trò · {{name}}"
+      },
+      "col": {
+        "admin": "Quản trị viên"
+      },
+      "lastLogin": "Đăng nhập gần nhất",
+      "neverLoggedIn": "Chưa đăng nhập",
+      "status": "Trạng thái",
+      "active": "Hoạt động",
+      "suspended": "Tạm ngưng",
+      "action": {
+        "changeRole": "Đổi vai trò",
+        "reset2fa": "Đặt lại 2FA",
+        "reactivate": "Kích hoạt lại",
+        "revoke": "Gỡ quyền quản trị"
+      },
+      "reset2fa": {
+        "title": "Đặt lại 2FA · {{name}}",
+        "body": "Tắt cờ 2FA của tài khoản này và gửi email thông báo cho họ.",
+        "success": "Đã đặt lại 2FA · {{name}}"
+      },
+      "reactivated": "Đã kích hoạt lại {{name}}",
+      "suspend": {
+        "title": "Tạm ngưng · {{name}}",
+        "body": "Tài khoản này không truy cập được khu vực quản trị cho tới khi kích hoạt lại.",
+        "reason": "Lý do (tùy chọn)",
+        "success": "Đã tạm ngưng {{name}}"
+      },
+      "revoke": {
+        "title": "Gỡ quyền quản trị · {{name}}",
+        "body": "Người này vẫn giữ tài khoản thành viên nhưng không còn vào được khu vực quản trị.",
+        "cta": "Gỡ quyền",
+        "success": "Đã gỡ quyền của {{name}}"
+      },
+      "title": "Tài khoản quản trị",
+      "subtitle": "Những người có quyền truy cập trang quản trị.",
+      "detail": {
+        "source": "Nguồn",
+        "sourceEnv": "Cấu hình hệ thống (Super Admin gốc)",
+        "sourceStaff": "Nhân viên được cấp quyền",
+        "on": "Đã bật",
+        "off": "Chưa bật",
+        "joined": "Tham gia",
+        "locked": "Tài khoản này được khóa: không thể đổi vai trò, tạm ngưng hay gỡ quyền (tài khoản gốc hoặc chính bạn)."
+      },
+      "searchPlaceholder": "Tìm quản trị viên...",
+      "empty": "Chưa có quản trị viên nào."
+    },
+    "roles": {
+      "create": {
+        "title": "Tạo vai trò",
+        "body": "Vai trò tùy chỉnh gồm các quyền bạn chọn. Quyền quản lý quản trị viên chỉ dành cho Super Admin.",
+        "success": "Đã tạo vai trò"
+      },
+      "name": "Tên vai trò",
+      "descOptional": "Mô tả (tùy chọn)",
+      "permissions": "Quyền",
+      "edit": {
+        "title": "Sửa vai trò · {{name}}",
+        "success": "Đã cập nhật vai trò",
+        "button": "Sửa"
+      },
+      "save": "Lưu",
+      "desc": "Mô tả",
+      "adminManageOnlySuper": "Quyền quản lý quản trị viên chỉ dành cho Super Admin.",
+      "granted": "Đã cấp \"{{perm}}\" cho {{role}}",
+      "revoked": "Đã thu hồi \"{{perm}}\" cho {{role}}",
+      "title": "Vai trò & Quyền",
+      "subtitle": "Bấm vào ô để cấp hoặc thu hồi quyền.",
+      "cardSub": "Super Admin luôn đủ quyền và không sửa được. Vai trò hệ thống không xóa được.",
+      "system": "Hệ thống",
+      "custom": "Tùy chỉnh",
+      "counts": "{{members}} thành viên · {{perms}} quyền",
+      "inUse": "Vai trò đang được dùng",
+      "delete": {
+        "title": "Xóa vai trò · {{name}}",
+        "body": "Vai trò sẽ bị xóa vĩnh viễn.",
+        "cta": "Xóa",
+        "success": "Đã xóa vai trò"
+      }
+    }
+  },
+  "userDetail": {
+    "tab": {
+      "overview": "Tổng quan",
+      "communities": "Cộng đồng đã tham gia",
+      "activity": "Hoạt động",
+      "purchases": "Lịch sử mua",
+      "reports": "Báo cáo / Vi phạm",
+      "security": "Bảo mật"
+    },
+    "activity": {
+      "all": "Tất cả",
+      "login": "Đăng nhập",
+      "community": "Cộng đồng",
+      "content": "Nội dung",
+      "payment": "Thanh toán",
+      "moderation": "Kiểm duyệt",
+      "timeline": "Dòng thời gian hoạt động",
+      "empty": "Chưa có hoạt động nào."
+    },
+    "kpi": {
+      "communities": "Cộng đồng",
+      "posts": "Bài viết",
+      "comments": "Bình luận",
+      "purchases": "Lượt mua",
+      "reports": "Báo cáo",
+      "received": "Đã nhận",
+      "clean": "Hồ sơ sạch"
+    },
+    "profile": {
+      "title": "Hồ sơ",
+      "location": "Vị trí",
+      "joined": "Tham gia",
+      "verification": "Trạng thái xác minh",
+      "role": "Vai trò",
+      "member": "Thành viên",
+      "plan": "Gói đăng ký"
+    },
+    "lastLogin": "Đăng nhập gần nhất",
+    "verified": "Đã xác minh",
+    "unverified": "Chưa xác minh",
+    "paid": "Trả phí",
+    "free": "Miễn phí",
+    "recent": {
+      "title": "Hoạt động gần đây",
+      "viewAll": "Xem tất cả"
+    },
+    "account": {
+      "title": "Tình trạng tài khoản",
+      "status": "Trạng thái",
+      "restrictions": "Hạn chế",
+      "reason": "Lý do",
+      "until": "Hiệu lực đến",
+      "indefinite": "Vô thời hạn",
+      "by": "Thực hiện bởi",
+      "at": "Lúc"
+    },
+    "communities": {
+      "col": {
+        "community": "Cộng đồng",
+        "membership": "Gói thành viên"
+      },
+      "role": {
+        "owner": "Chủ sở hữu",
+        "admin": "Quản trị viên",
+        "mod": "Kiểm duyệt viên"
+      },
+      "paidPrice": "Trả phí · ${{price}}/tháng",
+      "empty": "Người dùng này chưa tham gia cộng đồng nào.",
+      "open": "Mở cộng đồng"
+    },
+    "lastActive": "Hoạt động gần nhất",
+    "status": "Trạng thái",
+    "purchases": {
+      "totalSpend": "Tổng chi tiêu",
+      "activeSubs": "Gói đang hoạt động",
+      "refunds": "Hoàn tiền",
+      "col": {
+        "transaction": "Giao dịch",
+        "amount": "Số tiền",
+        "refunded": "Đã hoàn",
+        "method": "Phương thức",
+        "date": "Ngày"
+      },
+      "empty": "Người dùng này chưa có giao dịch nào."
+    },
+    "reports": {
+      "received": "Báo cáo nhận được",
+      "confirmed": "Vi phạm đã xác nhận",
+      "warnings": "Cảnh cáo",
+      "suspensions": "Lần tạm ngưng",
+      "empty": "Người dùng này chưa bị báo cáo.",
+      "review": "Duyệt"
+    },
+    "security": {
+      "emailVerification": "Xác minh email",
+      "activeSessions": "Phiên đang hoạt động",
+      "device": "Thiết bị",
+      "unknown": "Không rõ",
+      "createdAt": "Tạo lúc",
+      "active": "Hoạt động",
+      "noSessions": "Không có phiên đang hoạt động.",
+      "revoke": "Thu hồi",
+      "revoked": "Đã thu hồi phiên"
+    },
+    "title": "Chi tiết người dùng",
+    "lastLoginAgo": "Đăng nhập gần nhất {{time}}",
+    "neverLoggedIn": "Chưa đăng nhập",
+    "action": {
+      "message": "Nhắn tin",
+      "warn": "Cảnh cáo",
+      "restrict": "Hạn chế",
+      "suspend": "Tạm ngưng",
+      "ban": "Cấm",
+      "reinstate": "Khôi phục truy cập"
+    },
+    "protected": "Đây là tài khoản Platform Admin — không thể hạn chế, tạm ngưng hoặc cấm."
+  }
+}

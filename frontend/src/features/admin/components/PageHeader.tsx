@@ -1,19 +1,25 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
+import i18n from '../../../i18n';
 import { matchNav, type Crumb } from '../nav';
 
 export type RangeDays = 7 | 30 | 90;
-export const RANGES: { value: RangeDays; label: string }[] = [
-  { value: 7, label: '7 ngày' },
-  { value: 30, label: '30 ngày' },
-  { value: 90, label: '90 ngày' },
-];
+const rangeOpt = (value: RangeDays) => ({
+  value,
+  // Lazy: dịch tại thời điểm đọc để đổi ngôn ngữ vẫn cập nhật.
+  get label() {
+    return i18n.t('pageHeader.days', { ns: 'admin-components', count: value });
+  },
+});
+export const RANGES: { value: RangeDays; label: string }[] = [rangeOpt(7), rangeOpt(30), rangeOpt(90)];
 
 /** Nhóm chip khoảng thời gian của bản thiết kế (nền trắng bo 12, mục chọn nền trắng đổ bóng). Backend hỗ trợ 7/30/90 ngày. */
 export function DateRangeChips({ value, onChange }: { value: RangeDays; onChange: (v: RangeDays) => void }) {
+  const { t } = useTranslation('admin-components');
   return (
-    <div className="flex rounded-xl border-[1.5px] border-[#ece5df] bg-white p-1" role="tablist" aria-label="Khoảng thời gian">
+    <div className="flex rounded-xl border-[1.5px] border-[#ece5df] bg-white p-1" role="tablist" aria-label={t('pageHeader.rangeLabel')}>
       {RANGES.map((r) => {
         const on = r.value === value;
         return (
@@ -35,9 +41,10 @@ export function DateRangeChips({ value, onChange }: { value: RangeDays; onChange
 
 /** Breadcrumb + tiêu đề + phụ đề + khu vực nút/khoảng thời gian — dùng ở đầu mọi trang admin. */
 export function PageHeader({ title, subtitle, actions, trail }: { title: string; subtitle?: string; actions?: ReactNode; trail?: Crumb[] }) {
+  const { t } = useTranslation('admin-components');
   const { pathname } = useLocation();
   const { group, kid } = matchNav(pathname);
-  const crumbs: Crumb[] = [{ label: 'Quản trị', to: '/admin' }];
+  const crumbs: Crumb[] = [{ label: t('pageHeader.admin'), to: '/admin' }];
   if (group.key !== 'dash') {
     crumbs.push({ label: group.label, to: group.kids?.[0]?.to });
     if (trail) crumbs.push(...trail);

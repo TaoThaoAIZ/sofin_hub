@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { PathIcon } from '../../../components/ui/icons';
 import { ALL_CATEGORY_ICON, CATEGORY_UI } from '../constants';
 import type { Category, CategoryId } from '../types';
@@ -50,6 +51,7 @@ function TabButton({
 }
 
 export function CategoryTabs({ categories, active, onChange }: Props) {
+  const { t } = useTranslation('course');
   const scroller = useRef<HTMLDivElement>(null);
 
   // Cuộn ngang bằng bánh xe chuột khi danh sách tràn
@@ -77,7 +79,7 @@ export function CategoryTabs({ categories, active, onChange }: Props) {
     <div className="mx-auto flex max-w-[1400px] items-start gap-3 px-4 pt-2.5 md:px-10">
       <div className="flex flex-none items-center gap-3 pt-1.5 pb-3">
         <TabButton
-          label="Tất cả"
+          label={t('list.all')}
           {...ALL_CATEGORY_ICON}
           on={active === undefined}
           onClick={() => onChange(undefined)}

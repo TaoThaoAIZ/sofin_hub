@@ -1,0 +1,27 @@
+{
+  "roles": {
+    "member": "Member",
+    "mod": "Moderator",
+    "admin": "Admin",
+    "owner": "Community owner"
+  },
+  "reasons": {
+    "post": "Posted",
+    "like_received": "Post liked",
+    "lesson_complete": "Completed a lesson",
+    "event_rsvp": "RSVP’d to an event"
+  },
+  "profile": {
+    "loading": "Loading profile…",
+    "error": "Error",
+    "notFound": "This user was not found (the account may have been deleted).",
+    "loadFail": "Couldn’t load the profile. Please try again.",
+    "home": "Go to home",
+    "joined": "Joined {{date}}",
+    "totalPoints": "Total points",
+    "edit": "Edit profile",
+    "communities": "Joined communities",
+    "noCommunities": "Hasn’t joined any public communities yet.",
+    "roleSince": "{{role}} · since {{date}}"
+  }
+}

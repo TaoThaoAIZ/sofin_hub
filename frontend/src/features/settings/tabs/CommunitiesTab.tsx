@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { ApiError } from '../../../lib/api';
+import i18n from '../../../i18n';
 import { ModalShell, useMenu, useToast } from '../../admin/components/overlay';
 import type { MyCommunity } from '../communities/api';
 import { DraftsSection, PendingSection, PointsSection } from '../communities/ExtraSections';
@@ -11,11 +13,12 @@ import { CommunityLogo, SCard, SHead, Toggle } from '../ui';
 
 type Filter = 'all' | 'own' | 'mem';
 
-const errMsg = (e: unknown) => (e instanceof ApiError ? e.message : 'Có lỗi xảy ra, vui lòng thử lại.');
+const errMsg = (e: unknown) => (e instanceof ApiError ? e.message : i18n.t('communitiesTab.errGeneric', { ns: 'settings' }));
 const SIDE_BTN =
   'inline-flex h-11 items-center gap-2 rounded-xl border-[1.5px] border-[#e7e0da] bg-white px-[18px] text-sm font-bold whitespace-nowrap text-stone-900 no-underline hover:border-[#fdba74]';
 
 export function CommunitiesTab() {
+  const { t } = useTranslation('settings');
   const q = useMyCommunities();
   const toast = useToast();
   const navigate = useNavigate();
@@ -41,17 +44,17 @@ export function CommunitiesTab() {
     if (!from || from === target.id) return;
     const ids = all.map((c) => c.id).filter((id) => id !== from);
     ids.splice(ids.indexOf(target.id), 0, from);
-    reorder.mutate(ids, { onSuccess: () => toast.success('Đã cập nhật thứ tự'), onError: (e) => toast.error(errMsg(e)) });
+    reorder.mutate(ids, { onSuccess: () => toast.success(t('communitiesTab.orderUpdated')), onError: (e) => toast.error(errMsg(e)) });
   };
 
   const onMenu = (e: React.MouseEvent<HTMLElement>, c: MyCommunity) =>
     openMenu(
       e,
       [
-        { icon: 'keep', label: c.pinned ? 'Bỏ ghim' : 'Ghim lên đầu thanh bên', onClick: () => doPatch(c, { pinned: !c.pinned }, c.pinned ? 'Đã bỏ ghim' : `Đã ghim ${c.title}`) },
-        { icon: 'notifications', label: 'Tùy chỉnh thông báo', onClick: () => navigate('/settings/thong-bao') },
-        { icon: 'credit_card', label: 'Quản lý gói thành viên', onClick: () => navigate('/settings/thanh-toan') },
-        { icon: 'delete', label: 'Rời cộng đồng', danger: true, onClick: () => { setLeaveError(null); setLeaving(c); } },
+        { icon: 'keep', label: c.pinned ? t('communitiesTab.unpin') : t('communitiesTab.pin'), onClick: () => doPatch(c, { pinned: !c.pinned }, c.pinned ? t('communitiesTab.unpinned') : t('communitiesTab.pinned', { title: c.title })) },
+        { icon: 'notifications', label: t('communitiesTab.menuNotify'), onClick: () => navigate('/settings/thong-bao') },
+        { icon: 'credit_card', label: t('communitiesTab.menuPlans'), onClick: () => navigate('/settings/thanh-toan') },
+        { icon: 'delete', label: t('communitiesTab.menuLeave'), danger: true, onClick: () => { setLeaveError(null); setLeaving(c); } },
       ],
       undefined,
       260,
@@ -62,7 +65,7 @@ export function CommunitiesTab() {
     if (isOwner(leaving)) return setLeaving(null); // chủ sở hữu: chỉ cần "Đã hiểu"
     leave.mutate(leaving.id, {
       onSuccess: () => {
-        toast.success(`Đã rời ${leaving.title}`);
+        toast.success(t('communitiesTab.leftToast', { title: leaving.title }));
         setLeaving(null);
       },
       onError: (e) => setLeaveError(errMsg(e)),
@@ -70,9 +73,9 @@ export function CommunitiesTab() {
   };
 
   const tabs: readonly [Filter, string][] = [
-    ['all', `Tất cả · ${counts.all}`],
-    ['own', `Tôi quản lý · ${counts.own}`],
-    ['mem', `Thành viên · ${counts.mem}`],
+    ['all', t('communitiesTab.tabAll', { count: counts.all })],
+    ['own', t('communitiesTab.tabOwn', { count: counts.own })],
+    ['mem', t('communitiesTab.tabMem', { count: counts.mem })],
   ];
 
   return (
@@ -81,8 +84,8 @@ export function CommunitiesTab() {
         <SHead
           size="lg"
           icon="groups"
-          title="Cộng đồng đã tham gia"
-          sub="Kéo để sắp xếp thứ tự trên thanh bên trái."
+          title={t('communitiesTab.title')}
+          sub={t('communitiesTab.sub')}
           className="border-b border-[#f1ebe6] pb-4"
           action={
             <div role="tablist" className="flex rounded-[14px] bg-[#f5f2ef] p-1">
@@ -103,7 +106,7 @@ export function CommunitiesTab() {
             </div>
           }
         />
-        {q.isPending && <div className="px-2.5 py-10 text-center text-[14.5px] text-stone-500">Đang tải…</div>}
+        {q.isPending && <div className="px-2.5 py-10 text-center text-[14.5px] text-stone-500">{t('communitiesTab.loading')}</div>}
         {q.isError && <div role="alert" className="px-2.5 py-10 text-center text-[14.5px] text-red-600">{errMsg(q.error)}</div>}
         {shown.map((c) => {
           const owner = isOwner(c);
@@ -132,28 +135,28 @@ export function CommunitiesTab() {
               </div>
               <div className="flex flex-none items-center gap-3">
                 {owner ? (
-                  <Link to={`/communities/${c.id}/community/cai-dat`} title="Cài đặt cộng đồng" className={SIDE_BTN}>
+                  <Link to={`/communities/${c.id}/community/cai-dat`} title={t('communitiesTab.communitySettings')} className={SIDE_BTN}>
                     <MaterialIcon name="settings" size={20} />
-                    <span className="max-[1180px]:hidden">Cài đặt cộng đồng</span>
+                    <span className="max-[1180px]:hidden">{t('communitiesTab.communitySettings')}</span>
                   </Link>
                 ) : (
                   <Link to={`/communities/${c.id}/community`} className={SIDE_BTN}>
-                    Mở
+                    {t('communitiesTab.open')}
                   </Link>
                 )}
                 <Toggle
-                  label={`Hiện ${c.title} trên thanh bên`}
+                  label={t('communitiesTab.showInSidebar', { title: c.title })}
                   on={c.sidebarVisible}
-                  onChange={(v) => doPatch(c, { sidebarVisible: v }, `${v ? 'Đã hiện' : 'Đã ẩn'} ${c.title} trên thanh bên`)}
+                  onChange={(v) => doPatch(c, { sidebarVisible: v }, v ? t('communitiesTab.shownToast', { title: c.title }) : t('communitiesTab.hiddenToast', { title: c.title }))}
                 />
-                <button type="button" aria-label={`Tùy chọn ${c.title}`} onClick={(e) => onMenu(e, c)} className="grid size-11 flex-none cursor-pointer place-items-center rounded-xl border-[1.5px] border-[#e7e0da] bg-white">
+                <button type="button" aria-label={t('communitiesTab.options', { title: c.title })} onClick={(e) => onMenu(e, c)} className="grid size-11 flex-none cursor-pointer place-items-center rounded-xl border-[1.5px] border-[#e7e0da] bg-white">
                   <MaterialIcon name="more_horiz" size={22} />
                 </button>
               </div>
             </div>
           );
         })}
-        {q.data && shown.length === 0 && <div className="px-2.5 py-10 text-center text-[14.5px] text-stone-500">Chưa có cộng đồng nào trong mục này.</div>}
+        {q.data && shown.length === 0 && <div className="px-2.5 py-10 text-center text-[14.5px] text-stone-500">{t('communitiesTab.empty')}</div>}
       </SCard>
 
       <div className="flex min-w-0 flex-col gap-[18px]">
@@ -162,23 +165,23 @@ export function CommunitiesTab() {
             <MaterialIcon name="groups" size={44} filled color="#f26a1b" />
           </span>
           <div className="text-xl leading-[1.35] font-extrabold">
-            Có điều muốn dạy?
+            {t('communitiesTab.promoTitle')}
             <br />
-            Mở cộng đồng của riêng bạn.
+            {t('communitiesTab.promoTitle2')}
           </div>
-          <div className="mt-2 text-[14.5px] leading-[1.55] text-stone-600">Dùng thử 14 ngày, thiết lập trong khoảng 10 phút.</div>
+          <div className="mt-2 text-[14.5px] leading-[1.55] text-stone-600">{t('communitiesTab.promoSub')}</div>
           <Link
             to="/communities/new"
             className="mt-[18px] flex h-[50px] items-center justify-center gap-2 rounded-xl bg-gradient-to-b from-[#ff8f45] to-[#f26a1b] text-[15px] font-bold text-white no-underline shadow-[0_10px_24px_rgba(242,106,27,.3)]"
           >
-            Tạo cộng đồng
+            {t('communitiesTab.create')}
             <MaterialIcon name="arrow_forward" size={19} />
           </Link>
         </section>
         <SCard>
-          <SHead size="lg" icon="search" title="Tìm thêm cộng đồng" sub="Gợi ý dựa trên các chủ đề bạn đang quan tâm." />
+          <SHead size="lg" icon="search" title={t('communitiesTab.discoverTitle')} sub={t('communitiesTab.discoverSub')} />
           <Link to="/" className="mt-[18px] grid h-[50px] place-items-center rounded-xl border-[1.5px] border-[#e7e0da] text-[15px] font-bold text-stone-900 no-underline hover:border-[#fdba74]">
-            Mở trang Khám phá
+            {t('communitiesTab.discoverBtn')}
           </Link>
         </SCard>
       </div>
@@ -192,13 +195,13 @@ export function CommunitiesTab() {
         <ModalShell
           icon="logout"
           danger={!isOwner(leaving)}
-          title={`Rời ${leaving.title}?`}
+          title={t('communitiesTab.leaveTitle', { title: leaving.title })}
           body={
             isOwner(leaving)
-              ? 'Bạn là chủ sở hữu. Hãy chuyển quyền trước khi rời.'
-              : 'Bạn sẽ mất quyền truy cập nội dung và cấp độ hiện tại. Gói trả phí vẫn dùng được tới ngày gia hạn.'
+              ? t('communitiesTab.leaveOwnerBody')
+              : t('communitiesTab.leaveBody')
           }
-          cta={isOwner(leaving) ? 'Đã hiểu' : 'Rời cộng đồng'}
+          cta={isOwner(leaving) ? t('communitiesTab.gotIt') : t('communitiesTab.menuLeave')}
           pending={leave.isPending}
           error={leaveError}
           onConfirm={confirmLeave}

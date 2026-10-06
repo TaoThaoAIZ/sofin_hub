@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { formatCents } from '../../../lib/datetime';
 import { BarChartCard, CohortHeatmap, FunnelCard } from '../components/Batch3Parts';
 import { BreakdownCard, ChartCard, KpiGrid, Row, type Kpi } from '../components/Cards';
@@ -52,11 +53,12 @@ const shares = (list: Share[], labels?: Record<string, string>) => list.map((s) 
 
 /** Khung chung: tiêu đề + chip khoảng thời gian + tải/lỗi; `render` nhận dữ liệu đã tải. */
 function AnalyticsPage<T>({ title, path, children }: { title: string; path: string; children: (d: T, range: RangeDays) => ReactNode }) {
+  const { t } = useTranslation('admin-pages1');
   const [range, setRange] = useState<RangeDays>(30);
   const q = useAdminData<T>('analytics', path, { range });
   return (
     <>
-      <PageHeader title={`Phân tích · ${title}`} subtitle="Chỉ số tăng trưởng và hiệu suất của nền tảng." actions={<DateRangeChips value={range} onChange={setRange} />} />
+      <PageHeader title={t('analytics.pageTitle', { title })} subtitle={t('analytics.subtitle')} actions={<DateRangeChips value={range} onChange={setRange} />} />
       {q.isPending && <LoadingBlock />}
       {q.isError && <ErrorBlock error={q.error} onRetry={() => void q.refetch()} />}
       {q.data && children(q.data, range)}
@@ -67,8 +69,9 @@ function AnalyticsPage<T>({ title, path, children }: { title: string; path: stri
 /* ------------------------------ Người dùng ------------------------------ */
 
 export function AnalyticsUsersView() {
+  const { t } = useTranslation('admin-pages1');
   return (
-    <AnalyticsPage<AnalyticsUsers> title="Người dùng" path="/analytics/users">
+    <AnalyticsPage<AnalyticsUsers> title={t('analytics.users.title')} path="/analytics/users">
       {(d) => {
         const labels = d.series.map((p) => dayLabel(p.date));
         return (
@@ -76,20 +79,20 @@ export function AnalyticsUsersView() {
             <KpiGrid
               min={160}
               items={[
-                num('person', 'Tổng người dùng', d.kpis.totalUsers),
-                num('today', 'DAU (hoạt động/ngày)', d.kpis.dau),
-                num('date_range', 'WAU (hoạt động/tuần)', d.kpis.wau),
-                num('calendar_month', 'MAU (hoạt động/tháng)', d.kpis.mau),
-                num('person_add', 'Người dùng mới', d.kpis.newUsers),
+                num('person', t('analytics.users.total'), d.kpis.totalUsers),
+                num('today', t('analytics.users.dau'), d.kpis.dau),
+                num('date_range', t('analytics.users.wau'), d.kpis.wau),
+                num('calendar_month', t('analytics.users.mau'), d.kpis.mau),
+                num('person_add', t('analytics.users.new'), d.kpis.newUsers),
               ]}
             />
             <Row cols="1fr 1fr">
-              <ChartCard title="Tăng trưởng người dùng" labels={labels} series={[{ name: 'Người dùng mới', values: d.series.map((p) => p.newUsers) }]} />
-              <ChartCard title="Người dùng hoạt động" labels={labels} series={[{ name: 'Hoạt động trong ngày', values: d.series.map((p) => p.activeUsers), color: '#2563eb' }]} />
+              <ChartCard title={t('analytics.users.growth')} labels={labels} series={[{ name: t('analytics.users.new'), values: d.series.map((p) => p.newUsers) }]} />
+              <ChartCard title={t('analytics.users.active')} labels={labels} series={[{ name: t('analytics.users.activeDay'), values: d.series.map((p) => p.activeUsers), color: '#2563eb' }]} />
             </Row>
             <Row cols={d.geography.length > 0 ? '1fr 1fr' : '1fr'}>
-              <BreakdownCard title="Phân khúc người dùng" items={shares(d.segments, SEGMENT_LABEL)} />
-              {d.geography.length > 0 && <BreakdownCard title="Phân bố địa lý" sub="Theo vị trí người dùng tự khai" items={shares(d.geography)} />}
+              <BreakdownCard title={t('analytics.users.segments')} items={shares(d.segments, SEGMENT_LABEL)} />
+              {d.geography.length > 0 && <BreakdownCard title={t('analytics.users.geo')} sub={t('analytics.users.geoSub')} items={shares(d.geography)} />}
             </Row>
           </>
         );
@@ -101,9 +104,10 @@ export function AnalyticsUsersView() {
 /* ------------------------------ Cộng đồng ------------------------------ */
 
 export function AnalyticsCommunitiesView() {
+  const { t } = useTranslation('admin-pages1');
   const navigate = useNavigate();
   return (
-    <AnalyticsPage<AnalyticsCommunities> title="Cộng đồng" path="/analytics/communities">
+    <AnalyticsPage<AnalyticsCommunities> title={t('analytics.communities.title')} path="/analytics/communities">
       {(d) => {
         const catLabel = Object.fromEntries(d.byCategory.filter((c) => c.key).map((c) => [c.key!, c.label]));
         return (
@@ -111,39 +115,39 @@ export function AnalyticsCommunitiesView() {
           <KpiGrid
             min={160}
             items={[
-              num('groups', 'Cộng đồng', d.kpis.total),
-              num('add_business', 'Tạo mới trong kỳ', d.kpis.created),
-              num('paid', 'Trả phí', d.kpis.paid),
-              num('person', 'TB thành viên', d.kpis.avgMembers),
-              num('pause_circle', 'Tạm ngưng', d.kpis.suspended, true),
+              num('groups', t('analytics.communities.total'), d.kpis.total),
+              num('add_business', t('analytics.communities.created'), d.kpis.created),
+              num('paid', t('analytics.communities.paid'), d.kpis.paid),
+              num('person', t('analytics.communities.avgMembers'), d.kpis.avgMembers),
+              num('pause_circle', t('analytics.communities.suspended'), d.kpis.suspended, true),
             ]}
           />
           <Row cols="1.6fr 1fr">
             <ChartCard
-              title="Tăng trưởng cộng đồng"
+              title={t('analytics.communities.growth')}
               labels={d.series.map((p) => dayLabel(p.date))}
               series={[
-                { name: 'Tạo mới', values: d.series.map((p) => p.created) },
-                { name: 'Đang hoạt động', values: d.series.map((p) => p.active) },
-                { name: 'Trả phí mới', values: d.series.map((p) => p.paidCreated) },
+                { name: t('analytics.communities.seriesCreated'), values: d.series.map((p) => p.created) },
+                { name: t('analytics.communities.seriesActive'), values: d.series.map((p) => p.active) },
+                { name: t('analytics.communities.seriesPaidNew'), values: d.series.map((p) => p.paidCreated) },
               ]}
             />
-            <BreakdownCard title="Theo danh mục" items={shares(d.byCategory)} />
+            <BreakdownCard title={t('analytics.communities.byCategory')} items={shares(d.byCategory)} />
           </Row>
           <DataTable<AnalyticsCommunities['top'][number]>
-            title="Cộng đồng hàng đầu"
-            sub="Theo số thành viên"
+            title={t('analytics.communities.top')}
+            sub={t('analytics.communities.topSub')}
             columns={[
-              { key: 'name', label: 'Cộng đồng', w: 2, render: (m) => <MainCell name={m.name} sub={catLabel[m.category] ?? m.category} shape="square" seed={m.id} /> },
-              { key: 'members', label: 'Thành viên', render: (m) => <NumCell>{fmtNum(m.members)}</NumCell> },
-              { key: 'new', label: 'Thành viên mới', render: (m) => <NumCell>{fmtNum(m.newMembers)}</NumCell> },
-              { key: 'growth', label: 'Tăng trưởng', render: (m) => (m.growthPct == null ? <span className="text-stone-400">—</span> : <StatusBadge tone={m.growthPct >= 0 ? 'g' : 'r'}>{fmtDelta(m.growthPct)}</StatusBadge>) },
-              { key: 'mrr', label: 'MRR', render: (m) => <NumCell>{formatCents(m.mrrCents)}</NumCell> },
+              { key: 'name', label: t('analytics.communities.colCommunity'), w: 2, render: (m) => <MainCell name={m.name} sub={catLabel[m.category] ?? m.category} shape="square" seed={m.id} /> },
+              { key: 'members', label: t('analytics.communities.colMembers'), render: (m) => <NumCell>{fmtNum(m.members)}</NumCell> },
+              { key: 'new', label: t('analytics.communities.colNew'), render: (m) => <NumCell>{fmtNum(m.newMembers)}</NumCell> },
+              { key: 'growth', label: t('analytics.communities.colGrowth'), render: (m) => (m.growthPct == null ? <span className="text-stone-400">—</span> : <StatusBadge tone={m.growthPct >= 0 ? 'g' : 'r'}>{fmtDelta(m.growthPct)}</StatusBadge>) },
+              { key: 'mrr', label: t('analytics.communities.colMrr'), render: (m) => <NumCell>{formatCents(m.mrrCents)}</NumCell> },
             ]}
             rows={d.top}
             rowKey={(m) => m.id}
             onRow={(m) => navigate(`/admin/communities/${m.id}`)}
-            emptyText="Chưa có cộng đồng nào."
+            emptyText={t('analytics.communities.empty')}
           />
         </>
         );
@@ -155,34 +159,35 @@ export function AnalyticsCommunitiesView() {
 /* ------------------------------ Tương tác ------------------------------ */
 
 export function AnalyticsEngagementView() {
+  const { t } = useTranslation('admin-pages1');
   return (
-    <AnalyticsPage<AnalyticsEngagement> title="Tương tác" path="/analytics/engagement">
+    <AnalyticsPage<AnalyticsEngagement> title={t('analytics.engagement.title')} path="/analytics/engagement">
       {(d) => (
         <>
           <KpiGrid
             min={160}
             items={[
-              num('edit_note', 'Bài viết', d.kpis.posts),
-              num('chat', 'Bình luận', d.kpis.comments),
-              num('favorite', 'Lượt thích', d.kpis.likes),
-              num('school', 'Bài học hoàn thành', d.kpis.lessonCompletions),
-              percent('task_alt', 'Hoàn thành khóa học', d.kpis.courseCompletionPct),
-              num('event', 'Tham gia sự kiện', d.kpis.eventParticipation),
+              num('edit_note', t('analytics.engagement.posts'), d.kpis.posts),
+              num('chat', t('analytics.engagement.comments'), d.kpis.comments),
+              num('favorite', t('analytics.engagement.likes'), d.kpis.likes),
+              num('school', t('analytics.engagement.lessons'), d.kpis.lessonCompletions),
+              percent('task_alt', t('analytics.engagement.courseCompletion'), d.kpis.courseCompletionPct),
+              num('event', t('analytics.engagement.events'), d.kpis.eventParticipation),
             ]}
           />
           <Row cols="1.6fr 1fr">
             <ChartCard
-              title="Tương tác"
+              title={t('analytics.engagement.title')}
               labels={d.series.map((p) => dayLabel(p.date))}
               series={[
-                { name: 'Bài viết', values: d.series.map((p) => p.posts) },
-                { name: 'Bình luận', values: d.series.map((p) => p.comments) },
-                { name: 'Lượt thích', values: d.series.map((p) => p.likes) },
-                { name: 'Bài học hoàn thành', values: d.series.map((p) => p.completions) },
-                { name: 'Tham gia sự kiện', values: d.series.map((p) => p.rsvps) },
+                { name: t('analytics.engagement.posts'), values: d.series.map((p) => p.posts) },
+                { name: t('analytics.engagement.comments'), values: d.series.map((p) => p.comments) },
+                { name: t('analytics.engagement.likes'), values: d.series.map((p) => p.likes) },
+                { name: t('analytics.engagement.lessons'), values: d.series.map((p) => p.completions) },
+                { name: t('analytics.engagement.events'), values: d.series.map((p) => p.rsvps) },
               ]}
             />
-            <BreakdownCard title="Cơ cấu tương tác" items={shares(d.mix, MIX_LABEL)} />
+            <BreakdownCard title={t('analytics.engagement.mix')} items={shares(d.mix, MIX_LABEL)} />
           </Row>
         </>
       )}
@@ -193,32 +198,33 @@ export function AnalyticsEngagementView() {
 /* ------------------------------ Giữ chân ------------------------------ */
 
 export function AnalyticsRetentionView() {
+  const { t } = useTranslation('admin-pages1');
   return (
-    <AnalyticsPage<AnalyticsRetention> title="Giữ chân" path="/analytics/retention">
+    <AnalyticsPage<AnalyticsRetention> title={t('analytics.retention.title')} path="/analytics/retention">
       {(d) => (
         <>
           <KpiGrid
             min={160}
             items={[
-              percent('event_repeat', 'Giữ chân ngày 7', d.kpis.day7),
-              percent('event_repeat', 'Giữ chân ngày 30', d.kpis.day30),
-              percent('logout', 'Tỷ lệ rời bỏ', d.kpis.churn, true),
-              percent('loyalty', 'Tỷ lệ gia hạn', d.kpis.renewalRate),
+              percent('event_repeat', t('analytics.retention.day7'), d.kpis.day7),
+              percent('event_repeat', t('analytics.retention.day30'), d.kpis.day30),
+              percent('logout', t('analytics.retention.churn'), d.kpis.churn, true),
+              percent('loyalty', t('analytics.retention.renewal'), d.kpis.renewalRate),
             ]}
           />
           <CohortHeatmap
-            title="Giữ chân theo nhóm"
-            sub="Tỷ lệ mỗi nhóm đăng ký (theo tháng) còn hoạt động sau N tuần. Ô trống = chưa đủ thời gian."
-            columns={['Tuần 1', 'Tuần 2', 'Tuần 4', 'Tuần 8', 'Tuần 12']}
-            rows={d.cohorts.map((c) => ({ label: c.label, sub: 'Nhóm đăng ký', size: c.users, values: [c.weeks.w1, c.weeks.w2, c.weeks.w4, c.weeks.w8, c.weeks.w12] }))}
+            title={t('analytics.retention.cohort')}
+            sub={t('analytics.retention.cohortSub')}
+            columns={[t('analytics.retention.week1'), t('analytics.retention.week2'), t('analytics.retention.week4'), t('analytics.retention.week8'), t('analytics.retention.week12')]}
+            rows={d.cohorts.map((c) => ({ label: c.label, sub: t('analytics.retention.cohortRow'), size: c.users, values: [c.weeks.w1, c.weeks.w2, c.weeks.w4, c.weeks.w8, c.weeks.w12] }))}
           />
           <BarChartCard
-            title="Người dùng quay lại"
-            sub="Người dùng đã đăng ký từ trước vẫn hoạt động trong ngày, so với người dùng mới hoạt động"
+            title={t('analytics.retention.returning')}
+            sub={t('analytics.retention.returningSub')}
             labels={d.returning.map((p) => dayLabel(p.date))}
             series={[
-              { name: 'Quay lại', values: d.returning.map((p) => p.returning) },
-              { name: 'Mới hoạt động', values: d.returning.map((p) => p.newActive), color: '#2563eb' },
+              { name: t('analytics.retention.seriesReturning'), values: d.returning.map((p) => p.returning) },
+              { name: t('analytics.retention.seriesNewActive'), values: d.returning.map((p) => p.newActive), color: '#2563eb' },
             ]}
           />
         </>
@@ -230,34 +236,35 @@ export function AnalyticsRetentionView() {
 /* ------------------------------ Doanh thu ------------------------------ */
 
 export function AnalyticsRevenueView() {
+  const { t } = useTranslation('admin-pages1');
   return (
-    <AnalyticsPage<AnalyticsRevenue> title="Doanh thu" path="/analytics/revenue">
+    <AnalyticsPage<AnalyticsRevenue> title={t('analytics.revenue.title')} path="/analytics/revenue">
       {(d) => (
         <>
           <KpiGrid
             min={160}
             items={[
-              cents('payments', 'MRR', d.kpis.mrrCents),
-              cents('receipt_long', 'Doanh thu gộp', d.kpis.grossCents),
-              cents('percent', 'Phí nền tảng', d.kpis.platformFeesCents),
-              cents('person', 'ARPU', d.kpis.arpuCents),
-              cents('undo', 'Hoàn tiền', d.kpis.refundsCents, true),
+              cents('payments', t('analytics.revenue.mrr'), d.kpis.mrrCents),
+              cents('receipt_long', t('analytics.revenue.gross'), d.kpis.grossCents),
+              cents('percent', t('analytics.revenue.fees'), d.kpis.platformFeesCents),
+              cents('person', t('analytics.revenue.arpu'), d.kpis.arpuCents),
+              cents('undo', t('analytics.revenue.refunds'), d.kpis.refundsCents, true),
             ]}
           />
           <Row cols="1.6fr 1fr">
             <ChartCard
-              title="Doanh thu"
+              title={t('analytics.revenue.title')}
               labels={d.series.map((p) => dayLabel(p.date))}
               fmt={(v) => money(v * 100)}
               series={[
-                { name: 'Doanh thu gộp', values: d.series.map((p) => p.grossCents / 100) },
-                { name: 'Doanh thu ròng', values: d.series.map((p) => p.netCents / 100), color: '#16a34a' },
-                { name: 'Hoàn tiền', values: d.series.map((p) => p.refundsCents / 100), color: '#dc2626' },
+                { name: t('analytics.revenue.gross'), values: d.series.map((p) => p.grossCents / 100) },
+                { name: t('analytics.revenue.net'), values: d.series.map((p) => p.netCents / 100), color: '#16a34a' },
+                { name: t('analytics.revenue.refunds'), values: d.series.map((p) => p.refundsCents / 100), color: '#dc2626' },
               ]}
             />
-            <BreakdownCard title="Theo loại thanh toán" items={d.byPlan.map((p) => ({ label: PLAN_LABEL[p.key] ?? p.label, value: `${pct1(p.pct)} · ${formatCents(p.grossCents)}`, pct: p.pct }))} />
+            <BreakdownCard title={t('analytics.revenue.byPlan')} items={d.byPlan.map((p) => ({ label: PLAN_LABEL[p.key] ?? p.label, value: `${pct1(p.pct)} · ${formatCents(p.grossCents)}`, pct: p.pct }))} />
           </Row>
-          <BreakdownCard title="Theo cộng đồng" sub="Doanh thu gộp trong kỳ" items={d.byCommunity.map((c) => ({ label: c.name, value: `${pct1(c.pct)} · ${formatCents(c.grossCents)}`, pct: c.pct }))} />
+          <BreakdownCard title={t('analytics.revenue.byCommunity')} sub={t('analytics.revenue.byCommunitySub')} items={d.byCommunity.map((c) => ({ label: c.name, value: `${pct1(c.pct)} · ${formatCents(c.grossCents)}`, pct: c.pct }))} />
         </>
       )}
     </AnalyticsPage>
@@ -267,8 +274,9 @@ export function AnalyticsRevenueView() {
 /* ------------------------------ Chuyển đổi ------------------------------ */
 
 export function AnalyticsConversionView() {
+  const { t } = useTranslation('admin-pages1');
   return (
-    <AnalyticsPage<AnalyticsConversion> title="Chuyển đổi" path="/analytics/conversion">
+    <AnalyticsPage<AnalyticsConversion> title={t('analytics.conversion.title')} path="/analytics/conversion">
       {(d) => {
         const first = d.funnel[0]?.count ?? 0;
         return (
@@ -276,16 +284,16 @@ export function AnalyticsConversionView() {
             <KpiGrid
               min={160}
               items={[
-                percent('login', 'Đăng ký → Tham gia', d.kpis.signupToJoinPct),
-                percent('shopping_cart', 'Đăng ký → Trả phí', d.kpis.signupToPaidPct),
-                percent('science', 'Dùng thử → Trả phí', d.kpis.trialToPaidPct),
-                cents('paid', 'Doanh thu / lượt đăng ký', d.kpis.revenuePerSignupCents),
+                percent('login', t('analytics.conversion.signupToJoin'), d.kpis.signupToJoinPct),
+                percent('shopping_cart', t('analytics.conversion.signupToPaid'), d.kpis.signupToPaidPct),
+                percent('science', t('analytics.conversion.trialToPaid'), d.kpis.trialToPaidPct),
+                cents('paid', t('analytics.conversion.revenuePerSignup'), d.kpis.revenuePerSignupCents),
               ]}
             />
             <Row cols="1fr 1.6fr">
               <FunnelCard
-                title="Phễu chuyển đổi"
-                sub="Người đăng ký trong kỳ đi tiếp qua từng bước"
+                title={t('analytics.conversion.funnel')}
+                sub={t('analytics.conversion.funnelSub')}
                 steps={d.funnel.map((f, i) => ({
                   label: FUNNEL_LABEL[f.key] ?? f.label,
                   value: fmtNum(f.count),
@@ -294,12 +302,12 @@ export function AnalyticsConversionView() {
                 }))}
               />
               <BarChartCard
-                title="Chuyển đổi theo ngày"
+                title={t('analytics.conversion.daily')}
                 labels={d.series.map((p) => dayLabel(p.date))}
                 series={[
-                  { name: 'Đăng ký mới', values: d.series.map((p) => p.signups) },
-                  { name: 'Bắt đầu dùng thử', values: d.series.map((p) => p.trialsStarted), color: '#2563eb' },
-                  { name: 'Chuyển sang trả phí', values: d.series.map((p) => p.paidConversions), color: '#16a34a' },
+                  { name: t('analytics.conversion.newSignups'), values: d.series.map((p) => p.signups) },
+                  { name: t('analytics.conversion.trialsStarted'), values: d.series.map((p) => p.trialsStarted), color: '#2563eb' },
+                  { name: t('analytics.conversion.paidConversions'), values: d.series.map((p) => p.paidConversions), color: '#16a34a' },
                 ]}
               />
             </Row>

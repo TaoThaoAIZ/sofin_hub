@@ -1,5 +1,7 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
+import i18n, { currentLocale } from '../../../i18n';
 
 /**
  * Các mảnh UI dùng chung của khu vực Admin (bám bản thiết kế "SofinHub Admin"):
@@ -19,7 +21,7 @@ export const TONE: Record<Tone, readonly [string, string]> = {
 
 export const MONO_FONT = "'JetBrains Mono Variable','JetBrains Mono',ui-monospace,monospace";
 
-export const errMessage = (e: unknown, fallback = 'Đã có lỗi xảy ra, vui lòng thử lại') => (e instanceof Error && e.message ? e.message : fallback);
+export const errMessage = (e: unknown, fallback = i18n.t('ui.genericError', { ns: 'admin-components' })) => (e instanceof Error && e.message ? e.message : fallback);
 
 // ---- Nút ----
 export type BtnKind = 'primary' | 'default' | 'danger' | 'solidDanger' | 'dark';
@@ -151,37 +153,40 @@ export function Card({
 }
 
 // ---- Trạng thái chung ----
-export function LoadingBlock({ label = 'Đang tải…' }: { label?: string }) {
+export function LoadingBlock({ label }: { label?: string }) {
+  const { t } = useTranslation('admin-components');
   return (
     <div role="status" className="flex items-center justify-center gap-2 px-5 py-12 text-sm text-stone-400">
       <span className="size-4 animate-spin rounded-full border-2 border-stone-300 border-t-brand" aria-hidden="true" />
-      {label}
+      {label ?? t('ui.loading')}
     </div>
   );
 }
 
 export function ErrorBlock({ error, onRetry, className = '' }: { error: unknown; onRetry?: () => void; className?: string }) {
+  const { t } = useTranslation('admin-components');
   return (
     <div role="alert" className={`flex flex-col items-center gap-2 px-5 py-10 text-center text-sm text-[#b91c1c] ${className}`}>
       <MaterialIcon name="error" size={26} filled />
-      <span>{errMessage(error, 'Không tải được dữ liệu')}</span>
+      <span>{errMessage(error, t('ui.loadFailed'))}</span>
       {onRetry && (
         <button type="button" onClick={onRetry} className="mt-1 h-8 rounded-[9px] border border-[#fecaca] bg-white px-3 text-[12.5px] font-semibold">
-          Thử lại
+          {t('ui.retry')}
         </button>
       )}
     </div>
   );
 }
 
-export function EmptyBlock({ children = 'Không có kết quả phù hợp.', icon }: { children?: ReactNode; icon?: string }) {
+export function EmptyBlock({ children, icon }: { children?: ReactNode; icon?: string }) {
+  const { t } = useTranslation('admin-components');
   return (
     <div className="flex flex-col items-center gap-2 px-5 py-12 text-center text-sm text-stone-400">
       {icon && <MaterialIcon name={icon} size={28} />}
-      {children}
+      {children ?? t('ui.noResults')}
     </div>
   );
 }
 
 /** Dòng nhãn/giá trị trong thẻ "kv". */
-export const fmtNum = (n: number | null | undefined) => (n == null ? '—' : n.toLocaleString('vi-VN'));
+export const fmtNum = (n: number | null | undefined) => (n == null ? '—' : n.toLocaleString(currentLocale()));

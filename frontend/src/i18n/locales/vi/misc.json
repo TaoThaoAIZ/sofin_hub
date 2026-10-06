@@ -1,0 +1,76 @@
+{
+  "api": {
+    "requestFailed": "Yêu cầu thất bại ({{status}})"
+  },
+  "card": {
+    "brandUnknown": "Thẻ",
+    "numberRequired": "Vui lòng nhập số thẻ",
+    "numberIncomplete": "Số thẻ chưa đủ chữ số",
+    "numberInvalid": "Số thẻ không hợp lệ",
+    "expiryRequired": "Nhập ngày hết hạn",
+    "expiryFormat": "Ngày hết hạn không hợp lệ (MM / YY)",
+    "expired": "Thẻ đã hết hạn",
+    "expiryInvalid": "Ngày hết hạn không hợp lệ",
+    "cvcRequired": "Nhập mã CVC",
+    "cvcLength": "CVC gồm {{count}} chữ số"
+  },
+  "upload": {
+    "empty": "Tệp rỗng, vui lòng chọn tệp khác",
+    "tooLarge": "Tệp quá lớn (tối đa {{max}}MB)",
+    "unsupported": "Loại tệp không được hỗ trợ. Chỉ nhận: {{types}}",
+    "labels": {
+      "images": "ảnh JPG, PNG, WEBP, GIF",
+      "files": "PDF, ZIP, DOCX, XLSX, PPTX, TXT, MP4",
+      "message": "ảnh, PDF, ZIP, DOCX, XLSX, PPTX, TXT"
+    },
+    "failedStatus": "Tải tệp lên thất bại ({{status}})",
+    "failed": "Tải tệp lên thất bại, vui lòng thử lại",
+    "quota": "Bạn đã dùng hết dung lượng lưu trữ cho phép (200MB).",
+    "tooLargeLimit": "Tệp quá lớn so với giới hạn cho phép.",
+    "forbidden": "Bạn không có quyền tải tệp này lên."
+  },
+  "certVerify": {
+    "title": "Xác minh chứng nhận",
+    "verifying": "Đang xác minh…",
+    "valid": "Chứng nhận hợp lệ",
+    "notFoundTitle": "Không tìm thấy chứng nhận",
+    "failedTitle": "Không xác minh được",
+    "notFoundDesc": "Mã \"{{code}}\" không tồn tại hoặc không hợp lệ. Hãy kiểm tra lại đường dẫn.",
+    "home": "Về trang chủ SofinHub"
+  },
+  "contact": {
+    "fieldName": "họ tên",
+    "fieldSubject": "tiêu đề",
+    "fieldMessage": "nội dung",
+    "rateLimit": "Bạn đã gửi quá nhiều yêu cầu, vui lòng thử lại sau ít phút.",
+    "sendFailed": "Không gửi được liên hệ, vui lòng thử lại",
+    "title": "Liên hệ với chúng tôi",
+    "subtitle": "Gửi câu hỏi hoặc góp ý, đội ngũ SofinHub sẽ phản hồi qua email.",
+    "name": "Họ tên",
+    "email": "Email",
+    "subject": "Tiêu đề",
+    "message": "Nội dung",
+    "charCount": "{{count}}/5000 ký tự",
+    "sending": "Đang gửi…",
+    "send": "Gửi liên hệ"
+  },
+  "myCommunities": {
+    "loading": "Đang tải…",
+    "guestTitle1": "Cộng đồng ",
+    "guestTitleBrand": "của bạn",
+    "guestTitle2": " ở đây",
+    "guestContent": "Đăng nhập để xem các cộng đồng bạn đã tham gia, theo dõi hoạt động mới và tiếp tục học cùng mọi người.",
+    "login": "Đăng nhập",
+    "explore": "Khám phá cộng đồng",
+    "noAccount": "Chưa có tài khoản?",
+    "register": "Đăng ký miễn phí →",
+    "loadError": "Không tải được danh sách cộng đồng, vui lòng thử lại.",
+    "emptyTitle": "Bạn chưa tham gia cộng đồng nào",
+    "emptyContent": "Khám phá các cộng đồng thú vị, tham gia ngay để học hỏi, chia sẻ và kết nối với những người cùng đam mê.",
+    "title": "Cộng đồng của tôi"
+  },
+  "notFound": {
+    "message": "Trang này chưa có hoặc đang được xây dựng.",
+    "home": "Về trang chủ"
+  }
+}

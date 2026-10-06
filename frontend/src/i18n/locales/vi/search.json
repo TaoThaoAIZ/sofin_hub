@@ -1,0 +1,34 @@
+{
+  "tabs": {
+    "all": "Tất cả",
+    "courses": "Khóa học",
+    "posts": "Bài viết",
+    "members": "Thành viên"
+  },
+  "row": {
+    "course": "Khóa học",
+    "member": "Thành viên · {{role}} · {{course}}",
+    "post": "Bài viết của {{author}} · {{course}} · {{time}}",
+    "postTitle": "Bài viết của {{author}}"
+  },
+  "box": {
+    "placeholder": "Tìm kiếm bài viết, thành viên, chủ đề...",
+    "subtitleMember": "Thành viên · {{course}}",
+    "subtitlePost": "Bài viết · {{course}}",
+    "searching": "Đang tìm…",
+    "rateLimit": "Bạn tìm kiếm quá nhanh, vui lòng thử lại sau ít giây.",
+    "noSuggestions": "Không có gợi ý phù hợp.",
+    "viewAll": "Xem tất cả kết quả cho \"{{q}}\""
+  },
+  "page": {
+    "placeholder": "Tìm khóa học, bài viết, thành viên...",
+    "submit": "Tìm",
+    "filterAria": "Lọc theo cộng đồng",
+    "allCommunities": "Mọi cộng đồng",
+    "tooShort": "Nhập ít nhất 2 ký tự để tìm kiếm.",
+    "searching": "Đang tìm…",
+    "rateLimit": "Bạn tìm kiếm quá nhiều lần, vui lòng thử lại sau ít phút.",
+    "forbidden": "Bạn không phải thành viên của cộng đồng đã chọn nên không thể tìm trong đó.",
+    "noResults": "Không có kết quả cho \"{{q}}\"."
+  }
+}

@@ -1,3 +1,4 @@
+import i18n from '../../i18n';
 import type { CategoryId, Language, Visibility } from '../courses/types';
 
 export type MemberRoleDetail = 'member' | 'mod' | 'admin' | 'owner';
@@ -5,12 +6,23 @@ export type MemberRoleDetail = 'member' | 'mod' | 'admin' | 'owner';
 export type ViewerRole = MemberRoleDetail | 'platform_admin';
 export type AssignableRole = 'member' | 'mod' | 'admin';
 
+// Dùng getter để dịch lazily theo ngôn ngữ hiện tại tại thời điểm đọc.
 export const ROLE_LABEL: Record<ViewerRole, string> = {
-  member: 'Thành viên',
-  mod: 'Điều hành viên',
-  admin: 'Quản trị viên',
-  owner: 'Chủ cộng đồng',
-  platform_admin: 'Quản trị nền tảng',
+  get member() {
+    return i18n.t('roles.member', { ns: 'communities' });
+  },
+  get mod() {
+    return i18n.t('roles.mod', { ns: 'communities' });
+  },
+  get admin() {
+    return i18n.t('roles.admin', { ns: 'communities' });
+  },
+  get owner() {
+    return i18n.t('roles.owner', { ns: 'communities' });
+  },
+  get platform_admin() {
+    return i18n.t('roles.platformAdmin', { ns: 'communities' });
+  },
 };
 
 export const ROLE_RANK: Record<ViewerRole, number> = { member: 0, mod: 1, admin: 2, owner: 3, platform_admin: 4 };
@@ -95,11 +107,17 @@ export interface ReviewList {
   summary: { rating: number; ratingCount: number };
 }
 
+const reportReason = <K extends string>(key: K) => ({
+  key,
+  get label() {
+    return i18n.t(`reportReasons.${key}`, { ns: 'communities' });
+  },
+});
 export const REPORT_REASONS = [
-  { key: 'spam', label: 'Spam / quảng cáo' },
-  { key: 'harassment', label: 'Quấy rối, xúc phạm' },
-  { key: 'inappropriate', label: 'Nội dung không phù hợp' },
-  { key: 'misinformation', label: 'Thông tin sai lệch' },
-  { key: 'other', label: 'Lý do khác' },
+  reportReason('spam'),
+  reportReason('harassment'),
+  reportReason('inappropriate'),
+  reportReason('misinformation'),
+  reportReason('other'),
 ] as const;
 export type ReportReason = (typeof REPORT_REASONS)[number]['key'];

@@ -1,4 +1,6 @@
 import { useRef, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import { currentLocale } from '../../../i18n';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { Row } from './Cards';
 import { Card, EmptyBlock, MONO_FONT } from './ui';
@@ -40,11 +42,12 @@ const compact = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(1).replace(/\.0$
 
 /** Biểu đồ cột nhóm (SVG) — dùng cho dữ liệu theo khoảng thời gian khi đường không hợp (vd. chuyển đổi, số lượng). */
 export function BarChartCard({ title, sub, series, labels, fmt = compact, tools }: { title: string; sub?: string; series: BarSeries[]; labels: string[]; fmt?: (n: number) => string; tools?: ReactNode }) {
+  const { t } = useTranslation('admin-parts');
   const n = labels.length;
   const max = Math.max(1, ...series.flatMap((s) => s.values)) * 1.08;
   const step = Math.max(1, Math.ceil(n / 8));
   const empty = n === 0 || series.length === 0 || series.every((s) => s.values.every((v) => !v));
-  const summary = `${title}: ${series.map((s) => `${s.name} tổng ${fmt(s.values.reduce((a, b) => a + b, 0))}`).join('; ')}`;
+  const summary = `${title}: ${series.map((s) => t('chart.seriesTotal', { name: s.name, total: fmt(s.values.reduce((a, b) => a + b, 0)) })).join('; ')}`;
   const groupW = 100 / Math.max(1, n);
   const barW = (groupW * 0.7) / Math.max(1, series.length);
   return (
@@ -58,7 +61,7 @@ export function BarChartCard({ title, sub, series, labels, fmt = compact, tools 
         ))}
       </div>
       {empty ? (
-        <EmptyBlock>Chưa đủ dữ liệu để vẽ biểu đồ.</EmptyBlock>
+        <EmptyBlock>{t('chart.notEnoughData')}</EmptyBlock>
       ) : (
         <div className="flex gap-2.5">
           <div className="flex h-[200px] min-w-10 flex-col justify-between text-right text-[11px] text-stone-400" aria-hidden="true">
@@ -108,10 +111,11 @@ export interface FunnelStep {
 
 /** Phễu chuyển đổi: các thanh thu hẹp dần theo từng bước. */
 export function FunnelCard({ title, sub, steps }: { title: string; sub?: string; steps: FunnelStep[] }) {
+  const { t } = useTranslation('admin-parts');
   return (
     <Card title={title} sub={sub}>
       {steps.length === 0 ? (
-        <EmptyBlock>Chưa có dữ liệu.</EmptyBlock>
+        <EmptyBlock>{t('common.noData')}</EmptyBlock>
       ) : (
         <div className="flex flex-col gap-2.5">
           {steps.map((s, i) => (
@@ -146,6 +150,7 @@ export interface CohortRow {
 
 /** Bảng nhiệt: mỗi dòng là một nhóm đăng ký, mỗi cột là một mốc tuần — ô càng đậm càng giữ chân tốt. */
 export function CohortHeatmap({ title, sub, columns, rows }: { title: string; sub?: string; columns: string[]; rows: CohortRow[] }) {
+  const { t } = useTranslation('admin-parts');
   const cell = (v: number | null) => {
     if (v == null) return { background: '#faf7f4', color: '#d6d3d1' };
     const a = 0.12 + Math.min(100, v) / 100 * 0.78;
@@ -154,14 +159,14 @@ export function CohortHeatmap({ title, sub, columns, rows }: { title: string; su
   return (
     <Card title={title} sub={sub}>
       {rows.length === 0 ? (
-        <EmptyBlock>Chưa có nhóm đăng ký nào.</EmptyBlock>
+        <EmptyBlock>{t('cohort.empty')}</EmptyBlock>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[560px] border-separate border-spacing-1 text-[12.5px]">
             <thead>
               <tr className="text-left text-[11.5px] font-bold text-stone-400 uppercase">
-                <th className="px-2 py-1">Nhóm</th>
-                <th className="px-2 py-1 text-right">Người dùng</th>
+                <th className="px-2 py-1">{t('cohort.group')}</th>
+                <th className="px-2 py-1 text-right">{t('cohort.users')}</th>
                 {columns.map((c) => (
                   <th key={c} className="px-2 py-1 text-center">
                     {c}
@@ -176,7 +181,7 @@ export function CohortHeatmap({ title, sub, columns, rows }: { title: string; su
                     <div className="font-semibold">{r.label}</div>
                     {r.sub && <div className="text-[11.5px] text-stone-400">{r.sub}</div>}
                   </td>
-                  <td className="px-2 py-1.5 text-right font-semibold tabular-nums">{r.size.toLocaleString('vi-VN')}</td>
+                  <td className="px-2 py-1.5 text-right font-semibold tabular-nums">{r.size.toLocaleString(currentLocale())}</td>
                   {columns.map((_, i) => {
                     const v = r.values[i] ?? null;
                     return (
@@ -229,12 +234,13 @@ export function PermissionMatrix({
   readOnly?: boolean;
   onToggle: (role: MatrixRole, perm: MatrixPermission, next: boolean) => void;
 }) {
+  const { t } = useTranslation('admin-parts');
   const grid = `minmax(220px,2fr) repeat(${roles.length},minmax(96px,1fr))`;
   return (
     <div className="overflow-x-auto">
       <div style={{ minWidth: 220 + roles.length * 100 }}>
         <div className="grid items-center gap-3 border-b border-[#f1ebe6] px-5 py-3 text-[11.5px] font-bold tracking-[.04em] text-stone-400 uppercase" style={{ gridTemplateColumns: grid }}>
-          <span>Quyền</span>
+          <span>{t('matrix.permission')}</span>
           {roles.map((r) => (
             <span key={r.key} className="text-center">
               {r.label}
@@ -288,10 +294,11 @@ export const renderTemplate = (text: string, sample: Record<string, string>) => 
 
 /** Chip biến: bấm để chèn `{{biến}}` vào ô đang focus. */
 export function VariableChips({ variables, onInsert }: { variables: string[]; onInsert: (v: string) => void }) {
+  const { t } = useTranslation('admin-parts');
   if (variables.length === 0) return null;
   return (
     <div className="flex flex-col gap-2">
-      <div className="text-[13px] font-bold">Biến có thể chèn</div>
+      <div className="text-[13px] font-bold">{t('email.variables')}</div>
       <div className="flex flex-wrap gap-1.5">
         {variables.map((v) => (
           <button
@@ -300,7 +307,7 @@ export function VariableChips({ variables, onInsert }: { variables: string[]; on
             onClick={() => onInsert(`{{${v}}}`)}
             className="h-7 rounded-lg border border-[#fdba74] bg-[#fffaf6] px-2.5 text-xs font-semibold text-[#c2410c] hover:bg-[#fff1e6]"
             style={{ fontFamily: MONO_FONT }}
-            title="Bấm để chèn vào ô đang soạn"
+            title={t('email.insertHint')}
           >
             {`{{${v}}}`}
           </button>
@@ -330,13 +337,14 @@ export function useInsertable(value: string, setValue: (v: string) => void) {
 
 /** Khung xem trước email (tiêu đề + thân). */
 export function EmailPreview({ subject, body }: { subject: string; body: string }) {
+  const { t } = useTranslation('admin-parts');
   return (
     <div className="overflow-hidden rounded-[14px] border border-[#ece5df] bg-white">
       <div className="border-b border-[#f1ebe6] bg-[#faf7f4] px-4 py-2.5">
-        <div className="text-[11px] font-bold tracking-[.06em] text-stone-400 uppercase">Tiêu đề</div>
+        <div className="text-[11px] font-bold tracking-[.06em] text-stone-400 uppercase">{t('email.subject')}</div>
         <div className="mt-0.5 text-sm font-bold break-words">{subject || '—'}</div>
       </div>
-      <div className="px-4 py-3.5 text-[13.5px] leading-relaxed whitespace-pre-wrap text-stone-800">{body || <span className="text-stone-400">Nội dung trống.</span>}</div>
+      <div className="px-4 py-3.5 text-[13.5px] leading-relaxed whitespace-pre-wrap text-stone-800">{body || <span className="text-stone-400">{t('email.emptyBody')}</span>}</div>
     </div>
   );
 }

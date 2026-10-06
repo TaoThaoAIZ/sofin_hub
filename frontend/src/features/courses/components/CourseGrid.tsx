@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Button } from '../../../components/ui/Button';
 import { CourseCard } from './CourseCard';
 import type { ViewMode } from './FilterBar';
@@ -40,7 +41,8 @@ function Message({ title, action, onAction }: { title: string; action: string; o
 }
 
 export function CourseGrid({ courses, view, loading, error, fetching, onRetry, onReset }: Props) {
-  if (error && !courses) return <Message title={error.message} action="Thử lại" onAction={onRetry} />;
+  const { t } = useTranslation('course');
+  if (error && !courses) return <Message title={error.message} action={t('list.retry')} onAction={onRetry} />;
 
   if (loading) {
     return (
@@ -53,7 +55,7 @@ export function CourseGrid({ courses, view, loading, error, fetching, onRetry, o
   }
 
   if (!courses?.length) {
-    return <Message title="Không tìm thấy khóa học phù hợp." action="Xóa bộ lọc" onAction={onReset} />;
+    return <Message title={t('list.notFound')} action={t('list.clearFilters')} onAction={onReset} />;
   }
 
   return (

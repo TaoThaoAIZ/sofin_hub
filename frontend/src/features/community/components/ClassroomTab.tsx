@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import i18n from '../../../i18n';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { lessonPath } from '../../../lib/paths';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
@@ -8,16 +10,17 @@ import { useClaimCertificate, useCourseList, useLessons, useModules, useProgress
 import type { Certificate, ClassroomModule } from '../types';
 import { CertificateDialog } from './CertificateCard';
 import { ClassroomEditor, LessonFormDialog, ModuleFormDialog } from './ClassroomEditor';
-import { CourseManager, PUBLISH_LABEL, publishBadgeCls } from './CourseManager';
+import { CourseManager, publishBadgeCls, publishLabel } from './CourseManager';
 import { errText, ErrorNote, ghostBtn, isAdminPlus, isModPlus, primaryBtn, safeUrl, toast, ToastHost } from './contentUi';
 
 function LessonList({ communityId, courseId, moduleId }: { communityId: string; courseId: string; moduleId: string }) {
+  const { t } = useTranslation('community');
   const lessons = useLessons(communityId, courseId, moduleId);
   const toggle = useToggleLessonComplete(communityId);
 
-  if (lessons.isPending) return <p className="px-4 py-3 text-sm text-stone-400">Đang tải bài học…</p>;
-  if (lessons.isError) return <div className="p-3"><ErrorNote message={errText(lessons.error, 'Không tải được bài học')} /></div>;
-  if (lessons.data.length === 0) return <p className="px-4 py-3 text-sm text-stone-400">Module này chưa có bài học.</p>;
+  if (lessons.isPending) return <p className="px-4 py-3 text-sm text-stone-400">{t('classroom.lessonList.loading')}</p>;
+  if (lessons.isError) return <div className="p-3"><ErrorNote message={errText(lessons.error, t('classroom.lessonList.loadFailed'))} /></div>;
+  if (lessons.data.length === 0) return <p className="px-4 py-3 text-sm text-stone-400">{t('classroom.lessonList.empty')}</p>;
   return (
     <div className="flex flex-col gap-1.5 border-t border-[rgba(120,60,20,.08)] bg-white/60 p-3">
       {lessons.data.map((l) => (
@@ -26,8 +29,8 @@ function LessonList({ communityId, courseId, moduleId }: { communityId: string; 
             type="button"
             onClick={() => toggle.mutate(l.id, { onError: (e) => toast(errText(e), 'error') })}
             disabled={toggle.isPending}
-            aria-label={l.completed ? `Bỏ hoàn thành: ${l.title}` : `Đánh dấu hoàn thành: ${l.title}`}
-            title={l.completed ? 'Bỏ đánh dấu hoàn thành' : 'Đánh dấu hoàn thành'}
+            aria-label={l.completed ? t('classroom.lessonList.markUndone', { title: l.title }) : t('classroom.lessonList.markDone', { title: l.title })}
+            title={l.completed ? t('classroom.lessonList.titleUndone') : t('classroom.lessonList.titleDone')}
             className={`grid size-8 flex-none place-items-center rounded-full ${l.completed ? 'bg-brand text-white' : 'bg-stone-100 text-stone-500 hover:bg-brand/10'}`}
           >
             <MaterialIcon name="check" size={16} color={l.completed ? '#fff' : '#a8a29e'} />
@@ -35,10 +38,10 @@ function LessonList({ communityId, courseId, moduleId }: { communityId: string; 
           <Link to={lessonPath(communityId, l.id)} className="min-w-0 flex-1">
             <div className={`truncate text-[13.5px] font-medium hover:text-brand ${l.completed ? 'text-stone-400 line-through' : 'text-stone-900'}`}>{l.title}</div>
             <div className="text-[11.5px] text-stone-400">
-              {l.durationMin} phút · {l.type === 'video' ? 'Video' : l.type === 'file' ? 'Tệp' : 'Bài đọc'}
+              {t('classroom.lessonList.meta', { n: l.durationMin, type: l.type === 'video' ? t('editor.lesson.typeVideo') : l.type === 'file' ? t('editor.lesson.typeFile') : t('editor.lesson.typeText') })}
             </div>
           </Link>
-          <Link to={lessonPath(communityId, l.id)} aria-label={`Học bài ${l.title}`} className="grid size-8 flex-none place-items-center rounded-full bg-brand/10 hover:bg-brand/20">
+          <Link to={lessonPath(communityId, l.id)} aria-label={t('classroom.lessonList.learn', { title: l.title })} className="grid size-8 flex-none place-items-center rounded-full bg-brand/10 hover:bg-brand/20">
             <MaterialIcon name="play_arrow" size={18} filled color="#f26a1b" />
           </Link>
         </div>
@@ -48,14 +51,18 @@ function LessonList({ communityId, courseId, moduleId }: { communityId: string; 
 }
 
 function lockText(m: ClassroomModule) {
-  if (m.lockReason === 'level') return m.requiredLevel ? `Cần đạt Cấp độ ${m.requiredLevel}` : 'Cần đạt cấp độ cao hơn';
-  return 'Hoàn thành module trước';
+  if (m.lockReason === 'level')
+    return m.requiredLevel
+      ? i18n.t('classroom.lock.levelReq', { ns: 'community', level: m.requiredLevel })
+      : i18n.t('classroom.lock.levelHigher', { ns: 'community' });
+  return i18n.t('classroom.lock.prevModule', { ns: 'community' });
 }
 
 // Ảnh bìa module lấy từ file thiết kế gốc (slot module-img-0..8), ảnh đã có sẵn tiêu đề trong hình.
 const MODULE_IMAGE_COUNT = 9;
 const PAGE_SIZE = 10;
 export function ClassroomTab() {
+  const { t } = useTranslation('community');
   const { id: communityId = '' } = useParams();
   const [sp, setSp] = useSearchParams();
   const { data: community } = useCommunityDetail(communityId);
@@ -88,8 +95,8 @@ export function ClassroomTab() {
     setSp(id ? { khoa: id } : {}, { replace: true });
   };
 
-  if (courseList.isPending) return <p className="py-10 text-center text-stone-400">Đang tải lớp học…</p>;
-  if (courseList.isError) return <ErrorNote message={errText(courseList.error, 'Không tải được danh sách khóa học')} />;
+  if (courseList.isPending) return <p className="py-10 text-center text-stone-400">{t('classroom.loading')}</p>;
+  if (courseList.isError) return <ErrorNote message={errText(courseList.error, t('classroom.loadCoursesFailed'))} />;
 
   // Cộng đồng chưa có khóa học nào hiển thị được với người xem.
   if (!selected || !courseId) {
@@ -100,9 +107,9 @@ export function ClassroomTab() {
           <span className="grid size-14 place-items-center rounded-full bg-brand/10">
             <MaterialIcon name="school" size={30} filled color="#f26a1b" />
           </span>
-          <h1 className="m-0 text-[22px] font-extrabold">Chưa có khóa học nào</h1>
+          <h1 className="m-0 text-[22px] font-extrabold">{t('classroom.noCourses')}</h1>
           <p className="m-0 max-w-md text-sm text-stone-600">
-            {canEdit ? 'Hãy tạo khóa học đầu tiên để bắt đầu thêm module và bài học.' : 'Cộng đồng này chưa xuất bản khóa học nào. Hãy quay lại sau nhé.'}
+            {canEdit ? t('classroom.createFirst') : t('classroom.noPublished')}
           </p>
         </div>
         {canEdit && (
@@ -114,8 +121,8 @@ export function ClassroomTab() {
     );
   }
 
-  if (modules.isPending) return <p className="py-10 text-center text-stone-400">Đang tải lớp học…</p>;
-  if (modules.isError) return <ErrorNote message={errText(modules.error, 'Không tải được lớp học')} />;
+  if (modules.isPending) return <p className="py-10 text-center text-stone-400">{t('classroom.loading')}</p>;
+  if (modules.isError) return <ErrorNote message={errText(modules.error, t('classroom.loadFailed'))} />;
 
   const list = modules.data ?? [];
   const totalPages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
@@ -130,43 +137,33 @@ export function ClassroomTab() {
   return (
     <div className="flex flex-col gap-4">
       <ToastHost />
-      <div className="relative flex min-h-[128px] flex-wrap items-center gap-5 overflow-hidden rounded-[28px] border border-brand/15 bg-gradient-to-r from-[#fff7f0] via-[#ffe9d9] to-[#ffdcc4] px-6 py-[22px]">
-        <img src="/images/community/class-hero-bg.webp" alt="" className="pointer-events-none absolute inset-0 size-full object-cover" />
-        <div className="relative flex items-center gap-4">
-          <span className="grid size-[60px] flex-none place-items-center rounded-full bg-white/80 shadow-[0_6px_18px_rgba(242,106,27,.18)]">
-            <MaterialIcon name="school" size={32} filled color="#f26a1b" />
-          </span>
-          <div>
-            <h1 className="m-0 text-[32px] leading-tight font-extrabold tracking-tight">Lớp học</h1>
-            <p className="mt-1 text-sm text-stone-700">Học theo lộ trình module — hoàn thành module trước để mở khóa module tiếp theo.</p>
-          </div>
+      <div className="flex flex-wrap items-center gap-5 px-1 py-2">
+        <div>
+          <h1 className="m-0 text-[28px] leading-tight font-extrabold tracking-tight">{t('classroom.title')}</h1>
+          <p className="mt-1 text-sm text-stone-700">{t('classroom.subtitle')}</p>
         </div>
-        <div className="relative grid grid-cols-3 divide-x divide-brand/15 ml-auto rounded-[18px] border border-white/75 bg-white/45 py-3 text-center backdrop-blur-xl">
+        <div className="ml-auto flex gap-6 text-sm text-stone-600">
           {[
-            { icon: 'school', value: list.length, label: 'Module' },
-            { icon: 'article', value: totalLessons, label: 'Bài học' },
-            { icon: 'group', value: formatCompact(community?.stats.members ?? 0), label: 'Học viên' },
+            { value: list.length, label: t('classroom.statModules') },
+            { value: totalLessons, label: t('classroom.statLessons') },
+            { value: formatCompact(community?.stats.members ?? 0), label: t('classroom.statStudents') },
           ].map((s) => (
-            <div key={s.label} className="flex items-center gap-2.5 px-5">
-              <MaterialIcon name={s.icon} size={22} color="#f26a1b" />
-              <div className="text-left">
-                <div className="text-[17px] leading-tight font-extrabold">{s.value}</div>
-                <div className="text-[11.5px] text-stone-500">{s.label}</div>
-              </div>
+            <div key={s.label}>
+              <span className="font-extrabold text-stone-900">{s.value}</span> {s.label}
             </div>
           ))}
         </div>
         {canEdit && list.length > 0 && (
-          <button type="button" onClick={() => setAddingLesson(true)} className={`${primaryBtn} relative h-14 rounded-2xl px-6`}>
+          <button type="button" onClick={() => setAddingLesson(true)} className={`${primaryBtn} h-12 rounded-2xl px-6`}>
             <MaterialIcon name="add" size={22} color="#fff" />
-            Thêm bài học
+            {t('classroom.addLesson')}
           </button>
         )}
       </div>
 
       {/* Chọn khóa học: chỉ hiện khi cộng đồng có nhiều hơn 1 khóa */}
       {courses.length > 1 && (
-        <nav aria-label="Chọn khóa học" className="flex gap-3 overflow-x-auto pb-1">
+        <nav aria-label={t('classroom.pickCourse')} className="flex gap-3 overflow-x-auto pb-1">
           {courses.map((c) => {
             const active = c.id === selected.id;
             const thumb = safeUrl(c.thumbnailUrl ?? undefined);
@@ -184,7 +181,7 @@ export function ClassroomTab() {
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[13.5px] font-bold">{c.title}</span>
                   <span className="block truncate text-[11.5px] text-stone-500">
-                    {c.modulesCount} module · {c.lessonsCount} bài
+                    {t('classroom.courseMeta', { modules: c.modulesCount, lessons: c.lessonsCount })}
                   </span>
                   <span className="mt-1 flex items-center gap-1.5">
                     <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-[rgba(120,60,20,.08)]">
@@ -193,7 +190,7 @@ export function ClassroomTab() {
                     <span className="text-[11px] font-bold">{c.progress.percent}%</span>
                   </span>
                   {c.publishStatus !== 'published' && (
-                    <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${publishBadgeCls(c.publishStatus)}`}>{PUBLISH_LABEL[c.publishStatus]}</span>
+                    <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${publishBadgeCls(c.publishStatus)}`}>{publishLabel(c.publishStatus)}</span>
                   )}
                 </span>
               </button>
@@ -206,9 +203,9 @@ export function ClassroomTab() {
       <div className="glass flex flex-wrap items-center gap-4 rounded-2xl p-4">
         <div className="min-w-[220px] flex-1">
           <div className="flex items-center justify-between text-[13px]">
-            <span className="truncate font-semibold">Tiến độ{courses.length > 1 ? `: ${selected.title}` : ' khóa học'}</span>
+            <span className="truncate font-semibold">{courses.length > 1 ? t('classroom.progressNamed', { title: selected.title }) : t('classroom.progress')}</span>
             <span className="text-stone-500">
-              {prog ? `${prog.completedLessons}/${prog.totalLessons} bài · ${prog.completedModules} module` : progress.isPending ? 'Đang tải…' : '—'}
+              {prog ? t('classroom.progressLine', { done: prog.completedLessons, total: prog.totalLessons, modules: prog.completedModules }) : progress.isPending ? t('common.loading') : '—'}
             </span>
           </div>
           <div className="mt-2 flex items-center gap-2.5">
@@ -221,7 +218,7 @@ export function ClassroomTab() {
         {prog?.nextLesson && (
           <Link to={lessonPath(communityId, prog.nextLesson.id)} className={primaryBtn} title={prog.nextLesson.title}>
             <MaterialIcon name="play_arrow" size={19} filled color="#fff" />
-            Tiếp tục học
+            {t('classroom.continue')}
           </Link>
         )}
         {canClaim && (
@@ -232,16 +229,16 @@ export function ClassroomTab() {
             className={ghostBtn}
           >
             <MaterialIcon name="workspace_premium" size={19} filled color="#f26a1b" />
-            {claim.isPending ? 'Đang cấp…' : 'Nhận chứng nhận'}
+            {claim.isPending ? t('classroom.issuing') : t('classroom.claim')}
           </button>
         )}
         {complete && !selected.certificatesEffective && (
-          <span className="text-[12.5px] text-stone-500">Khóa học này chưa bật chứng nhận hoàn thành.</span>
+          <span className="text-[12.5px] text-stone-500">{t('classroom.certDisabled')}</span>
         )}
         {canEdit && (
           <button type="button" onClick={() => setEditMode((e) => !e)} className={editMode ? primaryBtn : ghostBtn} aria-pressed={editMode}>
             <MaterialIcon name={editMode ? 'close' : 'edit_note'} size={19} color={editMode ? '#fff' : undefined} />
-            {editMode ? 'Thoát chỉnh sửa' : 'Chỉnh sửa lớp học'}
+            {editMode ? t('classroom.exitEdit') : t('classroom.editClassroom')}
           </button>
         )}
       </div>
@@ -251,7 +248,7 @@ export function ClassroomTab() {
           <ClassroomEditor communityId={communityId} course={selected} modules={list} isAdmin={isAdminPlus(role)} />
         </>}
 
-      {list.length === 0 && !editMode && <p className="glass rounded-2xl py-10 text-center text-stone-500">Lớp học chưa có nội dung.</p>}
+      {list.length === 0 && !editMode && <p className="glass rounded-2xl py-10 text-center text-stone-500">{t('classroom.empty')}</p>}
 
       <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(270px,1fr))]">
         {shown.map((m) => {
@@ -267,11 +264,11 @@ export function ClassroomTab() {
                   <button
                     type="button"
                     onClick={() => setEditingModule(m)}
-                    title="Chỉnh sửa module"
+                    title={t('classroom.editModuleTitle')}
                     className="absolute top-3 right-3 z-[3] flex h-[34px] items-center gap-1.5 rounded-[10px] bg-white/95 px-3 text-[13px] font-bold shadow-[0_6px_16px_rgba(0,0,0,.18)] hover:bg-white hover:text-brand"
                   >
                     <MaterialIcon name="edit" size={17} />
-                    Sửa
+                    {t('classroom.editBtn')}
                   </button>
                 )}
                 {m.locked && (
@@ -285,7 +282,7 @@ export function ClassroomTab() {
               </div>
               <div className="flex flex-1 flex-col gap-1 px-[18px] pt-3.5 pb-4">
                 <div className="truncate text-[15.5px] font-bold">#{m.index - 1}: {m.title}</div>
-                <div className="truncate text-[12.5px] text-stone-500">{m.lessonsCount} bài học • {m.description}</div>
+                <div className="truncate text-[12.5px] text-stone-500">{t('classroom.lessonsDesc', { n: m.lessonsCount, desc: m.description })}</div>
                 <div className="mt-auto flex items-center gap-2.5 pt-2.5">
                   <span className="rounded-lg bg-brand/10 px-2 py-1 text-[11.5px] font-bold">{m.pct}%</span>
                   <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-[rgba(120,60,20,.08)]">
@@ -295,7 +292,7 @@ export function ClassroomTab() {
                     type="button"
                     disabled={m.locked}
                     onClick={() => setOpenId(openId === m.id ? null : m.id)}
-                    aria-label={`Mở ${m.title}`}
+                    aria-label={t('classroom.openAria', { title: m.title })}
                     title={m.locked ? lockText(m) : undefined}
                     className="grid size-[42px] flex-none place-items-center rounded-[14px] bg-brand/10 hover:bg-brand/20 disabled:cursor-not-allowed disabled:opacity-50"
                   >
@@ -317,15 +314,15 @@ export function ClassroomTab() {
 
       <div className="flex items-center justify-between text-[13px] text-stone-600">
         <div className="flex items-center gap-1">
-          <button disabled={page === 1} onClick={() => setPage(page - 1)} className="px-2 py-1 disabled:opacity-40">‹ Trước</button>
+          <button disabled={page === 1} onClick={() => setPage(page - 1)} className="px-2 py-1 disabled:opacity-40">{t('classroom.prev')}</button>
           {Array.from({ length: totalPages }, (_, n) => n + 1).map((n) => (
             <button key={n} onClick={() => setPage(n)} className={`size-8 rounded-full font-semibold ${n === page ? 'bg-brand text-white' : ''}`}>
               {n}
             </button>
           ))}
-          <button disabled={page === totalPages} onClick={() => setPage(page + 1)} className="px-2 py-1 disabled:opacity-40">Tiếp theo ›</button>
+          <button disabled={page === totalPages} onClick={() => setPage(page + 1)} className="px-2 py-1 disabled:opacity-40">{t('classroom.next')}</button>
         </div>
-        <span>{list.length ? `${start + 1}–${start + shown.length} trên ${list.length}` : ''}</span>
+        <span>{list.length ? t('classroom.range', { from: start + 1, to: start + shown.length, total: list.length }) : ''}</span>
       </div>
 
       {editingModule && <ModuleFormDialog communityId={communityId} courseId={courseId} module={editingModule} onClose={() => setEditingModule(null)} />}

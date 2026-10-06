@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { FieldError, FieldHint } from '../components/ui/FieldMessage';
@@ -50,6 +51,7 @@ function clearDraft() {
 }
 
 export function RegisterPage() {
+  const { t } = useTranslation('auth');
   const { register } = useAuth();
   const navigate = useNavigate();
 
@@ -82,14 +84,14 @@ export function RegisterPage() {
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     const errors: FieldErrors = {
-      firstName: validateRequired(firstName, 'tên') ?? undefined,
-      lastName: validateRequired(lastName, 'họ') ?? undefined,
+      firstName: validateRequired(firstName, t('register.firstNameLabel')) ?? undefined,
+      lastName: validateRequired(lastName, t('register.lastNameLabel')) ?? undefined,
       email: validateEmail(email) ?? undefined,
       password: validateNewPassword(password) ?? undefined,
       agree: !bothRead
-        ? 'Vui lòng đọc hết Điều khoản sử dụng và Chính sách bảo mật trước'
+        ? t('register.readFirst')
         : !agreed
-          ? 'Bạn cần đồng ý với Điều khoản sử dụng và Chính sách bảo mật để đăng ký'
+          ? t('register.mustAgree')
           : undefined,
     };
     setFieldErrors(errors);
@@ -103,7 +105,7 @@ export function RegisterPage() {
       clearDraft();
       navigate('/', { replace: true });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Đăng ký thất bại, vui lòng thử lại');
+      setError(err instanceof ApiError ? err.message : t('register.fail'));
     } finally {
       setSubmitting(false);
     }
@@ -133,9 +135,9 @@ export function RegisterPage() {
       <div className="relative z-10 flex min-w-[min(100%,380px)] flex-1 basis-[630px] flex-col gap-[22px] rounded-[28px] border border-white/95 bg-white/70 p-6 shadow-[0_30px_70px_rgba(120,60,20,.12)] backdrop-blur-[26px] backdrop-saturate-[180%] sm:p-10 md:p-[clamp(28px,4vw,60px)]">
         <div className="flex flex-col items-center gap-3 text-center">
           <img src="/images/logo.png" alt="SofinHub" className="mb-1 h-11 w-auto" />
-          <h2 className="m-0 text-[clamp(28px,2.6vw,38px)] font-bold tracking-[-.5px]">Tạo tài khoản</h2>
+          <h2 className="m-0 text-[clamp(28px,2.6vw,38px)] font-bold tracking-[-.5px]">{t('register.title')}</h2>
           <p className="m-0 max-w-[380px] text-base leading-[1.6] text-stone-600 text-pretty">
-            Tham gia cộng đồng để bắt đầu hành trình học tập và kết nối tại SofinHub.
+            {t('register.intro')}
           </p>
         </div>
 
@@ -150,7 +152,7 @@ export function RegisterPage() {
                   setFirstName(v);
                   clearFieldError('firstName');
                 }}
-                placeholder="Tên của bạn"
+                placeholder={t('register.firstNamePh')}
                 error={fieldErrors.firstName}
               />
             </div>
@@ -163,7 +165,7 @@ export function RegisterPage() {
                   setLastName(v);
                   clearFieldError('lastName');
                 }}
-                placeholder="Họ của bạn"
+                placeholder={t('register.lastNamePh')}
                 error={fieldErrors.lastName}
               />
             </div>
@@ -177,7 +179,7 @@ export function RegisterPage() {
               setEmail(v);
               clearFieldError('email');
             }}
-            placeholder="Email của bạn"
+            placeholder={t('register.emailPh')}
             error={fieldErrors.email}
           />
 
@@ -189,9 +191,9 @@ export function RegisterPage() {
               setPassword(v);
               clearFieldError('password');
             }}
-            placeholder="Mật khẩu"
+            placeholder={t('register.passwordPh')}
             error={fieldErrors.password}
-            hint="Ít nhất 8 ký tự, có chữ in hoa và ký tự đặc biệt"
+            hint={t('register.passwordHint')}
           />
 
           <div>
@@ -207,19 +209,19 @@ export function RegisterPage() {
                 className="mt-0.5 size-4 flex-none accent-brand disabled:opacity-50"
               />
               <span>
-                Tôi đã đọc và đồng ý với{' '}
+                {t('register.agreePrefix')}{' '}
                 <Link to="/terms" className="font-semibold text-brand underline">
-                  Điều khoản sử dụng
+                  {t('register.terms')}
                 </Link>{' '}
                 {termsRead && '✓ '}
-                và{' '}
+                {t('register.and')}{' '}
                 <Link to="/privacy" className="font-semibold text-brand underline">
-                  Chính sách bảo mật
+                  {t('register.privacy')}
                 </Link>
-                {privacyRead && ' ✓'} của chúng tôi.
+                {privacyRead && ' ✓'}{t('register.agreeSuffix')}
               </span>
             </label>
-            {!bothRead && <FieldHint indent>Mở và đọc hết hai trang trên (cuộn tới cuối) để bật ô đồng ý.</FieldHint>}
+            {!bothRead && <FieldHint indent>{t('register.readHint')}</FieldHint>}
             {fieldErrors.agree && <FieldError indent>{fieldErrors.agree}</FieldError>}
           </div>
 
@@ -234,7 +236,7 @@ export function RegisterPage() {
             disabled={submitting || !agreed}
             className="h-[60px] gap-2.5 rounded-2xl text-lg font-bold"
           >
-            {submitting ? 'Đang tạo tài khoản…' : 'Đăng ký ngay'}
+            {submitting ? t('register.creating') : t('register.submit')}
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
               <path d="M5 12h14M13 6l6 6-6 6" />
             </svg>
@@ -243,9 +245,9 @@ export function RegisterPage() {
 
         <div className="flex flex-wrap items-center justify-center gap-4 text-[15px] whitespace-nowrap text-stone-700">
           <span className="hidden h-px flex-1 bg-[rgba(120,60,20,.14)] sm:block" />
-          Bạn đã có tài khoản?{' '}
+          {t('register.haveAccount')}{' '}
           <Link to="/login" className="font-bold underline">
-            Đăng nhập
+            {t('register.signIn')}
           </Link>
           <span className="hidden h-px flex-1 bg-[rgba(120,60,20,.14)] sm:block" />
         </div>

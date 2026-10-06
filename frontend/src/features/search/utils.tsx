@@ -1,3 +1,4 @@
+import i18n from '../../i18n';
 import type { Segment, SearchResult } from './types';
 
 /** Render mảng {text, match}: đoạn match bọc <mark>. Chỉ dùng text node, KHÔNG innerHTML. */
@@ -36,7 +37,7 @@ export function resultHref(r: SearchResult): string {
 export function resultTitle(r: SearchResult): string {
   if (r.type === 'course') return segmentsToText(r.title);
   if (r.type === 'member') return segmentsToText(r.name);
-  return `Bài viết của ${r.author}`;
+  return i18n.t('row.postTitle', { ns: 'search', author: r.author });
 }
 
 export const RESULT_ICON: Record<SearchResult['type'], string> = { course: 'school', member: 'person', post: 'article' };

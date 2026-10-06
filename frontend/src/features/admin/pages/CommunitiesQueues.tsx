@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { formatDate, formatRelative } from '../../../lib/datetime';
 import { RejectCommunityModal, RequestChangesModal, UndeleteCommunityModal, trashInfo } from '../components/ActionModals';
 import { ChecklistCard, DecisionPanel, KvCard, Row, type ChecklistItem } from '../components/Cards';
@@ -19,6 +20,7 @@ const LIMIT = 20;
 /* ============================== Xét duyệt ============================== */
 
 export function CommunityReview() {
+  const { t } = useTranslation('admin-pages1');
   const navigate = useNavigate();
   const toast = useToast();
   const [params, setParams] = useSearchParams();
@@ -42,95 +44,95 @@ export function CommunityReview() {
   const checklist = (m: ReviewQueueItem): ChecklistItem[] => {
     const s = m.signals;
     return [
-      { key: 'profile', label: 'Hồ sơ cộng đồng', sub: s.hasThumbnail ? 'Đã có ảnh bìa / biểu tượng' : 'Chưa có ảnh bìa / biểu tượng', checked: s.hasThumbnail, auto: true },
-      { key: 'desc', label: 'Mô tả', sub: `${fmtNum(s.descriptionLength)} ký tự — ${s.descriptionLength >= 50 ? 'đủ rõ mục đích' : 'quá ngắn, cần mô tả rõ mục đích'}`, checked: s.descriptionLength >= 50, auto: true },
-      { key: 'quality', label: 'Chất lượng nội dung', sub: 'Đã xem bài viết đầu và bản xem trước khóa học', checked: !!manual[`${m.id}:quality`] },
-      { key: 'policy', label: 'Tuân thủ chính sách', sub: 'Không có chủ đề hay ưu đãi bị cấm', checked: !!manual[`${m.id}:policy`] },
+      { key: 'profile', label: t('queues.review.cl.profile'), sub: s.hasThumbnail ? t('queues.review.cl.profileOk') : t('queues.review.cl.profileMissing'), checked: s.hasThumbnail, auto: true },
+      { key: 'desc', label: t('queues.review.cl.desc'), sub: t(s.descriptionLength >= 50 ? 'queues.review.cl.descOk' : 'queues.review.cl.descShort', { n: fmtNum(s.descriptionLength) }), checked: s.descriptionLength >= 50, auto: true },
+      { key: 'quality', label: t('queues.review.cl.quality'), sub: t('queues.review.cl.qualitySub'), checked: !!manual[`${m.id}:quality`] },
+      { key: 'policy', label: t('queues.review.cl.policy'), sub: t('queues.review.cl.policySub'), checked: !!manual[`${m.id}:policy`] },
       {
         key: 'owner',
-        label: 'Lịch sử chủ sở hữu',
-        sub: `Tài khoản ${fmtNum(s.ownerAccountAgeDays)} ngày · ${s.ownerCommunities} cộng đồng`,
+        label: t('queues.review.cl.owner'),
+        sub: t('queues.review.cl.ownerSub', { days: fmtNum(s.ownerAccountAgeDays), n: s.ownerCommunities }),
         checked: s.ownerAccountAgeDays >= 30,
         auto: true,
-        flag: s.ownerAccountAgeDays >= 365 ? { text: 'Đáng tin cậy', tone: 'g' } : undefined,
+        flag: s.ownerAccountAgeDays >= 365 ? { text: t('queues.review.cl.trusted'), tone: 'g' } : undefined,
       },
       {
         key: 'violations',
-        label: 'Vi phạm trước đây',
-        sub: s.ownerViolations90d > 0 ? `${s.ownerViolations90d} vi phạm trong 90 ngày qua` : 'Chưa có',
+        label: t('queues.review.cl.violations'),
+        sub: s.ownerViolations90d > 0 ? t('queues.review.cl.violationsSub', { n: s.ownerViolations90d }) : t('queues.review.cl.none'),
         checked: s.ownerViolations90d === 0,
         auto: true,
-        flag: s.ownerViolations90d > 0 ? { text: 'Trung bình', tone: 'o' } : undefined,
+        flag: s.ownerViolations90d > 0 ? { text: t('queues.review.cl.medium'), tone: 'o' } : undefined,
       },
     ];
   };
 
-  const decided = sel && sel.status === 'changes_requested' ? 'Đã yêu cầu chỉnh sửa — đang chờ chủ sở hữu cập nhật' : '';
+  const decided = sel && sel.status === 'changes_requested' ? t('queues.review.decided') : '';
   const ref = sel ? { id: sel.id, name: sel.name } : null;
 
   return (
     <>
-      <PageHeader title="Xét duyệt cộng đồng" subtitle="Duyệt cộng đồng mới trước khi xuất hiện trên nền tảng." />
+      <PageHeader title={t('queues.review.title')} subtitle={t('queues.review.subtitle')} />
       <Row cols="1fr 1.2fr">
         <DataTable<ReviewQueueItem>
-          title="Hàng đợi xét duyệt"
-          sub={queue.data ? `${fmtNum(queue.data.meta.total)} đang chờ` : undefined}
+          title={t('queues.review.queue')}
+          sub={queue.data ? t('queues.review.waiting', { n: fmtNum(queue.data.meta.total) }) : undefined}
           columns={[
-            { key: 'name', label: 'Cộng đồng', w: 2, render: (c) => <MainCell name={c.name} sub={c.owner.name} shape="square" avatarSrc={c.thumbnail} seed={c.id} /> },
-            { key: 'submitted', label: 'Gửi lúc', render: (c) => <MutedCell>{formatRelative(c.submittedAt)}</MutedCell> },
-            { key: 'status', label: 'Trạng thái', render: (c) => <StatusBadge tone={COMMUNITY_STATUS[c.status].tone}>{COMMUNITY_STATUS[c.status].label}</StatusBadge> },
+            { key: 'name', label: t('queues.review.colCommunity'), w: 2, render: (c) => <MainCell name={c.name} sub={c.owner.name} shape="square" avatarSrc={c.thumbnail} seed={c.id} /> },
+            { key: 'submitted', label: t('queues.review.colSubmitted'), render: (c) => <MutedCell>{formatRelative(c.submittedAt)}</MutedCell> },
+            { key: 'status', label: t('queues.review.colStatus'), render: (c) => <StatusBadge tone={COMMUNITY_STATUS[c.status].tone}>{COMMUNITY_STATUS[c.status].label}</StatusBadge> },
           ]}
           rows={items}
           rowKey={(c) => c.id}
           loading={queue.isPending}
           error={queue.isError ? queue.error : null}
           onRetry={() => void queue.refetch()}
-          emptyText="Không có cộng đồng nào đang chờ xét duyệt."
+          emptyText={t('queues.review.empty')}
           onRow={(c) => select(c.id)}
           isActive={(c) => c.id === sel?.id}
           page={queue.data ? { page: queue.data.meta.page, totalPages: queue.data.meta.totalPages, total: queue.data.meta.total, limit: LIMIT, onPage: setPage } : undefined}
         />
         {sel && (
           <KvCard
-            title="Xem trước cộng đồng"
-            link="Mở cộng đồng"
+            title={t('queues.review.preview')}
+            link={t('queues.review.openCommunity')}
             onLink={() => navigate(`/admin/communities/${sel.id}`)}
             items={[
-              { k: 'Tên', v: sel.name },
-              { k: 'Chủ sở hữu', v: sel.owner.name },
-              { k: 'Mô tả', v: sel.description || '—' },
-              { k: 'Danh mục', v: categoryLabel(sel.category) },
-              { k: 'Giá', v: sel.pricing === 'free' ? PRICING_LABEL.free : `$${sel.priceUsd} / tháng` },
-              { k: 'Thành viên', v: fmtNum(sel.members) },
-              { k: 'Tạo lúc', v: formatDate(sel.createdAt) },
-              { k: 'Trạng thái', v: COMMUNITY_STATUS[sel.status].label, badge: COMMUNITY_STATUS[sel.status].tone },
+              { k: t('queues.review.kvName'), v: sel.name },
+              { k: t('queues.review.kvOwner'), v: sel.owner.name },
+              { k: t('queues.review.kvDesc'), v: sel.description || '—' },
+              { k: t('queues.review.kvCategory'), v: categoryLabel(sel.category) },
+              { k: t('queues.review.kvPrice'), v: sel.pricing === 'free' ? PRICING_LABEL.free : t('queues.review.perMonth', { price: sel.priceUsd }) },
+              { k: t('queues.review.kvMembers'), v: fmtNum(sel.members) },
+              { k: t('queues.review.kvCreated'), v: formatDate(sel.createdAt) },
+              { k: t('queues.review.kvStatus'), v: COMMUNITY_STATUS[sel.status].label, badge: COMMUNITY_STATUS[sel.status].tone },
             ]}
           />
         )}
       </Row>
       {sel && ref && (
         <Row cols="1fr 1fr">
-          <ChecklistCard title="Danh sách kiểm tra" items={checklist(sel)} onToggle={(k) => setManual((m) => ({ ...m, [`${sel.id}:${k}`]: !m[`${sel.id}:${k}`] }))} />
+          <ChecklistCard title={t('queues.review.checklist')} items={checklist(sel)} onToggle={(k) => setManual((m) => ({ ...m, [`${sel.id}:${k}`]: !m[`${sel.id}:${k}`] }))} />
           <DecisionPanel
-            title="Quyết định"
+            title={t('queues.review.decision')}
             note={note}
             onNote={setNote}
-            placeholder="Thêm ghi chú xét duyệt nội bộ..."
+            placeholder={t('queues.review.notePlaceholder')}
             done={decided}
             buttons={[
               {
-                label: 'Duyệt',
+                label: t('queues.review.approve'),
                 icon: 'check_circle',
                 kind: 'primary',
                 disabled: approve.isPending,
                 onClick: () =>
                   approve.mutate(
                     { id: sel.id, note: note.trim() || undefined },
-                    { onSuccess: () => { toast.success(`Đã duyệt · ${sel.name}`); setNote(''); }, onError: (e) => toast.error(errMessage(e)) },
+                    { onSuccess: () => { toast.success(t('queues.review.approved', { name: sel.name })); setNote(''); }, onError: (e) => toast.error(errMessage(e)) },
                   ),
               },
-              { label: 'Yêu cầu chỉnh sửa', icon: 'edit_note', disabled: sel.status !== 'pending_review', onClick: () => setModal('changes') },
-              { label: 'Từ chối', icon: 'block', kind: 'danger', onClick: () => setModal('reject') },
+              { label: t('queues.review.requestChanges'), icon: 'edit_note', disabled: sel.status !== 'pending_review', onClick: () => setModal('changes') },
+              { label: t('queues.review.reject'), icon: 'block', kind: 'danger', onClick: () => setModal('reject') },
             ]}
           />
         </Row>
@@ -144,6 +146,7 @@ export function CommunityReview() {
 /* ============================== Tạm ngưng ============================== */
 
 export function CommunitySuspended() {
+  const { t } = useTranslation('admin-pages1');
   const navigate = useNavigate();
   const summary = useCommunitySummary();
   const { label: categoryLabel } = useCategoryLabel();
@@ -157,35 +160,35 @@ export function CommunitySuspended() {
 
   return (
     <>
-      <PageHeader title="Tạm ngưng cộng đồng" subtitle="Cộng đồng bị tạm ngưng sẽ bị ẩn và tạm dừng thanh toán." />
+      <PageHeader title={t('queues.suspended.title')} subtitle={t('queues.suspended.subtitle')} />
       <DataTable
         columns={[
           cols[0]!,
           cols[1]!,
           cols[2]!,
           cols[4]!,
-          { key: 'reason', label: 'Lý do', render: (c) => <TextCell>{c.statusReason ?? '—'}</TextCell> },
-          { key: 'until', label: 'Đến khi', render: (c) => <MutedCell>{c.statusUntil ? formatDate(c.statusUntil) : c.status === 'suspended' ? 'Vô thời hạn' : '—'}</MutedCell> },
+          { key: 'reason', label: t('queues.suspended.colReason'), render: (c) => <TextCell>{c.statusReason ?? '—'}</TextCell> },
+          { key: 'until', label: t('queues.suspended.colUntil'), render: (c) => <MutedCell>{c.statusUntil ? formatDate(c.statusUntil) : c.status === 'suspended' ? t('queues.suspended.indefinite') : '—'}</MutedCell> },
           cols[7]!,
         ]}
         rows={list.data?.data ?? []}
         rowKey={(c) => c.id}
         tabs={[
-          { key: 'suspended', label: 'Tạm ngưng', count: summary.data?.suspended },
-          { key: 'active', label: 'Hoạt động', count: summary.data?.active },
+          { key: 'suspended', label: t('queues.suspended.tabSuspended'), count: summary.data?.suspended },
+          { key: 'active', label: t('queues.suspended.tabActive'), count: summary.data?.active },
         ]}
         tab={tab}
         onTab={(k) => { setTab(k as 'suspended' | 'active'); setPage(1); }}
-        search={{ value: q, onChange: (v) => { setQ(v); setPage(1); }, placeholder: 'Tìm cộng đồng...' }}
+        search={{ value: q, onChange: (v) => { setQ(v); setPage(1); }, placeholder: t('queues.suspended.search') }}
         loading={list.isPending}
         error={list.isError ? list.error : null}
         onRetry={() => void list.refetch()}
-        emptyText={tab === 'suspended' ? 'Không có cộng đồng nào đang bị tạm ngưng.' : undefined}
+        emptyText={tab === 'suspended' ? t('queues.suspended.empty') : undefined}
         onRow={(c) => navigate(`/admin/communities/${c.id}`)}
-        actions={(c) => actionsFor(c).filter((a) => ['Khôi phục', 'Tạm ngưng'].includes(a.label)).concat(actionsFor(c).filter((a) => a.label === 'Xem'))}
+        actions={(c) => actionsFor(c).filter((a) => a.icon === 'restore' || a.icon === 'pause_circle').concat(actionsFor(c).filter((a) => !a.icon))}
         page={list.data ? { page: list.data.meta.page, totalPages: list.data.meta.totalPages, total: list.data.meta.total, limit: LIMIT, onPage: setPage } : undefined}
       />
-      <Card title="Khóa nhanh theo mã / slug" sub="Công cụ khóa/mở khóa cộng đồng có sẵn — dùng khi cần thao tác trực tiếp theo id hoặc slug." action={<button type="button" onClick={() => setShowLock((v) => !v)} className="h-9 rounded-[10px] border-[1.5px] border-[#e7e0da] bg-white px-3 text-[13px] font-semibold">{showLock ? 'Ẩn' : 'Mở công cụ'}</button>}>
+      <Card title={t('queues.suspended.quickLock')} sub={t('queues.suspended.quickLockSub')} action={<button type="button" onClick={() => setShowLock((v) => !v)} className="h-9 rounded-[10px] border-[1.5px] border-[#e7e0da] bg-white px-3 text-[13px] font-semibold">{showLock ? t('queues.suspended.hide') : t('queues.suspended.openTool')}</button>}>
         {showLock && <LockTab />}
       </Card>
       {modalEl}
@@ -196,6 +199,7 @@ export function CommunitySuspended() {
 /* ============================== Xóa / Khôi phục ============================== */
 
 export function CommunityTrash() {
+  const { t } = useTranslation('admin-pages1');
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
   const list = useTrash({ q: q || undefined, page, limit: LIMIT });
@@ -204,26 +208,26 @@ export function CommunityTrash() {
 
   return (
     <>
-      <PageHeader title="Xóa / Khôi phục" subtitle="Cộng đồng đã xóa được giữ 30 ngày trước khi xóa vĩnh viễn." />
+      <PageHeader title={t('queues.trash.title')} subtitle={t('queues.trash.subtitle')} />
       <DataTable<TrashItem>
         columns={[
-          { key: 'name', label: 'Cộng đồng', w: 2, render: (c) => <MainCell name={c.name} sub={c.owner.name} shape="square" seed={c.id} /> },
-          { key: 'id', label: 'Mã', render: (c) => <MonoCell>{c.id}</MonoCell> },
-          { key: 'cat', label: 'Danh mục', render: (c) => <TextCell>{categoryLabel(c.category)}</TextCell> },
-          { key: 'by', label: 'Xóa bởi', render: (c) => <TextCell>{c.deletedByOwner ? 'Chủ sở hữu' : (c.deletedBy?.name ?? '—')}</TextCell> },
-          { key: 'date', label: 'Ngày xóa', render: (c) => <MutedCell>{formatDate(c.deletedAt)}</MutedCell> },
-          { key: 'reason', label: 'Lý do', render: (c) => <TextCell>{c.reason ?? '—'}</TextCell> },
-          { key: 'retention', label: 'Thời hạn lưu dữ liệu', render: (c) => <MutedCell>{c.daysLeft > 0 ? `Còn ${c.daysLeft} ngày` : 'Sắp xóa vĩnh viễn'}</MutedCell> },
-          { key: 'status', label: 'Trạng thái', render: () => <StatusBadge tone="x">{COMMUNITY_STATUS.deleted.label}</StatusBadge> },
+          { key: 'name', label: t('queues.trash.colCommunity'), w: 2, render: (c) => <MainCell name={c.name} sub={c.owner.name} shape="square" seed={c.id} /> },
+          { key: 'id', label: t('queues.trash.colId'), render: (c) => <MonoCell>{c.id}</MonoCell> },
+          { key: 'cat', label: t('queues.trash.colCategory'), render: (c) => <TextCell>{categoryLabel(c.category)}</TextCell> },
+          { key: 'by', label: t('queues.trash.colDeletedBy'), render: (c) => <TextCell>{c.deletedByOwner ? t('queues.trash.owner') : (c.deletedBy?.name ?? '—')}</TextCell> },
+          { key: 'date', label: t('queues.trash.colDate'), render: (c) => <MutedCell>{formatDate(c.deletedAt)}</MutedCell> },
+          { key: 'reason', label: t('queues.trash.colReason'), render: (c) => <TextCell>{c.reason ?? '—'}</TextCell> },
+          { key: 'retention', label: t('queues.trash.colRetention'), render: (c) => <MutedCell>{c.daysLeft > 0 ? t('queues.trash.daysLeft', { count: c.daysLeft }) : t('queues.trash.soon')}</MutedCell> },
+          { key: 'status', label: t('queues.trash.colStatus'), render: () => <StatusBadge tone="x">{COMMUNITY_STATUS.deleted.label}</StatusBadge> },
         ]}
         rows={list.data?.data ?? []}
         rowKey={(c) => c.id}
-        search={{ value: q, onChange: (v) => { setQ(v); setPage(1); }, placeholder: 'Tìm cộng đồng đã xóa...' }}
+        search={{ value: q, onChange: (v) => { setQ(v); setPage(1); }, placeholder: t('queues.trash.search') }}
         loading={list.isPending}
         error={list.isError ? list.error : null}
         onRetry={() => void list.refetch()}
-        emptyText="Chưa có cộng đồng nào bị xóa."
-        actions={(c) => [{ label: 'Khôi phục cộng đồng', icon: 'restore', onClick: () => setTarget(c) }]}
+        emptyText={t('queues.trash.empty')}
+        actions={(c) => [{ label: t('queues.trash.restore'), icon: 'restore', onClick: () => setTarget(c) }]}
         page={list.data ? { page: list.data.meta.page, totalPages: list.data.meta.totalPages, total: list.data.meta.total, limit: LIMIT, onPage: setPage } : undefined}
       />
       {target && <UndeleteCommunityModal community={{ id: target.id, name: target.name }} info={trashInfo(target)} onClose={() => setTarget(null)} />}

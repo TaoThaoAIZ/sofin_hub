@@ -16,6 +16,7 @@ import type {
   UpdateEventInput,
   UpdatePostInput,
 } from './types';
+import i18n from '../../i18n';
 
 const keys = {
   posts: (courseId: string, query: object) => ['community', courseId, 'posts', query] as const,
@@ -39,7 +40,7 @@ export function patchPostCaches(qc: QueryClient, courseId: string, postId: strin
 
 function useToken() {
   const { accessToken } = useAuth();
-  if (!accessToken) throw new Error('Bạn cần đăng nhập');
+  if (!accessToken) throw new Error(i18n.t('ui.loginRequired', { ns: 'community' }));
   return accessToken;
 }
 

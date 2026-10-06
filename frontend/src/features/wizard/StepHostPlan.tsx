@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import { currentLocale } from '../../i18n';
 import { MaterialIcon } from '../../components/ui/MaterialIcon';
 import { FieldError } from '../../components/ui/FieldMessage';
 import { formatMoney } from '../../lib/format';
@@ -24,6 +26,7 @@ export function StepHostPlan({
   trialEndLabel?: string;
   cardSlot: ReactNode;
 }) {
+  const { t } = useTranslation('wizard');
   const pro = plans.find((p) => !p.free);
   const free = plans.find((p) => p.free);
   const savePct = pro?.annualSavingsPct;
@@ -37,7 +40,7 @@ export function StepHostPlan({
 
   return (
     <div>
-      {plansLoading && <p className="mt-6 text-stone-500">Đang tải các gói…</p>}
+      {plansLoading && <p className="mt-6 text-stone-500">{t('hostPlan.loading')}</p>}
       {plansError && (
         <p role="alert" className="mt-6 rounded-xl bg-red-50 px-4 py-2.5 text-sm font-medium text-red-600">
           {plansError}
@@ -50,11 +53,11 @@ export function StepHostPlan({
               value={cycle}
               onChange={(v) => set({ hostCycle: v })}
               options={[
-                { id: 'monthly', label: 'Theo tháng' },
-                { id: 'annual', label: 'Theo năm' },
+                { id: 'monthly', label: t('hostPlan.monthly') },
+                { id: 'annual', label: t('hostPlan.annual') },
               ]}
             />
-            <span className="absolute -top-3.5 right-0 rounded-full bg-green-600 px-2.5 py-0.5 text-[11.5px] font-bold text-white">Tiết kiệm {savePct}%</span>
+            <span className="absolute -top-3.5 right-0 rounded-full bg-green-600 px-2.5 py-0.5 text-[11.5px] font-bold text-white">{t('hostPlan.save', { pct: savePct })}</span>
           </div>
         </div>
       ) : null}
@@ -65,7 +68,7 @@ export function StepHostPlan({
             const price = p.free ? 0 : cycle === 'annual' ? p.annualPrice : p.monthlyPrice;
             return (
               <div key={p.id} className={`relative flex flex-col overflow-hidden rounded-[18px] p-6 ${on ? 'border-2 border-brand bg-[linear-gradient(180deg,#fff,#fff7f1)] shadow-[0_14px_34px_rgba(242,106,27,.12)]' : 'border border-[#f0ebe6] bg-white'}`}>
-                {p.popular && <span className="absolute -top-px -right-px rounded-[0_18px_0_12px] bg-[#ffe4d1] px-3 py-1 text-xs font-bold text-[#c2410c]">Phổ biến nhất</span>}
+                {p.popular && <span className="absolute -top-px -right-px rounded-[0_18px_0_12px] bg-[#ffe4d1] px-3 py-1 text-xs font-bold text-[#c2410c]">{t('hostPlan.popular')}</span>}
                 <div className="flex items-center gap-3.5">
                   <span className="grid size-[52px] flex-none place-items-center rounded-[14px] bg-[#fff1e6]">
                     <MaterialIcon name={p.free ? 'send' : 'workspace_premium'} size={28} filled color={p.free ? '#f26a1b' : '#f59e0b'} />
@@ -77,7 +80,7 @@ export function StepHostPlan({
                 </div>
                 <div className="mt-5 text-[34px] font-extrabold tracking-[-1px]">
                   {formatMoney(price, p.currency)}
-                  <span className="text-base font-medium tracking-normal text-stone-500"> / {!p.free && cycle === 'annual' ? 'năm' : 'tháng'}</span>
+                  <span className="text-base font-medium tracking-normal text-stone-500"> / {!p.free && cycle === 'annual' ? t('hostPlan.perYear') : t('hostPlan.perMonth')}</span>
                 </div>
                 <ul className="m-0 mt-5 flex flex-1 list-none flex-col gap-3 p-0">
                   {p.features.map((ft) => (
@@ -92,7 +95,7 @@ export function StepHostPlan({
                   onClick={() => set({ hostPlan: p.free ? 'start' : 'pro' }, ['hostCard'])}
                   className={`mt-6 h-[50px] rounded-xl text-[15px] font-bold ${on ? 'bg-brand-gradient border-0 text-white shadow-[0_8px_20px_rgba(242,106,27,.3)]' : 'border-[1.5px] border-[#fdba74] bg-white text-stone-900'}`}
                 >
-                  {on ? 'Đã chọn' : 'Chọn gói này'}
+                  {on ? t('hostPlan.selected') : t('hostPlan.choose')}
                 </button>
               </div>
             );
@@ -101,30 +104,30 @@ export function StepHostPlan({
             <div className="flex flex-col gap-3.5 rounded-[18px] border border-[#f0ebe6] bg-white p-6">
               <div className="flex items-center gap-3">
                 <MaterialIcon name="bar_chart" size={28} color="#f26a1b" />
-                <span className="text-lg font-extrabold">Gói nào lợi hơn?</span>
+                <span className="text-lg font-extrabold">{t('hostPlan.compareTitle')}</span>
               </div>
               <label htmlFor="wz-revenue" className="text-sm text-stone-600">
-                Doanh thu thành viên dự kiến mỗi tháng
+                {t('hostPlan.revenueLabel')}
               </label>
               <div className="flex h-[62px] items-center rounded-[14px] bg-[#fff1e6] px-[18px]">
                 <input
                   id="wz-revenue"
                   inputMode="numeric"
-                  value={rev ? rev.toLocaleString('vi-VN') : ''}
+                  value={rev ? rev.toLocaleString(currentLocale()) : ''}
                   placeholder="0"
                   onChange={(e) => set({ revenueEstimate: parseInt(e.target.value.replace(/\D/g, ''), 10) || 0 })}
                   className="min-w-0 flex-1 border-0 bg-transparent text-[28px] font-extrabold tracking-[-0.5px] text-brand outline-0"
                 />
                 <MaterialIcon name="trending_up" size={26} color="#f26a1b" />
               </div>
-              <CalcRow name={free?.name ?? 'Miễn phí'} rule={`Phí giao dịch ${Math.round(fees.freeFeeRate * 1000) / 10}%`} value={formatMoney(feeFree, currency)} good={feeFree <= feePro} />
-              <CalcRow name={pro.name} rule={`Phí gói + ${Math.round(fees.proFeeRate * 1000) / 10}% giao dịch`} value={formatMoney(feePro, currency)} good={feePro < feeFree} />
+              <CalcRow name={free?.name ?? t('hostPlan.freeFallback')} rule={t('hostPlan.freeRule', { pct: Math.round(fees.freeFeeRate * 1000) / 10 })} value={formatMoney(feeFree, currency)} good={feeFree <= feePro} />
+              <CalcRow name={pro.name} rule={t('hostPlan.proRule', { pct: Math.round(fees.proFeeRate * 1000) / 10 })} value={formatMoney(feePro, currency)} good={feePro < feeFree} />
               <div className="flex-1" />
               <div className="flex gap-3 rounded-[14px] bg-[#fff4e8] p-4 text-sm leading-normal font-bold">
                 <MaterialIcon name="lightbulb" size={24} color="#f59e0b" filled />
                 <span>
-                  {pro.name} có lợi hơn khi doanh thu vượt {formatMoney(breakEven, currency)}/tháng.
-                  {feePro < feeFree ? ` Với doanh thu này bạn tiết kiệm ${formatMoney(feeFree - feePro, currency)}/tháng.` : ''}
+                  {t('hostPlan.tip', { name: pro.name, amount: formatMoney(breakEven, currency) })}
+                  {feePro < feeFree ? t('hostPlan.tipSave', { amount: formatMoney(feeFree - feePro, currency) }) : ''}
                 </span>
               </div>
             </div>
@@ -138,8 +141,8 @@ export function StepHostPlan({
           <div className="mt-4 flex gap-2.5 rounded-[14px] bg-[#ecfdf3] p-4 text-sm leading-[1.55] text-[#166534]">
             <MaterialIcon name="verified_user" size={20} color="#16a34a" filled />
             <span>
-              <b>Hôm nay: {formatMoney(0, currency)}.</b>{' '}
-              {pro.trialDays > 0 ? `Thử miễn phí ${pro.trialDays} ngày${trialEndLabel ? ` tới ${trialEndLabel}` : ''}. Hủy trước ngày đó, bạn không mất phí.` : 'Gói sẽ được tính phí từ kỳ đầu tiên.'}
+              <b>{t('hostPlan.todayLabel', { amount: formatMoney(0, currency) })}</b>{' '}
+              {pro.trialDays > 0 ? (trialEndLabel ? t('hostPlan.trialUntil', { days: pro.trialDays, date: trialEndLabel }) : t('hostPlan.trialNoDate', { days: pro.trialDays })) : t('hostPlan.noTrial')}
             </span>
           </div>
         </div>
@@ -149,6 +152,7 @@ export function StepHostPlan({
 }
 
 function CalcRow({ name, rule, value, good }: { name: string; rule: string; value: string; good: boolean }) {
+  const { t } = useTranslation('wizard');
   return (
     <div className="flex justify-between gap-2.5 text-sm">
       <div>
@@ -156,7 +160,7 @@ function CalcRow({ name, rule, value, good }: { name: string; rule: string; valu
         <div className="mt-0.5 text-xs text-stone-400">{rule}</div>
       </div>
       <span className="whitespace-nowrap text-stone-600">
-        Tổng phí <b className={good ? 'text-green-700' : 'text-brand'}>{value}</b>
+        {t('hostPlan.totalFee')} <b className={good ? 'text-green-700' : 'text-brand'}>{value}</b>
       </span>
     </div>
   );

@@ -1,4 +1,5 @@
 import { useId, useState, type CSSProperties, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { Card, CARD_CLS, EmptyBlock, StatusBadge, TONE, btnCls, type BtnKind, type Tone } from './ui';
 
@@ -87,13 +88,14 @@ export function ChartCard({
   tools?: ReactNode;
   loading?: boolean;
 }) {
+  const { t } = useTranslation('admin-parts');
   const [hidden, setHidden] = useState<Record<string, boolean>>({});
   const n = labels.length;
   const step = Math.max(1, Math.ceil(n / 8)); // tối đa ~8 nhãn trục X để không chồng chữ
   const shown = series.filter((s) => !hidden[s.name]);
   const max = Math.max(1, ...shown.flatMap((s) => s.values)) * 1.08;
   const pt = (v: number, i: number) => `${n <= 1 ? 50 : (i / (n - 1)) * 100},${96 - (v / max) * 92}`;
-  const summary = `${title}: ${series.map((s) => `${s.name} tổng ${fmt(s.values.reduce((a, b) => a + b, 0))}`).join('; ')}`;
+  const summary = `${title}: ${series.map((s) => t('chart.seriesTotal', { name: s.name, total: fmt(s.values.reduce((a, b) => a + b, 0)) })).join('; ')}`;
 
   return (
     <Card title={title} sub={sub} action={tools}>
@@ -116,9 +118,9 @@ export function ChartCard({
         })}
       </div>
       {loading ? (
-        <div className="grid h-[200px] place-items-center text-sm text-stone-400">Đang tải…</div>
+        <div className="grid h-[200px] place-items-center text-sm text-stone-400">{t('chart.loading')}</div>
       ) : n < 2 || series.length === 0 ? (
-        <EmptyBlock>Chưa đủ dữ liệu để vẽ biểu đồ.</EmptyBlock>
+        <EmptyBlock>{t('chart.notEnoughData')}</EmptyBlock>
       ) : (
         <div className="flex gap-2.5">
           <div className="flex h-[200px] min-w-10 flex-col justify-between text-right text-[11px] text-stone-400" aria-hidden="true">
@@ -157,7 +159,7 @@ export function ChartCard({
           </div>
         </div>
       )}
-      {shown.length === 0 && series.length > 0 && <div className="text-center text-xs text-stone-400">Bật ít nhất một đường để xem biểu đồ.</div>}
+      {shown.length === 0 && series.length > 0 && <div className="text-center text-xs text-stone-400">{t('chart.enableOneSeries')}</div>}
     </Card>
   );
 }
@@ -167,10 +169,11 @@ export function ChartCard({
 const BAR_COLORS = ['#f26a1b', '#fb923c', '#fdba74', '#fed7aa', '#ffedd5'];
 
 export function BreakdownCard({ title, sub, items }: { title: string; sub?: string; items: { label: string; value: string; pct: number }[] }) {
+  const { t } = useTranslation('admin-parts');
   return (
     <Card title={title} sub={sub}>
       {items.length === 0 ? (
-        <EmptyBlock>Chưa có dữ liệu.</EmptyBlock>
+        <EmptyBlock>{t('common.noData')}</EmptyBlock>
       ) : (
         <div className="flex flex-col gap-3">
           {items.map((b, i) => (
@@ -224,12 +227,13 @@ export interface TimelineItem {
   tone?: Tone;
 }
 
-export function TimelineCard({ title, sub, items, link, onLink, chips, empty = 'Chưa có hoạt động nào.' }: { title: string; sub?: string; items: TimelineItem[]; link?: string; onLink?: () => void; chips?: ReactNode; empty?: string }) {
+export function TimelineCard({ title, sub, items, link, onLink, chips, empty }: { title: string; sub?: string; items: TimelineItem[]; link?: string; onLink?: () => void; chips?: ReactNode; empty?: string }) {
+  const { t } = useTranslation('admin-parts');
   return (
     <Card title={title} sub={sub} link={link} onLink={onLink}>
       {chips}
       {items.length === 0 ? (
-        <EmptyBlock>{empty}</EmptyBlock>
+        <EmptyBlock>{empty ?? t('timeline.empty')}</EmptyBlock>
       ) : (
         <ul className="m-0 flex list-none flex-col p-0">
           {items.map((i, idx) => {
@@ -464,6 +468,7 @@ export function ContentCard({
   context?: { name: string; text: string; highlight?: boolean; avatar?: ReactNode }[];
   children?: ReactNode;
 }) {
+  const { t } = useTranslation('admin-parts');
   return (
     <Card title={title}>
       <div className="flex items-center gap-3">
@@ -490,7 +495,7 @@ export function ContentCard({
       </div>
       {context && context.length > 0 && (
         <>
-          <div className="text-[11.5px] font-bold tracking-[.06em] text-stone-400">NGỮ CẢNH</div>
+          <div className="text-[11.5px] font-bold tracking-[.06em] text-stone-400">{t('content.context')}</div>
           <div className="flex flex-col gap-2">
             {context.map((c, i) => (
               <div key={i} className={`flex gap-2.5 rounded-xl px-3 py-2.5 ${c.highlight ? 'border border-[#fdba74] bg-[#fff4ec]' : 'border border-transparent bg-[#faf8f6]'}`}>

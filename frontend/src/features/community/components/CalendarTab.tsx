@@ -1,5 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
+import i18n, { currentLocale } from '../../../i18n';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { useClickOutside } from '../../../lib/useClickOutside';
 import { useCommunityDetail } from '../../courses/queries';
@@ -11,17 +13,11 @@ import { PageBanner } from './shared';
 type View = 'month' | 'week' | 'day';
 type EventFilter = 'all' | 'upcoming' | 'rsvped';
 
-const VIEWS: { key: View; label: string }[] = [
-  { key: 'month', label: 'Tháng' },
-  { key: 'week', label: 'Tuần' },
-  { key: 'day', label: 'Ngày' },
-];
-const FILTERS: { key: EventFilter; label: string }[] = [
-  { key: 'all', label: 'Tất cả sự kiện' },
-  { key: 'upcoming', label: 'Sắp diễn ra' },
-  { key: 'rsvped', label: 'Tôi đã đăng ký' },
-];
-const DAY_NAMES = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'];
+const VIEWS: View[] = ['month', 'week', 'day'];
+const FILTERS: EventFilter[] = ['all', 'upcoming', 'rsvped'];
+const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
+/** Tháng hiển thị: số (vi) hoặc tên tháng (en). */
+const monthLabel = (d: Date) => (i18n.language === 'en' ? d.toLocaleString(currentLocale(), { month: 'long' }) : d.getMonth() + 1);
 
 const sameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 const mondayOf = (d: Date) => {
@@ -29,7 +25,7 @@ const mondayOf = (d: Date) => {
   x.setDate(x.getDate() - ((x.getDay() + 6) % 7));
   return x;
 };
-const timeOf = (iso: string) => new Date(iso).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+const timeOf = (iso: string) => new Date(iso).toLocaleTimeString(currentLocale(), { hour: '2-digit', minute: '2-digit' });
 
 const toolBtn =
   'flex h-11 items-center gap-2 rounded-xl border border-[rgba(120,60,20,.12)] bg-white px-[18px] text-sm font-medium shadow-[0_1px_2px_rgba(120,60,20,.05)] hover:bg-[#fff7f0]';
@@ -48,6 +44,7 @@ function buildDays(view: View, cur: Date): Date[] {
 }
 
 export function CalendarTab() {
+  const { t } = useTranslation('community');
   const { id: courseId = '' } = useParams();
   const { data: course } = useCommunityDetail(courseId);
   const canManage = isModPlus(course?.viewerRole);
@@ -81,11 +78,11 @@ export function CalendarTab() {
 
   const days = buildDays(view, cur);
   const cols = view === 'day' ? 1 : 7;
-  const heads = view === 'day' ? [DAY_NAMES[(cur.getDay() + 6) % 7]!] : DAY_NAMES;
+  const heads = view === 'day' ? [DAY_KEYS[(cur.getDay() + 6) % 7]!] : DAY_KEYS;
   const title_ =
     view === 'day'
-      ? `${cur.getDay() === 0 ? 'Chủ nhật' : `Thứ ${cur.getDay() + 1}`}, ${cur.getDate()} tháng ${cur.getMonth() + 1} ${cur.getFullYear()}`
-      : `Tháng ${cur.getMonth() + 1} ${cur.getFullYear()}`;
+      ? t('calendar.dayTitle', { weekday: t(`calendar.dayFull.${DAY_KEYS[(cur.getDay() + 6) % 7]}`), day: cur.getDate(), month: monthLabel(cur), year: cur.getFullYear() })
+      : t('calendar.monthTitle', { month: monthLabel(cur), year: cur.getFullYear() });
 
   const visible = (events.data ?? []).filter((e) => (filter === 'upcoming' ? !e.isPast : filter === 'rsvped' ? e.viewerRsvped : true));
   const eventsOn = (d: Date) => visible.filter((e) => sameDay(new Date(e.startAt), d)).sort((a, b) => a.startAt.localeCompare(b.startAt));
@@ -94,39 +91,39 @@ export function CalendarTab() {
 
   return (
     <main className="flex min-w-0 flex-col gap-4">
-      <PageBanner image="cal-hero-bg.webp" icon="calendar_month" title="Lịch sự kiện" className="min-h-[148px]" />
+      <PageBanner image="cal-hero-bg.webp" icon="calendar_month" title={t('calendar.title')} className="min-h-[148px]" />
 
       <section className="glass rounded-3xl p-4">
         <div className="mb-4 flex flex-wrap items-center gap-4">
           <button onClick={() => setCur(today)} className={toolBtn}>
-            Hôm nay
+            {t('calendar.today')}
           </button>
           <div className="flex h-11 overflow-hidden rounded-xl border border-[rgba(120,60,20,.12)] bg-white">
-            <button onClick={() => shift(-1)} aria-label="Trước" className="grid w-12 place-items-center hover:bg-[#fff7f0]">
+            <button onClick={() => shift(-1)} aria-label={t('calendar.prev')} className="grid w-12 place-items-center hover:bg-[#fff7f0]">
               <MaterialIcon name="chevron_left" />
             </button>
             <span className="w-px bg-[rgba(120,60,20,.12)]" />
-            <button onClick={() => shift(1)} aria-label="Sau" className="grid w-12 place-items-center hover:bg-[#fff7f0]">
+            <button onClick={() => shift(1)} aria-label={t('calendar.next')} className="grid w-12 place-items-center hover:bg-[#fff7f0]">
               <MaterialIcon name="chevron_right" />
             </button>
           </div>
           <div>
             <div className="text-[17px] font-bold">{title_}</div>
-            <div className="mt-0.5 text-[12.5px] text-stone-600">GMT+7 • Hồ Chí Minh</div>
+            <div className="mt-0.5 text-[12.5px] text-stone-600">{t('calendar.timezone')}</div>
           </div>
 
           <div className="ml-auto flex gap-1 rounded-[14px] border border-[rgba(120,60,20,.12)] bg-white p-1">
             {VIEWS.map((v) => (
               <button
-                key={v.key}
-                onClick={() => setView(v.key)}
+                key={v}
+                onClick={() => setView(v)}
                 className={`h-9 rounded-[10px] px-[22px] text-[14.5px] ${
-                  view === v.key
+                  view === v
                     ? 'bg-gradient-to-b from-[#fff1e6] to-[#ffe4d1] font-semibold text-brand shadow-[inset_0_0_0_1px_rgba(242,106,27,.2)]'
                     : 'font-medium text-stone-600'
                 }`}
               >
-                {v.label}
+                {t(`calendar.views.${v}`)}
               </button>
             ))}
           </div>
@@ -134,21 +131,21 @@ export function CalendarTab() {
           <div ref={filterRef} className="relative">
             <button onClick={() => setFilterOpen((o) => !o)} className={`${toolBtn} ${filter !== 'all' ? 'text-brand' : ''}`}>
               <MaterialIcon name="filter_alt" size={19} />
-              Lọc sự kiện
+              {t('calendar.filterBtn')}
             </button>
             {filterOpen && (
               <div className="absolute right-0 z-20 mt-2 w-52 rounded-xl border border-[rgba(120,60,20,.12)] bg-white p-1.5 shadow-lg">
                 {FILTERS.map((f) => (
                   <button
-                    key={f.key}
+                    key={f}
                     onClick={() => {
-                      setFilter(f.key);
+                      setFilter(f);
                       setFilterOpen(false);
                     }}
-                    className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[13.5px] hover:bg-stone-50 ${filter === f.key ? 'font-semibold text-brand' : ''}`}
+                    className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[13.5px] hover:bg-stone-50 ${filter === f ? 'font-semibold text-brand' : ''}`}
                   >
-                    {f.label}
-                    {filter === f.key && <MaterialIcon name="check" size={17} color="#f26a1b" />}
+                    {t(`calendar.filters.${f}`)}
+                    {filter === f && <MaterialIcon name="check" size={17} color="#f26a1b" />}
                   </button>
                 ))}
               </div>
@@ -157,18 +154,18 @@ export function CalendarTab() {
 
           <button
             type="button"
-            onClick={() => downloadIcs.mutate({ courseId }, { onSuccess: () => toast('Đã tải lịch cộng đồng (.ics)'), onError: (e) => toast(errText(e), 'error') })}
+            onClick={() => downloadIcs.mutate({ courseId }, { onSuccess: () => toast(t('calendar.icsToast')), onError: (e) => toast(errText(e), 'error') })}
             disabled={downloadIcs.isPending}
             className={toolBtn}
-            title="Tải file .ics chứa mọi sự kiện của cộng đồng để nhập vào Google/Apple/Outlook Calendar"
+            title={t('calendar.icsTitle')}
           >
             <MaterialIcon name="event_repeat" size={19} />
-            Đăng ký lịch cả cộng đồng
+            {t('calendar.subscribeAll')}
           </button>
 
           {canManage && <button onClick={() => setShowForm((s) => !s)} className="flex h-11 items-center gap-2 rounded-xl bg-brand px-[18px] text-sm font-bold text-white">
             <MaterialIcon name={showForm ? 'close' : 'add'} size={19} color="#fff" />
-            {showForm ? 'Đóng' : 'Tạo sự kiện'}
+            {showForm ? t('calendar.close') : t('calendar.create')}
           </button>}
         </div>
 
@@ -194,21 +191,21 @@ export function CalendarTab() {
                     setDescription('');
                     setCapacity('');
                     setShowForm(false);
-                    toast('Đã tạo sự kiện');
+                    toast(t('calendar.created'));
                   },
                 },
               );
             }}
             className="mb-4 grid gap-3 rounded-2xl border border-[rgba(120,60,20,.1)] bg-white p-3 sm:grid-cols-2"
           >
-            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Tên sự kiện" aria-label="Tên sự kiện" required maxLength={160} className={inputCls} />
-            <input type="datetime-local" value={date} onChange={(e) => setDate(e.target.value)} aria-label="Thời gian bắt đầu" required className={inputCls} />
-            <input value={meetingLink} onChange={(e) => setMeetingLink(e.target.value)} placeholder="Link họp (không bắt buộc)" aria-label="Link họp" className={inputCls} />
-            <input type="number" min={1} value={capacity} onChange={(e) => setCapacity(e.target.value)} placeholder="Sức chứa (để trống = không giới hạn)" aria-label="Sức chứa" className={inputCls} />
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} maxLength={2000} placeholder="Mô tả sự kiện (không bắt buộc)" aria-label="Mô tả" className={`${areaCls} sm:col-span-2`} />
+            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('calendar.eventName')} aria-label={t('calendar.eventName')} required maxLength={160} className={inputCls} />
+            <input type="datetime-local" value={date} onChange={(e) => setDate(e.target.value)} aria-label={t('calendar.startTime')} required className={inputCls} />
+            <input value={meetingLink} onChange={(e) => setMeetingLink(e.target.value)} placeholder={t('calendar.meetingLinkOpt')} aria-label={t('calendar.meetingLink')} className={inputCls} />
+            <input type="number" min={1} value={capacity} onChange={(e) => setCapacity(e.target.value)} placeholder={t('calendar.capacityPh')} aria-label={t('calendar.capacity')} className={inputCls} />
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} maxLength={2000} placeholder={t('calendar.descPh')} aria-label={t('calendar.desc')} className={`${areaCls} sm:col-span-2`} />
             <div className="flex items-center gap-3 sm:col-span-2">
               <button type="submit" disabled={createEvent.isPending} className={primaryBtn}>
-                {createEvent.isPending ? 'Đang tạo…' : 'Tạo sự kiện'}
+                {createEvent.isPending ? t('calendar.creating') : t('calendar.create')}
               </button>
               <ErrorNote message={createEvent.isError ? errText(createEvent.error) : null} />
             </div>
@@ -219,7 +216,7 @@ export function CalendarTab() {
           <div className="grid border-b border-[rgba(120,60,20,.1)]" style={{ gridTemplateColumns: `repeat(${cols},minmax(0,1fr))` }}>
             {heads.map((h, i) => (
               <div key={h} className={`grid h-11 place-items-center text-[13px] font-semibold ${i ? 'border-l border-[rgba(120,60,20,.08)]' : ''}`}>
-                {h}
+                {t(`calendar.dayShort.${h}`)}
               </div>
             ))}
           </div>
@@ -256,14 +253,14 @@ export function CalendarTab() {
                         {timeOf(ev.startAt)} {ev.title}
                       </button>
                     ))}
-                    {view === 'month' && dayEvents.length > 3 && <span className="px-1 text-[11px] text-stone-500">+{dayEvents.length - 3} nữa</span>}
+                    {view === 'month' && dayEvents.length > 3 && <span className="px-1 text-[11px] text-stone-500">{t('calendar.more', { n: dayEvents.length - 3 })}</span>}
                   </div>
                 </div>
               );
             })}
           </div>
         </div>
-        {events.isPending && <p className="pt-3 text-center text-sm text-stone-400">Đang tải sự kiện…</p>}
+        {events.isPending && <p className="pt-3 text-center text-sm text-stone-400">{t('calendar.loading')}</p>}
       </section>
 
       {selected && (
@@ -300,6 +297,7 @@ function EventDialog({
   onRsvp: () => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation('community');
   const update = useUpdateEvent(courseId);
   const remove = useDeleteEvent(courseId);
   const downloadIcs = useDownloadIcs();
@@ -317,12 +315,12 @@ function EventDialog({
   if (editing) {
     return (
       <Dialog
-        title="Sửa sự kiện"
+        title={t('calendar.editTitle')}
         onClose={onClose}
         footer={
           <>
             <button type="button" onClick={() => setEditing(false)} className={ghostBtn}>
-              Hủy
+              {t('calendar.cancel')}
             </button>
             <button
               type="button"
@@ -342,32 +340,32 @@ function EventDialog({
                   },
                   {
                     onSuccess: () => {
-                      toast('Đã cập nhật sự kiện');
+                      toast(t('calendar.updated'));
                       setEditing(false);
                     },
                   },
                 )
               }
             >
-              {update.isPending ? 'Đang lưu…' : 'Lưu thay đổi'}
+              {update.isPending ? t('calendar.saving') : t('calendar.save')}
             </button>
           </>
         }
       >
         <div className="flex flex-col gap-2.5">
-          <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={160} aria-label="Tên sự kiện" placeholder="Tên sự kiện" className={inputCls} />
-          <input type="datetime-local" value={startAt} onChange={(e) => setStartAt(e.target.value)} aria-label="Thời gian bắt đầu" className={inputCls} />
-          <input value={meetingLink} onChange={(e) => setMeetingLink(e.target.value)} aria-label="Link họp" placeholder="Link họp (để trống để xóa)" className={inputCls} />
+          <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={160} aria-label={t('calendar.eventName')} placeholder={t('calendar.eventName')} className={inputCls} />
+          <input type="datetime-local" value={startAt} onChange={(e) => setStartAt(e.target.value)} aria-label={t('calendar.startTime')} className={inputCls} />
+          <input value={meetingLink} onChange={(e) => setMeetingLink(e.target.value)} aria-label={t('calendar.meetingLink')} placeholder={t('calendar.meetingLinkClear')} className={inputCls} />
           <input
             type="number"
             min={1}
             value={capacity}
             onChange={(e) => setCapacity(e.target.value)}
-            aria-label="Sức chứa"
-            placeholder={`Sức chứa (để trống = không giới hạn; đã có ${ev.rsvpCount} đăng ký)`}
+            aria-label={t('calendar.capacity')}
+            placeholder={t('calendar.capacityEditPh', { n: ev.rsvpCount })}
             className={inputCls}
           />
-          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} maxLength={2000} aria-label="Mô tả" placeholder="Mô tả" className={areaCls} />
+          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} maxLength={2000} aria-label={t('calendar.desc')} placeholder={t('calendar.descShort')} className={areaCls} />
           <ErrorNote message={update.isError ? errText(update.error) : null} />
         </div>
       </Dialog>
@@ -384,21 +382,20 @@ function EventDialog({
           <div className="min-w-0 flex-1">
             <div className="text-lg font-extrabold">{ev.title}</div>
             <div className="mt-0.5 text-[13px] text-stone-500">
-              {new Date(ev.startAt).toLocaleString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              {new Date(ev.startAt).toLocaleString(currentLocale(), { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
             </div>
           </div>
-          <button onClick={onClose} aria-label="Đóng" className="text-stone-400 hover:text-stone-700">
+          <button onClick={onClose} aria-label={t('calendar.close')} className="text-stone-400 hover:text-stone-700">
             <MaterialIcon name="close" size={22} />
           </button>
         </div>
         {ev.description && <p className="mt-3 text-sm whitespace-pre-wrap text-stone-700">{ev.description}</p>}
         <div className="mt-3 flex flex-wrap items-center gap-2 text-[13px] text-stone-600">
           <span>
-            {ev.rsvpCount}
-            {ev.capacity ? `/${ev.capacity}` : ''} người đã đăng ký
+            {t('calendar.registered', { n: ev.rsvpCount, capacity: ev.capacity ? `/${ev.capacity}` : '' })}
           </span>
-          {ev.isPast && <span className="rounded-md bg-stone-200 px-1.5 py-0.5 text-xs font-semibold text-stone-600">Đã diễn ra</span>}
-          {full && <span className="rounded-md bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-700">Đã đầy chỗ</span>}
+          {ev.isPast && <span className="rounded-md bg-stone-200 px-1.5 py-0.5 text-xs font-semibold text-stone-600">{t('calendar.past')}</span>}
+          {full && <span className="rounded-md bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-700">{t('calendar.full')}</span>}
         </div>
         {link && (
           <a href={link} target="_blank" rel="noreferrer noopener" className="mt-2 block truncate text-[13px] text-brand hover:underline">
@@ -413,10 +410,10 @@ function EventDialog({
             className={`mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-xl text-sm font-bold disabled:opacity-60 ${ev.viewerRsvped ? 'bg-brand/10 text-brand' : 'bg-brand text-white'}`}
           >
             {ev.viewerRsvped && <MaterialIcon name="check" size={18} color="#f26a1b" />}
-            {rsvpPending ? 'Đang xử lý…' : full ? 'Đã đầy chỗ' : ev.viewerRsvped ? 'Đã đăng ký — bấm để hủy' : 'Đăng ký tham gia'}
+            {rsvpPending ? t('calendar.processing') : full ? t('calendar.full') : ev.viewerRsvped ? t('calendar.rsvpCancel') : t('calendar.rsvp')}
           </button>
         ) : (
-          <p className="mt-5 text-center text-sm text-stone-500">Sự kiện đã diễn ra</p>
+          <p className="mt-5 text-center text-sm text-stone-500">{t('calendar.pastEvent')}</p>
         )}
         <div className="mt-2">
           <ErrorNote message={rsvpError} />
@@ -424,21 +421,21 @@ function EventDialog({
 
         <button
           type="button"
-          onClick={() => downloadIcs.mutate({ eventId: ev.id }, { onSuccess: () => toast('Đã tải file lịch (.ics)'), onError: (e) => toast(errText(e), 'error') })}
+          onClick={() => downloadIcs.mutate({ eventId: ev.id }, { onSuccess: () => toast(t('calendar.icsEventToast')), onError: (e) => toast(errText(e), 'error') })}
           disabled={downloadIcs.isPending}
           className={`${ghostBtn} mt-3 w-full`}
         >
           <MaterialIcon name="calendar_add_on" size={19} />
-          Thêm vào lịch (.ics)
+          {t('calendar.addToCal')}
         </button>
 
         {canManage && (
           <div className="mt-3 flex gap-2.5 border-t border-[rgba(120,60,20,.08)] pt-3">
             <button type="button" onClick={() => setEditing(true)} className={`${ghostBtn} flex-1`}>
-              <MaterialIcon name="edit" size={18} /> Sửa
+              <MaterialIcon name="edit" size={18} /> {t('calendar.edit')}
             </button>
             <button type="button" onClick={() => setConfirmDel(true)} className={`${ghostBtn} flex-1 !text-red-600`}>
-              <MaterialIcon name="delete" size={18} color="#dc2626" /> Xóa
+              <MaterialIcon name="delete" size={18} color="#dc2626" /> {t('calendar.delete')}
             </button>
           </div>
         )}
@@ -446,16 +443,16 @@ function EventDialog({
       {confirmDel && (
         <div onClick={(e) => e.stopPropagation()}>
           <ConfirmDialog
-            title="Xóa sự kiện?"
-            message={`Sự kiện "${ev.title}" sẽ bị xóa và những người đã đăng ký sẽ nhận được thông báo.`}
-            confirmLabel="Xóa sự kiện"
+            title={t('calendar.deleteTitle')}
+            message={t('calendar.deleteMsg', { title: ev.title })}
+            confirmLabel={t('calendar.deleteConfirm')}
             pending={remove.isPending}
             error={remove.isError ? errText(remove.error) : null}
             onClose={() => setConfirmDel(false)}
             onConfirm={() =>
               remove.mutate(ev.id, {
                 onSuccess: () => {
-                  toast('Đã xóa sự kiện');
+                  toast(t('calendar.deleted'));
                   onClose();
                 },
               })

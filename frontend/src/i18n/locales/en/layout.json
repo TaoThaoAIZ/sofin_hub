@@ -1,0 +1,43 @@
+{
+  "loading": "Loading…",
+  "footer": {
+    "terms": "Terms of Use",
+    "privacy": "Privacy Policy",
+    "cookie": "Cookies",
+    "copyright": "© 2026 SofinHub. All rights reserved."
+  },
+  "legal": {
+    "backToRegister": "Back to sign up",
+    "updatedAt": "Last updated: {{date}}",
+    "doneReading": "I've finished reading, back to sign up",
+    "scrollToConfirm": "Scroll to the bottom to confirm you have read this"
+  },
+  "requireLogin": {
+    "loading": "Loading…",
+    "message": "You need to log in to view this page.",
+    "login": "Log in"
+  },
+  "pager": {
+    "prev": "Previous page",
+    "next": "Next page",
+    "pageOf": "Page <b>{{page}}</b> of {{total}}"
+  },
+  "popup": {
+    "close": "Close",
+    "ok": "Got it",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "processing": "Processing…"
+  },
+  "formField": {
+    "hidePassword": "Hide password",
+    "showPassword": "Show password"
+  },
+  "card": {
+    "number": "Card number",
+    "expiryAria": "Expiry date (MM / YY)",
+    "cvcAria": "CVC code",
+    "paymentInfo": "Payment information",
+    "expiry": "Expiry"
+  }
+}

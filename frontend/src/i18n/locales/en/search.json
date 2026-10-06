@@ -1,0 +1,34 @@
+{
+  "tabs": {
+    "all": "All",
+    "courses": "Courses",
+    "posts": "Posts",
+    "members": "Members"
+  },
+  "row": {
+    "course": "Course",
+    "member": "Member · {{role}} · {{course}}",
+    "post": "Post by {{author}} · {{course}} · {{time}}",
+    "postTitle": "Post by {{author}}"
+  },
+  "box": {
+    "placeholder": "Search posts, members, topics...",
+    "subtitleMember": "Member · {{course}}",
+    "subtitlePost": "Post · {{course}}",
+    "searching": "Searching…",
+    "rateLimit": "You're searching too fast, please try again in a few seconds.",
+    "noSuggestions": "No matching suggestions.",
+    "viewAll": "See all results for \"{{q}}\""
+  },
+  "page": {
+    "placeholder": "Search courses, posts, members...",
+    "submit": "Search",
+    "filterAria": "Filter by community",
+    "allCommunities": "All communities",
+    "tooShort": "Enter at least 2 characters to search.",
+    "searching": "Searching…",
+    "rateLimit": "You've searched too many times, please try again in a few minutes.",
+    "forbidden": "You're not a member of the selected community, so you can't search in it.",
+    "noResults": "No results for \"{{q}}\"."
+  }
+}

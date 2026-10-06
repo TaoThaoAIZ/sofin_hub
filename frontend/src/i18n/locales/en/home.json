@@ -1,0 +1,25 @@
+{
+  "cta": {
+    "badge": "For experts, creators and businesses",
+    "title": "Create your own community",
+    "desc": "Turn your knowledge, experience and influence into a learning community that grows together and creates lasting value.",
+    "button": "Create a community now"
+  },
+  "hero": {
+    "stats": {
+      "learners": "learners",
+      "courses": "communities",
+      "instructors": "community owners",
+      "rating": "average rating"
+    },
+    "badge": "ONLINE LEARNING PLATFORM",
+    "title1": "Learn new skills.",
+    "title2": "Grow with the community.",
+    "desc": "Thousands of practical courses from experts across many fields. Learn faster, apply right away and create value for yourself.",
+    "searchPlaceholder": "Search courses, topics, skills...",
+    "searchAria": "Search courses",
+    "searchButton": "Search"
+  },
+  "featured": "Featured courses",
+  "viewAll": "View all →"
+}

@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { useState, type ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
@@ -42,38 +44,37 @@ const statusBadge = (s: string) => {
 };
 const personName = (p: { name: string } | null | undefined) => <TextCell>{p?.name ?? '—'}</TextCell>;
 const reportsCell = (n: number) => <span className={`text-[13.5px] font-semibold tabular-nums ${n > 0 ? 'text-[#b91c1c]' : 'text-stone-400'}`}>{n}</span>;
-const SORT_CONTENT = [
-  { value: 'oldest', label: 'Cũ nhất' },
-  { value: 'engagement', label: 'Tương tác cao nhất' },
-  { value: 'reports', label: 'Nhiều báo cáo nhất' },
+const sortContent = (t: TFunction) => [
+  { value: 'oldest', label: t('common.oldest') },
+  { value: 'engagement', label: t('common.highestEngagement') },
+  { value: 'reports', label: t('common.mostReports') },
 ];
 const pageOf = (m: { page: number; totalPages: number; total: number } | undefined, onPage: (p: number) => void, limit = LIMIT) => (m ? { page: m.page, totalPages: m.totalPages, total: m.total, limit, onPage } : undefined);
 
 /* ============================ Hành động chung ============================ */
 
 type Res = 'posts' | 'comments' | 'lessons';
-const NOUN: Record<Res, string> = { posts: 'bài viết', comments: 'bình luận', lessons: 'bài học' };
 
 /** Ẩn / Gỡ / Khôi phục cho bài viết, bình luận, bài học (cùng một hợp đồng). */
 function useModerateActions(res: Res) {
+  const { t } = useTranslation('admin-content');
   const slot = useDialogSlot();
   const act = useAdminAction();
-  const noun = NOUN[res];
   const post = (id: string, action: string, body: object) => act.mutateAsync({ path: `/content/${res}/${id}/${action}`, body });
 
   const hide = (id: string, name: string) =>
     slot.show((close) => (
       <ActionDialog
         icon="visibility_off"
-        title={`Ẩn ${noun}?`}
-        body={`${name}. Nội dung sẽ không còn hiển thị với thành viên thường.`}
-        cta="Ẩn"
+        title={t(`moderate.${res}.hideTitle`)}
+        body={t('moderate.hideBody', { name })}
+        cta={t('common.hide')}
         reasons={USER_REASONS}
         requireReason
-        noteLabel="Ghi chú nội bộ"
-        notePlaceholder="Chỉ quản trị viên thấy..."
-        flagLabel="Thông báo cho tác giả"
-        successMessage={`Đã ẩn ${noun}`}
+        noteLabel={t('common.internalNote')}
+        notePlaceholder={t('common.adminOnlyPlaceholder')}
+        flagLabel={t('common.notifyAuthor')}
+        successMessage={t(`moderate.${res}.hideDone`)}
         run={(v) => post(id, 'hide', { reason: v.reason, note: v.note || undefined, notifyAuthor: v.flag })}
         onClose={close}
       />
@@ -83,15 +84,15 @@ function useModerateActions(res: Res) {
       <ActionDialog
         icon="delete"
         danger
-        title={`Gỡ ${noun}`}
-        body={`${name}. Nội dung bị gỡ khỏi API công khai; chỉ quản trị viên còn thấy.`}
-        cta="Gỡ nội dung"
+        title={t(`moderate.${res}.removeTitle`)}
+        body={t('moderate.removeBody', { name })}
+        cta={t('common.removeContent')}
         reasons={USER_REASONS}
         requireReason
-        noteLabel="Lý do nội bộ"
-        notePlaceholder="Vì sao gỡ nội dung này..."
-        flagLabel="Thông báo cho tác giả"
-        successMessage={`Đã gỡ ${noun}`}
+        noteLabel={t('common.internalReason')}
+        notePlaceholder={t('common.removeReasonPlaceholder')}
+        flagLabel={t('common.notifyAuthor')}
+        successMessage={t(`moderate.${res}.removeDone`)}
         run={(v) => post(id, 'remove', { reason: v.reason, note: v.note || undefined, notifyAuthor: v.flag })}
         onClose={close}
       />
@@ -100,11 +101,11 @@ function useModerateActions(res: Res) {
     slot.show((close) => (
       <ActionDialog
         icon="restore"
-        title={`Khôi phục ${noun}?`}
-        body={`${name}. Nội dung sẽ hiển thị lại bình thường.`}
-        cta="Khôi phục"
-        noteLabel="Ghi chú (tùy chọn)"
-        successMessage={`Đã khôi phục ${noun}`}
+        title={t(`moderate.${res}.restoreTitle`)}
+        body={t('moderate.restoreBody', { name })}
+        cta={t('common.restore')}
+        noteLabel={t('common.noteOptional')}
+        successMessage={t(`moderate.${res}.restoreDone`)}
         run={(v) => post(id, 'restore', { note: v.note || undefined })}
         onClose={close}
       />
@@ -123,7 +124,8 @@ function PreviewBody({ loading, error, children }: { loading: boolean; error: un
 const TextBlock = ({ children }: { children: ReactNode }) => <div className="rounded-xl bg-[#faf7f4] p-3.5 text-[13.5px] leading-relaxed wrap-break-word whitespace-pre-wrap">{children}</div>;
 
 function ReportList({ list }: { list: AdminPostDetail['reportList'] }) {
-  if (!list?.length) return <div className="text-[13px] text-stone-400">Không có báo cáo.</div>;
+  const { t } = useTranslation('admin-content');
+  if (!list?.length) return <div className="text-[13px] text-stone-400">{t('common.noReports')}</div>;
   return (
     <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
       {list.map((r) => (
@@ -136,49 +138,50 @@ function ReportList({ list }: { list: AdminPostDetail['reportList'] }) {
 }
 
 function PostPreview({ kind, id, onClose }: { kind: 'posts' | 'comments'; id: string; onClose: () => void }) {
+  const { t } = useTranslation('admin-content');
   const navigate = useNavigate();
   const q = useAdminData<AdminPostDetail | AdminCommentDetail>('content', `/content/${kind}/${id}`);
   const d = q.data;
   const thread = d && 'thread' in d ? d.thread : [];
   return (
-    <PreviewDialog title={kind === 'posts' ? 'Xem trước bài viết' : 'Xem trước bình luận'} sub={d?.code} onClose={onClose} wide>
+    <PreviewDialog title={kind === 'posts' ? t('posts.previewTitle') : t('posts.previewComment')} sub={d?.code} onClose={onClose} wide>
       <PreviewBody loading={q.isPending} error={q.error}>
         {d && (
           <>
             <PreviewKv
               items={[
-                ['Tác giả', d.author.name],
-                ['Cộng đồng', d.community.name],
-                ['Trạng thái', statusBadge(d.status)],
-                ['Báo cáo', String(d.reports)],
-                ['Đăng lúc', formatDateTime(d.createdAt)],
-                ...(d.moderationReason ? ([['Lý do kiểm duyệt', d.moderationReason]] as [string, ReactNode][]) : []),
+                [t('common.author'), d.author.name],
+                [t('common.community'), d.community.name],
+                [t('common.status'), statusBadge(d.status)],
+                [t('common.reports'), String(d.reports)],
+                [t('common.postedAt'), formatDateTime(d.createdAt)],
+                ...(d.moderationReason ? ([[t('common.moderationReason'), d.moderationReason]] as [string, ReactNode][]) : []),
               ]}
             />
-            <PreviewSection title="Nội dung">
+            <PreviewSection title={t('common.content')}>
               <TextBlock>{d.content}</TextBlock>
             </PreviewSection>
             {thread.length > 0 && (
-              <PreviewSection title="Bình luận gần đây">
+              <PreviewSection title={t('common.recentComments')}>
                 <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
-                  {thread.map((t) => (
-                    <li key={t.id} className="rounded-xl bg-[#faf7f4] px-3 py-2 text-[13px]">
-                      <b>{t.author.name}</b> {t.status !== 'published' && <span className="text-[#b91c1c]">({CONTENT_STATUS[t.status]?.label ?? t.status})</span>}
-                      <div className="text-stone-700">{t.text}</div>
+                  {thread.map((th) => (
+                    <li key={th.id} className="rounded-xl bg-[#faf7f4] px-3 py-2 text-[13px]">
+                      <b>{th.author.name}</b> {th.status !== 'published' && <span className="text-[#b91c1c]">({CONTENT_STATUS[th.status]?.label ?? th.status})</span>}
+                      <div className="text-stone-700">{th.text}</div>
                     </li>
                   ))}
                 </ul>
               </PreviewSection>
             )}
-            <PreviewSection title="Báo cáo">
+            <PreviewSection title={t('common.reports')}>
               <ReportList list={d.reportList} />
             </PreviewSection>
-            <PreviewSection title="Lịch sử quản trị">
+            <PreviewSection title={t('common.history')}>
               <HistoryList items={d.history} />
             </PreviewSection>
             <div>
               <AdminButton icon="person" onClick={() => navigate(`/admin/users/${d.author.id}`)}>
-                Xem tác giả
+                {t('common.viewAuthor')}
               </AdminButton>
             </div>
           </>
@@ -191,32 +194,33 @@ function PostPreview({ kind, id, onClose }: { kind: 'posts' | 'comments'; id: st
 /* ================================ Bài viết ================================ */
 
 export function PostsView() {
+  const { t } = useTranslation('admin-content');
   const navigate = useNavigate();
   const toast = useToast();
   const [params] = useSearchParams();
-  const t = useTableState({ sort: '' }, '');
+  const ts = useTableState({ sort: '' }, '');
   const [selected, setSelected] = useState<string[]>([]);
   const summary = useAdminData<PostSummary>('content', '/content/posts/summary');
-  const list = useAdminList<AdminPost>('content-posts', '/content/posts', { q: t.q || undefined, status: t.tab || undefined, sort: t.f.sort || undefined, communityId: params.get('communityId') ?? params.get('courseId') ?? undefined, page: t.page, limit: LIMIT });
+  const list = useAdminList<AdminPost>('content-posts', '/content/posts', { q: ts.q || undefined, status: ts.tab || undefined, sort: ts.f.sort || undefined, communityId: params.get('communityId') ?? params.get('courseId') ?? undefined, page: ts.page, limit: LIMIT });
   const { slot, hide, remove, restore } = useModerateActions('posts');
   const bulk = useAdminAction();
   const s = summary.data;
 
   const bulkRun = (action: 'hide' | 'remove' | 'restore') => {
-    const label = action === 'hide' ? 'Ẩn' : action === 'remove' ? 'Gỡ' : 'Khôi phục';
+    const label = action === 'hide' ? t('common.hide') : action === 'remove' ? t('common.remove') : t('common.restore');
     const n = selected.length;
     slot.show((close) => (
       <ActionDialog
         icon={action === 'restore' ? 'restore' : action === 'hide' ? 'visibility_off' : 'delete'}
         danger={action === 'remove'}
-        title={`${label} ${n} bài viết?`}
+        title={t(`bulk.${action}Title`, { n })}
         cta={label}
         reasons={action === 'restore' ? undefined : USER_REASONS}
         requireReason={action !== 'restore'}
-        successMessage={`Đã xử lý ${n} bài viết`}
+        successMessage={t('bulk.done', { n })}
         run={async (v) => {
           const r = (await bulk.mutateAsync({ path: '/content/posts/bulk', body: { action, ids: selected, reason: v.reason || undefined } })) as { updated: number; skipped: { id: string; reason: string }[] } | undefined;
-          if (r?.skipped?.length) toast.error(`Bỏ qua ${r.skipped.length} bài: ${r.skipped[0]!.reason}`);
+          if (r?.skipped?.length) toast.error(t('bulk.skipped', { n: r.skipped.length, reason: r.skipped[0]!.reason }));
           setSelected([]);
         }}
         onClose={close}
@@ -225,35 +229,35 @@ export function PostsView() {
   };
 
   const columns: Column<AdminPost>[] = [
-    { key: 'post', label: 'Bài viết', w: 2.4, render: (p) => <MainCell name={p.title || '(Không có nội dung)'} sub={p.code} icon="article" /> },
-    { key: 'author', label: 'Tác giả', render: (p) => personName(p.author) },
-    { key: 'community', label: 'Cộng đồng', w: 1.4, render: (p) => <TextCell>{p.community.name}</TextCell> },
-    { key: 'eng', label: 'Tương tác', w: 0.8, render: (p) => <NumCell>{fmtNum(p.engagement)}</NumCell> },
-    { key: 'reports', label: 'Báo cáo', w: 0.6, render: (p) => reportsCell(p.reports) },
-    { key: 'status', label: 'Trạng thái', render: (p) => statusBadge(p.underReview && p.status === 'published' ? 'under_review' : p.status) },
-    { key: 'created', label: 'Tạo lúc', render: (p) => <MutedCell>{formatRelative(p.createdAt)}</MutedCell> },
+    { key: 'post', label: t('common.post'), w: 2.4, render: (p) => <MainCell name={p.title || t('common.noContent')} sub={p.code} icon="article" /> },
+    { key: 'author', label: t('common.author'), render: (p) => personName(p.author) },
+    { key: 'community', label: t('common.community'), w: 1.4, render: (p) => <TextCell>{p.community.name}</TextCell> },
+    { key: 'eng', label: t('common.engagement'), w: 0.8, render: (p) => <NumCell>{fmtNum(p.engagement)}</NumCell> },
+    { key: 'reports', label: t('common.reports'), w: 0.6, render: (p) => reportsCell(p.reports) },
+    { key: 'status', label: t('common.status'), render: (p) => statusBadge(p.underReview && p.status === 'published' ? 'under_review' : p.status) },
+    { key: 'created', label: t('common.createdAt'), render: (p) => <MutedCell>{formatRelative(p.createdAt)}</MutedCell> },
   ];
 
   const actions = (p: AdminPost): RowAction[] => {
-    const a: RowAction[] = [{ label: 'Xem trước', onClick: () => slot.show((close) => <PostPreview kind="posts" id={p.id} onClose={close} />) }];
-    if (p.status === 'published') a.push({ label: 'Ẩn', icon: 'visibility_off', onClick: () => hide(p.id, p.code) });
-    if (p.status !== 'removed') a.push({ label: 'Gỡ', icon: 'delete', danger: true, onClick: () => remove(p.id, p.code) });
-    if (p.status !== 'published') a.push({ label: 'Khôi phục', icon: 'restore', onClick: () => restore(p.id, p.code) });
-    a.push({ label: 'Xem tác giả', icon: 'person', onClick: () => navigate(`/admin/users/${p.author.id}`) });
+    const a: RowAction[] = [{ label: t('common.preview'), onClick: () => slot.show((close) => <PostPreview kind="posts" id={p.id} onClose={close} />) }];
+    if (p.status === 'published') a.push({ label: t('common.hide'), icon: 'visibility_off', onClick: () => hide(p.id, p.code) });
+    if (p.status !== 'removed') a.push({ label: t('common.remove'), icon: 'delete', danger: true, onClick: () => remove(p.id, p.code) });
+    if (p.status !== 'published') a.push({ label: t('common.restore'), icon: 'restore', onClick: () => restore(p.id, p.code) });
+    a.push({ label: t('common.viewAuthor'), icon: 'person', onClick: () => navigate(`/admin/users/${p.author.id}`) });
     return a;
   };
 
   return (
     <>
-      <PageHeader title="Bài viết" subtitle="Quản lý nội dung trên toàn bộ cộng đồng." />
+      <PageHeader title={t('common.postsTitle')} subtitle={t('posts.pageSubtitle')} />
       {s && (
         <KpiGrid
           min={170}
           items={[
-            { icon: 'article', label: 'Tổng', value: fmtNum(s.total) },
-            { icon: 'today', label: 'Hôm nay', value: fmtNum(s.today) },
-            { icon: 'flag', label: 'Bị báo cáo', value: fmtNum(s.reported), bad: true, onClick: () => navigate('/admin/moderation') },
-            { icon: 'delete', label: 'Đã gỡ', value: fmtNum(s.removed) },
+            { icon: 'article', label: t('common.total'), value: fmtNum(s.total) },
+            { icon: 'today', label: t('common.today'), value: fmtNum(s.today) },
+            { icon: 'flag', label: t('common.reported'), value: fmtNum(s.reported), bad: true, onClick: () => navigate('/admin/moderation') },
+            { icon: 'delete', label: t('common.removed'), value: fmtNum(s.removed) },
           ]}
         />
       )}
@@ -262,35 +266,35 @@ export function PostsView() {
         rows={list.data?.data ?? []}
         rowKey={(p) => p.id}
         tabs={[
-          { key: '', label: 'Tất cả', count: s?.total },
-          { key: 'published', label: 'Đã xuất bản', count: s ? s.total - s.hidden - s.removed : undefined },
-          { key: 'under_review', label: 'Đang xem xét', count: s?.reported },
-          { key: 'hidden', label: 'Đã ẩn', count: s?.hidden },
-          { key: 'removed', label: 'Đã gỡ', count: s?.removed },
+          { key: '', label: t('common.all'), count: s?.total },
+          { key: 'published', label: t('common.published'), count: s ? s.total - s.hidden - s.removed : undefined },
+          { key: 'under_review', label: t('common.underReview'), count: s?.reported },
+          { key: 'hidden', label: t('common.hidden'), count: s?.hidden },
+          { key: 'removed', label: t('common.removed'), count: s?.removed },
         ]}
-        tab={t.tab}
+        tab={ts.tab}
         onTab={(k) => {
-          t.onTab(k);
+          ts.onTab(k);
           setSelected([]);
         }}
-        search={{ value: t.q, onChange: t.onQ, placeholder: 'Tìm bài viết, tác giả, mã bài viết...' }}
-        filters={[{ key: 'sort', label: 'Sắp xếp', value: t.f.sort, options: SORT_CONTENT, onChange: t.setFilter('sort') }]}
-        onClearFilters={t.clear}
+        search={{ value: ts.q, onChange: ts.onQ, placeholder: t('posts.searchPlaceholder') }}
+        filters={[{ key: 'sort', label: t('common.sortBy'), value: ts.f.sort, options: sortContent(t), onChange: ts.setFilter('sort') }]}
+        onClearFilters={ts.clear}
         select={{ selected, onChange: setSelected }}
         bulkBar={
           <>
-            <b className="text-[13px]">Đã chọn {selected.length}</b>
+            <b className="text-[13px]">{t('common.selected', { n: selected.length })}</b>
             <AdminButton className="!h-8" icon="visibility_off" onClick={() => bulkRun('hide')}>
-              Ẩn
+              {t('common.hide')}
             </AdminButton>
             <AdminButton kind="danger" className="!h-8" icon="delete" onClick={() => bulkRun('remove')}>
-              Gỡ
+              {t('common.remove')}
             </AdminButton>
             <AdminButton className="!h-8" icon="restore" onClick={() => bulkRun('restore')}>
-              Khôi phục
+              {t('common.restore')}
             </AdminButton>
             <button type="button" className="border-0 bg-transparent text-[12.5px] font-semibold text-brand" onClick={() => setSelected([])}>
-              Bỏ chọn
+              {t('common.deselect')}
             </button>
           </>
         }
@@ -299,7 +303,7 @@ export function PostsView() {
         onRetry={() => void list.refetch()}
         onRow={(p) => slot.show((close) => <PostPreview kind="posts" id={p.id} onClose={close} />)}
         actions={actions}
-        page={pageOf(list.data?.meta, t.setPage)}
+        page={pageOf(list.data?.meta, ts.setPage)}
       />
       {slot.el}
     </>
@@ -309,43 +313,44 @@ export function PostsView() {
 /* ================================ Bình luận ================================ */
 
 export function CommentsView() {
+  const { t } = useTranslation('admin-content');
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const t = useTableState({ sort: '' }, '');
+  const ts = useTableState({ sort: '' }, '');
   const summary = useAdminData<ContentSummary>('content', '/content/comments/summary');
-  const list = useAdminList<AdminComment>('content-comments', '/content/comments', { q: t.q || undefined, status: t.tab || undefined, sort: t.f.sort || undefined, communityId: params.get('communityId') ?? params.get('courseId') ?? undefined, page: t.page, limit: LIMIT });
+  const list = useAdminList<AdminComment>('content-comments', '/content/comments', { q: ts.q || undefined, status: ts.tab || undefined, sort: ts.f.sort || undefined, communityId: params.get('communityId') ?? params.get('courseId') ?? undefined, page: ts.page, limit: LIMIT });
   const { slot, hide, remove, restore } = useModerateActions('comments');
   const s = summary.data;
 
   const columns: Column<AdminComment>[] = [
-    { key: 'cmt', label: 'Bình luận', w: 2.4, render: (c) => <MainCell name={c.title || '(Không có nội dung)'} sub={c.code} icon="chat" /> },
-    { key: 'author', label: 'Tác giả', render: (c) => personName(c.author) },
-    { key: 'post', label: 'Bài viết gốc', w: 1.6, render: (c) => <TextCell>{c.post.title}</TextCell> },
-    { key: 'community', label: 'Cộng đồng', w: 1.2, render: (c) => <TextCell>{c.community.name}</TextCell> },
-    { key: 'reports', label: 'Báo cáo', w: 0.6, render: (c) => reportsCell(c.reports) },
-    { key: 'status', label: 'Trạng thái', render: (c) => statusBadge(c.status) },
-    { key: 'created', label: 'Tạo lúc', render: (c) => <MutedCell>{formatRelative(c.createdAt)}</MutedCell> },
+    { key: 'cmt', label: t('common.comment'), w: 2.4, render: (c) => <MainCell name={c.title || t('common.noContent')} sub={c.code} icon="chat" /> },
+    { key: 'author', label: t('common.author'), render: (c) => personName(c.author) },
+    { key: 'post', label: t('comments.originalPost'), w: 1.6, render: (c) => <TextCell>{c.post.title}</TextCell> },
+    { key: 'community', label: t('common.community'), w: 1.2, render: (c) => <TextCell>{c.community.name}</TextCell> },
+    { key: 'reports', label: t('common.reports'), w: 0.6, render: (c) => reportsCell(c.reports) },
+    { key: 'status', label: t('common.status'), render: (c) => statusBadge(c.status) },
+    { key: 'created', label: t('common.createdAt'), render: (c) => <MutedCell>{formatRelative(c.createdAt)}</MutedCell> },
   ];
   const actions = (c: AdminComment): RowAction[] => {
-    const a: RowAction[] = [{ label: 'Xem trước', onClick: () => slot.show((close) => <PostPreview kind="comments" id={c.id} onClose={close} />) }];
-    if (c.status === 'published') a.push({ label: 'Ẩn', icon: 'visibility_off', onClick: () => hide(c.id, c.code) });
-    if (c.status !== 'removed') a.push({ label: 'Gỡ', icon: 'delete', danger: true, onClick: () => remove(c.id, c.code) });
-    if (c.status !== 'published') a.push({ label: 'Khôi phục', icon: 'restore', onClick: () => restore(c.id, c.code) });
-    a.push({ label: 'Xem tác giả', icon: 'person', onClick: () => navigate(`/admin/users/${c.author.id}`) });
+    const a: RowAction[] = [{ label: t('common.preview'), onClick: () => slot.show((close) => <PostPreview kind="comments" id={c.id} onClose={close} />) }];
+    if (c.status === 'published') a.push({ label: t('common.hide'), icon: 'visibility_off', onClick: () => hide(c.id, c.code) });
+    if (c.status !== 'removed') a.push({ label: t('common.remove'), icon: 'delete', danger: true, onClick: () => remove(c.id, c.code) });
+    if (c.status !== 'published') a.push({ label: t('common.restore'), icon: 'restore', onClick: () => restore(c.id, c.code) });
+    a.push({ label: t('common.viewAuthor'), icon: 'person', onClick: () => navigate(`/admin/users/${c.author.id}`) });
     return a;
   };
 
   return (
     <>
-      <PageHeader title="Bình luận" subtitle="Mọi bình luận trên toàn bộ cộng đồng." />
+      <PageHeader title={t('common.commentsTitle')} subtitle={t('comments.pageSubtitle')} />
       {s && (
         <KpiGrid
           min={170}
           items={[
-            { icon: 'chat', label: 'Tổng', value: fmtNum(s.total) },
-            { icon: 'today', label: 'Hôm nay', value: fmtNum(s.today) },
-            { icon: 'flag', label: 'Bị báo cáo', value: fmtNum(s.reported), bad: true, onClick: () => navigate('/admin/moderation') },
-            { icon: 'delete', label: 'Đã gỡ', value: fmtNum(s.removed) },
+            { icon: 'chat', label: t('common.total'), value: fmtNum(s.total) },
+            { icon: 'today', label: t('common.today'), value: fmtNum(s.today) },
+            { icon: 'flag', label: t('common.reported'), value: fmtNum(s.reported), bad: true, onClick: () => navigate('/admin/moderation') },
+            { icon: 'delete', label: t('common.removed'), value: fmtNum(s.removed) },
           ]}
         />
       )}
@@ -354,22 +359,22 @@ export function CommentsView() {
         rows={list.data?.data ?? []}
         rowKey={(c) => c.id}
         tabs={[
-          { key: '', label: 'Tất cả', count: s?.total },
-          { key: 'published', label: 'Đã xuất bản' },
-          { key: 'hidden', label: 'Đã ẩn', count: s?.hidden },
-          { key: 'removed', label: 'Đã gỡ', count: s?.removed },
+          { key: '', label: t('common.all'), count: s?.total },
+          { key: 'published', label: t('common.published') },
+          { key: 'hidden', label: t('common.hidden'), count: s?.hidden },
+          { key: 'removed', label: t('common.removed'), count: s?.removed },
         ]}
-        tab={t.tab}
-        onTab={t.onTab}
-        search={{ value: t.q, onChange: t.onQ, placeholder: 'Tìm bình luận, tác giả, mã...' }}
-        filters={[{ key: 'sort', label: 'Sắp xếp', value: t.f.sort, options: SORT_CONTENT, onChange: t.setFilter('sort') }]}
-        onClearFilters={t.clear}
+        tab={ts.tab}
+        onTab={ts.onTab}
+        search={{ value: ts.q, onChange: ts.onQ, placeholder: t('comments.searchPlaceholder') }}
+        filters={[{ key: 'sort', label: t('common.sortBy'), value: ts.f.sort, options: sortContent(t), onChange: ts.setFilter('sort') }]}
+        onClearFilters={ts.clear}
         loading={list.isPending}
         error={list.isError ? list.error : null}
         onRetry={() => void list.refetch()}
         onRow={(c) => slot.show((close) => <PostPreview kind="comments" id={c.id} onClose={close} />)}
         actions={actions}
-        page={pageOf(list.data?.meta, t.setPage)}
+        page={pageOf(list.data?.meta, ts.setPage)}
       />
       {slot.el}
     </>
@@ -379,60 +384,61 @@ export function CommentsView() {
 /* ================================= Khóa học ================================= */
 
 function CoursePreview({ id, onClose }: { id: string; onClose: () => void }) {
+  const { t } = useTranslation('admin-content');
   const q = useAdminData<AdminCourseDetail>('content', `/content/courses/${id}`);
   const d = q.data;
   return (
-    <PreviewDialog title={d?.title ?? 'Khóa học'} sub={d?.community.name} onClose={onClose} wide>
+    <PreviewDialog title={d?.title ?? t('common.course')} sub={d?.community.name} onClose={onClose} wide>
       <PreviewBody loading={q.isPending} error={q.error}>
         {d && (
           <>
             <PreviewKv
               items={[
-                ['Giảng viên', d.creator?.name],
-                ['Học viên', fmtNum(d.students)],
-                ['Số module', fmtNum(d.modules ?? d.moduleList?.length ?? 0)],
-                ['Số bài học', fmtNum(d.lessons)],
-                ['Tỷ lệ hoàn thành', `${d.completionPct}%`],
-                ['Trạng thái', statusBadge(d.status)],
-                ['Báo cáo', String(d.reports)],
-                ...(d.moderationReason ? ([['Lý do kiểm duyệt', d.moderationReason]] as [string, ReactNode][]) : []),
+                [t('courses.instructor'), d.creator?.name],
+                [t('courses.students'), fmtNum(d.students)],
+                [t('courses.moduleCount'), fmtNum(d.modules ?? d.moduleList?.length ?? 0)],
+                [t('courses.lessonCount'), fmtNum(d.lessons)],
+                [t('courses.completionRate'), `${d.completionPct}%`],
+                [t('common.status'), statusBadge(d.status)],
+                [t('common.reports'), String(d.reports)],
+                ...(d.moderationReason ? ([[t('common.moderationReason'), d.moderationReason]] as [string, ReactNode][]) : []),
               ]}
             />
             {d.description && (
-              <PreviewSection title="Mô tả">
+              <PreviewSection title={t('common.description')}>
                 <TextBlock>{d.description}</TextBlock>
               </PreviewSection>
             )}
             {d.moduleList && d.moduleList.length > 0 && (
-              <PreviewSection title={`Module (${d.moduleList.length})`}>
+              <PreviewSection title={t('courses.modulesTitle', { n: d.moduleList.length })}>
                 <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
                   {d.moduleList.map((m) => (
                     <li key={m.id} className="flex items-center gap-2 rounded-xl bg-[#faf7f4] px-3 py-2 text-[13px]">
                       <MaterialIcon name="folder" size={17} color="#a8a29e" />
                       <span className="min-w-0 flex-1 truncate font-semibold">{m.title}</span>
-                      <span className="text-stone-500">{m.lessons} bài</span>
+                      <span className="text-stone-500">{t('courses.lessonsShort', { n: m.lessons })}</span>
                     </li>
                   ))}
                 </ul>
               </PreviewSection>
             )}
-            <PreviewSection title={`Bài học (${d.lessonList.length})`}>
+            <PreviewSection title={t('courses.lessonsTitle', { n: d.lessonList.length })}>
               {d.lessonList.length === 0 ? (
-                <div className="text-[13px] text-stone-400">Chưa có bài học.</div>
+                <div className="text-[13px] text-stone-400">{t('courses.noLessons')}</div>
               ) : (
                 <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
                   {d.lessonList.map((l) => (
                     <li key={l.id} className="flex items-center gap-2 rounded-xl bg-[#faf7f4] px-3 py-2 text-[13px]">
                       <MaterialIcon name={LESSON_ICON[l.type] ?? 'description'} size={17} color="#a8a29e" />
                       <span className="min-w-0 flex-1 truncate font-semibold">{l.title}</span>
-                      <span className="text-stone-500">{l.durationMin ? `${l.durationMin} phút` : (LESSON_TYPE[l.type] ?? l.type)}</span>
+                      <span className="text-stone-500">{l.durationMin ? t('common.minutes', { n: l.durationMin }) : (LESSON_TYPE[l.type] ?? l.type)}</span>
                       {statusBadge(l.status)}
                     </li>
                   ))}
                 </ul>
               )}
             </PreviewSection>
-            <PreviewSection title="Lịch sử quản trị">
+            <PreviewSection title={t('common.history')}>
               <HistoryList items={d.history} />
             </PreviewSection>
           </>
@@ -443,117 +449,118 @@ function CoursePreview({ id, onClose }: { id: string; onClose: () => void }) {
 }
 
 export function CoursesView() {
+  const { t } = useTranslation('admin-content');
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const t = useTableState({ sort: '' }, '');
+  const ts = useTableState({ sort: '' }, '');
   const summary = useAdminData<ContentSummary>('content', '/content/courses/summary');
-  const list = useAdminList<AdminCourse>('content-courses', '/content/courses', { q: t.q || undefined, status: t.tab || undefined, sort: t.f.sort || undefined, communityId: params.get('communityId') ?? params.get('courseId') ?? undefined, page: t.page, limit: LIMIT });
+  const list = useAdminList<AdminCourse>('content-courses', '/content/courses', { q: ts.q || undefined, status: ts.tab || undefined, sort: ts.f.sort || undefined, communityId: params.get('communityId') ?? params.get('courseId') ?? undefined, page: ts.page, limit: LIMIT });
   const slot = useDialogSlot();
   const act = useAdminAction();
   const s = summary.data;
   const post = (id: string, action: string, body: object) => act.mutateAsync({ path: `/content/courses/${id}/${action}`, body });
 
   const publish = (c: AdminCourse) =>
-    slot.show((close) => <ActionDialog icon="publish" title="Xuất bản khóa học?" body={c.title} cta="Xuất bản" noteLabel="Ghi chú (tùy chọn)" successMessage="Đã xuất bản khóa học" run={(v) => post(c.id, 'publish', { note: v.note || undefined })} onClose={close} />);
+    slot.show((close) => <ActionDialog icon="publish" title={t('courses.publishTitle')} body={c.title} cta={t('courses.publish')} noteLabel={t('common.noteOptional')} successMessage={t('courses.published')} run={(v) => post(c.id, 'publish', { note: v.note || undefined })} onClose={close} />);
   const unpublish = (c: AdminCourse) =>
     slot.show((close) => (
       <ActionDialog
         icon="unpublished"
-        title="Hủy xuất bản khóa học?"
-        body={`${c.title}. Thành viên thường sẽ không còn thấy khóa học này.`}
-        cta="Hủy xuất bản"
+        title={t('courses.unpublishTitle')}
+        body={t('courses.unpublishBody', { title: c.title })}
+        cta={t('courses.unpublish')}
         reasons={USER_REASONS}
         requireReason
-        noteLabel="Ghi chú nội bộ"
-        flagLabel="Thông báo cho giảng viên"
-        successMessage="Đã hủy xuất bản khóa học"
+        noteLabel={t('common.internalNote')}
+        flagLabel={t('courses.notifyInstructor')}
+        successMessage={t('courses.unpublished')}
         run={(v) => post(c.id, 'unpublish', { reason: v.reason, note: v.note || undefined, notifyAuthor: v.flag })}
         onClose={close}
       />
     ));
   const archive = (c: AdminCourse) =>
-    slot.show((close) => <ActionDialog icon="inventory_2" title="Lưu trữ khóa học?" body={c.title} cta="Lưu trữ" noteLabel="Ghi chú (tùy chọn)" successMessage="Đã lưu trữ khóa học" run={(v) => post(c.id, 'archive', { note: v.note || undefined })} onClose={close} />);
+    slot.show((close) => <ActionDialog icon="inventory_2" title={t('courses.archiveTitle')} body={c.title} cta={t('courses.archive')} noteLabel={t('common.noteOptional')} successMessage={t('courses.archived')} run={(v) => post(c.id, 'archive', { note: v.note || undefined })} onClose={close} />);
   const remove = (c: AdminCourse) =>
     slot.show((close) => (
       <ActionDialog
         icon="delete"
         danger
-        title="Gỡ khóa học"
+        title={t('courses.removeTitle')}
         body={c.title}
-        cta="Gỡ khóa học"
+        cta={t('courses.removeTitle')}
         reasons={USER_REASONS}
         requireReason
-        noteLabel="Lý do nội bộ"
-        flagLabel="Thông báo cho giảng viên"
-        successMessage="Đã gỡ khóa học"
+        noteLabel={t('common.internalReason')}
+        flagLabel={t('courses.notifyInstructor')}
+        successMessage={t('courses.removed')}
         run={(v) => post(c.id, 'remove', { reason: v.reason, note: v.note || undefined, notifyAuthor: v.flag })}
         onClose={close}
       />
     ));
   const restore = (c: AdminCourse) =>
-    slot.show((close) => <ActionDialog icon="restore" title="Khôi phục khóa học?" body={c.title} cta="Khôi phục" noteLabel="Ghi chú (tùy chọn)" successMessage="Đã khôi phục khóa học" run={(v) => post(c.id, 'restore', { note: v.note || undefined })} onClose={close} />);
+    slot.show((close) => <ActionDialog icon="restore" title={t('courses.restoreTitle')} body={c.title} cta={t('common.restore')} noteLabel={t('common.noteOptional')} successMessage={t('courses.restored')} run={(v) => post(c.id, 'restore', { note: v.note || undefined })} onClose={close} />);
 
   const columns: Column<AdminCourse>[] = [
-    { key: 'course', label: 'Khóa học', w: 2.2, render: (c) => <MainCell name={c.title} sub={c.id.slice(0, 8)} shape="square" avatarSrc={c.thumbnail} seed={c.id} /> },
-    { key: 'creator', label: 'Giảng viên', render: (c) => personName(c.creator) },
-    { key: 'community', label: 'Cộng đồng', w: 1.4, render: (c) => <TextCell>{c.community.name}</TextCell> },
-    { key: 'students', label: 'Học viên', render: (c) => <NumCell>{fmtNum(c.students)}</NumCell> },
-    { key: 'modules', label: 'Module', w: 0.7, render: (c) => <NumCell>{fmtNum(c.modules ?? 0)}</NumCell> },
-    { key: 'lessons', label: 'Bài học', w: 0.7, render: (c) => <NumCell>{fmtNum(c.lessons)}</NumCell> },
-    { key: 'completion', label: 'Hoàn thành', w: 1.2, render: (c) => <BarCell pct={c.completionPct} /> },
-    { key: 'reports', label: 'Báo cáo', w: 0.6, render: (c) => reportsCell(c.reports) },
-    { key: 'status', label: 'Trạng thái', render: (c) => statusBadge(c.status) },
+    { key: 'course', label: t('common.course'), w: 2.2, render: (c) => <MainCell name={c.title} sub={c.id.slice(0, 8)} shape="square" avatarSrc={c.thumbnail} seed={c.id} /> },
+    { key: 'creator', label: t('courses.instructor'), render: (c) => personName(c.creator) },
+    { key: 'community', label: t('common.community'), w: 1.4, render: (c) => <TextCell>{c.community.name}</TextCell> },
+    { key: 'students', label: t('courses.students'), render: (c) => <NumCell>{fmtNum(c.students)}</NumCell> },
+    { key: 'modules', label: t('courses.moduleCol'), w: 0.7, render: (c) => <NumCell>{fmtNum(c.modules ?? 0)}</NumCell> },
+    { key: 'lessons', label: t('common.lessonsTitle'), w: 0.7, render: (c) => <NumCell>{fmtNum(c.lessons)}</NumCell> },
+    { key: 'completion', label: t('courses.completion'), w: 1.2, render: (c) => <BarCell pct={c.completionPct} /> },
+    { key: 'reports', label: t('common.reports'), w: 0.6, render: (c) => reportsCell(c.reports) },
+    { key: 'status', label: t('common.status'), render: (c) => statusBadge(c.status) },
   ];
   const actions = (c: AdminCourse): RowAction[] => {
-    const a: RowAction[] = [{ label: 'Xem trước', onClick: () => slot.show((close) => <CoursePreview id={c.id} onClose={close} />) }];
-    if (c.status === 'published') a.push({ label: 'Hủy xuất bản', icon: 'unpublished', onClick: () => unpublish(c) });
-    if (c.status === 'draft' || c.status === 'archived') a.push({ label: 'Xuất bản', icon: 'publish', onClick: () => publish(c) });
-    if (c.status === 'published' || c.status === 'draft') a.push({ label: 'Lưu trữ', icon: 'inventory_2', onClick: () => archive(c) });
-    if (c.status !== 'removed') a.push({ label: 'Gỡ', icon: 'delete', danger: true, onClick: () => remove(c) });
-    else a.push({ label: 'Khôi phục', icon: 'restore', onClick: () => restore(c) });
-    a.push({ label: 'Mở cộng đồng', icon: 'open_in_new', onClick: () => navigate(`/admin/communities/${c.community.id}`) });
+    const a: RowAction[] = [{ label: t('common.preview'), onClick: () => slot.show((close) => <CoursePreview id={c.id} onClose={close} />) }];
+    if (c.status === 'published') a.push({ label: t('courses.unpublish'), icon: 'unpublished', onClick: () => unpublish(c) });
+    if (c.status === 'draft' || c.status === 'archived') a.push({ label: t('courses.publish'), icon: 'publish', onClick: () => publish(c) });
+    if (c.status === 'published' || c.status === 'draft') a.push({ label: t('courses.archive'), icon: 'inventory_2', onClick: () => archive(c) });
+    if (c.status !== 'removed') a.push({ label: t('common.remove'), icon: 'delete', danger: true, onClick: () => remove(c) });
+    else a.push({ label: t('common.restore'), icon: 'restore', onClick: () => restore(c) });
+    a.push({ label: t('common.openCommunity'), icon: 'open_in_new', onClick: () => navigate(`/admin/communities/${c.community.id}`) });
     return a;
   };
 
   return (
     <>
-      <PageHeader title="Khóa học" subtitle="Khóa học nằm trong các cộng đồng (một cộng đồng có thể có nhiều khóa học)." />
+      <PageHeader title={t('common.coursesTitle')} subtitle={t('courses.pageSubtitle')} />
       <DataTable<AdminCourse>
         columns={columns}
         rows={list.data?.data ?? []}
         rowKey={(c) => c.id}
         tabs={[
-          { key: '', label: 'Tất cả', count: s?.total },
-          { key: 'published', label: 'Đã xuất bản', count: s?.published },
-          { key: 'draft', label: 'Nháp', count: s?.draft },
-          { key: 'archived', label: 'Đã lưu trữ', count: s?.archived },
-          { key: 'removed', label: 'Đã gỡ', count: s?.removed },
+          { key: '', label: t('common.all'), count: s?.total },
+          { key: 'published', label: t('common.published'), count: s?.published },
+          { key: 'draft', label: t('courses.tabDraft'), count: s?.draft },
+          { key: 'archived', label: t('courses.tabArchived'), count: s?.archived },
+          { key: 'removed', label: t('common.removed'), count: s?.removed },
         ]}
-        tab={t.tab}
-        onTab={t.onTab}
-        search={{ value: t.q, onChange: t.onQ, placeholder: 'Tìm khóa học...' }}
+        tab={ts.tab}
+        onTab={ts.onTab}
+        search={{ value: ts.q, onChange: ts.onQ, placeholder: t('courses.searchPlaceholder') }}
         filters={[
           {
             key: 'sort',
-            label: 'Sắp xếp',
-            value: t.f.sort,
+            label: t('common.sortBy'),
+            value: ts.f.sort,
             options: [
-              { value: 'oldest', label: 'Cũ nhất' },
-              { value: 'students', label: 'Nhiều học viên' },
-              { value: 'lessons', label: 'Nhiều bài học' },
-              { value: 'newest', label: 'Mới nhất' },
-              { value: 'title', label: 'Tên A–Z' },
+              { value: 'oldest', label: t('common.oldest') },
+              { value: 'students', label: t('courses.mostStudents') },
+              { value: 'lessons', label: t('courses.mostLessons') },
+              { value: 'newest', label: t('common.newest') },
+              { value: 'title', label: t('common.nameAZ') },
             ],
-            onChange: t.setFilter('sort'),
+            onChange: ts.setFilter('sort'),
           },
         ]}
-        onClearFilters={t.clear}
+        onClearFilters={ts.clear}
         loading={list.isPending}
         error={list.isError ? list.error : null}
         onRetry={() => void list.refetch()}
         onRow={(c) => slot.show((close) => <CoursePreview id={c.id} onClose={close} />)}
         actions={actions}
-        page={pageOf(list.data?.meta, t.setPage)}
+        page={pageOf(list.data?.meta, ts.setPage)}
       />
       {slot.el}
     </>
@@ -563,28 +570,29 @@ export function CoursesView() {
 /* ================================== Bài học ================================== */
 
 function LessonPreview({ id, onClose }: { id: string; onClose: () => void }) {
+  const { t } = useTranslation('admin-content');
   const q = useAdminData<AdminLessonDetail>('content', `/content/lessons/${id}`);
   const d = q.data;
   const video = d?.videoUrl ? resolveApiPath(d.videoUrl) : d?.embedUrl;
   return (
-    <PreviewDialog title={d?.title ?? 'Bài học'} sub={d?.code} onClose={onClose} wide>
+    <PreviewDialog title={d?.title ?? t('common.lesson')} sub={d?.code} onClose={onClose} wide>
       <PreviewBody loading={q.isPending} error={q.error}>
         {d && (
           <>
             <PreviewKv
               items={[
-                ['Mô-đun', d.module.title ?? d.module.name],
-                ['Cộng đồng', d.community.name],
-                ['Loại', LESSON_TYPE[d.type] ?? d.type],
-                ['Thời lượng', d.durationMin ? `${d.durationMin} phút` : '—'],
-                ['Hoàn thành', fmtNum(d.views)],
-                ['Trạng thái', statusBadge(d.status)],
-                ['Báo cáo', String(d.reports)],
-                ...(d.moderationReason ? ([['Lý do kiểm duyệt', d.moderationReason]] as [string, ReactNode][]) : []),
+                [t('common.module'), d.module.title ?? d.module.name],
+                [t('common.community'), d.community.name],
+                [t('common.type'), LESSON_TYPE[d.type] ?? d.type],
+                [t('common.duration'), d.durationMin ? t('common.minutes', { n: d.durationMin }) : '—'],
+                [t('common.completions'), fmtNum(d.views)],
+                [t('common.status'), statusBadge(d.status)],
+                [t('common.reports'), String(d.reports)],
+                ...(d.moderationReason ? ([[t('common.moderationReason'), d.moderationReason]] as [string, ReactNode][]) : []),
               ]}
             />
             {d.body && (
-              <PreviewSection title="Nội dung">
+              <PreviewSection title={t('common.content')}>
                 <TextBlock>{d.body}</TextBlock>
               </PreviewSection>
             )}
@@ -595,7 +603,7 @@ function LessonPreview({ id, onClose }: { id: string; onClose: () => void }) {
                 </a>
               </PreviewSection>
             )}
-            <PreviewSection title="Lịch sử quản trị">
+            <PreviewSection title={t('common.history')}>
               <HistoryList items={d.history} />
             </PreviewSection>
           </>
@@ -606,57 +614,58 @@ function LessonPreview({ id, onClose }: { id: string; onClose: () => void }) {
 }
 
 export function LessonsView() {
+  const { t } = useTranslation('admin-content');
   const [params] = useSearchParams();
-  const t = useTableState({ sort: '', status: '' }, '');
+  const ts = useTableState({ sort: '', status: '' }, '');
   const summary = useAdminData<ContentSummary>('content', '/content/lessons/summary');
-  const list = useAdminList<AdminLesson>('content-lessons', '/content/lessons', { q: t.q || undefined, type: t.tab || undefined, status: t.f.status || undefined, sort: t.f.sort || undefined, communityId: params.get('communityId') ?? params.get('courseId') ?? undefined, page: t.page, limit: LIMIT });
+  const list = useAdminList<AdminLesson>('content-lessons', '/content/lessons', { q: ts.q || undefined, type: ts.tab || undefined, status: ts.f.status || undefined, sort: ts.f.sort || undefined, communityId: params.get('communityId') ?? params.get('courseId') ?? undefined, page: ts.page, limit: LIMIT });
   const { slot, hide, remove, restore } = useModerateActions('lessons');
   const s = summary.data;
 
   const columns: Column<AdminLesson>[] = [
-    { key: 'lesson', label: 'Bài học', w: 2.2, render: (l) => <MainCell name={l.title} sub={l.code} icon={LESSON_ICON[l.type] ?? 'description'} /> },
-    { key: 'module', label: 'Mô-đun', w: 1.5, render: (l) => <TextCell>{l.module.title ?? l.module.name}</TextCell> },
-    { key: 'community', label: 'Cộng đồng', w: 1.3, render: (l) => <TextCell>{l.community.name}</TextCell> },
-    { key: 'type', label: 'Loại', render: (l) => <TextCell>{LESSON_TYPE[l.type] ?? l.type}</TextCell> },
-    { key: 'views', label: 'Lượt hoàn thành', render: (l) => <NumCell>{fmtNum(l.views)}</NumCell> },
-    { key: 'reports', label: 'Báo cáo', w: 0.6, render: (l) => reportsCell(l.reports) },
-    { key: 'status', label: 'Trạng thái', render: (l) => statusBadge(l.status) },
+    { key: 'lesson', label: t('common.lesson'), w: 2.2, render: (l) => <MainCell name={l.title} sub={l.code} icon={LESSON_ICON[l.type] ?? 'description'} /> },
+    { key: 'module', label: t('common.module'), w: 1.5, render: (l) => <TextCell>{l.module.title ?? l.module.name}</TextCell> },
+    { key: 'community', label: t('common.community'), w: 1.3, render: (l) => <TextCell>{l.community.name}</TextCell> },
+    { key: 'type', label: t('common.type'), render: (l) => <TextCell>{LESSON_TYPE[l.type] ?? l.type}</TextCell> },
+    { key: 'views', label: t('lessons.completionsCol'), render: (l) => <NumCell>{fmtNum(l.views)}</NumCell> },
+    { key: 'reports', label: t('common.reports'), w: 0.6, render: (l) => reportsCell(l.reports) },
+    { key: 'status', label: t('common.status'), render: (l) => statusBadge(l.status) },
   ];
   const actions = (l: AdminLesson): RowAction[] => {
-    const a: RowAction[] = [{ label: 'Xem trước', onClick: () => slot.show((close) => <LessonPreview id={l.id} onClose={close} />) }];
-    if (l.status === 'published') a.push({ label: 'Ẩn', icon: 'visibility_off', onClick: () => hide(l.id, l.title) });
-    if (l.status !== 'removed') a.push({ label: 'Gỡ', icon: 'delete', danger: true, onClick: () => remove(l.id, l.title) });
-    if (l.status !== 'published') a.push({ label: 'Khôi phục', icon: 'restore', onClick: () => restore(l.id, l.title) });
+    const a: RowAction[] = [{ label: t('common.preview'), onClick: () => slot.show((close) => <LessonPreview id={l.id} onClose={close} />) }];
+    if (l.status === 'published') a.push({ label: t('common.hide'), icon: 'visibility_off', onClick: () => hide(l.id, l.title) });
+    if (l.status !== 'removed') a.push({ label: t('common.remove'), icon: 'delete', danger: true, onClick: () => remove(l.id, l.title) });
+    if (l.status !== 'published') a.push({ label: t('common.restore'), icon: 'restore', onClick: () => restore(l.id, l.title) });
     return a;
   };
 
   return (
     <>
-      <PageHeader title="Bài học" subtitle="Từng bài học trong các khóa học." />
+      <PageHeader title={t('common.lessonsTitle')} subtitle={t('lessons.pageSubtitle')} />
       <DataTable<AdminLesson>
         columns={columns}
         rows={list.data?.data ?? []}
         rowKey={(l) => l.id}
         tabs={[
-          { key: '', label: 'Tất cả', count: s?.total },
+          { key: '', label: t('common.all'), count: s?.total },
           { key: 'video', label: 'Video' },
-          { key: 'text', label: 'Văn bản' },
-          { key: 'file', label: 'Tệp' },
+          { key: 'text', label: t('lessons.tabText') },
+          { key: 'file', label: t('lessons.tabFile') },
         ]}
-        tab={t.tab}
-        onTab={t.onTab}
-        search={{ value: t.q, onChange: t.onQ, placeholder: 'Tìm bài học...' }}
+        tab={ts.tab}
+        onTab={ts.onTab}
+        search={{ value: ts.q, onChange: ts.onQ, placeholder: t('lessons.searchPlaceholder') }}
         filters={[
-          { key: 'status', label: 'Trạng thái', value: t.f.status, options: [{ value: 'published', label: 'Đã xuất bản' }, { value: 'hidden', label: 'Đã ẩn' }, { value: 'removed', label: 'Đã gỡ' }], onChange: t.setFilter('status') },
-          { key: 'sort', label: 'Sắp xếp', value: t.f.sort, options: [{ value: 'views', label: 'Nhiều lượt hoàn thành' }, { value: 'title', label: 'Tên A–Z' }], onChange: t.setFilter('sort') },
+          { key: 'status', label: t('common.status'), value: ts.f.status, options: [{ value: 'published', label: t('common.published') }, { value: 'hidden', label: t('common.hidden') }, { value: 'removed', label: t('common.removed') }], onChange: ts.setFilter('status') },
+          { key: 'sort', label: t('common.sortBy'), value: ts.f.sort, options: [{ value: 'views', label: t('lessons.mostCompletions') }, { value: 'title', label: t('common.nameAZ') }], onChange: ts.setFilter('sort') },
         ]}
-        onClearFilters={t.clear}
+        onClearFilters={ts.clear}
         loading={list.isPending}
         error={list.isError ? list.error : null}
         onRetry={() => void list.refetch()}
         onRow={(l) => slot.show((close) => <LessonPreview id={l.id} onClose={close} />)}
         actions={actions}
-        page={pageOf(list.data?.meta, t.setPage)}
+        page={pageOf(list.data?.meta, ts.setPage)}
       />
       {slot.el}
     </>
@@ -673,31 +682,32 @@ const toLocalInput = (iso: string) => {
 };
 
 function EventPreview({ id, onClose }: { id: string; onClose: () => void }) {
+  const { t } = useTranslation('admin-content');
   const q = useAdminData<AdminEventDetail>('content', `/content/events/${id}`);
   const d = q.data;
   return (
-    <PreviewDialog title={d?.title ?? 'Sự kiện'} sub={d?.community.name} onClose={onClose} wide>
+    <PreviewDialog title={d?.title ?? t('common.event')} sub={d?.community.name} onClose={onClose} wide>
       <PreviewBody loading={q.isPending} error={q.error}>
         {d && (
           <>
             <PreviewKv
               items={[
-                ['Người tổ chức', d.host.name],
-                ['Thời gian', `${formatDateTime(d.startAt)} (${d.timezone})`],
-                ['Địa điểm / Link họp', d.meetingLink ?? d.location],
-                ['Người tham dự', d.capacity ? `${d.attendees} / ${d.capacity}` : String(d.attendees)],
-                ['Trạng thái', statusBadge(d.status)],
-                ...(d.cancelReason ? ([['Lý do hủy', d.cancelReason]] as [string, ReactNode][]) : []),
+                [t('events.host'), d.host.name],
+                [t('events.time'), `${formatDateTime(d.startAt)} (${d.timezone})`],
+                [t('events.locationOrLink'), d.meetingLink ?? d.location],
+                [t('events.attendees'), d.capacity ? `${d.attendees} / ${d.capacity}` : String(d.attendees)],
+                [t('common.status'), statusBadge(d.status)],
+                ...(d.cancelReason ? ([[t('events.cancelReason'), d.cancelReason]] as [string, ReactNode][]) : []),
               ]}
             />
             {d.description && (
-              <PreviewSection title="Mô tả">
+              <PreviewSection title={t('common.description')}>
                 <TextBlock>{d.description}</TextBlock>
               </PreviewSection>
             )}
-            <PreviewSection title={`Người đã đăng ký (${d.attendees})`}>
+            <PreviewSection title={t('events.registeredTitle', { n: d.attendees })}>
               {d.rsvps.length === 0 ? (
-                <div className="text-[13px] text-stone-400">Chưa có ai đăng ký.</div>
+                <div className="text-[13px] text-stone-400">{t('events.noRegistrations')}</div>
               ) : (
                 <div className="flex flex-wrap gap-1.5">
                   {d.rsvps.map((p) => (
@@ -708,7 +718,7 @@ function EventPreview({ id, onClose }: { id: string; onClose: () => void }) {
                 </div>
               )}
             </PreviewSection>
-            <PreviewSection title="Lịch sử quản trị">
+            <PreviewSection title={t('common.history')}>
               <HistoryList items={d.history} />
             </PreviewSection>
           </>
@@ -719,6 +729,7 @@ function EventPreview({ id, onClose }: { id: string; onClose: () => void }) {
 }
 
 function EditEventDialog({ event, onClose }: { event: AdminEvent; onClose: () => void }) {
+  const { t } = useTranslation('admin-content');
   const act = useAdminAction();
   const detail = useAdminData<AdminEventDetail>('content', `/content/events/${event.id}`);
   const [title, setTitle] = useState(event.title);
@@ -733,11 +744,11 @@ function EditEventDialog({ event, onClose }: { event: AdminEvent; onClose: () =>
   return (
     <ActionDialog
       icon="edit"
-      title="Sửa sự kiện"
+      title={t('events.editTitle')}
       body={event.community.name}
-      cta="Lưu thay đổi"
+      cta={t('events.saveChanges')}
       disabledExtra={invalid || detail.isPending}
-      successMessage="Đã cập nhật sự kiện"
+      successMessage={t('events.updated')}
       run={() =>
         act.mutateAsync({
           method: 'PATCH',
@@ -747,23 +758,24 @@ function EditEventDialog({ event, onClose }: { event: AdminEvent; onClose: () =>
       }
       onClose={onClose}
     >
-      <InputField label="Tên sự kiện" value={title} onChange={setTitle} maxLength={200} />
-      <TextAreaField label="Mô tả" value={descVal} onChange={setDesc} maxLength={2000} />
+      <InputField label={t('events.name')} value={title} onChange={setTitle} maxLength={200} />
+      <TextAreaField label={t('common.description')} value={descVal} onChange={setDesc} maxLength={2000} />
       <div className="flex flex-col gap-2">
-        <div className="text-[13px] font-bold">Thời gian bắt đầu</div>
-        <input type="datetime-local" value={startAt} onChange={(e) => setStartAt(e.target.value)} aria-label="Thời gian bắt đầu" className="h-11 rounded-xl border-[1.5px] border-[#e7e0da] px-[13px] text-sm font-medium outline-0 focus:border-brand" />
+        <div className="text-[13px] font-bold">{t('events.startTime')}</div>
+        <input type="datetime-local" value={startAt} onChange={(e) => setStartAt(e.target.value)} aria-label={t('events.startTime')} className="h-11 rounded-xl border-[1.5px] border-[#e7e0da] px-[13px] text-sm font-medium outline-0 focus:border-brand" />
       </div>
-      <InputField label="Link họp (tùy chọn)" value={link} onChange={setLink} placeholder="https://..." />
-      <InputField label="Sức chứa (để trống = không giới hạn)" value={cap} onChange={setCap} placeholder="VD: 100" />
+      <InputField label={t('events.meetingLinkOptional')} value={link} onChange={setLink} placeholder="https://..." />
+      <InputField label={t('events.capacity')} value={cap} onChange={setCap} placeholder={t('events.capacityPlaceholder')} />
     </ActionDialog>
   );
 }
 
 export function EventsView() {
-  const t = useTableState({ sort: '' }, '');
+  const { t } = useTranslation('admin-content');
+  const ts = useTableState({ sort: '' }, '');
   const summary = useAdminData<ContentSummary>('content', '/content/events/summary');
   const [params] = useSearchParams();
-  const list = useAdminList<AdminEvent>('content-events', '/content/events', { q: t.q || undefined, status: t.tab || undefined, sort: t.f.sort || undefined, communityId: params.get('communityId') ?? params.get('courseId') ?? undefined, page: t.page, limit: LIMIT });
+  const list = useAdminList<AdminEvent>('content-events', '/content/events', { q: ts.q || undefined, status: ts.tab || undefined, sort: ts.f.sort || undefined, communityId: params.get('communityId') ?? params.get('courseId') ?? undefined, page: ts.page, limit: LIMIT });
   const slot = useDialogSlot();
   const act = useAdminAction();
   const s = summary.data;
@@ -774,13 +786,13 @@ export function EventsView() {
       <ActionDialog
         icon="event_busy"
         danger
-        title="Hủy sự kiện?"
-        body={`${e.title}. ${e.attendees} người đã đăng ký sẽ được thông báo.`}
-        cta="Hủy sự kiện"
-        reasons={opts(['Vi phạm chính sách', 'Chủ sở hữu yêu cầu', 'Trùng lịch', 'Khác'])}
+        title={t('events.cancelTitle')}
+        body={t('events.cancelBody', { title: e.title, n: e.attendees })}
+        cta={t('events.cancelCta')}
+        reasons={opts([t('events.reasonPolicy'), t('events.reasonOwnerRequest'), t('events.reasonScheduleConflict'), t('common.other')])}
         requireReason
-        flagLabel="Thông báo cho người đã đăng ký"
-        successMessage="Đã hủy sự kiện"
+        flagLabel={t('events.notifyAttendees')}
+        successMessage={t('events.canceled')}
         run={(v) => post(e.id, 'cancel', { reason: v.reason, notifyAttendees: v.flag })}
         onClose={close}
       />
@@ -790,65 +802,65 @@ export function EventsView() {
       <ActionDialog
         icon="delete"
         danger
-        title="Gỡ sự kiện"
+        title={t('events.removeTitle')}
         body={e.title}
-        cta="Gỡ sự kiện"
+        cta={t('events.removeTitle')}
         reasons={USER_REASONS}
         requireReason
-        flagLabel="Thông báo cho người đã đăng ký"
-        successMessage="Đã gỡ sự kiện"
+        flagLabel={t('events.notifyAttendees')}
+        successMessage={t('events.removed')}
         run={(v) => post(e.id, 'remove', { reason: v.reason, notifyAttendees: v.flag })}
         onClose={close}
       />
     ));
   const restore = (e: AdminEvent) =>
-    slot.show((close) => <ActionDialog icon="restore" title="Khôi phục sự kiện?" body={e.title} cta="Khôi phục" noteLabel="Ghi chú (tùy chọn)" successMessage="Đã khôi phục sự kiện" run={(v) => post(e.id, 'restore', { note: v.note || undefined })} onClose={close} />);
+    slot.show((close) => <ActionDialog icon="restore" title={t('events.restoreTitle')} body={e.title} cta={t('common.restore')} noteLabel={t('common.noteOptional')} successMessage={t('events.restored')} run={(v) => post(e.id, 'restore', { note: v.note || undefined })} onClose={close} />);
 
   const columns: Column<AdminEvent>[] = [
-    { key: 'event', label: 'Sự kiện', w: 2, render: (e) => <MainCell name={e.title} sub={e.location ?? undefined} icon="event" /> },
-    { key: 'community', label: 'Cộng đồng', w: 1.4, render: (e) => <TextCell>{e.community.name}</TextCell> },
-    { key: 'host', label: 'Người tổ chức', render: (e) => personName(e.host) },
-    { key: 'att', label: 'Tham dự', render: (e) => <NumCell>{e.capacity ? `${e.attendees}/${e.capacity}` : e.attendees}</NumCell> },
-    { key: 'date', label: 'Ngày', render: (e) => <MutedCell>{formatDateTime(e.startAt)}</MutedCell> },
-    { key: 'status', label: 'Trạng thái', render: (e) => statusBadge(e.status) },
-    { key: 'reports', label: 'Báo cáo', w: 0.6, render: (e) => reportsCell(e.reports) },
+    { key: 'event', label: t('common.event'), w: 2, render: (e) => <MainCell name={e.title} sub={e.location ?? undefined} icon="event" /> },
+    { key: 'community', label: t('common.community'), w: 1.4, render: (e) => <TextCell>{e.community.name}</TextCell> },
+    { key: 'host', label: t('events.host'), render: (e) => personName(e.host) },
+    { key: 'att', label: t('events.attending'), render: (e) => <NumCell>{e.capacity ? `${e.attendees}/${e.capacity}` : e.attendees}</NumCell> },
+    { key: 'date', label: t('common.date'), render: (e) => <MutedCell>{formatDateTime(e.startAt)}</MutedCell> },
+    { key: 'status', label: t('common.status'), render: (e) => statusBadge(e.status) },
+    { key: 'reports', label: t('common.reports'), w: 0.6, render: (e) => reportsCell(e.reports) },
   ];
   const actions = (e: AdminEvent): RowAction[] => {
-    const a: RowAction[] = [{ label: 'Xem', onClick: () => slot.show((close) => <EventPreview id={e.id} onClose={close} />) }];
+    const a: RowAction[] = [{ label: t('common.view'), onClick: () => slot.show((close) => <EventPreview id={e.id} onClose={close} />) }];
     if (e.status === 'upcoming' || e.status === 'live') {
-      a.push({ label: 'Sửa', icon: 'edit', onClick: () => slot.show((close) => <EditEventDialog event={e} onClose={close} />) });
-      a.push({ label: 'Hủy', icon: 'event_busy', danger: true, onClick: () => cancel(e) });
+      a.push({ label: t('common.edit'), icon: 'edit', onClick: () => slot.show((close) => <EditEventDialog event={e} onClose={close} />) });
+      a.push({ label: t('common.cancel'), icon: 'event_busy', danger: true, onClick: () => cancel(e) });
     }
-    if (e.status !== 'removed') a.push({ label: 'Gỡ', icon: 'delete', danger: true, onClick: () => remove(e) });
-    if (e.status === 'cancelled' || e.status === 'removed') a.push({ label: 'Khôi phục', icon: 'restore', onClick: () => restore(e) });
+    if (e.status !== 'removed') a.push({ label: t('common.remove'), icon: 'delete', danger: true, onClick: () => remove(e) });
+    if (e.status === 'cancelled' || e.status === 'removed') a.push({ label: t('common.restore'), icon: 'restore', onClick: () => restore(e) });
     return a;
   };
 
   return (
     <>
-      <PageHeader title="Sự kiện" subtitle="Sự kiện được lên lịch ở mọi cộng đồng." />
+      <PageHeader title={t('common.eventsTitle')} subtitle={t('events.pageSubtitle')} />
       <DataTable<AdminEvent>
         columns={columns}
         rows={list.data?.data ?? []}
         rowKey={(e) => e.id}
         tabs={[
-          { key: '', label: 'Tất cả', count: s?.total },
-          { key: 'upcoming', label: 'Sắp diễn ra', count: s?.upcoming },
-          { key: 'live', label: 'Đang diễn ra', count: s?.live },
-          { key: 'completed', label: 'Hoàn tất', count: s?.completed },
-          { key: 'cancelled', label: 'Đã hủy', count: s?.cancelled },
+          { key: '', label: t('common.all'), count: s?.total },
+          { key: 'upcoming', label: t('events.tabUpcoming'), count: s?.upcoming },
+          { key: 'live', label: t('events.tabLive'), count: s?.live },
+          { key: 'completed', label: t('common.completed'), count: s?.completed },
+          { key: 'cancelled', label: t('events.tabCanceled'), count: s?.cancelled },
         ]}
-        tab={t.tab}
-        onTab={t.onTab}
-        search={{ value: t.q, onChange: t.onQ, placeholder: 'Tìm sự kiện...' }}
-        filters={[{ key: 'sort', label: 'Sắp xếp', value: t.f.sort, options: [{ value: 'newest', label: 'Mới tạo nhất' }, { value: 'startAt', label: 'Theo ngày diễn ra' }], onChange: t.setFilter('sort') }]}
-        onClearFilters={t.clear}
+        tab={ts.tab}
+        onTab={ts.onTab}
+        search={{ value: ts.q, onChange: ts.onQ, placeholder: t('events.searchPlaceholder') }}
+        filters={[{ key: 'sort', label: t('common.sortBy'), value: ts.f.sort, options: [{ value: 'newest', label: t('events.recentlyCreated') }, { value: 'startAt', label: t('events.byEventDate') }], onChange: ts.setFilter('sort') }]}
+        onClearFilters={ts.clear}
         loading={list.isPending}
         error={list.isError ? list.error : null}
         onRetry={() => void list.refetch()}
         onRow={(e) => slot.show((close) => <EventPreview id={e.id} onClose={close} />)}
         actions={actions}
-        page={pageOf(list.data?.meta, t.setPage)}
+        page={pageOf(list.data?.meta, ts.setPage)}
       />
       {slot.el}
     </>
@@ -857,32 +869,33 @@ export function EventsView() {
 
 /* ================================== Media ================================== */
 
-const KIND_OPTIONS = [
-  { value: '', label: 'Tất cả' },
-  { value: 'image', label: 'Hình ảnh' },
+const kindOptions = (t: TFunction) => [
+  { value: '', label: t('common.all') },
+  { value: 'image', label: t('media.kindImage') },
   { value: 'video', label: 'Video' },
-  { value: 'document', label: 'Tài liệu' },
-  { value: 'audio', label: 'Âm thanh' },
+  { value: 'document', label: t('media.kindDocument') },
+  { value: 'audio', label: t('media.kindAudio') },
 ] as const;
-const MEDIA_STATUS_OPTIONS = [
-  { value: '', label: 'Mọi trạng thái' },
-  { value: 'active', label: 'Hoạt động' },
-  { value: 'flagged', label: 'Bị gắn cờ' },
-  { value: 'removed', label: 'Đã gỡ' },
+const mediaStatusOptions = (t: TFunction) => [
+  { value: '', label: t('media.anyStatus') },
+  { value: 'active', label: t('common.active') },
+  { value: 'flagged', label: t('media.flaggedStatus') },
+  { value: 'removed', label: t('common.removed') },
 ] as const;
-const VIEW_OPTIONS = [
-  { value: 'grid', label: 'Lưới' },
-  { value: 'table', label: 'Bảng' },
+const viewOptions = (t: TFunction) => [
+  { value: 'grid', label: t('media.viewGrid') },
+  { value: 'table', label: t('media.viewTable') },
 ] as const;
 const MEDIA_LIMIT = 24;
 const KIND_ICON: Record<string, string> = { image: 'image', video: 'movie', document: 'description', audio: 'graphic_eq' };
 
 export function MediaView() {
+  const { t } = useTranslation('admin-content');
   const toast = useToast();
   const [params] = useSearchParams();
   const [view, setView] = useState<'grid' | 'table'>('grid');
-  const [kind, setKind] = useState<(typeof KIND_OPTIONS)[number]['value']>('');
-  const [status, setStatus] = useState<(typeof MEDIA_STATUS_OPTIONS)[number]['value']>('');
+  const [kind, setKind] = useState<ReturnType<typeof kindOptions>[number]['value']>('');
+  const [status, setStatus] = useState<ReturnType<typeof mediaStatusOptions>[number]['value']>('');
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
   const summary = useAdminData<MediaSummary>('content', '/content/media/summary');
@@ -895,36 +908,36 @@ export function MediaView() {
 
   const post = (key: string, action: string, body: object) => act.mutateAsync({ path: `/content/media/${encodeURIComponent(key)}/${action}`, body });
   const preview = (m: AdminMedia) => {
-    if (m.url) openFile(m.url).catch((e) => toast.error(errMessage(e, 'Không mở được tệp')));
+    if (m.url) openFile(m.url).catch((e) => toast.error(errMessage(e, t('media.openFailed'))));
   };
   const download = async (m: AdminMedia) => {
     try {
       await apiDownload(`/admin/content/media/${encodeURIComponent(m.key)}/download`, m.filename);
     } catch (e) {
-      toast.error(errMessage(e, 'Không tải được tệp'));
+      toast.error(errMessage(e, t('media.downloadFailed')));
     }
   };
-  const flag = (m: AdminMedia) => slot.show((close) => <ActionDialog icon="flag" title="Gắn cờ tệp?" body={m.filename} cta="Gắn cờ" reasons={USER_REASONS} requireReason successMessage="Đã gắn cờ tệp" run={(v) => post(m.key, 'flag', { reason: v.reason })} onClose={close} />);
+  const flag = (m: AdminMedia) => slot.show((close) => <ActionDialog icon="flag" title={t('media.flagTitle')} body={m.filename} cta={t('media.flag')} reasons={USER_REASONS} requireReason successMessage={t('media.flagged')} run={(v) => post(m.key, 'flag', { reason: v.reason })} onClose={close} />);
   const unflag = (m: AdminMedia) =>
-    slot.show((close) => <ActionDialog icon="outlined_flag" title="Bỏ gắn cờ?" body={m.filename} cta="Bỏ gắn cờ" noteLabel="Ghi chú (tùy chọn)" successMessage="Đã bỏ gắn cờ" run={(v) => post(m.key, 'unflag', { note: v.note || undefined })} onClose={close} />);
+    slot.show((close) => <ActionDialog icon="outlined_flag" title={t('media.unflagTitle')} body={m.filename} cta={t('media.unflag')} noteLabel={t('common.noteOptional')} successMessage={t('media.unflagged')} run={(v) => post(m.key, 'unflag', { note: v.note || undefined })} onClose={close} />);
   const remove = (m: AdminMedia) =>
     slot.show((close) => (
       <ActionDialog
         icon="delete"
         danger
-        title="Gỡ tệp"
-        body={`${m.filename}. Tệp sẽ không còn truy cập được công khai.`}
-        cta="Gỡ tệp"
+        title={t('media.removeTitle')}
+        body={t('media.removeBody', { name: m.filename })}
+        cta={t('media.removeTitle')}
         reasons={USER_REASONS}
         requireReason
-        flagLabel="Thông báo cho chủ tệp"
-        successMessage="Đã gỡ tệp"
+        flagLabel={t('media.notifyOwner')}
+        successMessage={t('media.removed')}
         run={(v) => post(m.key, 'remove', { reason: v.reason, notifyOwner: v.flag })}
         onClose={close}
       />
     ));
   const restore = (m: AdminMedia) =>
-    slot.show((close) => <ActionDialog icon="restore" title="Khôi phục tệp?" body={m.filename} cta="Khôi phục" noteLabel="Ghi chú (tùy chọn)" successMessage="Đã khôi phục tệp" run={(v) => post(m.key, 'restore', { note: v.note || undefined })} onClose={close} />);
+    slot.show((close) => <ActionDialog icon="restore" title={t('media.restoreTitle')} body={m.filename} cta={t('common.restore')} noteLabel={t('common.noteOptional')} successMessage={t('media.restored')} run={(v) => post(m.key, 'restore', { note: v.note || undefined })} onClose={close} />);
 
   const cards: MediaCardItem[] = items.map((m) => ({
     id: m.key,
@@ -935,52 +948,52 @@ export function MediaView() {
     thumbUrl: m.url && ['avatar', 'cover', 'post_image'].includes(m.purpose) ? resolveApiPath(m.url) : null,
     reports: m.reports,
     buttons: [
-      ...(m.status !== 'removed' ? [{ icon: 'visibility', label: 'Xem trước', onClick: () => preview(m) }] : []),
-      { icon: 'download', label: 'Tải xuống', onClick: () => void download(m) },
-      m.status === 'removed' ? { icon: 'restore', label: 'Khôi phục', onClick: () => restore(m) } : { icon: 'delete', label: 'Gỡ', danger: true, onClick: () => remove(m) },
+      ...(m.status !== 'removed' ? [{ icon: 'visibility', label: t('common.preview'), onClick: () => preview(m) }] : []),
+      { icon: 'download', label: t('media.download'), onClick: () => void download(m) },
+      m.status === 'removed' ? { icon: 'restore', label: t('common.restore'), onClick: () => restore(m) } : { icon: 'delete', label: t('common.remove'), danger: true, onClick: () => remove(m) },
     ],
   }));
 
   const columns: Column<AdminMedia>[] = [
-    { key: 'name', label: 'Tên tệp', w: 2, render: (m) => <MainCell name={m.filename} sub={MEDIA_KIND_LABEL[m.kind] ?? m.kind} icon={KIND_ICON[m.kind] ?? 'draft'} /> },
-    { key: 'owner', label: 'Chủ tệp', render: (m) => personName(m.owner) },
-    { key: 'community', label: 'Cộng đồng', w: 1.4, render: (m) => <TextCell>{m.community?.name ?? '—'}</TextCell> },
-    { key: 'size', label: 'Dung lượng', render: (m) => <MutedCell>{fmtBytes(m.size)}</MutedCell> },
-    { key: 'reports', label: 'Báo cáo', w: 0.6, render: (m) => reportsCell(m.reports) },
-    { key: 'status', label: 'Trạng thái', render: (m) => statusBadge(m.status) },
-    { key: 'up', label: 'Tải lên', render: (m) => <MutedCell>{formatRelative(m.uploadedAt)}</MutedCell> },
+    { key: 'name', label: t('media.fileName'), w: 2, render: (m) => <MainCell name={m.filename} sub={MEDIA_KIND_LABEL[m.kind] ?? m.kind} icon={KIND_ICON[m.kind] ?? 'draft'} /> },
+    { key: 'owner', label: t('media.owner'), render: (m) => personName(m.owner) },
+    { key: 'community', label: t('common.community'), w: 1.4, render: (m) => <TextCell>{m.community?.name ?? '—'}</TextCell> },
+    { key: 'size', label: t('media.size'), render: (m) => <MutedCell>{fmtBytes(m.size)}</MutedCell> },
+    { key: 'reports', label: t('common.reports'), w: 0.6, render: (m) => reportsCell(m.reports) },
+    { key: 'status', label: t('common.status'), render: (m) => statusBadge(m.status) },
+    { key: 'up', label: t('media.uploaded'), render: (m) => <MutedCell>{formatRelative(m.uploadedAt)}</MutedCell> },
   ];
   const actions = (m: AdminMedia): RowAction[] => {
     const a: RowAction[] = [];
-    if (m.status !== 'removed') a.push({ label: 'Xem trước', onClick: () => preview(m) });
-    a.push({ label: 'Tải xuống', icon: 'download', onClick: () => void download(m) });
-    if (m.status === 'active') a.push({ label: 'Gắn cờ', icon: 'flag', onClick: () => flag(m) });
-    if (m.status === 'flagged') a.push({ label: 'Bỏ gắn cờ', icon: 'outlined_flag', onClick: () => unflag(m) });
-    if (m.status !== 'removed') a.push({ label: 'Gỡ', icon: 'delete', danger: true, onClick: () => remove(m) });
-    else a.push({ label: 'Khôi phục', icon: 'restore', onClick: () => restore(m) });
+    if (m.status !== 'removed') a.push({ label: t('common.preview'), onClick: () => preview(m) });
+    a.push({ label: t('media.download'), icon: 'download', onClick: () => void download(m) });
+    if (m.status === 'active') a.push({ label: t('media.flag'), icon: 'flag', onClick: () => flag(m) });
+    if (m.status === 'flagged') a.push({ label: t('media.unflag'), icon: 'outlined_flag', onClick: () => unflag(m) });
+    if (m.status !== 'removed') a.push({ label: t('common.remove'), icon: 'delete', danger: true, onClick: () => remove(m) });
+    else a.push({ label: t('common.restore'), icon: 'restore', onClick: () => restore(m) });
     return a;
   };
 
-  const viewTools = <Segment options={VIEW_OPTIONS} value={view} onChange={setView} small label="Chế độ xem" />;
+  const viewTools = <Segment options={viewOptions(t)} value={view} onChange={setView} small label={t('media.viewMode')} />;
   const toolbar = (
     <div className="flex flex-wrap items-center gap-3">
       <Segment
-        options={KIND_OPTIONS}
+        options={kindOptions(t)}
         value={kind}
         onChange={(v) => {
           setKind(v);
           setPage(1);
         }}
-        label="Loại tệp"
+        label={t('media.fileType')}
       />
       <Segment
-        options={MEDIA_STATUS_OPTIONS}
+        options={mediaStatusOptions(t)}
         value={status}
         onChange={(v) => {
           setStatus(v);
           setPage(1);
         }}
-        label="Trạng thái"
+        label={t('common.status')}
       />
       <SearchInput
         value={q}
@@ -988,7 +1001,7 @@ export function MediaView() {
           setQ(v);
           setPage(1);
         }}
-        placeholder="Tìm tệp, chủ tệp..."
+        placeholder={t('media.searchPlaceholder')}
         className="max-w-[320px]"
       />
     </div>
@@ -996,30 +1009,30 @@ export function MediaView() {
 
   return (
     <>
-      <PageHeader title="Media" subtitle="Thư viện media của toàn nền tảng." />
+      <PageHeader title="Media" subtitle={t('media.pageSubtitle')} />
       {s && (
         <KpiGrid
           min={170}
           items={[
-            { icon: 'perm_media', label: 'Tổng tệp', value: fmtNum(s.total) },
-            { icon: 'hard_drive', label: 'Dung lượng', value: fmtBytes(s.totalSizeBytes) },
-            { icon: 'flag', label: 'Bị gắn cờ', value: fmtNum(s.flagged), bad: true },
-            { icon: 'delete', label: 'Đã gỡ', value: fmtNum(s.removed) },
+            { icon: 'perm_media', label: t('media.totalFiles'), value: fmtNum(s.total) },
+            { icon: 'hard_drive', label: t('common.storage'), value: fmtBytes(s.totalSizeBytes) },
+            { icon: 'flag', label: t('media.flaggedStatus'), value: fmtNum(s.flagged), bad: true },
+            { icon: 'delete', label: t('common.removed'), value: fmtNum(s.removed) },
           ]}
         />
       )}
       {toolbar}
       {list.isPending ? (
-        <Card title="Thư viện media">
+        <Card title={t('media.library')}>
           <LoadingBlock />
         </Card>
       ) : list.isError ? (
-        <Card title="Thư viện media">
+        <Card title={t('media.library')}>
           <ErrorBlock error={list.error} onRetry={() => void list.refetch()} />
         </Card>
       ) : view === 'grid' ? (
         <>
-          <MediaGrid title="Thư viện media" sub={`${fmtNum(meta?.total ?? items.length)} tệp`} tools={viewTools} items={cards} />
+          <MediaGrid title={t('media.library')} sub={t('media.count', { n: fmtNum(meta?.total ?? items.length) })} tools={viewTools} items={cards} />
           {meta && meta.totalPages > 1 && (
             <div className="flex justify-end">
               <TablePager info={{ page: meta.page, totalPages: meta.totalPages, total: meta.total, limit: MEDIA_LIMIT, onPage: setPage }} />
@@ -1028,14 +1041,14 @@ export function MediaView() {
         </>
       ) : (
         <DataTable<AdminMedia>
-          title="Thư viện media"
-          sub={`${fmtNum(meta?.total ?? items.length)} tệp`}
+          title={t('media.library')}
+          sub={t('media.count', { n: fmtNum(meta?.total ?? items.length) })}
           headTools={viewTools}
           columns={columns}
           rows={items}
           rowKey={(m) => m.key}
           actions={actions}
-          emptyText="Không có tệp nào."
+          emptyText={t('media.empty')}
           page={pageOf(meta, setPage, MEDIA_LIMIT)}
         />
       )}

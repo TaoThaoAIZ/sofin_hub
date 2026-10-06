@@ -1,0 +1,441 @@
+{
+  "labels": {
+    "userStatus": {
+      "active": "Active",
+      "restricted": "Restricted",
+      "suspended": "Suspended",
+      "banned": "Banned"
+    },
+    "communityStatus": {
+      "pending_review": "Pending review",
+      "changes_requested": "Changes requested",
+      "rejected": "Rejected",
+      "active": "Active",
+      "suspended": "Suspended",
+      "deleted": "Deleted"
+    },
+    "caseStatus": {
+      "open": "Open",
+      "under_review": "Under review",
+      "resolved": "Resolved",
+      "dismissed": "Dismissed"
+    },
+    "caseRisk": {
+      "low": "Low",
+      "medium": "Medium",
+      "critical": "Critical"
+    },
+    "discovery": {
+      "listed": "Listed",
+      "hidden": "Hidden",
+      "unlisted": "Removed from discovery"
+    },
+    "reasonLabel": {
+      "harassment": "Harassment",
+      "inappropriate": "Inappropriate content",
+      "misinformation": "Misinformation",
+      "other": "Other",
+      "hate_speech": "Hate speech",
+      "scam": "Scam",
+      "copyright": "Copyright",
+      "nsfw": "Sensitive content"
+    },
+    "targetLabel": {
+      "post": "Posts",
+      "comment": "Comments",
+      "member": "Member"
+    },
+    "roleLabel": {
+      "owner": "Owner",
+      "admin": "Admin",
+      "mod": "Moderator",
+      "member": "Member"
+    },
+    "pricingLabel": {
+      "free": "Free",
+      "paid": "Paid",
+      "trial": "Trial"
+    },
+    "restrictionLabel": {
+      "post": "Cannot post",
+      "comment": "Cannot comment",
+      "dm": "Cannot send messages",
+      "create_community": "Cannot create communities",
+      "purchase": "Cannot purchase"
+    },
+    "durationLabel": {
+      "24h": "24 hours",
+      "7d": "7 days",
+      "30d": "30 days",
+      "indefinite": "Indefinitely"
+    },
+    "purchaseStatus": {
+      "succeeded": "Succeeded",
+      "pending": "Pending",
+      "failed": "Failed",
+      "refunded": "Refunded"
+    },
+    "auditAction": {
+      "community_approve": "Approve community",
+      "community_request_changes": "Request community changes",
+      "community_reject": "Reject community",
+      "community_suspend": "Suspend community",
+      "community_restore": "Restore community after suspension",
+      "community_delete": "Delete community",
+      "community_undelete": "Restore deleted community",
+      "community_lock": "Lock community",
+      "community_unlock": "Unlock community",
+      "user_restrict": "Restrict user",
+      "user_suspend": "Suspend user",
+      "user_ban": "Ban user",
+      "user_reinstate": "Reinstate user",
+      "user_warn": "Warn user",
+      "user_revoke_session": "Revoke login session",
+      "case_assign": "Take on case",
+      "case_warn": "Warning (case)",
+      "case_remove_content": "Remove content (case)",
+      "case_restrict_user": "Restrict user (case)",
+      "case_suspend_user": "Suspend user (case)",
+      "case_ban_user": "Ban user (case)",
+      "case_dismiss": "Dismiss case",
+      "case_escalate": "Escalate case risk",
+      "case_resolve": "Close case",
+      "payment_refund_resolve": "Resolve refund",
+      "payment_payout_resolve": "Resolve payout",
+      "report_resolve": "Resolve reports"
+    },
+    "decisionLabel": {
+      "warning": "Warning",
+      "removal": "Content removed",
+      "restriction": "Restriction",
+      "suspension": "Suspension",
+      "ban": "Ban"
+    },
+    "caseEventLabel": {
+      "assign": "took on the case",
+      "warn": "warned the user",
+      "remove_content": "removed the content",
+      "restrict_user": "restricted the user",
+      "suspend_user": "suspended the user",
+      "ban_user": "banned the user",
+      "dismiss": "closed the case (no violation)",
+      "escalate": "escalated the risk level",
+      "resolve": "closed the case",
+      "created": "created the case"
+    },
+    "contentStatus": {
+      "published": "Published",
+      "under_review": "Under review",
+      "hidden": "Hidden",
+      "removed": "Removed",
+      "draft": "Draft",
+      "archived": "Archived",
+      "upcoming": "Upcoming",
+      "live": "Live",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "active": "Active",
+      "flagged": "Flagged",
+      "disabled": "Disabled"
+    },
+    "txStatus": {
+      "succeeded": "Succeeded",
+      "failed": "Failed",
+      "pending": "Pending",
+      "refunded": "Refunded"
+    },
+    "subStatus": {
+      "trialing": "Trial",
+      "active": "Active",
+      "past_due": "Past due",
+      "paused": "Paused",
+      "canceled": "Cancelled",
+      "expired": "Expired"
+    },
+    "refundStatus": {
+      "pending": "New request",
+      "refunding": "Refunding (awaiting gateway)",
+      "approved": "Completed",
+      "rejected": "Rejected"
+    },
+    "chargebackStatus": {
+      "open": "Open",
+      "under_review": "Under review",
+      "won": "Won"
+    },
+    "chargebackReason": {
+      "fraudulent": "Fraudulent",
+      "product_not_received": "Product not received",
+      "duplicate": "Duplicate",
+      "subscription_cancelled": "Subscription cancelled",
+      "unrecognized": "Unrecognized transaction",
+      "product_not_as_described": "Product not as described"
+    },
+    "payoutStatus": {
+      "requested": "Pending",
+      "approved": "Processing",
+      "paid": "Paid out",
+      "failed": "Failed",
+      "on_hold": "On hold",
+      "rejected": "Rejected"
+    },
+    "listedStatus": {
+      "listed": "Listed",
+      "featured": "Featured",
+      "hidden": "Hidden",
+      "unlisted": "Removed from discovery"
+    },
+    "searchVis": {
+      "searchable": "Searchable",
+      "reduced": "Reduced visibility",
+      "hidden": "Hidden"
+    },
+    "featuredLabel": {
+      "featured": "Featured communities",
+      "trending": "Trending",
+      "editors_picks": "Editors' picks",
+      "new_noteworthy": "New & Noteworthy"
+    },
+    "factorLabel": {
+      "memberGrowth": "Member growth",
+      "engagement": "Engagement",
+      "retention": "Retention",
+      "rating": "Rating",
+      "reportPenalty": "Report penalty"
+    },
+    "lessonType": {
+      "text": "Text",
+      "file": "File",
+      "link": "Link"
+    },
+    "mediaKindLabel": {
+      "image": "Image",
+      "document": "Document",
+      "audio": "Audio"
+    },
+    "categoryDefaultName": {
+      "content": "Content",
+      "tech": "Technology",
+      "finance": "Finance",
+      "health": "Health & Fitness",
+      "self": "Personal development",
+      "hobby": "Hobbies",
+      "relationships": "Relationships",
+      "design": "Design"
+    },
+    "ticketStatus": {
+      "new": "New",
+      "open": "Open",
+      "awaiting_reply": "Awaiting reply",
+      "resolved": "Resolved",
+      "closed": "Closed"
+    },
+    "ticketPriority": {
+      "low": "Low",
+      "medium": "Medium",
+      "urgent": "Urgent"
+    },
+    "ticketCategory": {
+      "user": "Users",
+      "payment": "Payments"
+    },
+    "flagStage": {
+      "draft": "Draft",
+      "beta": "Beta",
+      "active": "Live"
+    },
+    "templateStatus": {
+      "active": "In use",
+      "draft": "Draft",
+      "disabled": "Disabled"
+    },
+    "permissionLabel": {
+      "dashboard_view": "View dashboard",
+      "community_manage": "Manage communities",
+      "report_resolve": "Resolve reports",
+      "user_ban": "Ban user",
+      "payment_refund": "Refund",
+      "payout_approve": "Approve payouts",
+      "system_flags": "Edit feature flags",
+      "admin_manage": "Manage admins",
+      "users_view": "View users",
+      "content_manage": "Manage content",
+      "payment_view": "View payments",
+      "payment_manage": "Manage payments",
+      "analytics_view": "View analytics",
+      "support_manage": "Handle support tickets",
+      "audit_view": "View audit log",
+      "system_settings": "System settings"
+    },
+    "staffRoleLabel": {
+      "moderator": "Moderator",
+      "support": "Support",
+      "finance": "Finance"
+    },
+    "integrationCategory": {
+      "payments": "Payments",
+      "storage": "Storage",
+      "analytics": "Analytics"
+    },
+    "segmentLabel": {
+      "free_members": "Free members",
+      "paid_members": "Paid members",
+      "staff": "Admins & moderators"
+    },
+    "mixLabel": {
+      "likes": "Likes",
+      "comments": "Comments",
+      "posts": "Posts",
+      "lessons": "Lesson completions",
+      "lesson_completions": "Lesson completions",
+      "completions": "Lesson completions",
+      "rsvps": "Event attendance",
+      "events": "Event attendance"
+    },
+    "planLabel": {
+      "subscription": "Subscriptions",
+      "new_subscription": "New subscription",
+      "renewal": "Renewal",
+      "course": "Courses",
+      "event": "Events",
+      "one_time": "One-time payment",
+      "trial": "Trial"
+    },
+    "funnelLabel": {
+      "signup": "Created account",
+      "joined": "Joined community",
+      "trial": "Started trial",
+      "paid": "Became paid"
+    },
+    "auditPrefix": {
+      "community": "community",
+      "user": "user",
+      "case": "case",
+      "content": "content",
+      "post": "post",
+      "comment": "comment",
+      "lesson": "lesson",
+      "course": "course",
+      "event": "event",
+      "payment": "payment",
+      "refund": "refund",
+      "payout": "payout",
+      "chargeback": "chargeback",
+      "subscription": "subscription",
+      "discovery": "discovery",
+      "category": "category",
+      "admin": "admin",
+      "role": "role",
+      "flag": "feature flag",
+      "integration": "integration",
+      "notification": "notification",
+      "email_template": "email template",
+      "template": "email template",
+      "settings": "general settings",
+      "setting": "general settings",
+      "report": "report"
+    },
+    "auditVerb": {
+      "create": "Create",
+      "update": "Update",
+      "edit": "Edit",
+      "delete": "Delete",
+      "remove": "Remove",
+      "toggle": "Toggle",
+      "connect": "Connect",
+      "disconnect": "Disconnect",
+      "test": "Test",
+      "reply": "Reply to",
+      "note": "Add note to",
+      "resolve": "Resolve",
+      "close": "Close",
+      "reopen": "Reopen",
+      "escalate": "Escalate",
+      "suspend": "Suspend",
+      "enable": "Enable",
+      "reset": "Reset to default",
+      "reset_2fa": "Reset 2FA for",
+      "broadcast": "Send",
+      "reorder": "Reorder",
+      "move": "Move",
+      "feature": "Feature",
+      "unfeature": "Unfeature",
+      "hide": "Hide",
+      "restore": "Restore",
+      "approve": "Approve",
+      "reject": "Reject",
+      "refund": "Refund",
+      "retry": "Retry",
+      "cancel": "Cancel",
+      "grant": "Grant permission",
+      "revoke": "Revoke permission",
+      "status": "Change status of",
+      "export": "Export",
+      "assign": "Assign"
+    }
+  },
+  "nav": {
+    "groups": {
+      "dash": "Overview",
+      "communities": "Communities",
+      "users": "Users",
+      "content": "Content",
+      "moderation": "Moderation",
+      "payments": "Payments",
+      "discovery": "Discovery",
+      "analytics": "Analytics",
+      "support": "Support",
+      "system": "System"
+    },
+    "kids": {
+      "communities_list": "Community list",
+      "communities_review": "Review",
+      "communities_suspend": "Suspend",
+      "communities_trash": "Delete / Restore",
+      "users_all": "All users",
+      "users_restrict": "Restricted / Suspended",
+      "users_ban": "Ban",
+      "content_posts": "Posts",
+      "content_comments": "Comments",
+      "content_courses": "Courses",
+      "content_lessons": "Lessons",
+      "content_events": "Events",
+      "content_media": "Media",
+      "moderation_queue": "Report queue",
+      "moderation_warning": "Warning",
+      "moderation_remove": "Remove content",
+      "moderation_suspend": "Suspend",
+      "moderation_ban": "Ban",
+      "payments_tx": "Transactions",
+      "payments_subs": "Subscriptions",
+      "payments_refunds": "Refund",
+      "payments_chargebacks": "Chargebacks",
+      "payments_creator": "Creator revenue",
+      "payments_payouts": "Payouts",
+      "discovery_listed": "Listed communities",
+      "discovery_categories": "Categories",
+      "discovery_featured": "Featured",
+      "discovery_rankings": "Rankings",
+      "discovery_seo": "Search visibility",
+      "analytics_users": "Users",
+      "analytics_communities": "Communities",
+      "analytics_engagement": "Engagement",
+      "analytics_retention": "Retention",
+      "analytics_revenue": "Revenue",
+      "analytics_conversion": "Conversion",
+      "support_tickets": "Support tickets",
+      "support_user": "User issues",
+      "support_creator": "Creator issues",
+      "support_payment": "Payment issues",
+      "system_admins": "Admin accounts",
+      "system_roles": "Roles & Permissions",
+      "system_categories": "Categories",
+      "system_flags": "Feature flags",
+      "system_integrations": "Integrations",
+      "system_notifications": "Notifications",
+      "system_email": "Email templates",
+      "system_audit": "Audit log",
+      "system_settings": "General settings"
+    }
+  }
+}

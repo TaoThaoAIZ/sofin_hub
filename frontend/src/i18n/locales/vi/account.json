@@ -1,0 +1,27 @@
+{
+  "roles": {
+    "member": "Thành viên",
+    "mod": "Điều hành viên",
+    "admin": "Quản trị viên",
+    "owner": "Chủ cộng đồng"
+  },
+  "reasons": {
+    "post": "Đăng bài viết",
+    "like_received": "Được thích bài viết",
+    "lesson_complete": "Hoàn thành bài học",
+    "event_rsvp": "Đăng ký sự kiện"
+  },
+  "profile": {
+    "loading": "Đang tải hồ sơ…",
+    "error": "Lỗi",
+    "notFound": "Không tìm thấy người dùng này (có thể tài khoản đã bị xóa).",
+    "loadFail": "Không tải được hồ sơ, vui lòng thử lại.",
+    "home": "Về trang chủ",
+    "joined": "Tham gia {{date}}",
+    "totalPoints": "Tổng điểm",
+    "edit": "Chỉnh sửa hồ sơ",
+    "communities": "Cộng đồng đã tham gia",
+    "noCommunities": "Chưa tham gia cộng đồng công khai nào.",
+    "roleSince": "{{role}} · từ {{date}}"
+  }
+}

@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { useNavigate } from 'react-router-dom';
 import { formatRelative } from '../../../lib/datetime';
 import { KpiGrid } from '../components/Cards';
@@ -15,11 +17,14 @@ const LIMIT = 20;
 type QueueTab = 'all' | 'open' | 'under_review' | 'closed';
 const TAB_STATUS: Record<QueueTab, string> = { all: 'all', open: 'open', under_review: 'under_review', closed: 'resolved,dismissed' };
 
-const RISK_OPTIONS = (Object.keys(CASE_RISK) as CaseRisk[]).map((k) => ({ value: k, label: CASE_RISK[k].label }));
-const REASON_OPTIONS = Object.entries(REASON_LABEL).map(([value, label]) => ({ value, label }));
+const riskOptions = () => (Object.keys(CASE_RISK) as CaseRisk[]).map((k) => ({ value: k, label: CASE_RISK[k].label }));
+const reasonOptions = () => Object.entries(REASON_LABEL).map(([value, label]) => ({ value, label }));
 
 /** Hàng đợi báo cáo: KPI + bảng vụ việc (tab trạng thái, lọc rủi ro/lý do/người phụ trách, tìm kiếm). */
 export function ModerationQueue() {
+  const { t } = useTranslation('admin-pages2');
+  const RISK_OPTIONS = riskOptions();
+  const REASON_OPTIONS = reasonOptions();
   const navigate = useNavigate();
   const summary = useModerationSummary();
   const assignees = useAssignees();
@@ -37,15 +42,15 @@ export function ModerationQueue() {
 
   return (
     <>
-      <PageHeader title="Hàng đợi báo cáo" subtitle="Phân loại nội dung và người dùng bị báo cáo theo mức rủi ro." />
+      <PageHeader title={t('moderation.queue.title')} subtitle={t('moderation.queue.subtitle')} />
       {s && (
         <KpiGrid
           min={170}
           items={[
-            { icon: 'flag', label: 'Báo cáo mở', value: fmtNum(s.open), bad: true },
-            { icon: 'priority_high', label: 'Nghiêm trọng', value: fmtNum(s.critical), bad: true },
-            { icon: 'manage_search', label: 'Đang xem xét', value: fmtNum(s.underReview) },
-            { icon: 'task_alt', label: 'Xử lý hôm nay', value: fmtNum(s.resolvedToday) },
+            { icon: 'flag', label: t('moderation.queue.kpi.open'), value: fmtNum(s.open), bad: true },
+            { icon: 'priority_high', label: t('moderation.queue.kpi.critical'), value: fmtNum(s.critical), bad: true },
+            { icon: 'manage_search', label: t('moderation.queue.kpi.underReview'), value: fmtNum(s.underReview) },
+            { icon: 'task_alt', label: t('moderation.queue.kpi.resolvedToday'), value: fmtNum(s.resolvedToday) },
           ]}
         />
       )}
@@ -54,25 +59,25 @@ export function ModerationQueue() {
         rows={list.data?.data ?? []}
         rowKey={(c) => c.id}
         tabs={[
-          { key: 'all', label: 'Tất cả' },
-          { key: 'open', label: 'Mở', count: s?.open },
-          { key: 'under_review', label: 'Đang xem xét', count: s?.underReview },
-          { key: 'closed', label: 'Đã xử lý' },
+          { key: 'all', label: t('moderation.queue.tab.all') },
+          { key: 'open', label: t('moderation.queue.tab.open'), count: s?.open },
+          { key: 'under_review', label: t('moderation.queue.tab.underReview'), count: s?.underReview },
+          { key: 'closed', label: t('moderation.queue.tab.closed') },
         ]}
         tab={tab}
         onTab={(k) => { setTab(k as QueueTab); setPage(1); }}
-        search={{ value: q, onChange: (v) => { setQ(v); setPage(1); }, placeholder: 'Tìm mã vụ việc, nội dung, người dùng...' }}
+        search={{ value: q, onChange: (v) => { setQ(v); setPage(1); }, placeholder: t('moderation.queue.searchPlaceholder') }}
         filters={[
-          { key: 'risk', label: 'Rủi ro', value: f.risk, options: RISK_OPTIONS, onChange: set('risk') },
-          { key: 'reason', label: 'Lý do', value: f.reason, options: REASON_OPTIONS, onChange: set('reason') },
-          { key: 'assignee', label: 'Người phụ trách', value: f.assignee, options: [{ value: 'me', label: 'Tôi' }, { value: 'unassigned', label: 'Chưa phân công' }, ...(assignees.data ?? []).map((a) => ({ value: a.id, label: a.name }))], onChange: set('assignee') },
-          { key: 'sort', label: 'Sắp xếp', value: f.sort, options: [{ value: 'risk', label: 'Theo rủi ro' }], onChange: set('sort') },
+          { key: 'risk', label: t('moderation.queue.filter.risk'), value: f.risk, options: RISK_OPTIONS, onChange: set('risk') },
+          { key: 'reason', label: t('moderation.queue.filter.reason'), value: f.reason, options: REASON_OPTIONS, onChange: set('reason') },
+          { key: 'assignee', label: t('moderation.queue.filter.assignee'), value: f.assignee, options: [{ value: 'me', label: t('moderation.queue.filter.me') }, { value: 'unassigned', label: t('moderation.queue.filter.unassigned') }, ...(assignees.data ?? []).map((a) => ({ value: a.id, label: a.name }))], onChange: set('assignee') },
+          { key: 'sort', label: t('moderation.queue.filter.sort'), value: f.sort, options: [{ value: 'risk', label: t('moderation.queue.filter.byRisk') }], onChange: set('sort') },
         ]}
         onClearFilters={() => { setF({ risk: '', reason: '', assignee: '', sort: '' }); setPage(1); }}
         loading={list.isPending}
         error={list.isError ? list.error : null}
         onRetry={() => void list.refetch()}
-        emptyText={tab === 'open' ? 'Không có báo cáo nào đang chờ xử lý.' : undefined}
+        emptyText={tab === 'open' ? t('moderation.queue.emptyOpen') : undefined}
         onRow={(c) => navigate(`/admin/moderation/cases/${c.id}`)}
         actions={(c) => actionsFor(c)}
         page={list.data ? { page: list.data.meta.page, totalPages: list.data.meta.totalPages, total: list.data.meta.total, limit: LIMIT, onPage: setPage } : undefined}
@@ -92,26 +97,28 @@ interface LogCfg {
   empty: string;
 }
 
-const SUBTITLE = 'Mọi quyết định được lưu theo: Vụ việc → Quyết định → Quản trị viên → Lý do → Bằng chứng.';
-
-const LOGS: Record<'warnings' | 'removals' | 'suspensions' | 'bans', LogCfg> = {
-  warnings: { title: 'Cảnh cáo', subtitle: SUBTITLE, types: [{ key: 'warning', label: 'Cảnh cáo' }], targetLabel: 'Người dùng', empty: 'Chưa có cảnh cáo nào.' },
-  removals: { title: 'Nội dung đã gỡ', subtitle: SUBTITLE, types: [{ key: 'removal', label: 'Đã gỡ nội dung' }], targetLabel: 'Nội dung', empty: 'Chưa có nội dung nào bị gỡ.' },
-  suspensions: {
-    title: 'Tạm ngưng',
-    subtitle: SUBTITLE,
-    types: [
-      { key: 'suspension', label: 'Tạm ngưng' },
-      { key: 'restriction', label: 'Hạn chế' },
-    ],
-    targetLabel: 'Người dùng',
-    empty: 'Chưa có quyết định nào.',
-  },
-  bans: { title: 'Lệnh cấm', subtitle: SUBTITLE, types: [{ key: 'ban', label: 'Cấm' }], targetLabel: 'Người dùng', empty: 'Chưa có lệnh cấm nào.' },
+const logs = (t: TFunction): Record<'warnings' | 'removals' | 'suspensions' | 'bans', LogCfg> => {
+  const subtitle = t('moderation.log.subtitle');
+  return {
+    warnings: { title: t('moderation.log.warnings.title'), subtitle, types: [{ key: 'warning', label: t('moderation.log.warnings.title') }], targetLabel: t('moderation.log.user'), empty: t('moderation.log.warnings.empty') },
+    removals: { title: t('moderation.log.removals.title'), subtitle, types: [{ key: 'removal', label: t('moderation.log.removals.type') }], targetLabel: t('moderation.log.content'), empty: t('moderation.log.removals.empty') },
+    suspensions: {
+      title: t('moderation.log.suspensions.title'),
+      subtitle,
+      types: [
+        { key: 'suspension', label: t('moderation.log.suspensions.title') },
+        { key: 'restriction', label: t('moderation.log.suspensions.restriction') },
+      ],
+      targetLabel: t('moderation.log.user'),
+      empty: t('moderation.log.suspensions.empty'),
+    },
+    bans: { title: t('moderation.log.bans.title'), subtitle, types: [{ key: 'ban', label: t('moderation.log.bans.type') }], targetLabel: t('moderation.log.user'), empty: t('moderation.log.bans.empty') },
+  };
 };
 
-export function ModerationLog({ kind }: { kind: keyof typeof LOGS }) {
-  const cfg = LOGS[kind];
+export function ModerationLog({ kind }: { kind: 'warnings' | 'removals' | 'suspensions' | 'bans' }) {
+  const { t } = useTranslation('admin-pages2');
+  const cfg = logs(t)[kind];
   const navigate = useNavigate();
   const [type, setType] = useState<DecisionType>(cfg.types[0]!.key);
   const [q, setQ] = useState('');
@@ -122,20 +129,20 @@ export function ModerationLog({ kind }: { kind: keyof typeof LOGS }) {
       <PageHeader title={cfg.title} subtitle={cfg.subtitle} />
       <DataTable
         columns={[
-          { key: 'case', label: 'Mã vụ việc', render: (d) => <MonoCell>{d.case?.caseCode ?? '—'}</MonoCell> },
-          { key: 'target', label: cfg.targetLabel, w: 2, render: (d) => <MainCell name={d.target.name} sub={d.target.type === 'user' ? 'Người dùng' : d.target.type === 'content' ? 'Nội dung' : d.target.type} icon={kind === 'removals' ? 'article' : undefined} avatar={kind !== 'removals'} /> },
-          { key: 'decision', label: 'Quyết định', render: (d) => <TextCell>{DECISION_LABEL[d.decision] ?? d.decision}</TextCell> },
-          { key: 'admin', label: 'Quản trị viên', render: (d) => <TextCell>{d.admin.name}</TextCell> },
-          { key: 'reason', label: 'Lý do', render: (d) => <TextCell>{d.reason ?? '—'}</TextCell> },
-          { key: 'evidence', label: 'Bằng chứng', w: 1.5, render: (d) => <TextCell>{d.evidence ?? '—'}</TextCell> },
-          { key: 'date', label: 'Ngày', render: (d) => <MutedCell>{formatRelative(d.createdAt)}</MutedCell> },
+          { key: 'case', label: t('moderation.log.col.caseCode'), render: (d) => <MonoCell>{d.case?.caseCode ?? '—'}</MonoCell> },
+          { key: 'target', label: cfg.targetLabel, w: 2, render: (d) => <MainCell name={d.target.name} sub={d.target.type === 'user' ? t('moderation.log.user') : d.target.type === 'content' ? t('moderation.log.content') : d.target.type} icon={kind === 'removals' ? 'article' : undefined} avatar={kind !== 'removals'} /> },
+          { key: 'decision', label: t('moderation.log.col.decision'), render: (d) => <TextCell>{DECISION_LABEL[d.decision] ?? d.decision}</TextCell> },
+          { key: 'admin', label: t('moderation.log.col.admin'), render: (d) => <TextCell>{d.admin.name}</TextCell> },
+          { key: 'reason', label: t('moderation.log.col.reason'), render: (d) => <TextCell>{d.reason ?? '—'}</TextCell> },
+          { key: 'evidence', label: t('moderation.log.col.evidence'), w: 1.5, render: (d) => <TextCell>{d.evidence ?? '—'}</TextCell> },
+          { key: 'date', label: t('moderation.log.col.date'), render: (d) => <MutedCell>{formatRelative(d.createdAt)}</MutedCell> },
         ]}
         rows={list.data?.data ?? []}
         rowKey={(d) => d.id}
-        tabs={cfg.types.length > 1 ? cfg.types.map((t) => ({ key: t.key, label: t.label })) : undefined}
+        tabs={cfg.types.length > 1 ? cfg.types.map((ty) => ({ key: ty.key, label: ty.label })) : undefined}
         tab={type}
         onTab={(k) => { setType(k as DecisionType); setPage(1); }}
-        search={{ value: q, onChange: (v) => { setQ(v); setPage(1); }, placeholder: 'Tìm vụ việc...' }}
+        search={{ value: q, onChange: (v) => { setQ(v); setPage(1); }, placeholder: t('moderation.log.searchPlaceholder') }}
         loading={list.isPending}
         error={list.isError ? list.error : null}
         onRetry={() => void list.refetch()}

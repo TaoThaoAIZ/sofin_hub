@@ -1,0 +1,43 @@
+{
+  "loading": "Đang tải…",
+  "footer": {
+    "terms": "Điều khoản sử dụng",
+    "privacy": "Chính sách bảo mật",
+    "cookie": "Cookie",
+    "copyright": "© 2026 SofinHub. Bảo lưu mọi quyền."
+  },
+  "legal": {
+    "backToRegister": "Quay lại đăng ký",
+    "updatedAt": "Cập nhật lần cuối: {{date}}",
+    "doneReading": "Đã đọc xong, quay lại đăng ký",
+    "scrollToConfirm": "Cuộn xuống hết trang để xác nhận bạn đã đọc"
+  },
+  "requireLogin": {
+    "loading": "Đang tải…",
+    "message": "Bạn cần đăng nhập để xem trang này.",
+    "login": "Đăng nhập"
+  },
+  "pager": {
+    "prev": "Trang trước",
+    "next": "Trang sau",
+    "pageOf": "Trang <b>{{page}}</b> / {{total}}"
+  },
+  "popup": {
+    "close": "Đóng",
+    "ok": "Đã hiểu",
+    "confirm": "Đồng ý",
+    "cancel": "Hủy",
+    "processing": "Đang xử lý…"
+  },
+  "formField": {
+    "hidePassword": "Ẩn mật khẩu",
+    "showPassword": "Hiện mật khẩu"
+  },
+  "card": {
+    "number": "Số thẻ",
+    "expiryAria": "Ngày hết hạn (MM / YY)",
+    "cvcAria": "Mã CVC",
+    "paymentInfo": "Thông tin thanh toán",
+    "expiry": "Hết hạn"
+  }
+}

@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { ApiError } from '../../../lib/api';
+import i18n, { currentLocale } from '../../../i18n';
 import { formatCents, formatDate } from '../../../lib/datetime';
 import { formatMoney } from '../../../lib/format';
 import { useMenu, useToast } from '../../admin/components/overlay';
@@ -11,25 +13,25 @@ import { useCommissions, useReferral, useReferralUsers, useRemind } from '../ref
 import type { ReferralKind, ReferralRow, ReferralRowStatus } from '../referral/types';
 import { SCard, SHead } from '../ui';
 
-const errText = (e: unknown) => (e instanceof ApiError ? e.message : 'Đã có lỗi xảy ra, vui lòng thử lại');
+const errText = (e: unknown) => (e instanceof ApiError ? e.message : i18n.t('common.genericError', { ns: 'settings' }));
 
 /** Tiền hoa hồng: member = USD cent, creator = VND (đơn vị đồng, không có phần thập phân). */
 const money = (amount: number, currency: string) => (currency === 'VND' ? formatMoney(amount, 'VND') : formatCents(amount));
 /** 3000 bps -> "30%", 250 -> "2,5%". */
-const pct = (bps: number) => `${(bps / 100).toLocaleString('vi-VN', { maximumFractionDigits: 2 })}%`;
+const pct = (bps: number) => `${(bps / 100).toLocaleString(currentLocale(), { maximumFractionDigits: 2 })}%`;
 
 const KINDS: { id: ReferralKind; label: string }[] = [
-  { id: 'creator', label: 'Giới thiệu người tạo cộng đồng' },
-  { id: 'member', label: 'Giới thiệu thành viên' },
+  { id: 'creator', label: 'referral.kindCreator' },
+  { id: 'member', label: 'referral.kindMember' },
 ];
 
 const STATUS: Record<ReferralRowStatus, { label: string; bg: string; fg: string }> = {
-  paid: { label: 'Đang trả phí', bg: '#dcfce7', fg: '#15803d' },
-  trial: { label: 'Đang dùng thử', bg: '#fef3c7', fg: '#b45309' },
-  cancel: { label: 'Đã hủy', bg: '#f1efed', fg: '#57534e' },
+  paid: { label: 'referral.statusPaid', bg: '#dcfce7', fg: '#15803d' },
+  trial: { label: 'referral.statusTrial', bg: '#fef3c7', fg: '#b45309' },
+  cancel: { label: 'referral.statusCancel', bg: '#f1efed', fg: '#57534e' },
   none: { label: '', bg: '#f1efed', fg: '#78716c' },
 };
-const NONE_LABEL: Record<ReferralKind, string> = { creator: 'Chưa trả phí', member: 'Chưa tham gia' };
+const NONE_LABEL: Record<ReferralKind, string> = { creator: 'referral.noneCreator', member: 'referral.noneMember' };
 const AVATARS: readonly [string, string][] = [
   ['#fee2e2', '#b91c1c'],
   ['#ede9fe', '#6d28d9'],
@@ -72,12 +74,13 @@ async function copyText(text: string): Promise<boolean> {
 }
 
 function CommissionModal({ row, kind, currency, onClose }: { row: ReferralRow; kind: ReferralKind; currency: string; onClose: () => void }) {
+  const { t } = useTranslation('settings');
   const q = useCommissions(row.userId, kind);
   return (
-    <SettingsModal title="Chi tiết hoa hồng" body={`${row.name} · đã nhận ${money(row.earnedCents, currency)}`} onClose={onClose}>
-      {q.isPending && <p className="py-3 text-center text-stone-400">Đang tải…</p>}
+    <SettingsModal title={t('referral.commissionTitle')} body={t('referral.commissionBody', { name: row.name, amount: money(row.earnedCents, currency) })} onClose={onClose}>
+      {q.isPending && <p className="py-3 text-center text-stone-400">{t('referral.loading')}</p>}
       {q.isError && <p role="alert" className="py-3 text-center text-[#dc2626]">{errText(q.error)}</p>}
-      {q.data && q.data.data.length === 0 && <p className="rounded-xl bg-[#faf7f4] px-4 py-5 text-center text-sm text-stone-500">Chưa có khoản hoa hồng nào từ người này.</p>}
+      {q.data && q.data.data.length === 0 && <p className="rounded-xl bg-[#faf7f4] px-4 py-5 text-center text-sm text-stone-500">{t('referral.noCommission')}</p>}
       {q.data && q.data.data.length > 0 && (
         <ul className="m-0 flex max-h-[280px] list-none flex-col gap-2 overflow-y-auto p-0">
           {q.data.data.map((c) => (
@@ -85,20 +88,21 @@ function CommissionModal({ row, kind, currency, onClose }: { row: ReferralRow; k
               <span className="min-w-0">
                 <b className={`block font-bold ${c.status === 'void' ? 'text-stone-400 line-through' : ''}`}>{money(c.amountCents, q.data.currency)}</b>
                 <span className="text-xs text-stone-500">
-                  {formatDate(c.createdAt)} · {pct(c.rateBps)} của {money(c.baseCents, q.data.currency)}
+                  {t('referral.commissionLine', { date: formatDate(c.createdAt), rate: pct(c.rateBps), base: money(c.baseCents, q.data.currency) })}
                 </span>
               </span>
-              <span className="text-xs font-semibold text-stone-500">{c.status === 'paid' ? 'Đã chi trả' : c.status === 'void' ? 'Đã hủy' : 'Chờ chi trả'}</span>
+              <span className="text-xs font-semibold text-stone-500">{c.status === 'paid' ? t('referral.cPaid') : c.status === 'void' ? t('referral.cVoid') : t('referral.cPending')}</span>
             </li>
           ))}
         </ul>
       )}
-      <ModalActions cancelLabel="Đóng" okLabel="Xong" onCancel={onClose} onOk={onClose} />
+      <ModalActions cancelLabel={t('common.close')} okLabel={t('common.done')} onCancel={onClose} onOk={onClose} />
     </SettingsModal>
   );
 }
 
 export function ReferralTab() {
+  const { t } = useTranslation('settings');
   const toast = useToast();
   const [kind, setKind] = useState<ReferralKind>('creator');
   const [all, setAll] = useState(false);
@@ -125,42 +129,42 @@ export function ReferralTab() {
 
   const copy = async () => {
     if (!link) return;
-    if (await copyText(link)) toast.success('Đã sao chép link giới thiệu');
-    else toast.error('Không sao chép được, hãy chọn và sao chép link thủ công');
+    if (await copyText(link)) toast.success(t('referral.copied'));
+    else toast.error(t('referral.copyFail'));
   };
 
   const kpis = [
-    { icon: 'group_add', label: 'Người đã đăng ký', v: String(o?.kpis.registered.value ?? 0), delta: o?.kpis.registered.delta != null ? `+${o.kpis.registered.delta}` : '', down: false, note: 'so với tháng trước' },
-    { icon: 'workspace_premium', label: 'Đang trả phí', v: String(o?.kpis.paying.value ?? 0), delta: '', down: false, note: 'so với tháng trước' },
+    { icon: 'group_add', label: t('referral.kpiRegistered'), v: String(o?.kpis.registered.value ?? 0), delta: o?.kpis.registered.delta != null ? `+${o.kpis.registered.delta}` : '', down: false, note: t('referral.vsLastMonth') },
+    { icon: 'workspace_premium', label: t('referral.kpiPaying'), v: String(o?.kpis.paying.value ?? 0), delta: '', down: false, note: t('referral.vsLastMonth') },
     {
       icon: 'paid',
-      label: 'Hoa hồng tháng này',
+      label: t('referral.kpiMonth'),
       v: money(o?.kpis.commissionThisMonth.cents ?? 0, currency),
       delta: o?.kpis.commissionThisMonth.deltaPct != null ? `${o.kpis.commissionThisMonth.deltaPct > 0 ? '+' : ''}${o.kpis.commissionThisMonth.deltaPct}%` : '',
       down: (o?.kpis.commissionThisMonth.deltaPct ?? 0) < 0,
-      note: 'so với tháng trước',
+      note: t('referral.vsLastMonth'),
     },
-    { icon: 'account_balance_wallet', label: 'Chờ chi trả', v: money(o?.kpis.pendingPayout.cents ?? 0, currency), delta: '', down: false, note: o ? `Chi trả ngày ${formatDate(o.kpis.pendingPayout.payoutOn)}` : '' },
+    { icon: 'account_balance_wallet', label: t('referral.kpiPending'), v: money(o?.kpis.pendingPayout.cents ?? 0, currency), delta: '', down: false, note: o ? t('referral.payoutOn', { date: formatDate(o.kpis.pendingPayout.payoutOn) }) : '' },
   ];
 
   const steps = [
-    { n: '1', t: 'Chia sẻ link', s: `Ai bấm link được ghi nhận cho bạn trong ${o?.rates.attributionDays ?? 60} ngày.` },
-    { n: '2', t: kind === 'creator' ? 'Họ mở cộng đồng' : 'Họ tham gia cộng đồng', s: 'Bạn thấy họ ở bảng dưới ngay khi họ bắt đầu dùng thử.' },
-    { n: '3', t: 'Bạn nhận hoa hồng', s: `Mỗi tháng họ thanh toán, bạn nhận ${rate}.` },
+    { n: '1', t: t('referral.step1Title'), s: t('referral.step1Body', { days: o?.rates.attributionDays ?? 60 }) },
+    { n: '2', t: kind === 'creator' ? t('referral.step2Creator') : t('referral.step2Member'), s: t('referral.step2Body') },
+    { n: '3', t: t('referral.step3Title'), s: t('referral.step3Body', { rate }) },
   ];
 
   const rowMenu = (e: React.MouseEvent<HTMLElement>, r: ReferralRow) =>
     openMenu(
       e,
       [
-        { icon: 'chat', label: 'Gửi tin nhắn', onClick: () => void dm.startConversation(r.userId) },
-        { icon: 'receipt_long', label: 'Chi tiết hoa hồng', onClick: () => setDetail(r) },
+        { icon: 'chat', label: t('referral.menuMessage'), onClick: () => void dm.startConversation(r.userId) },
+        { icon: 'receipt_long', label: t('referral.menuDetail'), onClick: () => setDetail(r) },
         ...(r.status === 'trial'
           ? [
               {
                 icon: 'notifications',
-                label: 'Nhắc nâng cấp gói',
-                onClick: () => remind.mutate({ userId: r.userId, kind }, { onSuccess: () => toast.success(`Đã gửi lời nhắc cho ${r.name}`), onError: (er) => toast.error(errText(er)) }),
+                label: t('referral.menuRemind'),
+                onClick: () => remind.mutate({ userId: r.userId, kind }, { onSuccess: () => toast.success(t('referral.remindedToast', { name: r.name })), onError: (er) => toast.error(errText(er)) }),
               },
             ]
           : []),
@@ -188,7 +192,7 @@ export function ReferralTab() {
                 className={`flex h-11 items-center gap-2 rounded-[11px] border-[1.5px] px-[18px] text-[15px] font-semibold whitespace-nowrap ${on ? 'border-[#fdba74] bg-white text-brand' : 'border-transparent bg-transparent text-stone-600'}`}
               >
                 {on && <MaterialIcon name="settings" size={19} filled color="#f26a1b" />}
-                {k.label}
+                {t(k.label)}
               </button>
             );
           })}
@@ -196,7 +200,7 @@ export function ReferralTab() {
         <div className="flex-1" />
         <Link to="/settings/thanh-toan" className="flex items-center gap-2 text-[15px] font-semibold text-brand underline">
           <MaterialIcon name="settings" size={21} />
-          Cài đặt nhận tiền
+          {t('referral.payoutSettings')}
           <MaterialIcon name="arrow_forward" size={19} />
         </Link>
       </div>
@@ -207,18 +211,18 @@ export function ReferralTab() {
         </span>
         <div className="min-w-0 flex-[1_1_420px] pr-[72px]">
           <h1 className="m-0 text-[clamp(26px,2.6vw,34px)] leading-[1.2] font-extrabold tracking-[-.02em]">
-            Nhận <span className="text-brand">{rate}</span> {kind === 'creator' ? 'mỗi tháng từ người bạn giới thiệu mở cộng đồng' : 'mỗi tháng từ thành viên bạn mời vào cộng đồng trả phí'}
+            {t('referral.heroGet')} <span className="text-brand">{rate}</span> {kind === 'creator' ? t('referral.heroCreator') : t('referral.heroMember')}
           </h1>
           <div className="mt-3 text-base text-stone-600">
-            {kind === 'creator' ? 'Hoa hồng định kỳ, trả mỗi tháng người đó còn dùng gói trả phí.' : 'Áp dụng cho cộng đồng có bật chương trình giới thiệu thành viên.'}
+            {kind === 'creator' ? t('referral.heroSubCreator') : t('referral.heroSubMember')}
           </div>
         </div>
         <div className="relative min-w-[280px] flex-[0_1_460px]">
-          <div className="mb-2 text-sm text-stone-700">Link giới thiệu của bạn</div>
+          <div className="mb-2 text-sm text-stone-700">{t('referral.yourLink')}</div>
           <div className="flex gap-3">
             <div className="flex h-[50px] min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-[#f0e2d7] bg-white px-4">
-              <span className="min-w-0 flex-1 truncate text-[14.5px]">{link ? link.replace(/^https?:\/\//, '') : overview.isError ? 'Không tải được link' : '…'}</span>
-              <button type="button" aria-label="Sao chép link" onClick={copy} disabled={!link} className="border-0 bg-transparent p-0 text-stone-600">
+              <span className="min-w-0 flex-1 truncate text-[14.5px]">{link ? link.replace(/^https?:\/\//, '') : overview.isError ? t('referral.linkFail') : '…'}</span>
+              <button type="button" aria-label={t('referral.copyLinkLabel')} onClick={copy} disabled={!link} className="border-0 bg-transparent p-0 text-stone-600">
                 <MaterialIcon name="content_copy" size={20} />
               </button>
             </div>
@@ -228,7 +232,7 @@ export function ReferralTab() {
               disabled={!link}
               className="h-[50px] rounded-xl border-0 bg-gradient-to-b from-[#ff8f45] to-[#f26a1b] px-7 text-[15px] font-bold text-white shadow-[0_8px_20px_rgba(242,106,27,.3)] disabled:opacity-60"
             >
-              Sao chép
+              {t('referral.copyBtn')}
             </button>
           </div>
         </div>
@@ -267,13 +271,13 @@ export function ReferralTab() {
         <SHead
           icon="group_add"
           size="lg"
-          title="Người bạn đã giới thiệu"
-          sub="Danh sách những người đã đăng ký từ link giới thiệu của bạn."
+          title={t('referral.listTitle')}
+          sub={t('referral.listSub')}
           className="mb-4"
           action={
             total > 4 ? (
               <button type="button" onClick={() => setAll((v) => !v)} className="flex items-center gap-1.5 border-0 bg-transparent p-0 text-[15px] font-bold text-[#15803d] underline">
-                {all ? 'Thu gọn' : `Xem tất cả ${total}`}
+                {all ? t('referral.collapse') : t('referral.viewAll', { total })}
                 <MaterialIcon name="arrow_forward" size={19} color="#f26a1b" />
               </button>
             ) : undefined
@@ -282,20 +286,20 @@ export function ReferralTab() {
         <div className="overflow-x-auto">
           <div className="min-w-[820px]">
             <div className={`grid ${COLS} gap-3 rounded-xl bg-[#f7f4f1] px-4 py-3.5 text-[13.5px] text-stone-600`}>
-              <span>Người dùng</span>
-              <span>Cộng đồng</span>
-              <span>Ngày đăng ký</span>
-              <span>Trạng thái</span>
-              <span>Hoa hồng đã nhận</span>
+              <span>{t('referral.colUser')}</span>
+              <span>{t('referral.colCommunity')}</span>
+              <span>{t('referral.colSignup')}</span>
+              <span>{t('referral.colStatus')}</span>
+              <span>{t('referral.colEarned')}</span>
               <span />
             </div>
-            {users.isPending && <p className="py-8 text-center text-stone-400">Đang tải…</p>}
+            {users.isPending && <p className="py-8 text-center text-stone-400">{t('referral.loading')}</p>}
             {users.isError && <p role="alert" className="py-8 text-center text-[#dc2626]">{errText(users.error)}</p>}
             {users.data && rows.length === 0 && (
               <div className="py-10 text-center">
                 <MaterialIcon name="group_add" size={34} color="#fdba74" />
-                <div className="mt-2 text-[15px] font-bold">Chưa có ai đăng ký từ link của bạn</div>
-                <div className="mt-1 text-sm text-stone-500">Sao chép link giới thiệu ở trên và chia sẻ cho bạn bè để bắt đầu nhận hoa hồng.</div>
+                <div className="mt-2 text-[15px] font-bold">{t('referral.emptyTitle')}</div>
+                <div className="mt-1 text-sm text-stone-500">{t('referral.emptySub')}</div>
               </div>
             )}
             {rows.map((r, i) => {
@@ -320,11 +324,11 @@ export function ReferralTab() {
                   <span>
                     <span style={{ background: st.bg, color: st.fg }} className="inline-flex h-[30px] items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold whitespace-nowrap">
                       <span style={{ background: st.fg }} className="size-[7px] rounded-full" />
-                      {r.status === 'none' ? NONE_LABEL[kind] : st.label}
+                      {r.status === 'none' ? t(NONE_LABEL[kind]) : t(st.label)}
                     </span>
                   </span>
                   <span className="text-stone-700">{r.earnedCents > 0 ? money(r.earnedCents, currency) : '—'}</span>
-                  <button type="button" aria-label={`Tùy chọn cho ${r.name}`} onClick={(e) => rowMenu(e, r)} className="border-0 bg-transparent p-0 text-stone-800">
+                  <button type="button" aria-label={t('referral.rowOptions', { name: r.name })} onClick={(e) => rowMenu(e, r)} className="border-0 bg-transparent p-0 text-stone-800">
                     <MaterialIcon name="more_horiz" size={22} />
                   </button>
                 </div>

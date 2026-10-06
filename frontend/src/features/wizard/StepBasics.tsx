@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { MaterialIcon } from '../../components/ui/MaterialIcon';
 import { FieldError } from '../../components/ui/FieldMessage';
 import type { Category } from '../courses/types';
@@ -39,21 +40,22 @@ export function StepBasics({
   onSlugChange: (v: string) => void;
   onNameChange: (v: string) => void;
 }) {
+  const { t } = useTranslation('wizard');
   return (
     <div className="flex flex-col gap-[22px] rounded-[18px] border border-[#f0ebe6] bg-white p-[22px] shadow-[0_4px_16px_rgba(120,60,20,.04)]">
-      <WField icon="auto_awesome" label="Tên cộng đồng" htmlFor="wz-name" error={errors.name} hint="Ví dụ hay: “Viết Content Ra Đơn”, “Chạy Bộ 5K Cho Người Mới”" right={`${form.name.length}/30`}>
+      <WField icon="auto_awesome" label={t('basics.name')} htmlFor="wz-name" error={errors.name} hint={t('basics.nameHint')} right={`${form.name.length}/30`}>
         <input
           id="wz-name"
           value={form.name}
           maxLength={30}
           onChange={(e) => onNameChange(e.target.value)}
-          placeholder="Ví dụ: Lớp Gốm Cuối Tuần"
+          placeholder={t('basics.namePlaceholder')}
           aria-invalid={!!errors.name}
           className={`${inputCls(errors.name)} h-12`}
         />
       </WField>
 
-      <WField icon="link" label="Đường dẫn" htmlFor="wz-slug" error={errors.slug} hint="Đổi đường dẫn sau này sẽ làm hỏng các link cũ – nên chốt ngay từ đầu.">
+      <WField icon="link" label={t('basics.slug')} htmlFor="wz-slug" error={errors.slug} hint={t('basics.slugHint')}>
         <div className={`flex h-12 overflow-hidden rounded-xl border-[1.5px] focus-within:border-brand ${errors.slug ? 'border-red-400' : 'border-[#e7e0da]'}`}>
           <span className="flex flex-none items-center border-r-[1.5px] border-[#e7e0da] bg-[#f5f2ef] px-4 text-[15px] font-semibold text-stone-600 max-sm:px-2.5 max-sm:text-[13px]">sofinhub.com/</span>
           <input
@@ -61,7 +63,7 @@ export function StepBasics({
             value={form.slug}
             maxLength={40}
             onChange={(e) => onSlugChange(e.target.value)}
-            placeholder="ten-cong-dong"
+            placeholder={t('basics.slugPlaceholder')}
             aria-invalid={!!errors.slug}
             className="min-w-0 flex-1 border-0 px-3.5 text-[15px] font-medium outline-0"
           />
@@ -70,20 +72,20 @@ export function StepBasics({
         {(slugStatus === 'taken' || slugStatus === 'invalid') && !errors.slug && slugReason && <FieldError>{slugReason}</FieldError>}
       </WField>
 
-      <WField icon="description" label="Mô tả ngắn" htmlFor="wz-desc" error={errors.description} hint="Hiện trên thẻ cộng đồng ở trang Khám phá" right={`${form.description.length}/150`}>
+      <WField icon="description" label={t('basics.description')} htmlFor="wz-desc" error={errors.description} hint={t('basics.descriptionHint')} right={`${form.description.length}/150`}>
         <textarea
           id="wz-desc"
           value={form.description}
           maxLength={150}
           onChange={(e) => set({ description: e.target.value }, ['description'])}
-          placeholder="Một câu nói rõ thành viên nhận được gì"
+          placeholder={t('basics.descriptionPlaceholder')}
           aria-invalid={!!errors.description}
           className={`${inputCls(errors.description)} h-[84px] resize-none py-3 leading-[1.55]`}
         />
       </WField>
 
-      <WField icon="sell" label="Danh mục" error={errors.category}>
-        <div role="radiogroup" aria-label="Danh mục" className="flex flex-wrap gap-2.5">
+      <WField icon="sell" label={t('basics.category')} error={errors.category}>
+        <div role="radiogroup" aria-label={t('basics.category')} className="flex flex-wrap gap-2.5">
           {categories.map((c) => {
             const on = form.category === c.id;
             const ui = CATEGORY_UI[c.id] ?? { icon: 'sell', color: '#f26a1b' };
@@ -108,12 +110,13 @@ export function StepBasics({
 }
 
 function SlugBadge({ status }: { status: SlugStatus }) {
+  const { t } = useTranslation('wizard');
   if (status === 'idle') return null;
   const map = {
-    checking: { icon: 'progress_activity', text: 'Đang kiểm tra', cls: 'text-stone-500' },
-    available: { icon: 'check', text: 'Còn trống', cls: 'text-green-700' },
-    taken: { icon: 'close', text: 'Đã có người dùng', cls: 'text-red-700' },
-    invalid: { icon: 'close', text: 'Không hợp lệ', cls: 'text-red-700' },
+    checking: { icon: 'progress_activity', text: t('basics.slugChecking'), cls: 'text-stone-500' },
+    available: { icon: 'check', text: t('basics.slugAvailable'), cls: 'text-green-700' },
+    taken: { icon: 'close', text: t('basics.slugTaken'), cls: 'text-red-700' },
+    invalid: { icon: 'close', text: t('basics.slugInvalid'), cls: 'text-red-700' },
   } as const;
   const m = map[status];
   return (

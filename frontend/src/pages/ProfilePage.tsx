@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import { Footer } from '../components/layout/Footer';
 import { Header } from '../components/layout/Header';
@@ -8,7 +9,7 @@ import { useAuth } from '../features/auth/AuthContext';
 import { RequireAuth } from '../features/auth/RequireAuth';
 import { Avatar } from '../features/account/components/Avatar';
 import { usePublicProfile } from '../features/account/queries';
-import { ROLE_LABEL, formatDate } from '../features/account/roles';
+import { roleLabel, formatDate } from '../features/account/roles';
 
 export function ProfilePage() {
   return (
@@ -22,6 +23,7 @@ export function ProfilePage() {
 const safeUrl = (u: string) => (/^https?:\/\//i.test(u) ? u : null);
 
 function ProfileContent() {
+  const { t } = useTranslation('account');
   const { id = '' } = useParams();
   const { user } = useAuth();
   const { data: profile, isPending, error } = usePublicProfile(id);
@@ -30,20 +32,20 @@ function ProfileContent() {
     <div className="min-h-screen bg-white">
       <Header />
       <main className="mx-auto flex w-full max-w-[860px] flex-col gap-6 px-4 py-8 md:py-12">
-        {isPending && <p className="py-16 text-center text-stone-500">Đang tải hồ sơ…</p>}
+        {isPending && <p className="py-16 text-center text-stone-500">{t('profile.loading')}</p>}
 
         {error && (
           <div className="grid place-items-center gap-3 py-16 text-center">
-            <p className="m-0 text-5xl font-extrabold text-brand">{error instanceof ApiError && error.status === 404 ? '404' : 'Lỗi'}</p>
+            <p className="m-0 text-5xl font-extrabold text-brand">{error instanceof ApiError && error.status === 404 ? '404' : t('profile.error')}</p>
             <p className="m-0 text-stone-600">
               {error instanceof ApiError && error.status === 404
-                ? 'Không tìm thấy người dùng này (có thể tài khoản đã bị xóa).'
+                ? t('profile.notFound')
                 : error instanceof ApiError
                   ? error.message
-                  : 'Không tải được hồ sơ, vui lòng thử lại.'}
+                  : t('profile.loadFail')}
             </p>
             <ButtonLink to="/" className="h-10 rounded-[14px] px-[18px] text-sm font-semibold">
-              Về trang chủ
+              {t('profile.home')}
             </ButtonLink>
           </div>
         )}
@@ -70,27 +72,27 @@ function ProfileContent() {
                   )}
                   <span className="flex items-center gap-1.5">
                     <MaterialIcon name="calendar_month" size={18} />
-                    Tham gia {formatDate(profile.joinedAt)}
+                    {t('profile.joined', { date: formatDate(profile.joinedAt) })}
                   </span>
                 </div>
               </div>
               <div className="flex flex-col items-end gap-3">
                 <div className="glass-chip rounded-2xl px-4 py-2 text-center">
                   <div className="text-2xl font-extrabold text-brand">{profile.totalPoints}</div>
-                  <div className="text-xs text-stone-500">Tổng điểm</div>
+                  <div className="text-xs text-stone-500">{t('profile.totalPoints')}</div>
                 </div>
                 {user?.id === profile.id && (
                   <ButtonLink to="/settings" className="h-10 rounded-[14px] px-4 text-sm font-semibold">
-                    Chỉnh sửa hồ sơ
+                    {t('profile.edit')}
                   </ButtonLink>
                 )}
               </div>
             </section>
 
             <section>
-              <h2 className="mb-3 text-xl font-bold">Cộng đồng đã tham gia</h2>
+              <h2 className="mb-3 text-xl font-bold">{t('profile.communities')}</h2>
               {profile.communities.length === 0 ? (
-                <p className="glass rounded-2xl p-5 text-stone-500">Chưa tham gia cộng đồng công khai nào.</p>
+                <p className="glass rounded-2xl p-5 text-stone-500">{t('profile.noCommunities')}</p>
               ) : (
                 <ul className="m-0 grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-2">
                   {profile.communities.map((c) => (
@@ -100,7 +102,7 @@ function ProfileContent() {
                         <div className="min-w-0">
                           <div className="truncate font-semibold">{c.course.title}</div>
                           <div className="text-[13px] text-stone-500">
-                            {ROLE_LABEL[c.role] ?? c.role} · từ {formatDate(c.joinedAt)}
+                            {t('profile.roleSince', { role: roleLabel(c.role), date: formatDate(c.joinedAt) })}
                           </div>
                         </div>
                       </Link>

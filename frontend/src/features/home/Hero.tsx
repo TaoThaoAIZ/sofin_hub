@@ -1,4 +1,6 @@
 import { useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
+import { currentLocale } from '../../i18n';
 import { Button } from '../../components/ui/Button';
 import { GraduationCapIcon, PathIcon, SearchIcon } from '../../components/ui/icons';
 import { usePlatformStats } from '../courses/queries';
@@ -6,7 +8,6 @@ import type { PlatformStats } from '../courses/types';
 
 const STAT_ITEMS: {
   key: keyof PlatformStats;
-  label: string;
   bg: string;
   fg: string;
   d: string;
@@ -14,31 +15,27 @@ const STAT_ITEMS: {
 }[] = [
   {
     key: 'learners',
-    label: 'học viên',
     bg: '#ffe7d4',
     fg: '#f26a1b',
     d: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21v-1a6 6 0 0 1 12 0v1M16 3.5a4 4 0 0 1 0 7.5M22 21v-1a6 6 0 0 0-4-5.6',
-    format: (n) => n.toLocaleString('vi-VN'),
+    format: (n) => n.toLocaleString(currentLocale()),
   },
   {
     key: 'courses',
-    label: 'cộng đồng',
     bg: '#ede9fe',
     fg: '#8b5cf6',
     d: 'M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5zM20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5a1.5 1.5 0 0 0 1.5-1.5z',
-    format: (n) => n.toLocaleString('vi-VN'),
+    format: (n) => n.toLocaleString(currentLocale()),
   },
   {
     key: 'instructors',
-    label: 'chủ cộng đồng',
     bg: '#dbeafe',
     fg: '#3b82f6',
     d: 'M12 4 2 9l10 5 10-5zM6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5M22 9v6',
-    format: (n) => n.toLocaleString('vi-VN'),
+    format: (n) => n.toLocaleString(currentLocale()),
   },
   {
     key: 'rating',
-    label: 'điểm đánh giá trung bình',
     bg: '#dcfce7',
     fg: '#22c55e',
     d: 'm12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z',
@@ -47,6 +44,7 @@ const STAT_ITEMS: {
 ];
 
 export function Hero({ onSearch }: { onSearch: (q: string) => void }) {
+  const { t } = useTranslation('home');
   const [text, setText] = useState('');
   const { data: stats } = usePlatformStats();
 
@@ -60,18 +58,17 @@ export function Hero({ onSearch }: { onSearch: (q: string) => void }) {
       <div>
         <div className="glass mb-[18px] inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-bold tracking-[0.5px] text-brand">
           <GraduationCapIcon size={16} />
-          NỀN TẢNG HỌC TẬP TRỰC TUYẾN
+          {t('hero.badge')}
         </div>
 
         <h1 className="m-0 text-[clamp(30px,3.2vw,50px)] leading-[1.1] font-extrabold tracking-[-2px] text-balance">
-          Học kỹ năng mới.
+          {t('hero.title1')}
           <br />
-          <span className="text-brand sm:whitespace-nowrap">Phát triển cùng cộng đồng.</span>
+          <span className="text-brand sm:whitespace-nowrap">{t('hero.title2')}</span>
         </h1>
 
         <p className="mt-[18px] max-w-[600px] text-lg leading-[1.6] text-stone-600 text-pretty">
-          Hàng ngàn khóa học thực tế từ chuyên gia trong nhiều lĩnh vực. Học nhanh hơn, ứng dụng ngay và tạo giá trị
-          cho bản thân.
+          {t('hero.desc')}
         </p>
 
         <form
@@ -83,12 +80,12 @@ export function Hero({ onSearch }: { onSearch: (q: string) => void }) {
           <input
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="Tìm kiếm khóa học, chủ đề, kỹ năng..."
-            aria-label="Tìm kiếm khóa học"
+            placeholder={t('hero.searchPlaceholder')}
+            aria-label={t('hero.searchAria')}
             className="h-11 min-w-0 flex-1 border-0 bg-transparent text-base outline-0 placeholder:text-stone-400"
           />
           <Button type="submit" className="h-12 gap-2 rounded-2xl px-5 text-base font-semibold whitespace-nowrap sm:px-8">
-            Tìm kiếm <span aria-hidden="true">→</span>
+            {t('hero.searchButton')} <span aria-hidden="true">→</span>
           </Button>
         </form>
 
@@ -103,7 +100,7 @@ export function Hero({ onSearch }: { onSearch: (q: string) => void }) {
               </div>
               <div>
                 <div className="text-xl font-bold">{stats && stats[s.key] !== null ? s.format(stats[s.key] as number) : '–'}</div>
-                <div className="text-[13px] text-stone-500">{s.label}</div>
+                <div className="text-[13px] text-stone-500">{t(`hero.stats.${s.key}`)}</div>
               </div>
             </div>
           ))}

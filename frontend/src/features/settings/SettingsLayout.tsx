@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { MaterialIcon } from '../../components/ui/MaterialIcon';
 import { ToastProvider } from '../admin/components/overlay';
@@ -7,26 +8,27 @@ import { Header } from '../../components/layout/Header';
 interface NavItem {
   to: string;
   icon: string;
-  label: string;
+  labelKey: string;
   divider?: boolean;
 }
 
 const NAV: NavItem[] = [
-  { to: '/settings', icon: 'person', label: 'Hồ sơ' },
-  { to: '/settings/thong-bao', icon: 'notifications', label: 'Thông báo' },
-  { to: '/settings/bao-mat', icon: 'lock', label: 'Tài khoản & bảo mật' },
-  { to: '/settings/thanh-toan', icon: 'credit_card', label: 'Thanh toán' },
-  { to: '/settings/cong-dong', icon: 'group', label: 'Cộng đồng của tôi', divider: true },
-  { to: '/settings/gioi-thieu', icon: 'redeem', label: 'Chương trình giới thiệu' },
+  { to: '/settings', icon: 'person', labelKey: 'layout.profile' },
+  { to: '/settings/thong-bao', icon: 'notifications', labelKey: 'layout.notifications' },
+  { to: '/settings/bao-mat', icon: 'lock', labelKey: 'layout.security' },
+  { to: '/settings/thanh-toan', icon: 'credit_card', labelKey: 'layout.billing' },
+  { to: '/settings/cong-dong', icon: 'group', labelKey: 'layout.communities', divider: true },
+  { to: '/settings/gioi-thieu', icon: 'redeem', labelKey: 'layout.referral' },
 ];
 
 function SideNav() {
+  const { t } = useTranslation('settings');
   return (
     <>
       <div className="flex items-center gap-3.5 px-2 pb-3.5">
-        <span className="text-[26px] font-extrabold tracking-[-.02em]">Cài đặt</span>
+        <span className="text-[26px] font-extrabold tracking-[-.02em]">{t('layout.title')}</span>
       </div>
-      <nav aria-label="Cài đặt" className="flex flex-col gap-1">
+      <nav aria-label={t('layout.title')} className="flex flex-col gap-1">
         {NAV.map((n) => (
           <div key={n.to}>
             {n.divider && <div className="mx-2.5 my-2.5 h-px bg-[#efe9e4]" />}
@@ -48,7 +50,7 @@ function SideNav() {
                   >
                     <MaterialIcon name={n.icon} size={21} filled={isActive} color={isActive ? '#fff' : '#292524'} />
                   </span>
-                  {n.label}
+                  {t(n.labelKey)}
                 </>
               )}
             </NavLink>

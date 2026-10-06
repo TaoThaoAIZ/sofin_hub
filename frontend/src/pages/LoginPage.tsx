@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
@@ -12,6 +13,7 @@ interface FieldErrors {
 }
 
 export function LoginPage() {
+  const { t } = useTranslation('auth');
   const { login, completeTwoFactor } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -48,7 +50,7 @@ export function LoginPage() {
       }
       navigate(redirectTo, { replace: true });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Đăng nhập thất bại, vui lòng thử lại');
+      setError(err instanceof ApiError ? err.message : t('login.fail'));
     } finally {
       setSubmitting(false);
     }
@@ -58,7 +60,7 @@ export function LoginPage() {
     e.preventDefault();
     if (!ticket) return;
     if (code.replace(/D/g, '').length !== 6) {
-      setError('Nhập đủ mã 6 số');
+      setError(t('login.enter6'));
       return;
     }
     setSubmitting(true);
@@ -67,7 +69,7 @@ export function LoginPage() {
       await completeTwoFactor(ticket, code);
       navigate(redirectTo, { replace: true });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Xác minh thất bại, vui lòng thử lại');
+      setError(err instanceof ApiError ? err.message : t('login.verifyFail'));
       // Vé hết hạn: quay lại bước nhập mật khẩu.
       if (err instanceof ApiError && err.status === 401 && /hết hạn, vui lòng đăng nhập lại/.test(err.message)) setTicket(null);
     } finally {
@@ -99,23 +101,23 @@ export function LoginPage() {
       <div className="relative z-10 flex min-w-[min(100%,380px)] flex-1 basis-[630px] flex-col gap-[22px] rounded-[28px] border border-white/95 bg-white/70 p-6 shadow-[0_30px_70px_rgba(120,60,20,.12)] backdrop-blur-[26px] backdrop-saturate-[180%] sm:p-10 md:p-[clamp(28px,4vw,60px)]">
         <div className="flex flex-col items-center gap-3 text-center">
           <img src="/images/logo.png" alt="SofinHub" className="mb-1 h-11 w-auto" />
-          <h2 className="m-0 text-[clamp(26px,2.4vw,34px)] font-bold tracking-[-.5px]">Chào mừng quay trở lại</h2>
+          <h2 className="m-0 text-[clamp(26px,2.4vw,34px)] font-bold tracking-[-.5px]">{t('login.welcome')}</h2>
           <p className="m-0 max-w-[380px] text-base leading-[1.6] text-stone-600 text-pretty">
-            Đăng nhập để tiếp tục hành trình học tập và kết nối tại SofinHub.
+            {t('login.intro')}
           </p>
         </div>
 
         {ticket ? (
           <form onSubmit={submitCode} noValidate className="mt-2 flex flex-col gap-4">
-            <p className="m-0 text-center text-[15px] text-stone-600">Nhập mã 6 số từ ứng dụng xác thực (Google Authenticator, Authy...) để hoàn tất đăng nhập.</p>
-            <FormField type="text" autoComplete="one-time-code" value={code} onChange={setCode} placeholder="Mã 6 số" />
+            <p className="m-0 text-center text-[15px] text-stone-600">{t('login.codeHint')}</p>
+            <FormField type="text" autoComplete="one-time-code" value={code} onChange={setCode} placeholder={t('login.codePlaceholder')} />
             {error && (
               <div role="alert" className="rounded-xl bg-red-50 px-4 py-2.5 text-sm font-medium text-red-600">
                 {error}
               </div>
             )}
             <Button type="submit" disabled={submitting} className="h-[60px] gap-2.5 rounded-2xl text-lg font-bold">
-              {submitting ? 'Đang xác minh…' : 'Xác minh'}
+              {submitting ? t('login.verifying') : t('login.verify')}
             </Button>
             <button
               type="button"
@@ -126,7 +128,7 @@ export function LoginPage() {
               }}
               className="border-0 bg-transparent text-[15px] font-medium text-stone-600"
             >
-              Quay lại
+              {t('login.back')}
             </button>
           </form>
         ) : (
@@ -139,7 +141,7 @@ export function LoginPage() {
               setEmail(v);
               clearFieldError('email');
             }}
-            placeholder="Email của bạn"
+            placeholder={t('login.emailPlaceholder')}
             error={fieldErrors.email}
           />
 
@@ -151,12 +153,12 @@ export function LoginPage() {
               setPassword(v);
               clearFieldError('password');
             }}
-            placeholder="Mật khẩu"
+            placeholder={t('login.passwordPlaceholder')}
             error={fieldErrors.password}
           />
 
           <Link to="/forgot-password" className="self-end text-[15px] font-medium">
-            Quên mật khẩu?
+            {t('login.forgot')}
           </Link>
 
           {error && (
@@ -166,7 +168,7 @@ export function LoginPage() {
           )}
 
           <Button type="submit" disabled={submitting} className="h-[60px] gap-2.5 rounded-2xl text-lg font-bold">
-            {submitting ? 'Đang đăng nhập…' : 'Đăng nhập'}
+            {submitting ? t('login.signingIn') : t('login.submit')}
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
               <path d="M5 12h14M13 6l6 6-6 6" />
             </svg>
@@ -176,7 +178,7 @@ export function LoginPage() {
 
         <div className="flex items-center gap-4 text-[15px] text-stone-500">
           <span className="h-px flex-1 bg-[rgba(120,60,20,.14)]" />
-          hoặc đăng nhập với
+          {t('login.orWith')}
           <span className="h-px flex-1 bg-[rgba(120,60,20,.14)]" />
         </div>
 
@@ -186,9 +188,9 @@ export function LoginPage() {
         </div>
 
         <div className="text-center text-[15px] text-stone-700">
-          Chưa có tài khoản?{' '}
+          {t('login.noAccount')}{' '}
           <Link to="/register" className="font-bold">
-            Đăng ký ngay
+            {t('login.register')}
           </Link>
         </div>
       </div>
@@ -197,6 +199,7 @@ export function LoginPage() {
 }
 
 function SocialButton({ label }: { label: string }) {
+  const { t } = useTranslation('auth');
   const [note, setNote] = useState(false);
   return (
     <div className="flex flex-col items-stretch gap-1.5">
@@ -208,7 +211,7 @@ function SocialButton({ label }: { label: string }) {
         {label === 'Google' ? <GoogleMark /> : <FacebookMark />}
         {label}
       </button>
-      {note && <span className="text-center text-xs text-stone-500">Tính năng sắp ra mắt</span>}
+      {note && <span className="text-center text-xs text-stone-500">{t('login.comingSoon')}</span>}
     </div>
   );
 }

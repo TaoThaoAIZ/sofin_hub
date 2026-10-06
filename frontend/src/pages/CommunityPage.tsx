@@ -1,17 +1,19 @@
+import { useTranslation } from 'react-i18next';
 import { Navigate, Outlet, useParams } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { CommunitySidebar } from '../features/community/components/CommunitySidebar';
 import { useCommunityDetail } from '../features/courses/queries';
 
 export function CommunityPage() {
+  const { t } = useTranslation('community');
   const { id = '' } = useParams();
   const { data: course, isPending } = useCommunityDetail(id);
 
   if (isPending) {
     return (
       <div className="min-h-screen bg-white">
-        <Header active="Cộng đồng của tôi" />
-        <p className="py-24 text-center text-stone-500">Đang tải cộng đồng…</p>
+        <Header active="myCommunities" />
+        <p className="py-24 text-center text-stone-500">{t('page.loading')}</p>
       </div>
     );
   }
@@ -23,7 +25,7 @@ export function CommunityPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <Header active="Cộng đồng của tôi" />
+      <Header active="myCommunities" />
       <div className="mx-auto grid w-[calc(100%-32px)] max-w-[1320px] grid-cols-[248px_minmax(0,1fr)] items-start gap-6 pt-3 pb-10 md:w-[calc(100%-80px)] max-md:grid-cols-1">
         <CommunitySidebar courseTitle={course.title} />
         <div className="min-w-0">

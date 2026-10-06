@@ -3,8 +3,19 @@ export interface Paginated<T> {
   meta: { page: number; limit: number; total: number; totalPages: number };
 }
 
+import i18n from '../../i18n';
+
 export type PostCategory = 'Thảo luận chung' | 'Hỏi đáp' | 'Case study' | 'Thông báo';
 export const POST_CATEGORIES: PostCategory[] = ['Thảo luận chung', 'Hỏi đáp', 'Case study', 'Thông báo'];
+
+const CATEGORY_KEY: Record<PostCategory, string> = {
+  'Thảo luận chung': 'general',
+  'Hỏi đáp': 'qa',
+  'Case study': 'caseStudy',
+  'Thông báo': 'announcement',
+};
+/** Nhãn hiển thị của chuyên mục (giá trị API vẫn là tiếng Việt). */
+export const categoryLabel = (c: PostCategory) => i18n.t(`categories.${CATEGORY_KEY[c]}`, { ns: 'community', defaultValue: c });
 
 export interface PostAuthor {
   id: string;
@@ -186,12 +197,14 @@ export interface PostShare {
 }
 
 export const REPORT_REASONS = [
-  { key: 'spam', label: 'Spam / quảng cáo' },
-  { key: 'harassment', label: 'Quấy rối / công kích' },
-  { key: 'inappropriate', label: 'Nội dung không phù hợp' },
-  { key: 'misinformation', label: 'Thông tin sai lệch' },
-  { key: 'other', label: 'Lý do khác' },
+  { key: 'spam' },
+  { key: 'harassment' },
+  { key: 'inappropriate' },
+  { key: 'misinformation' },
+  { key: 'other' },
 ] as const;
+
+export const reportReasonLabel = (key: string) => i18n.t(`reportReasons.${key}`, { ns: 'community', defaultValue: key });
 export type ReportReason = (typeof REPORT_REASONS)[number]['key'];
 
 export type ReportStatus = 'open' | 'resolved' | 'dismissed';

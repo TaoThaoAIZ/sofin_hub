@@ -1,14 +1,16 @@
+import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
+import i18n from '../../../i18n';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { useAuth } from '../../auth/AuthContext';
 import { useLeaderboard, useLevels } from '../queries';
 import type { LeaderboardWindow, LevelInfo } from '../types';
 import { AVATAR_PALETTE, initials } from './shared';
 
-const BOARDS: { window: LeaderboardWindow; icon: string; color: string; title: string; prefix: string }[] = [
-  { window: '7d', icon: 'local_fire_department', color: '#ef4444', title: 'Top thành viên (7 ngày)', prefix: '+' },
-  { window: '30d', icon: 'bar_chart', color: '#f26a1b', title: 'Top thành viên (30 ngày)', prefix: '+' },
-  { window: 'all', icon: 'emoji_events', color: '#f59e0b', title: 'Top thành viên (mọi thời điểm)', prefix: '' },
+const BOARDS: { window: LeaderboardWindow; icon: string; color: string; titleKey: string; prefix: string }[] = [
+  { window: '7d', icon: 'local_fire_department', color: '#ef4444', titleKey: 'leaderboard.top7', prefix: '+' },
+  { window: '30d', icon: 'bar_chart', color: '#f26a1b', titleKey: 'leaderboard.top30', prefix: '+' },
+  { window: 'all', icon: 'emoji_events', color: '#f59e0b', titleKey: 'leaderboard.topAll', prefix: '' },
 ];
 
 // Màu huy hiệu hạng 1-3 lấy từ medal[] trong file thiết kế gốc.
@@ -19,9 +21,13 @@ const MEDAL = [
 ];
 const HEX = 'polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)';
 
-const levelLabel = (l: LevelInfo) => (l.name ? `Cấp độ ${l.level} - ${l.name}` : `Cấp độ ${l.level}`);
+const levelLabel = (l: LevelInfo) =>
+  l.name
+    ? i18n.t('leaderboard.levelNamed', { ns: 'community', level: l.level, name: l.name })
+    : i18n.t('leaderboard.level', { ns: 'community', level: l.level });
 
 function LevelRow({ l, current }: { l: LevelInfo; current: number }) {
+  const { t } = useTranslation('community');
   const state = l.level === current ? 'cur' : l.level < current ? 'done' : 'locked';
   return (
     <div className="flex items-start gap-3.5 py-2">
@@ -37,8 +43,8 @@ function LevelRow({ l, current }: { l: LevelInfo; current: number }) {
       <div className="min-w-0">
         <div className="text-sm font-semibold">{levelLabel(l)}</div>
         <div className="mt-0.5 text-xs leading-snug text-stone-500">
-          {l.minPoints > 0 ? `Từ ${l.minPoints} điểm • ` : ''}
-          {l.memberPct}% thành viên
+          {l.minPoints > 0 ? t('leaderboard.fromPoints', { points: l.minPoints }) : ''}
+          {t('leaderboard.memberPct', { pct: l.memberPct })}
         </div>
       </div>
     </div>
@@ -46,16 +52,17 @@ function LevelRow({ l, current }: { l: LevelInfo; current: number }) {
 }
 
 function Board({ cfg, courseId, meId }: { cfg: (typeof BOARDS)[number]; courseId: string; meId?: string }) {
+  const { t } = useTranslation('community');
   const rows = useLeaderboard(courseId, cfg.window);
   return (
     <section className="glass min-w-0 rounded-[22px] px-3 pt-3.5 pb-2.5">
       <div className="mb-1.5 flex items-center gap-2.5 border-b border-[rgba(120,60,20,.08)] px-1 pb-3">
         <MaterialIcon name={cfg.icon} size={24} filled color={cfg.color} />
-        <span className="flex-1 text-base font-bold">{cfg.title}</span>
+        <span className="flex-1 text-base font-bold">{t(cfg.titleKey)}</span>
         <MaterialIcon name="chevron_right" size={20} color="#57534e" />
       </div>
-      {rows.isPending && <p className="py-6 text-center text-sm text-stone-400">Đang tải…</p>}
-      {rows.data?.length === 0 && <p className="py-6 text-center text-sm text-stone-500">Chưa có hoạt động nào.</p>}
+      {rows.isPending && <p className="py-6 text-center text-sm text-stone-400">{t('common.loading')}</p>}
+      {rows.data?.length === 0 && <p className="py-6 text-center text-sm text-stone-500">{t('leaderboard.noActivity')}</p>}
       {rows.data?.map((r, i) => (
         <div
           key={r.userId}
@@ -79,12 +86,12 @@ function Board({ cfg, courseId, meId }: { cfg: (typeof BOARDS)[number]; courseId
           </span>
           <span className="flex min-w-0 flex-1 items-center gap-1.5 truncate text-sm font-medium">
             <span className="truncate">{r.name}</span>
-            {r.userId === meId && <span className="text-xs text-brand">(Bạn)</span>}
+            {r.userId === meId && <span className="text-xs text-brand">{t('leaderboard.you')}</span>}
             {i === 0 && <MaterialIcon name="crown" size={17} filled color="#f59e0b" />}
           </span>
           <span className="text-[13.5px] font-medium whitespace-nowrap text-brand">
             {cfg.prefix}
-            {r.points} điểm
+            {t('leaderboard.points', { points: r.points })}
           </span>
         </div>
       ))}
@@ -93,6 +100,7 @@ function Board({ cfg, courseId, meId }: { cfg: (typeof BOARDS)[number]; courseId
 }
 
 export function LeaderboardTab() {
+  const { t } = useTranslation('community');
   const { id: courseId = '' } = useParams();
   const { user } = useAuth();
   const levels = useLevels(courseId);
@@ -125,10 +133,10 @@ export function LeaderboardTab() {
             <span className="grid size-6 place-items-center rounded-full bg-gradient-to-b from-[#ff8f45] to-brand">
               <MaterialIcon name="crown" size={15} filled color="#fff" />
             </span>
-            {me ? levelLabel({ level: me.level, name: me.levelName, minPoints: 0, memberPct: 0 }) : 'Cấp độ 1'}
+            {me ? levelLabel({ level: me.level, name: me.levelName, minPoints: 0, memberPct: 0 }) : i18n.t('leaderboard.level', { ns: 'community', level: 1 })}
           </div>
           <div className="flex items-center gap-1.5 text-[13.5px] text-stone-800">
-            {me && me.pointsToNext > 0 ? `Còn ${me.pointsToNext} điểm để lên cấp` : 'Bạn đã đạt cấp cao nhất'}
+            {me && me.pointsToNext > 0 ? t('leaderboard.toNext', { points: me.pointsToNext }) : t('leaderboard.maxLevel')}
             <MaterialIcon name="info" size={17} />
           </div>
         </div>
@@ -136,16 +144,16 @@ export function LeaderboardTab() {
         <div className="relative z-10 min-w-0 flex-[2_1_520px] rounded-[20px] border border-white/85 bg-white/70 px-5 py-[18px] shadow-[inset_0_1px_0_#fff,0_10px_30px_rgba(120,60,20,.08)] backdrop-blur-lg">
           <div className="flex flex-wrap items-center gap-3 border-b border-[rgba(120,60,20,.08)] pb-3">
             <MaterialIcon name="bar_chart" size={24} filled color="#f26a1b" />
-            <span className="text-lg font-extrabold">Hành trình thăng cấp</span>
+            <span className="text-lg font-extrabold">{t('leaderboard.journey')}</span>
             <div className="ml-auto flex h-[34px] min-w-[200px] flex-[0_1_330px] items-center gap-2.5 rounded-full bg-white px-3.5 shadow-[0_2px_10px_rgba(120,60,20,.08)]">
               <MaterialIcon name="emoji_events" size={18} filled color="#f59e0b" />
-              <span className="text-[12.5px] font-semibold whitespace-nowrap">{me?.journeyPct ?? 0}% hoàn thành</span>
+              <span className="text-[12.5px] font-semibold whitespace-nowrap">{t('leaderboard.journeyDone', { pct: me?.journeyPct ?? 0 })}</span>
               <div className="h-2 flex-1 overflow-hidden rounded-full bg-[rgba(120,60,20,.08)]">
                 <div className="h-full rounded-full bg-gradient-to-r from-[#ff8f45] to-brand" style={{ width: `${me?.journeyPct ?? 0}%` }} />
               </div>
             </div>
           </div>
-          {levels.isPending && <p className="py-6 text-center text-sm text-stone-400">Đang tải cấp độ…</p>}
+          {levels.isPending && <p className="py-6 text-center text-sm text-stone-400">{t('leaderboard.loadingLevels')}</p>}
           <div className="mt-1.5 grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-x-7">
             <div className="flex flex-col">
               {list.slice(0, half).map((l) => (
@@ -164,8 +172,8 @@ export function LeaderboardTab() {
       <div className="mt-1 flex flex-wrap items-center gap-4">
         <MaterialIcon name="bar_chart" size={38} filled color="#f26a1b" />
         <div className="min-w-0 flex-[1_1_300px]">
-          <div className="text-[22px] font-extrabold tracking-tight">Bảng xếp hạng</div>
-          <div className="mt-0.5 text-sm text-stone-600">Vinh danh những thành viên tích cực và đóng góp nhiều nhất cho cộng đồng.</div>
+          <div className="text-[22px] font-extrabold tracking-tight">{t('leaderboard.title')}</div>
+          <div className="mt-0.5 text-sm text-stone-600">{t('leaderboard.subtitle')}</div>
         </div>
       </div>
 

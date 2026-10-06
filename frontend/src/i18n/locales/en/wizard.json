@@ -1,0 +1,347 @@
+{
+  "steps": {
+    "basics": "Basic info",
+    "plan": "Plan & trial",
+    "identity": "Branding & intro",
+    "members": "Members & pricing",
+    "launch": "Launch"
+  },
+  "validation": {
+    "nameMin": "Community name must be at least 3 characters",
+    "nameMax": "Community name must be at most 30 characters",
+    "slugRequired": "Please enter a URL",
+    "slugMin": "URL must be at least 3 characters",
+    "slugFormat": "Use only lowercase letters, numbers and hyphens",
+    "slugTaken": "This URL is already taken",
+    "slugChecking": "Checking the URL, please wait a moment",
+    "descriptionRequired": "Please enter a short description",
+    "categoryRequired": "Please choose a category",
+    "hostCard": "Please enter your card details to start the trial",
+    "promiseMax": "Promise must be at most 100 characters",
+    "videoUrl": "Invalid video URL (paste a YouTube or Vimeo link)",
+    "priceMonthlyRequired": "Enter a monthly membership price greater than 0",
+    "priceMax": "Maximum price is {{max}} USD",
+    "priceAnnualRequired": "Enter an annual membership price greater than 0",
+    "priceAnnualTooHigh": "The annual price can't be higher than 12 months combined",
+    "questionMin": "A question must be at least 3 characters (or remove it)",
+    "questionMax": "A question must be at most 200 characters",
+    "terms": "You need to agree to the Community Owner Terms"
+  },
+  "errors": {
+    "generic": "Something went wrong, please try again"
+  },
+  "ui": {
+    "optional": "(optional)"
+  },
+  "imageSlot": {
+    "uploading": "Uploading…",
+    "remove": "Remove image"
+  },
+  "basics": {
+    "name": "Community name",
+    "nameHint": "Good examples: “Content Writing That Sells”, “5K Running for Beginners”",
+    "namePlaceholder": "e.g. Weekend Pottery Class",
+    "slug": "URL",
+    "slugHint": "Changing the URL later will break old links, so settle on it now.",
+    "slugPlaceholder": "community-name",
+    "description": "Short description",
+    "descriptionHint": "Shown on the community card on Discover",
+    "descriptionPlaceholder": "One sentence on what members get",
+    "category": "Category",
+    "slugChecking": "Checking",
+    "slugAvailable": "Available",
+    "slugTaken": "Taken",
+    "slugInvalid": "Invalid"
+  },
+  "brand": {
+    "logo": "Community logo",
+    "logoPlaceholder": "Upload logo (square 1:1)",
+    "logoAria": "Upload logo",
+    "cover": "Cover image",
+    "coverPlaceholder": "Drag an image here · 16:9 · min 1280×720",
+    "coverAria": "Upload cover image",
+    "color": "Brand color",
+    "colorAria": "Color {{color}}",
+    "custom": "Custom",
+    "customAria": "Pick a custom color",
+    "promise": "Promise (headline)",
+    "promisePlaceholder": "What will members achieve?",
+    "benefitsTitle": "{{count}} things members get",
+    "benefitsTitle_one": "{{count}} thing members get",
+    "benefitsTitle_other": "{{count}} things members get",
+    "benefitAria": "Benefit {{n}}",
+    "benefitPlaceholder": "Add a specific result...",
+    "removeBenefit": "Remove benefit",
+    "addBenefit": "+ Add another benefit",
+    "video": "Intro video",
+    "videoPlaceholder": "Paste a YouTube or Vimeo link..."
+  },
+  "preview": {
+    "coverFallback": "Cover image",
+    "aboutTitle": "About page preview",
+    "communityName": "Community name",
+    "private": "Private",
+    "public": "Public",
+    "oneMember": "1 member",
+    "promiseFallback": "Your community's promise will appear here",
+    "benefitFallback": "A benefit members get",
+    "join": "Join",
+    "discoverTitle": "Discover preview",
+    "coverStep3": "Cover image is in step 3",
+    "descriptionFallback": "Your short description will appear here."
+  },
+  "hostPlan": {
+    "loading": "Loading plans…",
+    "monthly": "Monthly",
+    "annual": "Annual",
+    "save": "Save {{pct}}%",
+    "popular": "Most popular",
+    "perYear": "year",
+    "perMonth": "month",
+    "selected": "Selected",
+    "choose": "Choose this plan",
+    "compareTitle": "Which plan is better?",
+    "revenueLabel": "Expected monthly member revenue",
+    "freeFallback": "Free",
+    "freeRule": "{{pct}}% transaction fee",
+    "proRule": "Plan fee + {{pct}}% transaction fee",
+    "tip": "{{name}} pays off once revenue exceeds {{amount}}/month.",
+    "tipSave": " At this revenue you save {{amount}}/month.",
+    "todayLabel": "Today: {{amount}}.",
+    "trialUntil": "Free for {{days}} days, until {{date}}. Cancel before then and you won't be charged.",
+    "trialNoDate": "Free for {{days}} days. Cancel before then and you won't be charged.",
+    "noTrial": "The plan is charged from the first billing period.",
+    "totalFee": "Total fees"
+  },
+  "members": {
+    "privacy": "Privacy",
+    "private": "Private",
+    "privateSub": "Only members can see the content. The about page stays public.",
+    "public": "Public",
+    "publicSub": "Anyone can view posts; only members can post.",
+    "price": "Membership price",
+    "free": "Free",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "save": "Save {{pct}}%",
+    "priceMonthly": "Monthly price",
+    "perMonth": "/ month",
+    "priceYearly": "Yearly price",
+    "perYear": "/ year",
+    "trialOffer": "Give new members a {{days}}-day trial",
+    "yearSavings": "The yearly price saves {{pct}}% compared with paying monthly.",
+    "netLine": "You receive about <b>{{amount}}</b> per member after transaction fees.",
+    "questionsTitle": "Join questions",
+    "questionsCount": "{{count}} / {{max}} questions",
+    "questionAria": "Question {{n}}",
+    "questionPlaceholder": "Enter a question...",
+    "removeQuestion": "Remove question",
+    "addQuestion": "+ Add question",
+    "payoutTitle": "Connect a payout account",
+    "payoutConnected": "Payout account connected",
+    "payoutSkipped": "You can connect later in Community settings. Paid communities need a payout account to withdraw revenue.",
+    "payoutPrompt": "Do it today: your first payout needs identity verification and can take a few business days.",
+    "connecting": "Connecting…",
+    "connectNow": "Connect now",
+    "skip": "Skip, do it later",
+    "rulesTitle": "Community rules",
+    "requireRules": "Require agreement to the rules",
+    "autoApprovePaid": "Auto-approve paying members",
+    "editRules": "Edit template rules",
+    "payoutDialog": {
+      "errBank": "Enter the bank name",
+      "errHolder": "Enter the account holder name",
+      "errNumber": "Account number must be 6–20 digits",
+      "connect": "Connect",
+      "bank": "Bank",
+      "bankPlaceholder": "e.g. Vietcombank",
+      "holder": "Account holder",
+      "holderPlaceholder": "Full name as printed on the account",
+      "number": "Account number",
+      "numberPlaceholder": "6–20 digits",
+      "note": "We only store the last 4 digits of the account number."
+    },
+    "rulesDialog": {
+      "title": "Edit template rules",
+      "save": "Save rules",
+      "intro": "Each item is one rule; new members will see them when they request to join.",
+      "titleAria": "Rule {{n}} title",
+      "bodyAria": "Rule {{n}} text",
+      "titlePlaceholder": "Rule title",
+      "bodyPlaceholder": "Short description (optional)",
+      "remove": "Remove this rule",
+      "add": "+ Add rule"
+    },
+    "increase": "Increase price",
+    "decrease": "Decrease price"
+  },
+  "summary": {
+    "edit": "Edit",
+    "terms": "I agree to the Community Owner Terms",
+    "viewTerms": "View terms",
+    "name": "Community name",
+    "slug": "URL",
+    "category": "Category",
+    "plan": "Plan",
+    "planPro": "{{name}} · {{cycle}}",
+    "cycleAnnual": "annual",
+    "cycleMonthly": "monthly",
+    "trialDays": " · {{days}}-day trial",
+    "planFree": "{{name}} · free",
+    "startFallback": "Start",
+    "promise": "Promise",
+    "promiseNone": "None yet",
+    "benefits": "Benefits",
+    "benefitsValue": "{{count}} things members get",
+    "benefitsValue_one": "{{count}} thing members get",
+    "benefitsValue_other": "{{count}} things members get",
+    "access": "Access",
+    "accessValue": "{{visibility}} · {{count}} join questions",
+    "accessValue_one": "{{visibility}} · {{count}} join question",
+    "accessValue_other": "{{visibility}} · {{count}} join questions",
+    "public": "Public",
+    "private": "Private",
+    "price": "Price",
+    "priceYear": " · {{amount}}/year"
+  },
+  "launch": {
+    "items": {
+      "created": {
+        "title": "Create community & choose a plan",
+        "sub": "Community creation completed"
+      },
+      "identity": {
+        "title": "Logo, cover & about page",
+        "sub": "Your community has its own identity",
+        "btn": "Update"
+      },
+      "payout": {
+        "title": "Connect a payout account",
+        "sub": "Required to withdraw revenue from a paid community",
+        "btn": "Connect"
+      },
+      "first_lesson": {
+        "title": "Add your first lesson",
+        "sub": "One complete module beats ten empty ones",
+        "btn": "Open Classroom"
+      },
+      "welcome_post": {
+        "title": "Write a welcome post & pin it",
+        "sub": "Include a question so new members can reply right away",
+        "btn": "Write a post"
+      },
+      "invite_members": {
+        "title": "Invite your first 10 members",
+        "titleN": "Invite your first {{count}} members",
+        "sub": "Friends, past customers, social media followers",
+        "btn": "Invite"
+      }
+    },
+    "conditions": {
+      "has_description_and_promise": "Has a description & about page",
+      "has_cover": "Has a cover image",
+      "min_members": "At least {{n}} members",
+      "recent_post": "Has a post in the last 7 days"
+    },
+    "created": "Community created",
+    "ready": "is ready!",
+    "readyDesc": "Your community is live. Finish the tasks below before inviting your first member – newcomers who see an empty classroom leave fast.",
+    "enter": "Go to community",
+    "checklistTitle": "Launch checklist",
+    "progress": "{{done}} / {{total}} done",
+    "loading": "Loading checklist…",
+    "inviteLink": "Invite link",
+    "copyInvite": "Copy invite link",
+    "discoverTitle": "Get on Discover",
+    "discoverIntro": "Communities are recommended once they meet these conditions:",
+    "eligible": "Your community meets the conditions to be recommended.",
+    "notEligible": "Complete the remaining conditions to improve your chances of being recommended."
+  },
+  "head": {
+    "0": {
+      "a": "What's your community",
+      "b": "called?",
+      "lead": "Name it after the result members get, not after yourself – strangers will find you more easily on Discover."
+    },
+    "1": {
+      "a": "Free trial for",
+      "b": "{{n}} days",
+      "c": ", no charge yet",
+      "lead": "Choose the plan you want to continue with after the trial. We'll remind you before it ends."
+    },
+    "2": {
+      "a": "Help strangers see right away",
+      "b": "why they should join",
+      "lead": "Finish your branding and write a short intro to your community."
+    },
+    "3": {
+      "a": "Who can join, and at",
+      "b": "what price?",
+      "lead": "Set who can join, the price, and a few questions to get to know your members."
+    },
+    "4": {
+      "a": "Ready to",
+      "b": "launch!",
+      "lead": "Review your details before opening the community."
+    }
+  },
+  "wizard": {
+    "slugMin": "URL must be at least 3 characters",
+    "slugFormat": "Use only lowercase letters, numbers and hyphens",
+    "slugSuggestion": "{{message}} Suggestion: {{suggestion}}",
+    "draftSaved": "Draft saved",
+    "finishStep1": "Please complete step 1 first",
+    "payoutConnected": "Payout account connected",
+    "actionFailed": "Couldn't complete that, please try again",
+    "inviteCopied": "Invite link copied",
+    "copyFailed": "Couldn't copy, please copy the link manually",
+    "priceAtStep4": "Price is set in step 4",
+    "free": "Free",
+    "perMonth": "{{amount}}/month",
+    "perYear": "{{amount}}/year",
+    "loadingDraft": "Loading draft…",
+    "draftNotFound": "Draft not found",
+    "draftNotFoundDesc": "The draft may have been launched or deleted.",
+    "createNew": "Create a new community",
+    "title": "Create a community",
+    "stepsAria": "Steps",
+    "saveExit": "Save draft & exit",
+    "launchChecklistError": "Couldn't load the launch checklist",
+    "stepOf": "Step {{step}} / 5",
+    "plansError": "Couldn't load plans, please try again",
+    "cardSaved": "{{brand}} card •••• {{last4}} saved",
+    "useOtherCard": "Use a different card",
+    "feeNote": "Platform commission {{commission}}% + payment gateway fee {{gateway}}%",
+    "cancel": "Cancel",
+    "back": "Back",
+    "checkFields": "Please check the fields marked in red.",
+    "skipLater": "Skip, do it later",
+    "saving": "Saving…",
+    "launchBtn": "Launch community",
+    "createBtn": "Create community",
+    "startTrial": "Start trial",
+    "continue": "Continue"
+  },
+  "tips": {
+    "price": {
+      "t": "Pricing tip",
+      "s": "Consider the value you give members when choosing a price."
+    },
+    "plan": {
+      "t": "Change plans anytime",
+      "s": "Upgrade or downgrade in Community settings, effective from the next billing period."
+    },
+    "identity": {
+      "t": "Your about page is your sales page",
+      "s": "Your logo, cover, description and key benefits show on your community page."
+    },
+    "almost": {
+      "t": "Almost done",
+      "s": "Everything here can be edited later in Community settings."
+    },
+    "start": {
+      "t": "About 10 minutes",
+      "s": "Everything here can be edited later in Community settings."
+    }
+  }
+}

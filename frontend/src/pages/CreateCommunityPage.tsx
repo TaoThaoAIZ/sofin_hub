@@ -13,7 +13,7 @@ export function CreateCommunityPage() {
           'radial-gradient(700px 500px at 0% 20%, rgba(255,186,140,.3), transparent 70%), radial-gradient(700px 600px at 100% 30%, rgba(251,207,232,.28), transparent 70%), #faf8f6',
       }}
     >
-      <Header active="Cộng đồng của tôi" />
+      <Header active="myCommunities" />
       <RequireAuth>
         <CreateWizard />
       </RequireAuth>

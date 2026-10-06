@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { ButtonLink } from '../../../components/ui/Button';
 import { ArrowRightIcon, StarIcon, UserIcon } from '../../../components/ui/icons';
 import { formatCompact } from '../../../lib/format';
@@ -6,6 +7,7 @@ import type { Course } from '../types';
 import type { ViewMode } from './FilterBar';
 
 export function CourseCard({ course, view }: { course: Course; view: ViewMode }) {
+  const { t } = useTranslation('course');
   const list = view === 'list';
   const tag = course.tag ? TAG_UI[course.tag] : null;
 
@@ -24,7 +26,7 @@ export function CourseCard({ course, view }: { course: Course; view: ViewMode })
             className="absolute top-3 left-3.5 rounded-full border border-white/60 px-2.5 py-1 text-[13px] font-semibold"
             style={{ background: tag.bg, color: tag.fg }}
           >
-            {tag.label}
+            {t(tag.labelKey)}
           </span>
         )}
       </div>
@@ -41,11 +43,11 @@ export function CourseCard({ course, view }: { course: Course; view: ViewMode })
           <div className="flex">
             <span className="flex h-9 items-center rounded-full border border-[rgba(242,106,27,.18)] bg-brand/10 px-3.5 text-base font-bold whitespace-nowrap text-brand">
               {course.priceUsd === 0 ? (
-                'Miễn phí'
+                t('list.free')
               ) : (
                 <>
                   ${course.priceUsd}
-                  <span className="text-[13px] font-medium">/tháng</span>
+                  <span className="text-[13px] font-medium">{t('list.perMonth')}</span>
                 </>
               )}
             </span>
@@ -64,7 +66,7 @@ export function CourseCard({ course, view }: { course: Course; view: ViewMode })
             </div>
             <ButtonLink
               to={`/courses/${course.id}`}
-              aria-label={`Xem khóa học ${course.title}`}
+              aria-label={t('list.view', { title: course.title })}
               className="size-[38px] rounded-full"
             >
               <ArrowRightIcon size={16} />

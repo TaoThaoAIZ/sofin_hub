@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+import i18n from '../../../i18n';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { initialsOf, type ProfileForm } from './form';
 
@@ -11,18 +13,19 @@ export interface PreviewStats {
 /** "Tham gia từ tháng M/YYYY" từ ngày tạo tài khoản. */
 export function joinedLabel(iso: string) {
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? '' : `Tham gia từ tháng ${d.getMonth() + 1}/${d.getFullYear()}`;
+  return Number.isNaN(d.getTime()) ? '' : i18n.t('profilePreview.joined', { ns: 'settings', month: d.getMonth() + 1, year: d.getFullYear() });
 }
 
 /** Thẻ "Người khác thấy bạn như thế này": dựng từ giá trị ĐANG NHẬP (chưa lưu) + số liệu thật của tài khoản. */
 export function ProfilePreview({ form, stats }: { form: ProfileForm; stats: PreviewStats | undefined }) {
-  const fullName = `${form.first.trim()} ${form.last.trim()}`.trim() || 'Tên của bạn';
+  const { t } = useTranslation('settings');
+  const fullName = `${form.first.trim()} ${form.last.trim()}`.trim() || t('profilePreview.yourName');
   const links = [
     form.website.trim() && { icon: 'language', color: '#57534e' },
     form.instagram.trim() && { icon: 'photo_camera', color: '#e1306c' },
     form.youtube.trim() && { icon: 'smart_display', color: '#57534e' },
   ].filter(Boolean) as { icon: string; color: string }[];
-  const handle = form.handle ? `@${form.handle}` : 'Chưa đặt đường dẫn';
+  const handle = form.handle ? `@${form.handle}` : t('profilePreview.noHandle');
   // Vị trí chỉ hiện với người khác khi bật "hiện trên bản đồ" (BE cũng ẩn ở hồ sơ công khai).
   const city = form.city.trim() && form.showOnMap ? ` · ${form.city.trim()}` : '';
 
@@ -38,19 +41,19 @@ export function ProfilePreview({ form, stats }: { form: ProfileForm; stats: Prev
           {handle}
           {city}
         </div>
-        <div className="mt-2.5 text-[14.5px] leading-[1.6] break-words whitespace-pre-line text-stone-800">{form.bio || 'Chưa có giới thiệu.'}</div>
+        <div className="mt-2.5 text-[14.5px] leading-[1.6] break-words whitespace-pre-line text-stone-800">{form.bio || t('profilePreview.noBio')}</div>
         <div className="mt-3.5 grid grid-cols-3 border-y border-[#f0ebe6] text-center">
           <div className="border-r border-[#f0ebe6] px-1 py-3">
-            <div className="text-[13.5px] text-stone-600">Cấp độ</div>
+            <div className="text-[13.5px] text-stone-600">{t('profilePreview.level')}</div>
             <div className="text-[19px] font-extrabold">{stats?.level ?? '–'}</div>
           </div>
           <div className="border-r border-[#f0ebe6] px-1 py-3">
             <div className="text-[19px] font-extrabold">{stats?.points ?? '–'}</div>
-            <div className="text-[13.5px] text-stone-600">điểm</div>
+            <div className="text-[13.5px] text-stone-600">{t('profilePreview.points')}</div>
           </div>
           <div className="px-1 py-3">
             <div className="text-[19px] font-extrabold">{stats?.communities ?? '–'}</div>
-            <div className="text-[13.5px] text-stone-600">cộng đồng</div>
+            <div className="text-[13.5px] text-stone-600">{t('profilePreview.communities')}</div>
           </div>
         </div>
         {links.length > 0 && (

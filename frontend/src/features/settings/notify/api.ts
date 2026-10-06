@@ -1,13 +1,14 @@
+import i18n from '../../../i18n';
 import { apiGet, apiPut } from '../../../lib/api';
 import type { EmailDigest } from '../../notifications/types';
 import type { MemberRole } from '../../account/types';
 
 export const COMMUNITY_COLUMNS = [
-  { key: 'admin', label: 'Thông báo từ quản trị' },
-  { key: 'event', label: 'Nhắc sự kiện' },
-  { key: 'featured', label: 'Bài nổi bật' },
-  { key: 'comment', label: 'Bình luận bài tôi theo dõi' },
-  { key: 'joinRequest', label: 'Yêu cầu gia nhập' },
+  { key: 'admin', get label() { return i18n.t('notifyCols.admin', { ns: 'settings' }); } },
+  { key: 'event', get label() { return i18n.t('notifyCols.event', { ns: 'settings' }); } },
+  { key: 'featured', get label() { return i18n.t('notifyCols.featured', { ns: 'settings' }); } },
+  { key: 'comment', get label() { return i18n.t('notifyCols.comment', { ns: 'settings' }); } },
+  { key: 'joinRequest', get label() { return i18n.t('notifyCols.joinRequest', { ns: 'settings' }); } },
 ] as const;
 export type CommunityPrefKey = (typeof COMMUNITY_COLUMNS)[number]['key'];
 export type CommunityPref = Record<CommunityPrefKey, boolean>;

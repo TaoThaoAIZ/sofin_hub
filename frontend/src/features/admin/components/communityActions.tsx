@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useCategories } from '../../courses/queries';
 import type { AdminCommunity } from '../types';
@@ -19,6 +20,7 @@ export function useCategoryLabel() {
  * Trả về `actionsFor(community)` cho menu hàng + `modalEl` phải render ở đâu đó trong trang.
  */
 export function useCommunityActions(onDone?: () => void) {
+  const { t } = useTranslation('admin-components');
   const navigate = useNavigate();
   const [modal, setModal] = useState<{ kind: ModalKind; c: CommunityRef } | null>(null);
   const open = (kind: ModalKind, c: CommunityRef) => setModal({ kind, c });
@@ -26,13 +28,13 @@ export function useCommunityActions(onDone?: () => void) {
   const actionsFor = (c: AdminCommunity, opts: { includeView?: boolean } = { includeView: true }): RowAction[] => {
     const ref = { id: c.id, name: c.name };
     const list: RowAction[] = [];
-    if (opts.includeView !== false) list.push({ label: 'Xem', onClick: () => navigate(`/admin/communities/${c.id}`) });
-    if (c.status !== 'deleted') list.push({ label: 'Mở cộng đồng', icon: 'open_in_new', onClick: () => window.open(`/communities/${c.id}/community`, '_blank', 'noopener') });
-    if (c.status === 'pending_review' || c.status === 'changes_requested') list.push({ label: 'Xét duyệt', icon: 'how_to_reg', onClick: () => navigate(`/admin/communities/review?id=${c.id}`) });
-    if (c.status === 'active') list.push({ label: 'Tạm ngưng', icon: 'pause_circle', danger: true, onClick: () => open('suspend', ref) });
-    if (c.status === 'suspended') list.push({ label: 'Khôi phục', icon: 'restore', onClick: () => open('restore', ref) });
-    if (c.status === 'deleted') list.push({ label: 'Khôi phục', icon: 'restore', onClick: () => open('undelete', ref) });
-    if (c.status !== 'deleted') list.push({ label: 'Xóa', icon: 'delete', danger: true, onClick: () => open('delete', ref) });
+    if (opts.includeView !== false) list.push({ label: t('cma.view'), onClick: () => navigate(`/admin/communities/${c.id}`) });
+    if (c.status !== 'deleted') list.push({ label: t('cma.open'), icon: 'open_in_new', onClick: () => window.open(`/communities/${c.id}/community`, '_blank', 'noopener') });
+    if (c.status === 'pending_review' || c.status === 'changes_requested') list.push({ label: t('cma.review'), icon: 'how_to_reg', onClick: () => navigate(`/admin/communities/review?id=${c.id}`) });
+    if (c.status === 'active') list.push({ label: t('cma.suspend'), icon: 'pause_circle', danger: true, onClick: () => open('suspend', ref) });
+    if (c.status === 'suspended') list.push({ label: t('cma.restore'), icon: 'restore', onClick: () => open('restore', ref) });
+    if (c.status === 'deleted') list.push({ label: t('cma.restore'), icon: 'restore', onClick: () => open('undelete', ref) });
+    if (c.status !== 'deleted') list.push({ label: t('cma.delete'), icon: 'delete', danger: true, onClick: () => open('delete', ref) });
     return list;
   };
 

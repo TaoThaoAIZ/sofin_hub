@@ -1,4 +1,8 @@
 import type { Tone } from './components/ui';
+import i18n from '../../i18n';
+
+/** Dịch lazy (gọi lúc render) — nhãn dùng getter nên đổi ngôn ngữ vẫn cập nhật. */
+export const tl = (key: string): string => i18n.t(key, { ns: 'admin' });
 
 /** Kiểu dữ liệu theo hợp đồng backend/docs/api/admin.md (đợt 1). */
 
@@ -352,120 +356,120 @@ export interface StatusMeta {
 }
 
 export const USER_STATUS: Record<UserStatus, StatusMeta> = {
-  active: { label: 'Hoạt động', tone: 'g' },
-  restricted: { label: 'Bị hạn chế', tone: 'o' },
-  suspended: { label: 'Tạm ngưng', tone: 'r' },
-  banned: { label: 'Bị cấm', tone: 'r' },
+  active: { get label() { return tl('labels.userStatus.active'); }, tone: 'g' },
+  restricted: { get label() { return tl('labels.userStatus.restricted'); }, tone: 'o' },
+  suspended: { get label() { return tl('labels.userStatus.suspended'); }, tone: 'r' },
+  banned: { get label() { return tl('labels.userStatus.banned'); }, tone: 'r' },
 };
 
 export const COMMUNITY_STATUS: Record<CommunityStatus, StatusMeta> = {
-  pending_review: { label: 'Chờ duyệt', tone: 'o' },
-  changes_requested: { label: 'Đã yêu cầu chỉnh sửa', tone: 'o' },
-  rejected: { label: 'Đã từ chối', tone: 'r' },
-  active: { label: 'Hoạt động', tone: 'g' },
-  suspended: { label: 'Tạm ngưng', tone: 'r' },
-  deleted: { label: 'Đã xóa', tone: 'x' },
+  pending_review: { get label() { return tl('labels.communityStatus.pending_review'); }, tone: 'o' },
+  changes_requested: { get label() { return tl('labels.communityStatus.changes_requested'); }, tone: 'o' },
+  rejected: { get label() { return tl('labels.communityStatus.rejected'); }, tone: 'r' },
+  active: { get label() { return tl('labels.communityStatus.active'); }, tone: 'g' },
+  suspended: { get label() { return tl('labels.communityStatus.suspended'); }, tone: 'r' },
+  deleted: { get label() { return tl('labels.communityStatus.deleted'); }, tone: 'x' },
 };
 
 export const CASE_STATUS: Record<CaseStatus, StatusMeta> = {
-  open: { label: 'Mở', tone: 'o' },
-  under_review: { label: 'Đang xem xét', tone: 'o' },
-  resolved: { label: 'Đã xử lý', tone: 'g' },
-  dismissed: { label: 'Bỏ qua', tone: 'x' },
+  open: { get label() { return tl('labels.caseStatus.open'); }, tone: 'o' },
+  under_review: { get label() { return tl('labels.caseStatus.under_review'); }, tone: 'o' },
+  resolved: { get label() { return tl('labels.caseStatus.resolved'); }, tone: 'g' },
+  dismissed: { get label() { return tl('labels.caseStatus.dismissed'); }, tone: 'x' },
 };
 
 export const CASE_RISK: Record<CaseRisk, StatusMeta> = {
-  low: { label: 'Thấp', tone: 'x' },
-  medium: { label: 'Trung bình', tone: 'o' },
+  low: { get label() { return tl('labels.caseRisk.low'); }, tone: 'x' },
+  medium: { get label() { return tl('labels.caseRisk.medium'); }, tone: 'o' },
   high: { label: 'Cao', tone: 'r' },
-  critical: { label: 'Nghiêm trọng', tone: 'r' },
+  critical: { get label() { return tl('labels.caseRisk.critical'); }, tone: 'r' },
 };
 
 export const DISCOVERY: Record<AdminCommunity['discovery'], StatusMeta> = {
-  listed: { label: 'Đang hiển thị', tone: 'g' },
-  hidden: { label: 'Đã ẩn', tone: 'x' },
-  unlisted: { label: 'Gỡ khỏi khám phá', tone: 'r' },
+  listed: { get label() { return tl('labels.discovery.listed'); }, tone: 'g' },
+  hidden: { get label() { return tl('labels.discovery.hidden'); }, tone: 'x' },
+  unlisted: { get label() { return tl('labels.discovery.unlisted'); }, tone: 'r' },
 };
 
 export const REASON_LABEL: Record<string, string> = {
   spam: 'Spam',
-  harassment: 'Quấy rối',
-  inappropriate: 'Nội dung không phù hợp',
-  misinformation: 'Thông tin sai lệch',
-  other: 'Khác',
-  hate_speech: 'Ngôn từ thù ghét',
-  scam: 'Lừa đảo',
-  copyright: 'Bản quyền',
-  nsfw: 'Nội dung nhạy cảm',
+  get harassment() { return tl('labels.reasonLabel.harassment'); },
+  get inappropriate() { return tl('labels.reasonLabel.inappropriate'); },
+  get misinformation() { return tl('labels.reasonLabel.misinformation'); },
+  get other() { return tl('labels.reasonLabel.other'); },
+  get hate_speech() { return tl('labels.reasonLabel.hate_speech'); },
+  get scam() { return tl('labels.reasonLabel.scam'); },
+  get copyright() { return tl('labels.reasonLabel.copyright'); },
+  get nsfw() { return tl('labels.reasonLabel.nsfw'); },
 };
 
-export const TARGET_LABEL: Record<AdminCase['targetType'], string> = { post: 'Bài viết', comment: 'Bình luận', member: 'Thành viên' };
-export const ROLE_LABEL: Record<string, string> = { owner: 'Chủ sở hữu', admin: 'Quản trị viên', mod: 'Kiểm duyệt viên', member: 'Thành viên', creator: 'Creator' };
-export const PRICING_LABEL: Record<string, string> = { free: 'Miễn phí', paid: 'Trả phí', trial: 'Dùng thử' };
+export const TARGET_LABEL: Record<AdminCase['targetType'], string> = { get post() { return tl('labels.targetLabel.post'); }, get comment() { return tl('labels.targetLabel.comment'); }, get member() { return tl('labels.targetLabel.member'); } };
+export const ROLE_LABEL: Record<string, string> = { get owner() { return tl('labels.roleLabel.owner'); }, get admin() { return tl('labels.roleLabel.admin'); }, get mod() { return tl('labels.roleLabel.mod'); }, get member() { return tl('labels.roleLabel.member'); }, creator: 'Creator' };
+export const PRICING_LABEL: Record<string, string> = { get free() { return tl('labels.pricingLabel.free'); }, get paid() { return tl('labels.pricingLabel.paid'); }, get trial() { return tl('labels.pricingLabel.trial'); } };
 export const RESTRICTION_LABEL: Record<RestrictionKey, string> = {
-  post: 'Không được đăng bài',
-  comment: 'Không được bình luận',
-  dm: 'Không được nhắn tin',
-  create_community: 'Không được tạo cộng đồng',
-  purchase: 'Không được mua',
+  get post() { return tl('labels.restrictionLabel.post'); },
+  get comment() { return tl('labels.restrictionLabel.comment'); },
+  get dm() { return tl('labels.restrictionLabel.dm'); },
+  get create_community() { return tl('labels.restrictionLabel.create_community'); },
+  get purchase() { return tl('labels.restrictionLabel.purchase'); },
 };
-export const DURATION_LABEL: Record<DurationKey, string> = { '24h': '24 giờ', '7d': '7 ngày', '30d': '30 ngày', indefinite: 'Vô thời hạn' };
+export const DURATION_LABEL: Record<DurationKey, string> = { get '24h'() { return tl('labels.durationLabel.24h'); }, get '7d'() { return tl('labels.durationLabel.7d'); }, get '30d'() { return tl('labels.durationLabel.30d'); }, get indefinite() { return tl('labels.durationLabel.indefinite'); } };
 export const PURCHASE_STATUS: Record<string, StatusMeta> = {
-  succeeded: { label: 'Thành công', tone: 'g' },
-  pending: { label: 'Đang chờ', tone: 'o' },
-  failed: { label: 'Thất bại', tone: 'r' },
-  refunded: { label: 'Đã hoàn tiền', tone: 'x' },
+  succeeded: { get label() { return tl('labels.purchaseStatus.succeeded'); }, tone: 'g' },
+  pending: { get label() { return tl('labels.purchaseStatus.pending'); }, tone: 'o' },
+  failed: { get label() { return tl('labels.purchaseStatus.failed'); }, tone: 'r' },
+  refunded: { get label() { return tl('labels.purchaseStatus.refunded'); }, tone: 'x' },
 };
 
 /** Nhãn hành động trong nhật ký / lịch sử vụ việc. */
 export const AUDIT_ACTION: Record<string, string> = {
-  'community.approve': 'Duyệt cộng đồng',
-  'community.request_changes': 'Yêu cầu chỉnh sửa cộng đồng',
-  'community.reject': 'Từ chối cộng đồng',
-  'community.suspend': 'Tạm ngưng cộng đồng',
-  'community.restore': 'Khôi phục cộng đồng sau tạm ngưng',
-  'community.delete': 'Xóa cộng đồng',
-  'community.undelete': 'Khôi phục cộng đồng đã xóa',
-  'community.lock': 'Khóa cộng đồng',
-  'community.unlock': 'Mở khóa cộng đồng',
-  'user.restrict': 'Hạn chế người dùng',
-  'user.suspend': 'Tạm ngưng người dùng',
-  'user.ban': 'Cấm người dùng',
-  'user.reinstate': 'Khôi phục người dùng',
-  'user.warn': 'Cảnh cáo người dùng',
-  'user.revoke_session': 'Thu hồi phiên đăng nhập',
-  'case.assign': 'Nhận xử lý vụ việc',
-  'case.warn': 'Cảnh cáo (vụ việc)',
-  'case.remove_content': 'Gỡ nội dung (vụ việc)',
-  'case.restrict_user': 'Hạn chế người dùng (vụ việc)',
-  'case.suspend_user': 'Tạm ngưng người dùng (vụ việc)',
-  'case.ban_user': 'Cấm người dùng (vụ việc)',
-  'case.dismiss': 'Bỏ qua vụ việc',
-  'case.escalate': 'Nâng mức rủi ro vụ việc',
-  'case.resolve': 'Đóng vụ việc',
-  'payment.refund_resolve': 'Xử lý hoàn tiền',
-  'payment.payout_resolve': 'Xử lý chi trả',
-  'report.resolve': 'Xử lý báo cáo',
+  get 'community.approve'() { return tl('labels.auditAction.community_approve'); },
+  get 'community.request_changes'() { return tl('labels.auditAction.community_request_changes'); },
+  get 'community.reject'() { return tl('labels.auditAction.community_reject'); },
+  get 'community.suspend'() { return tl('labels.auditAction.community_suspend'); },
+  get 'community.restore'() { return tl('labels.auditAction.community_restore'); },
+  get 'community.delete'() { return tl('labels.auditAction.community_delete'); },
+  get 'community.undelete'() { return tl('labels.auditAction.community_undelete'); },
+  get 'community.lock'() { return tl('labels.auditAction.community_lock'); },
+  get 'community.unlock'() { return tl('labels.auditAction.community_unlock'); },
+  get 'user.restrict'() { return tl('labels.auditAction.user_restrict'); },
+  get 'user.suspend'() { return tl('labels.auditAction.user_suspend'); },
+  get 'user.ban'() { return tl('labels.auditAction.user_ban'); },
+  get 'user.reinstate'() { return tl('labels.auditAction.user_reinstate'); },
+  get 'user.warn'() { return tl('labels.auditAction.user_warn'); },
+  get 'user.revoke_session'() { return tl('labels.auditAction.user_revoke_session'); },
+  get 'case.assign'() { return tl('labels.auditAction.case_assign'); },
+  get 'case.warn'() { return tl('labels.auditAction.case_warn'); },
+  get 'case.remove_content'() { return tl('labels.auditAction.case_remove_content'); },
+  get 'case.restrict_user'() { return tl('labels.auditAction.case_restrict_user'); },
+  get 'case.suspend_user'() { return tl('labels.auditAction.case_suspend_user'); },
+  get 'case.ban_user'() { return tl('labels.auditAction.case_ban_user'); },
+  get 'case.dismiss'() { return tl('labels.auditAction.case_dismiss'); },
+  get 'case.escalate'() { return tl('labels.auditAction.case_escalate'); },
+  get 'case.resolve'() { return tl('labels.auditAction.case_resolve'); },
+  get 'payment.refund_resolve'() { return tl('labels.auditAction.payment_refund_resolve'); },
+  get 'payment.payout_resolve'() { return tl('labels.auditAction.payment_payout_resolve'); },
+  get 'report.resolve'() { return tl('labels.auditAction.report_resolve'); },
 };
 
 export const DECISION_LABEL: Record<string, string> = {
-  warning: 'Cảnh cáo',
-  removal: 'Đã gỡ nội dung',
-  restriction: 'Hạn chế',
-  suspension: 'Tạm ngưng',
-  ban: 'Cấm',
+  get warning() { return tl('labels.decisionLabel.warning'); },
+  get removal() { return tl('labels.decisionLabel.removal'); },
+  get restriction() { return tl('labels.decisionLabel.restriction'); },
+  get suspension() { return tl('labels.decisionLabel.suspension'); },
+  get ban() { return tl('labels.decisionLabel.ban'); },
 };
 
 /** Nhãn hành động của lịch sử vụ việc (history.type) — khóa lạ giữ nguyên. */
 export const CASE_EVENT_LABEL: Record<string, string> = {
-  assign: 'đã nhận xử lý vụ việc',
-  warn: 'đã cảnh cáo người dùng',
-  remove_content: 'đã gỡ nội dung',
-  restrict_user: 'đã hạn chế người dùng',
-  suspend_user: 'đã tạm ngưng người dùng',
-  ban_user: 'đã cấm người dùng',
-  dismiss: 'đã đóng vụ việc (không vi phạm)',
-  escalate: 'đã nâng mức rủi ro',
-  resolve: 'đã đóng vụ việc',
-  created: 'đã tạo vụ việc',
+  get assign() { return tl('labels.caseEventLabel.assign'); },
+  get warn() { return tl('labels.caseEventLabel.warn'); },
+  get remove_content() { return tl('labels.caseEventLabel.remove_content'); },
+  get restrict_user() { return tl('labels.caseEventLabel.restrict_user'); },
+  get suspend_user() { return tl('labels.caseEventLabel.suspend_user'); },
+  get ban_user() { return tl('labels.caseEventLabel.ban_user'); },
+  get dismiss() { return tl('labels.caseEventLabel.dismiss'); },
+  get escalate() { return tl('labels.caseEventLabel.escalate'); },
+  get resolve() { return tl('labels.caseEventLabel.resolve'); },
+  get created() { return tl('labels.caseEventLabel.created'); },
 };

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { ButtonLink } from '../components/ui/Button';
@@ -7,7 +8,7 @@ import { CommunityLogo } from '../features/settings/ui';
 import { isOwner, lineText, roleText } from '../features/settings/communities/format';
 import { sortCommunities, useMyCommunities } from '../features/settings/communities/queries';
 
-const ACTIVE = 'Cộng đồng của tôi';
+const ACTIVE = 'myCommunities';
 
 const OUTLINE_BTN =
   'inline-flex h-[52px] items-center justify-center gap-2.5 rounded-2xl border border-[rgba(120,60,20,.12)] bg-white px-7 text-base font-bold text-stone-900 no-underline hover:border-[#fdba74]';
@@ -29,6 +30,7 @@ function EmptyState({ title, content, children }: { title: React.ReactNode; cont
 }
 
 export function MyCommunitiesPage() {
+  const { t } = useTranslation('misc');
   const { status } = useAuth();
   const location = useLocation();
   const authed = status === 'authenticated';
@@ -37,29 +39,29 @@ export function MyCommunitiesPage() {
 
   let body: React.ReactNode;
   if (status === 'loading' || (authed && q.isPending)) {
-    body = <p className="py-24 text-center text-stone-500">Đang tải…</p>;
+    body = <p className="py-24 text-center text-stone-500">{t('myCommunities.loading')}</p>;
   } else if (!authed) {
     body = (
       <EmptyState
         title={
           <>
-            Cộng đồng <span className="text-brand">của bạn</span> ở đây
+            {t('myCommunities.guestTitle1')}<span className="text-brand">{t('myCommunities.guestTitleBrand')}</span>{t('myCommunities.guestTitle2')}
           </>
         }
-        content="Đăng nhập để xem các cộng đồng bạn đã tham gia, theo dõi hoạt động mới và tiếp tục học cùng mọi người."
+        content={t('myCommunities.guestContent')}
       >
         <ButtonLink to="/login" state={{ from: location.pathname }} className="h-[52px] gap-2.5 rounded-2xl px-8 text-base font-bold">
           <MaterialIcon name="login" size={20} color="#fff" />
-          Đăng nhập
+          {t('myCommunities.login')}
         </ButtonLink>
         <Link to="/" className={OUTLINE_BTN}>
           <MaterialIcon name="explore" size={20} />
-          Khám phá cộng đồng
+          {t('myCommunities.explore')}
         </Link>
         <div className="mt-2 w-full text-[15px] text-stone-500">
-          Chưa có tài khoản?{' '}
+          {t('myCommunities.noAccount')}{' '}
           <Link to="/register" className="font-bold">
-            Đăng ký miễn phí →
+            {t('myCommunities.register')}
           </Link>
         </div>
       </EmptyState>
@@ -67,25 +69,25 @@ export function MyCommunitiesPage() {
   } else if (q.isError) {
     body = (
       <p role="alert" className="py-24 text-center text-red-600">
-        Không tải được danh sách cộng đồng, vui lòng thử lại.
+        {t('myCommunities.loadError')}
       </p>
     );
   } else if (list.length === 0) {
     body = (
       <EmptyState
-        title="Bạn chưa tham gia cộng đồng nào"
-        content="Khám phá các cộng đồng thú vị, tham gia ngay để học hỏi, chia sẻ và kết nối với những người cùng đam mê."
+        title={t('myCommunities.emptyTitle')}
+        content={t('myCommunities.emptyContent')}
       >
         <ButtonLink to="/" className="h-[52px] gap-2.5 rounded-2xl px-8 text-base font-bold">
           <MaterialIcon name="explore" size={20} color="#fff" />
-          Khám phá cộng đồng
+          {t('myCommunities.explore')}
         </ButtonLink>
       </EmptyState>
     );
   } else {
     body = (
       <section className="mx-auto w-full max-w-[1320px] px-4 pt-10 pb-24 md:px-10">
-        <h1 className="m-0 mb-6 text-[clamp(26px,3vw,36px)] font-extrabold tracking-[-1px]">Cộng đồng của tôi</h1>
+        <h1 className="m-0 mb-6 text-[clamp(26px,3vw,36px)] font-extrabold tracking-[-1px]">{t('myCommunities.title')}</h1>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {list.map((c) => (
             <Link

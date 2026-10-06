@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import { ChevronDownIcon, GridIcon, ListIcon } from '../../../components/ui/icons';
 import { FILTER_DROPDOWNS, type FilterDropdown } from '../constants';
 import type { CourseFilters } from '../types';
@@ -28,6 +29,7 @@ function Dropdown({
   onClose: () => void;
   onPick: (value: string | undefined) => void;
 }) {
+  const { t } = useTranslation('course');
   const ref = useRef<HTMLDivElement>(null);
   const selected = def.options.find((o) => o.value === value);
   const active = !!selected;
@@ -57,7 +59,7 @@ function Dropdown({
           active ? 'text-brand [--chip-bg:rgba(255,237,224,.6)]' : 'text-stone-900'
         } ${active || open ? '[--chip-border:rgba(242,106,27,.55)]' : ''}`}
       >
-        {selected?.label ?? def.label}
+        {t(selected?.labelKey ?? def.labelKey)}
         <ChevronDownIcon size={14} />
       </button>
 
@@ -79,7 +81,7 @@ function Dropdown({
                   on ? 'bg-brand-soft font-semibold text-brand' : 'font-medium text-stone-900'
                 }`}
               >
-                {o.label}
+                {t(o.labelKey)}
                 <span className={on ? 'text-brand' : 'invisible'}>✓</span>
               </button>
             );
@@ -108,6 +110,7 @@ function ViewButton({ on, title, onClick, children }: { on: boolean; title: stri
 }
 
 export function FilterBar({ filters, onFilterChange, view, onViewChange, total }: Props) {
+  const { t } = useTranslation('course');
   const [openKey, setOpenKey] = useState<string | null>(null);
 
   return (
@@ -129,15 +132,15 @@ export function FilterBar({ filters, onFilterChange, view, onViewChange, total }
 
       <div className="ml-auto flex items-center gap-5">
         <div className="glass flex gap-1 rounded-2xl p-1">
-          <ViewButton on={view === 'grid'} title="Lưới" onClick={() => onViewChange('grid')}>
+          <ViewButton on={view === 'grid'} title={t('list.grid')} onClick={() => onViewChange('grid')}>
             <GridIcon size={18} />
           </ViewButton>
-          <ViewButton on={view === 'list'} title="Danh sách" onClick={() => onViewChange('list')}>
+          <ViewButton on={view === 'list'} title={t('list.listView')} onClick={() => onViewChange('list')}>
             <ListIcon size={18} />
           </ViewButton>
         </div>
         <span className="text-sm whitespace-nowrap text-stone-600">
-          Tìm thấy <b className="text-brand">{total ?? '–'}</b> khóa học
+          <Trans t={t} i18nKey="list.found" values={{ total: total ?? '–' }} components={{ b: <b className="text-brand" /> }} />
         </span>
       </div>
     </div>

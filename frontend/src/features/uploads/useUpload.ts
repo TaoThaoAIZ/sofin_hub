@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import i18n from '../../i18n';
 import { ApiError, apiPost, resolveApiPath } from '../../lib/api';
 
 export type UploadPurpose = 'post_image' | 'post_file' | 'avatar' | 'cover' | 'lesson_attachment' | 'message_attachment';
@@ -25,21 +26,21 @@ const DOCS = [
 ];
 
 // Khớp bảng whitelist ở backend/docs/api/uploads.md (chỉ để báo lỗi sớm — BE vẫn kiểm tra lại).
-const RULES: Record<UploadPurpose, { types: string[]; maxMb: number; label: string }> = {
-  post_image: { types: IMAGES, maxMb: 5, label: 'ảnh JPG, PNG, WEBP, GIF' },
-  avatar: { types: IMAGES, maxMb: 3, label: 'ảnh JPG, PNG, WEBP, GIF' },
-  cover: { types: IMAGES, maxMb: 8, label: 'ảnh JPG, PNG, WEBP, GIF' },
-  post_file: { types: [...DOCS, 'video/mp4'], maxMb: 25, label: 'PDF, ZIP, DOCX, XLSX, PPTX, TXT, MP4' },
-  lesson_attachment: { types: [...DOCS, 'video/mp4'], maxMb: 25, label: 'PDF, ZIP, DOCX, XLSX, PPTX, TXT, MP4' },
-  message_attachment: { types: [...IMAGES, ...DOCS], maxMb: 25, label: 'ảnh, PDF, ZIP, DOCX, XLSX, PPTX, TXT' },
+const RULES: Record<UploadPurpose, { types: string[]; maxMb: number; label: 'images' | 'files' | 'message' }> = {
+  post_image: { types: IMAGES, maxMb: 5, label: 'images' },
+  avatar: { types: IMAGES, maxMb: 3, label: 'images' },
+  cover: { types: IMAGES, maxMb: 8, label: 'images' },
+  post_file: { types: [...DOCS, 'video/mp4'], maxMb: 25, label: 'files' },
+  lesson_attachment: { types: [...DOCS, 'video/mp4'], maxMb: 25, label: 'files' },
+  message_attachment: { types: [...IMAGES, ...DOCS], maxMb: 25, label: 'message' },
 };
 
 /** Kiểm tra sớm ở FE; trả về thông báo lỗi tiếng Việt hoặc null nếu hợp lệ. */
 export function validateUpload(file: File, purpose: UploadPurpose): string | null {
   const rule = RULES[purpose];
-  if (file.size === 0) return 'Tệp rỗng, vui lòng chọn tệp khác';
-  if (file.size > rule.maxMb * MB) return `Tệp quá lớn (tối đa ${rule.maxMb}MB)`;
-  if (!rule.types.includes(file.type)) return `Loại tệp không được hỗ trợ. Chỉ nhận: ${rule.label}`;
+  if (file.size === 0) return i18n.t('upload.empty', { ns: 'misc' });
+  if (file.size > rule.maxMb * MB) return i18n.t('upload.tooLarge', { ns: 'misc', max: rule.maxMb });
+  if (!rule.types.includes(file.type)) return i18n.t('upload.unsupported', { ns: 'misc', types: i18n.t(`upload.labels.${rule.label}`, { ns: 'misc' }) });
   return null;
 }
 
@@ -80,16 +81,16 @@ export function useUpload() {
         });
         if (!res.ok) {
           const body = (await res.json().catch(() => null)) as { error?: { message?: string; code?: string } } | null;
-          throw new ApiError(res.status, body?.error?.message ?? `Tải tệp lên thất bại (${res.status})`, body?.error?.code);
+          throw new ApiError(res.status, body?.error?.message ?? i18n.t('upload.failedStatus', { ns: 'misc', status: res.status }), body?.error?.code);
         }
         return { url: presign.fileUrl, key: presign.key, name: file.name, contentType: file.type, size: file.size };
       } catch (err) {
-        let msg = 'Tải tệp lên thất bại, vui lòng thử lại';
+        let msg = i18n.t('upload.failed', { ns: 'misc' });
         if (err instanceof ApiError) {
           if (err.status === 413) {
-            msg = err.code === 'QUOTA_EXCEEDED' ? 'Bạn đã dùng hết dung lượng lưu trữ cho phép (200MB).' : 'Tệp quá lớn so với giới hạn cho phép.';
+            msg = err.code === 'QUOTA_EXCEEDED' ? i18n.t('upload.quota', { ns: 'misc' }) : i18n.t('upload.tooLargeLimit', { ns: 'misc' });
           } else if (err.status === 403) {
-            msg = err.message || 'Bạn không có quyền tải tệp này lên.';
+            msg = err.message || i18n.t('upload.forbidden', { ns: 'misc' });
           } else {
             msg = err.message;
           }

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import { Button } from '../../components/ui/Button';
 import { FieldError } from '../../components/ui/FieldMessage';
 import { MaterialIcon } from '../../components/ui/MaterialIcon';
@@ -38,6 +39,7 @@ export function StepMembers({
   payoutBusy: boolean;
   payoutError?: string;
 }) {
+  const { t } = useTranslation('wizard');
   const [rulesOpen, setRulesOpen] = useState(false);
   const [payoutOpen, setPayoutOpen] = useState(false);
   const paid = form.billing !== 'free';
@@ -53,12 +55,12 @@ export function StepMembers({
 
   return (
     <div className="flex flex-col gap-4">
-      <SectionCard icon="shield" title="Quyền riêng tư">
-        <div role="radiogroup" aria-label="Quyền riêng tư" className="grid gap-3.5 [grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]">
+      <SectionCard icon="shield" title={t('members.privacy')}>
+        <div role="radiogroup" aria-label={t('members.privacy')} className="grid gap-3.5 [grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]">
           {(
             [
-              ['private', 'Riêng tư', 'lock', 'Chỉ thành viên thấy nội dung. Trang giới thiệu vẫn công khai.'],
-              ['public', 'Công khai', 'public', 'Ai cũng xem được bài đăng, chỉ thành viên mới đăng bài.'],
+              ['private', t('members.private'), 'lock', t('members.privateSub')],
+              ['public', t('members.public'), 'public', t('members.publicSub')],
             ] as const
           ).map(([id, label, icon, sub]) => {
             const on = form.visibility === id;
@@ -78,35 +80,40 @@ export function StepMembers({
         </div>
       </SectionCard>
 
-      <SectionCard icon="database" title="Giá thành viên">
+      <SectionCard icon="database" title={t('members.price')}>
         <SegTabs
           value={form.billing}
           onChange={(billing) => set({ billing }, ['priceMonthly', 'priceAnnual'])}
           options={[
-            { id: 'free', label: 'Miễn phí' },
-            { id: 'month', label: 'Hàng tháng' },
-            { id: 'year', label: 'Hàng năm', badge: annualDiscountPct ? `Tiết kiệm ${annualDiscountPct}%` : undefined },
+            { id: 'free', label: t('members.free') },
+            { id: 'month', label: t('members.monthly') },
+            { id: 'year', label: t('members.yearly'), badge: annualDiscountPct ? t('members.save', { pct: annualDiscountPct }) : undefined },
           ]}
         />
         {paid && (
           <>
             <div className="mt-3.5 grid gap-3.5 [grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]">
-              <PriceBox label="Giá hàng tháng" unit="/ tháng" value={form.priceMonthly} error={errors.priceMonthly} currency={currency} onChange={(v) => set({ priceMonthly: v }, ['priceMonthly'])} onStep={(d) => bump('priceMonthly', d * unit)} />
+              <PriceBox label={t('members.priceMonthly')} unit={t('members.perMonth')} value={form.priceMonthly} error={errors.priceMonthly} currency={currency} onChange={(v) => set({ priceMonthly: v }, ['priceMonthly'])} onStep={(d) => bump('priceMonthly', d * unit)} />
               {form.billing === 'year' && (
-                <PriceBox label="Giá hàng năm" unit="/ năm" value={form.priceAnnual} error={errors.priceAnnual} currency={currency} onChange={(v) => set({ priceAnnual: v }, ['priceAnnual'])} onStep={(d) => bump('priceAnnual', d * unit * 10)} />
+                <PriceBox label={t('members.priceYearly')} unit={t('members.perYear')} value={form.priceAnnual} error={errors.priceAnnual} currency={currency} onChange={(v) => set({ priceAnnual: v }, ['priceAnnual'])} onStep={(d) => bump('priceAnnual', d * unit * 10)} />
               )}
               {!!trialDays && trialDays > 0 && (
                 <button type="button" role="checkbox" aria-checked={form.trialEnabled} onClick={() => set({ trialEnabled: !form.trialEnabled })} className="flex h-[58px] items-center gap-2.5 rounded-[14px] border-[1.5px] border-[#e7e0da] bg-white px-4 text-left text-[14.5px]">
                   <MaterialIcon name={form.trialEnabled ? 'check_box' : 'check_box_outline_blank'} size={24} filled={form.trialEnabled} color={form.trialEnabled ? '#f26a1b' : '#a8a29e'} />
-                  Cho thành viên mới dùng thử {trialDays} ngày
+                  {t('members.trialOffer', { days: trialDays })}
                 </button>
               )}
             </div>
-            {form.billing === 'year' && savings > 0 && <p className="mt-2 mb-0 text-[13px] font-semibold text-green-700">Giá năm tiết kiệm {savings}% so với trả theo tháng.</p>}
+            {form.billing === 'year' && savings > 0 && <p className="mt-2 mb-0 text-[13px] font-semibold text-green-700">{t('members.yearSavings', { pct: savings })}</p>}
             {net && (net.monthly || net.annual) ? (
               <div className="mt-2.5 flex items-center gap-1.5 text-[13px] text-stone-600">
                 <span>
-                  Bạn nhận về khoảng <b className="text-stone-900">{formatMoney(form.billing === 'year' ? (net.annual ?? 0) : (net.monthly ?? 0), currency)}</b> mỗi thành viên sau phí giao dịch.
+                  <Trans
+                    ns="wizard"
+                    i18nKey="members.netLine"
+                    values={{ amount: formatMoney(form.billing === 'year' ? (net.annual ?? 0) : (net.monthly ?? 0), currency) }}
+                    components={{ b: <b className="text-stone-900" /> }}
+                  />
                 </span>
                 {feeNote && (
                   <span title={feeNote} className="inline-flex">
@@ -119,14 +126,14 @@ export function StepMembers({
         )}
       </SectionCard>
 
-      <SectionCard icon="chat" title="Câu hỏi khi xin gia nhập" right={<span className="text-sm text-stone-500">{form.questions.length} / {maxQuestions} câu</span>}>
+      <SectionCard icon="chat" title={t('members.questionsTitle')} right={<span className="text-sm text-stone-500">{t('members.questionsCount', { count: form.questions.length, max: maxQuestions })}</span>}>
         <div className="flex flex-col gap-2.5">
           {form.questions.map((q, i) => (
             <div key={i}>
               <div className="flex items-center gap-2.5">
                 <MaterialIcon name="drag_indicator" size={20} color="#c7bfb8" />
-                <input aria-label={`Câu hỏi ${i + 1}`} value={q} maxLength={200} onChange={(e) => setQ(i, e.target.value)} placeholder="Nhập câu hỏi..." aria-invalid={!!errors[`question-${i}`]} className={`${inputCls(errors[`question-${i}`])} h-11 min-w-0 flex-1 text-[14.5px]`} />
-                <button type="button" aria-label="Xóa câu hỏi" onClick={() => set({ questions: form.questions.filter((_, k) => k !== i) })} className="grid size-9 flex-none place-items-center rounded-[10px] border border-[#ece5df] bg-white text-stone-500 hover:bg-red-50 hover:text-red-600">
+                <input aria-label={t('members.questionAria', { n: i + 1 })} value={q} maxLength={200} onChange={(e) => setQ(i, e.target.value)} placeholder={t('members.questionPlaceholder')} aria-invalid={!!errors[`question-${i}`]} className={`${inputCls(errors[`question-${i}`])} h-11 min-w-0 flex-1 text-[14.5px]`} />
+                <button type="button" aria-label={t('members.removeQuestion')} onClick={() => set({ questions: form.questions.filter((_, k) => k !== i) })} className="grid size-9 flex-none place-items-center rounded-[10px] border border-[#ece5df] bg-white text-stone-500 hover:bg-red-50 hover:text-red-600">
                   <MaterialIcon name="delete" size={19} />
                 </button>
               </div>
@@ -135,7 +142,7 @@ export function StepMembers({
           ))}
           {form.questions.length < maxQuestions && (
             <button type="button" onClick={() => set({ questions: [...form.questions, ''] })} className="h-11 rounded-xl border-[1.5px] border-dashed border-[#fdba74] bg-[#fffaf6] text-sm font-bold text-brand">
-              + Thêm câu hỏi
+              {t('members.addQuestion')}
             </button>
           )}
           {errors.questions && <FieldError>{errors.questions}</FieldError>}
@@ -146,24 +153,24 @@ export function StepMembers({
         <div className="rounded-[18px] border border-[#fdd5b8] bg-[linear-gradient(160deg,#fff7f0,#ffeede)] p-[22px]">
           <div className="flex items-center gap-3">
             <MaterialIcon name={payout?.status === 'connected' ? 'check_circle' : 'account_balance_wallet'} size={28} color="#f26a1b" filled />
-            <span className="text-[16.5px] font-extrabold">Kết nối tài khoản nhận tiền</span>
+            <span className="text-[16.5px] font-extrabold">{t('members.payoutTitle')}</span>
           </div>
           <p className="mt-3 mb-0 text-sm leading-relaxed text-stone-600">
             {payout?.status === 'connected'
-              ? `Đã kết nối tài khoản nhận tiền${payout.label ? ` ${payout.label}` : ''}.`
+              ? `${t('members.payoutConnected')}${payout.label ? ` ${payout.label}` : ''}.`
               : payout?.status === 'skipped'
-                ? 'Bạn có thể kết nối sau trong Cài đặt cộng đồng. Cộng đồng trả phí cần tài khoản nhận tiền để rút doanh thu.'
-                : 'Làm ngay hôm nay: lần chi trả đầu tiên cần xét duyệt danh tính và có thể mất vài ngày làm việc.'}
+                ? t('members.payoutSkipped')
+                : t('members.payoutPrompt')}
           </p>
           {payout?.status !== 'connected' && (
             <>
               <Button onClick={() => setPayoutOpen(true)} disabled={payoutBusy} className="mt-4 h-12 w-full gap-2 rounded-xl text-[15px] font-bold">
-                {payoutBusy ? 'Đang kết nối…' : 'Kết nối ngay'}
+                {payoutBusy ? t('members.connecting') : t('members.connectNow')}
                 <MaterialIcon name="arrow_forward" size={19} color="#fff" />
               </Button>
               {payout?.status !== 'skipped' && (
                 <button type="button" onClick={onSkipPayout} className="mt-3 w-full border-0 bg-transparent text-center text-[13.5px] font-semibold text-brand underline">
-                  Bỏ qua, làm sau
+                  {t('members.skip')}
                 </button>
               )}
             </>
@@ -174,16 +181,16 @@ export function StepMembers({
             </p>
           )}
         </div>
-        <SectionCard icon="description" title="Nội quy cộng đồng">
+        <SectionCard icon="description" title={t('members.rulesTitle')}>
           <CheckRow checked={form.rulesRequireAgreement} onChange={(v) => set({ rulesRequireAgreement: v })}>
-            Yêu cầu đồng ý nội quy
+            {t('members.requireRules')}
           </CheckRow>
           <CheckRow checked={form.rulesAutoApprovePaid} onChange={(v) => set({ rulesAutoApprovePaid: v })}>
-            Tự duyệt người trả phí
+            {t('members.autoApprovePaid')}
           </CheckRow>
           {errors.rules && <FieldError>{errors.rules}</FieldError>}
           <button type="button" onClick={() => setRulesOpen(true)} className="mt-2.5 flex items-center gap-1.5 border-0 bg-transparent p-0 text-sm font-semibold text-brand underline">
-            Sửa nội quy mẫu <MaterialIcon name="arrow_forward" size={18} />
+            {t('members.editRules')} <MaterialIcon name="arrow_forward" size={18} />
           </button>
         </SectionCard>
       </div>
@@ -201,15 +208,16 @@ export interface PayoutValues {
 }
 
 function PayoutDialog({ onClose, onSubmit }: { onClose: () => void; onSubmit: (v: PayoutValues) => Promise<void> }) {
+  const { t } = useTranslation('wizard');
   const [v, setV] = useState<PayoutValues>({ bankName: '', accountHolder: '', accountNumber: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const submit = async () => {
     const e: Record<string, string> = {};
-    if (!v.bankName.trim()) e.bankName = 'Nhập tên ngân hàng';
-    if (!v.accountHolder.trim()) e.accountHolder = 'Nhập tên chủ tài khoản';
-    if (!/^\d{6,20}$/.test(v.accountNumber)) e.accountNumber = 'Số tài khoản gồm 6–20 chữ số';
+    if (!v.bankName.trim()) e.bankName = t('members.payoutDialog.errBank');
+    if (!v.accountHolder.trim()) e.accountHolder = t('members.payoutDialog.errHolder');
+    if (!/^\d{6,20}$/.test(v.accountNumber)) e.accountNumber = t('members.payoutDialog.errNumber');
     setErrors(e);
     if (Object.keys(e).length) return;
     setBusy(true);
@@ -241,23 +249,23 @@ function PayoutDialog({ onClose, onSubmit }: { onClose: () => void; onSubmit: (v
   );
   return (
     <Modal
-      title="Kết nối tài khoản nhận tiền"
+      title={t('members.payoutTitle')}
       icon="account_balance_wallet"
       onClose={onClose}
       footer={
         <>
           <CancelButton onClick={onClose} />
           <PrimaryButton onClick={() => void submit()} disabled={busy}>
-            {busy ? 'Đang kết nối…' : 'Kết nối'}
+            {busy ? t('members.connecting') : t('members.payoutDialog.connect')}
           </PrimaryButton>
         </>
       }
     >
       <div className="flex flex-col gap-3">
-        {row('bankName', 'Ngân hàng', 'Ví dụ: Vietcombank')}
-        {row('accountHolder', 'Chủ tài khoản', 'Họ và tên in trên tài khoản')}
-        {row('accountNumber', 'Số tài khoản', '6–20 chữ số', { inputMode: 'numeric', maxLength: 20 })}
-        <p className="m-0 text-xs text-stone-500">Chúng tôi chỉ lưu 4 số cuối của số tài khoản.</p>
+        {row('bankName', t('members.payoutDialog.bank'), t('members.payoutDialog.bankPlaceholder'))}
+        {row('accountHolder', t('members.payoutDialog.holder'), t('members.payoutDialog.holderPlaceholder'))}
+        {row('accountNumber', t('members.payoutDialog.number'), t('members.payoutDialog.numberPlaceholder'), { inputMode: 'numeric', maxLength: 20 })}
+        <p className="m-0 text-xs text-stone-500">{t('members.payoutDialog.note')}</p>
         {error && <ErrorLine>{error}</ErrorLine>}
       </div>
     </Modal>
@@ -265,36 +273,37 @@ function PayoutDialog({ onClose, onSubmit }: { onClose: () => void; onSubmit: (v
 }
 
 function RulesDialog({ rules, onClose, onSave }: { rules: WizardRule[]; onClose: () => void; onSave: (r: WizardRule[]) => void }) {
+  const { t } = useTranslation('wizard');
   const [list, setList] = useState<WizardRule[]>(rules.length ? rules : [{ title: '', body: '' }]);
   const upd = (i: number, patch: Partial<WizardRule>) => setList(list.map((x, k) => (k === i ? { ...x, ...patch } : x)));
   return (
     <Modal
-      title="Sửa nội quy mẫu"
+      title={t('members.rulesDialog.title')}
       icon="description"
       onClose={onClose}
       footer={
         <>
           <CancelButton onClick={onClose} />
-          <PrimaryButton onClick={() => onSave(list.map((r) => ({ title: r.title.trim(), body: r.body.trim() })).filter((r) => r.title))}>Lưu nội quy</PrimaryButton>
+          <PrimaryButton onClick={() => onSave(list.map((r) => ({ title: r.title.trim(), body: r.body.trim() })).filter((r) => r.title))}>{t('members.rulesDialog.save')}</PrimaryButton>
         </>
       }
     >
-      <p className="mt-0">Mỗi mục là một điều trong nội quy; thành viên mới sẽ thấy khi xin gia nhập.</p>
+      <p className="mt-0">{t('members.rulesDialog.intro')}</p>
       <div className="flex flex-col gap-3">
         {list.map((r, i) => (
           <div key={i} className="flex items-start gap-2">
             <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-              <input aria-label={`Tiêu đề điều ${i + 1}`} value={r.title} maxLength={80} onChange={(e) => upd(i, { title: e.target.value })} placeholder="Tiêu đề điều khoản" className={`${inputCls()} h-10 font-semibold`} />
-              <textarea aria-label={`Nội dung điều ${i + 1}`} value={r.body} maxLength={500} rows={2} onChange={(e) => upd(i, { body: e.target.value })} placeholder="Mô tả ngắn (không bắt buộc)" className={`${inputCls()} resize-none py-2 text-sm`} />
+              <input aria-label={t('members.rulesDialog.titleAria', { n: i + 1 })} value={r.title} maxLength={80} onChange={(e) => upd(i, { title: e.target.value })} placeholder={t('members.rulesDialog.titlePlaceholder')} className={`${inputCls()} h-10 font-semibold`} />
+              <textarea aria-label={t('members.rulesDialog.bodyAria', { n: i + 1 })} value={r.body} maxLength={500} rows={2} onChange={(e) => upd(i, { body: e.target.value })} placeholder={t('members.rulesDialog.bodyPlaceholder')} className={`${inputCls()} resize-none py-2 text-sm`} />
             </div>
-            <button type="button" aria-label="Xóa điều này" onClick={() => setList(list.filter((_, k) => k !== i))} className="grid size-9 flex-none place-items-center rounded-lg border-0 bg-transparent text-stone-500 hover:bg-red-50 hover:text-red-600">
+            <button type="button" aria-label={t('members.rulesDialog.remove')} onClick={() => setList(list.filter((_, k) => k !== i))} className="grid size-9 flex-none place-items-center rounded-lg border-0 bg-transparent text-stone-500 hover:bg-red-50 hover:text-red-600">
               <MaterialIcon name="delete" size={19} />
             </button>
           </div>
         ))}
         {list.length < 20 && (
           <button type="button" onClick={() => setList([...list, { title: '', body: '' }])} className="h-10 rounded-xl border-[1.5px] border-dashed border-[#fdba74] bg-[#fffaf6] text-sm font-bold text-brand">
-            + Thêm điều
+            {t('members.rulesDialog.add')}
           </button>
         )}
       </div>
@@ -303,6 +312,7 @@ function RulesDialog({ rules, onClose, onSave }: { rules: WizardRule[]; onClose:
 }
 
 function PriceBox({ label, unit, value, error, currency, onChange, onStep }: { label: string; unit: string; value: string; error?: string; currency: string; onChange: (v: string) => void; onStep: (dir: 1 | -1) => void }) {
+  const { t } = useTranslation('wizard');
   return (
     <div>
       <div className={`flex h-[58px] items-center rounded-[14px] border-[1.5px] pr-2.5 pl-4 focus-within:border-brand ${error ? 'border-red-400' : 'border-[#e7e0da]'}`}>
@@ -310,10 +320,10 @@ function PriceBox({ label, unit, value, error, currency, onChange, onStep }: { l
         <input aria-label={label} inputMode="decimal" value={value} onChange={(e) => onChange(e.target.value.replace(/[^\d.,]/g, ''))} placeholder="0" aria-invalid={!!error} className="w-0 min-w-0 flex-1 border-0 text-[26px] font-extrabold tracking-[-0.5px] outline-0" />
         <span className="mr-2 text-sm whitespace-nowrap text-stone-500">{currency === 'USD' ? unit : `${currency} ${unit}`}</span>
         <div className="flex flex-col">
-          <button type="button" aria-label="Tăng giá" onClick={() => onStep(1)} className="border-0 bg-transparent p-0 leading-none text-stone-500">
+          <button type="button" aria-label={t('members.increase')} onClick={() => onStep(1)} className="border-0 bg-transparent p-0 leading-none text-stone-500">
             <MaterialIcon name="expand_less" size={20} />
           </button>
-          <button type="button" aria-label="Giảm giá" onClick={() => onStep(-1)} className="border-0 bg-transparent p-0 leading-none text-stone-500">
+          <button type="button" aria-label={t('members.decrease')} onClick={() => onStep(-1)} className="border-0 bg-transparent p-0 leading-none text-stone-500">
             <MaterialIcon name="expand_more" size={20} />
           </button>
         </div>

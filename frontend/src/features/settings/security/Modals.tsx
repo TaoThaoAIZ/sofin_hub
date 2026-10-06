@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { ApiError } from '../../../lib/api';
 import { deleteAccount } from '../../account/api';
@@ -53,6 +54,7 @@ const digits = (v: string) => v.replace(/\D/g, '').slice(0, 6);
 
 /** "Đổi email": gửi link xác minh tới email MỚI; email chỉ đổi sau khi bấm link. */
 export function EmailModal({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation('settings');
   const toast = useToast();
   const change = useChangeEmail();
   const [email, setEmail] = useState('');
@@ -61,27 +63,28 @@ export function EmailModal({ onClose }: { onClose: () => void }) {
 
   const submit = async () => {
     const invalid = validateEmail(email);
-    if (invalid) return setError(invalid === 'Vui lòng nhập email' ? 'Email chưa hợp lệ' : invalid);
-    if (!pw) return setError('Nhập mật khẩu hiện tại');
+    if (invalid) return setError(invalid === t('validation.emailRequired', { ns: 'auth' }) ? t('modals.invalidEmail') : invalid);
+    if (!pw) return setError(t('modals.enterCurrentPw'));
     try {
       const r = await change.mutateAsync({ newEmail: email.trim(), password: pw });
-      toast.success(`Đã gửi link xác minh tới ${r.pendingEmail} · kiểm tra hộp thư`);
+      toast.success(t('modals.emailSentToast', { email: r.pendingEmail }));
       onClose();
     } catch (e) {
-      setError(errMsg(e, 'Không gửi được email xác minh'));
+      setError(errMsg(e, t('modals.emailSendFail')));
     }
   };
 
   return (
-    <ModalShell icon="mail" title="Đổi email" body="Chúng tôi sẽ gửi link xác minh tới email mới." cta="Gửi xác minh" pending={change.isPending} error={error} onConfirm={submit} onClose={onClose}>
-      <ModalField label="Email mới" type="email" value={email} onChange={(v) => { setEmail(v); setError(null); }} placeholder="ten@email.com" autoComplete="email" />
-      <ModalField label="Mật khẩu hiện tại" type="password" value={pw} onChange={(v) => { setPw(v); setError(null); }} placeholder="••••••••" autoComplete="current-password" />
+    <ModalShell icon="mail" title={t('modals.emailTitle')} body={t('modals.emailBody')} cta={t('modals.emailCta')} pending={change.isPending} error={error} onConfirm={submit} onClose={onClose}>
+      <ModalField label={t('modals.newEmail')} type="email" value={email} onChange={(v) => { setEmail(v); setError(null); }} placeholder={t('modals.emailPlaceholder')} autoComplete="email" />
+      <ModalField label={t('modals.currentPw')} type="password" value={pw} onChange={(v) => { setPw(v); setError(null); }} placeholder="••••••••" autoComplete="current-password" />
     </ModalShell>
   );
 }
 
 /** "Đổi mật khẩu": 3 ô; quy tắc mật khẩu khớp BE (≥8 ký tự, 1 chữ in hoa, 1 ký tự đặc biệt). */
 export function PasswordModal({ onChanged, onClose }: { onChanged: () => void; onClose: () => void }) {
+  const { t } = useTranslation('settings');
   const toast = useToast();
   const change = useChangePassword();
   const [old, setOld] = useState('');
@@ -90,17 +93,17 @@ export function PasswordModal({ onChanged, onClose }: { onChanged: () => void; o
   const [error, setError] = useState<string | null>(null);
 
   const submit = async () => {
-    if (!old) return setError('Nhập mật khẩu hiện tại');
+    if (!old) return setError(t('modals.enterCurrentPw'));
     const weak = validateNewPassword(n1);
     if (weak) return setError(weak);
-    if (n1 !== n2) return setError('Mật khẩu nhập lại không khớp');
+    if (n1 !== n2) return setError(t('modals.pwMismatch'));
     try {
       await change.mutateAsync({ currentPassword: old, newPassword: n1 });
       onChanged();
-      toast.success('Đã đổi mật khẩu');
+      toast.success(t('modals.pwChangedToast'));
       onClose();
     } catch (e) {
-      setError(errMsg(e, 'Không đổi được mật khẩu'));
+      setError(errMsg(e, t('modals.pwChangeFail')));
     }
   };
   const clear = <T,>(set: (v: T) => void) => (v: T) => {
@@ -111,23 +114,24 @@ export function PasswordModal({ onChanged, onClose }: { onChanged: () => void; o
   return (
     <ModalShell
       icon="lock"
-      title="Đổi mật khẩu"
-      body="Tối thiểu 8 ký tự, gồm ít nhất 1 chữ in hoa và 1 ký tự đặc biệt."
-      cta="Cập nhật"
+      title={t('modals.pwTitle')}
+      body={t('modals.pwBody')}
+      cta={t('modals.pwCta')}
       pending={change.isPending}
       error={error}
       onConfirm={submit}
       onClose={onClose}
     >
-      <ModalField label="Mật khẩu hiện tại" type="password" value={old} onChange={clear(setOld)} placeholder="••••••••" autoComplete="current-password" />
-      <ModalField label="Mật khẩu mới" type="password" value={n1} onChange={clear(setN1)} placeholder="••••••••" autoComplete="new-password" />
-      <ModalField label="Nhập lại mật khẩu mới" type="password" value={n2} onChange={clear(setN2)} placeholder="••••••••" autoComplete="new-password" />
+      <ModalField label={t('modals.currentPw')} type="password" value={old} onChange={clear(setOld)} placeholder="••••••••" autoComplete="current-password" />
+      <ModalField label={t('modals.newPw')} type="password" value={n1} onChange={clear(setN1)} placeholder="••••••••" autoComplete="new-password" />
+      <ModalField label={t('modals.repeatPw')} type="password" value={n2} onChange={clear(setN2)} placeholder="••••••••" autoComplete="new-password" />
     </ModalShell>
   );
 }
 
 /** Mã QR otpauth:// (thư viện nạp khi cần để không phình bundle trang). */
 function QrImage({ text }: { text: string }) {
+  const { t } = useTranslation('settings');
   const [src, setSrc] = useState<string | null>(null);
   useEffect(() => {
     let alive = true;
@@ -136,11 +140,12 @@ function QrImage({ text }: { text: string }) {
       alive = false;
     };
   }, [text]);
-  return src ? <img src={src} alt="Mã QR xác minh 2 bước" width={176} height={176} className="rounded-xl border border-[#f0ebe6]" /> : <div className="size-44 animate-pulse rounded-xl bg-[#f5f2ef]" />;
+  return src ? <img src={src} alt={t('modals.qrAlt')} width={176} height={176} className="rounded-xl border border-[#f0ebe6]" /> : <div className="size-44 animate-pulse rounded-xl bg-[#f5f2ef]" />;
 }
 
 /** Bật (đang tắt) hoặc tắt (đang bật) xác minh 2 bước. Bật: tạo bí mật ở BE → quét QR/nhập khóa → nhập mã 6 số. */
 export function TwoFactorModal({ enabled, onClose }: { enabled: boolean; onClose: () => void }) {
+  const { t } = useTranslation('settings');
   const toast = useToast();
   const setup = useSetupTwoFactor();
   const enable = useEnableTwoFactor();
@@ -154,22 +159,22 @@ export function TwoFactorModal({ enabled, onClose }: { enabled: boolean; onClose
   useEffect(() => {
     if (enabled || started.current) return;
     started.current = true;
-    runSetup(undefined, { onError: (e) => setError(errMsg(e, 'Không bắt đầu được thiết lập xác minh 2 bước')) });
+    runSetup(undefined, { onError: (e) => setError(errMsg(e, t('modals.tfSetupFail'))) });
   }, [enabled, runSetup]);
 
   const submit = async () => {
-    if (code.length !== 6) return setError('Nhập đủ 6 số');
+    if (code.length !== 6) return setError(t('modals.tfEnter6'));
     try {
       if (enabled) {
         await disable.mutateAsync(code);
-        toast.success('Đã tắt xác minh 2 bước');
+        toast.success(t('modals.tfDisabledToast'));
       } else {
         await enable.mutateAsync(code);
-        toast.success('Đã bật xác minh 2 bước');
+        toast.success(t('modals.tfEnabledToast'));
       }
       onClose();
     } catch (e) {
-      setError(errMsg(e, 'Mã xác minh không đúng'));
+      setError(errMsg(e, t('modals.tfBadCode')));
     }
   };
 
@@ -178,9 +183,9 @@ export function TwoFactorModal({ enabled, onClose }: { enabled: boolean; onClose
     <ModalShell
       icon="shield"
       danger={enabled}
-      title={enabled ? 'Tắt xác minh 2 bước?' : 'Bật xác minh 2 bước'}
-      body={enabled ? 'Tài khoản sẽ chỉ được bảo vệ bằng mật khẩu.' : 'Quét mã QR bằng Google Authenticator rồi nhập mã 6 số.'}
-      cta={enabled ? 'Tắt xác minh' : 'Bật xác minh'}
+      title={enabled ? t('modals.tfTitleOff') : t('modals.tfTitleOn')}
+      body={enabled ? t('modals.tfBodyOff') : t('modals.tfBodyOn')}
+      cta={enabled ? t('modals.tfCtaOff') : t('modals.tfCtaOn')}
       pending={enable.isPending || disable.isPending}
       disabled={!enabled && !secret}
       error={error}
@@ -193,7 +198,7 @@ export function TwoFactorModal({ enabled, onClose }: { enabled: boolean; onClose
             <>
               <QrImage text={secret.otpauthUrl} />
               <div className="text-center text-[12.5px] text-stone-500">
-                Không quét được? Nhập khóa này vào ứng dụng:
+                {t('modals.tfCantScan')}
                 <div className="mt-1 font-mono text-[14px] font-bold tracking-[.08em] break-all text-stone-800 select-all">{groupKey(secret.secret)}</div>
               </div>
             </>
@@ -203,7 +208,7 @@ export function TwoFactorModal({ enabled, onClose }: { enabled: boolean; onClose
         </div>
       )}
       <ModalField
-        label={enabled ? 'Mã 6 số từ ứng dụng xác thực' : 'Mã 6 số'}
+        label={enabled ? t('modals.tfCodeAuth') : t('modals.tfCode')}
         value={code}
         onChange={(v) => {
           setCode(digits(v));
@@ -220,6 +225,8 @@ export function TwoFactorModal({ enabled, onClose }: { enabled: boolean; onClose
 
 /** "Xóa tài khoản vĩnh viễn?": gõ XÓA + mật khẩu. Đang bị chặn (chủ cộng đồng / còn gói) thì không cho xác nhận. */
 export function DeleteModal({ blockers, onClose }: { blockers: DeleteBlockers | undefined; onClose: () => void }) {
+  const { t } = useTranslation('settings');
+  const confirmWord = t('modals.deleteWord');
   const { logout } = useAuth();
   const navigate = useNavigate();
   const [word, setWord] = useState('');
@@ -229,30 +236,30 @@ export function DeleteModal({ blockers, onClose }: { blockers: DeleteBlockers | 
   const blocked = blockersSentence(blockers);
 
   const submit = async () => {
-    if (word !== 'XÓA') return setError('Gõ đúng chữ XÓA để xác nhận');
-    if (!pw) return setError('Nhập mật khẩu để xác nhận');
+    if (word !== confirmWord) return setError(t('modals.deleteWordMismatch', { word: confirmWord }));
+    if (!pw) return setError(t('modals.deleteEnterPw'));
     setPending(true);
     try {
       await deleteAccount(pw);
       await logout();
       navigate('/', { replace: true });
     } catch (e) {
-      setError(errMsg(e, 'Không xóa được tài khoản, vui lòng thử lại'));
+      setError(errMsg(e, t('modals.deleteFail')));
       setPending(false);
     }
   };
 
   const body: ReactNode = (
     <>
-      Hồ sơ của bạn sẽ bị xóa và không thể khôi phục. Bài viết và bình luận cũ vẫn được giữ lại dưới tên “Thành viên đã xóa”.
+      {t('modals.deleteBody')}
       {blocked && <span className="mt-2 block font-semibold text-[#b91c1c]">{blocked}</span>}
     </>
   );
 
   return (
-    <ModalShell icon="delete" danger title="Xóa tài khoản vĩnh viễn?" body={body} cta="Xóa tài khoản" pending={pending} disabled={!!blocked} error={error} onConfirm={submit} onClose={onClose}>
-      <ModalField label="Gõ XÓA để xác nhận" value={word} onChange={(v) => { setWord(v); setError(null); }} placeholder="XÓA" />
-      <ModalField label="Mật khẩu hiện tại" type="password" value={pw} onChange={(v) => { setPw(v); setError(null); }} placeholder="••••••••" autoComplete="current-password" />
+    <ModalShell icon="delete" danger title={t('modals.deleteTitle')} body={body} cta={t('modals.deleteCta')} pending={pending} disabled={!!blocked} error={error} onConfirm={submit} onClose={onClose}>
+      <ModalField label={t('modals.deleteTypeLabel', { word: confirmWord })} value={word} onChange={(v) => { setWord(v); setError(null); }} placeholder={confirmWord} />
+      <ModalField label={t('modals.currentPw')} type="password" value={pw} onChange={(v) => { setPw(v); setError(null); }} placeholder="••••••••" autoComplete="current-password" />
     </ModalShell>
   );
 }

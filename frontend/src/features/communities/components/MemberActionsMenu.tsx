@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { Trans, useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { ApiError } from '../../../lib/api';
@@ -43,6 +44,7 @@ export function MemberActionsMenu({
   viewerId: string | undefined;
   onNotify: Notify;
 }) {
+  const { t } = useTranslation('communities');
   const btnRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -84,7 +86,7 @@ export function MemberActionsMenu({
   const fail = (e: unknown) => {
     // Thành viên minh họa (id 'seed:...') không tồn tại thật → BE trả 404
     if (member.id.startsWith('seed:') && e instanceof ApiError && e.status === 404) {
-      onNotify('Đây là thành viên minh họa của hệ thống nên không thể quản trị.', 'error');
+      onNotify(t('memberMenu.seedError'), 'error');
     } else {
       onNotify(errorText(e), 'error');
     }
@@ -94,14 +96,14 @@ export function MemberActionsMenu({
     setOpen(false);
     changeRole.mutate(
       { userId: member.id, role },
-      { onSuccess: () => onNotify(`Đã đổi vai trò của ${member.name} thành ${ROLE_LABEL[role]}.`), onError: fail },
+      { onSuccess: () => onNotify(t('memberMenu.roleChanged', { name: member.name, role: ROLE_LABEL[role] })), onError: fail },
     );
   };
 
   const copyHandle = () => {
     void navigator.clipboard?.writeText(`@${member.handle}`);
     setOpen(false);
-    onNotify(`Đã sao chép @${member.handle}`);
+    onNotify(t('memberMenu.copied', { handle: member.handle }));
   };
 
   const openDialog = (d: Dialog) => {
@@ -116,7 +118,7 @@ export function MemberActionsMenu({
       <button
         ref={btnRef}
         type="button"
-        aria-label={`Tùy chọn cho ${member.name}`}
+        aria-label={t('memberMenu.optionsFor', { name: member.name })}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
@@ -135,19 +137,19 @@ export function MemberActionsMenu({
             className="z-50 w-60 rounded-xl border border-[rgba(120,60,20,.12)] bg-white p-1.5 shadow-lg"
           >
             <Link to={`/users/${member.id}`} role="menuitem" className={itemClass} onClick={() => setOpen(false)}>
-              <MaterialIcon name="person" size={18} color="#57534e" /> Xem hồ sơ
+              <MaterialIcon name="person" size={18} color="#57534e" /> {t('memberMenu.viewProfile')}
             </Link>
             <button type="button" role="menuitem" className={itemClass} onClick={copyHandle}>
-              <MaterialIcon name="content_copy" size={18} color="#57534e" /> Sao chép @{member.handle}
+              <MaterialIcon name="content_copy" size={18} color="#57534e" /> {t('memberMenu.copyHandle', { handle: member.handle })}
             </button>
 
             {roles.length > 0 && (
               <>
-                <div className="px-2.5 pt-2 pb-1 text-[11px] font-semibold tracking-wide text-stone-500">ĐỔI VAI TRÒ</div>
+                <div className="px-2.5 pt-2 pb-1 text-[11px] font-semibold tracking-wide text-stone-500">{t('memberMenu.changeRole')}</div>
                 {roles.map((r) => (
                   <button key={r} type="button" role="menuitem" className={itemClass} onClick={() => setRole(r)}>
                     <MaterialIcon name="shield_person" size={18} color="#57534e" />
-                    Đặt làm {ROLE_LABEL[r]}
+                    {t('memberMenu.setRole', { role: ROLE_LABEL[r] })}
                   </button>
                 ))}
               </>
@@ -157,10 +159,10 @@ export function MemberActionsMenu({
               <>
                 <div className="my-1 border-t border-[rgba(120,60,20,.08)]" />
                 <button type="button" role="menuitem" className={`${itemClass} text-red-600`} onClick={() => openDialog('kick')}>
-                  <MaterialIcon name="person_remove" size={18} color="#dc2626" /> Xóa khỏi cộng đồng
+                  <MaterialIcon name="person_remove" size={18} color="#dc2626" /> {t('memberMenu.removeFromCommunity')}
                 </button>
                 <button type="button" role="menuitem" className={`${itemClass} text-red-600`} onClick={() => openDialog('ban')}>
-                  <MaterialIcon name="block" size={18} color="#dc2626" /> Cấm thành viên
+                  <MaterialIcon name="block" size={18} color="#dc2626" /> {t('memberMenu.banMember')}
                 </button>
               </>
             )}
@@ -169,7 +171,7 @@ export function MemberActionsMenu({
               <>
                 <div className="my-1 border-t border-[rgba(120,60,20,.08)]" />
                 <button type="button" role="menuitem" className={itemClass} onClick={() => openDialog('report')}>
-                  <MaterialIcon name="flag" size={18} color="#57534e" /> Báo cáo thành viên
+                  <MaterialIcon name="flag" size={18} color="#57534e" /> {t('memberMenu.reportMember')}
                 </button>
               </>
             )}
@@ -192,10 +194,11 @@ interface DialogProps {
 }
 
 function KickDialog({ courseId, member, onClose, onNotify, onFail }: DialogProps & { onFail: (e: unknown) => void }) {
+  const { t } = useTranslation('communities');
   const kick = useKickMember(courseId);
   return (
     <Modal
-      title="Xóa khỏi cộng đồng"
+      title={t('memberMenu.removeFromCommunity')}
       icon="person_remove"
       onClose={onClose}
       footer={
@@ -207,7 +210,7 @@ function KickDialog({ courseId, member, onClose, onNotify, onFail }: DialogProps
             onClick={() =>
               kick.mutate(member.id, {
                 onSuccess: () => {
-                  onNotify(`Đã xóa ${member.name} khỏi cộng đồng.`);
+                  onNotify(t('kick.removed', { name: member.name }));
                   onClose();
                 },
                 onError: (e) => {
@@ -217,22 +220,23 @@ function KickDialog({ courseId, member, onClose, onNotify, onFail }: DialogProps
               })
             }
           >
-            {kick.isPending ? 'Đang xóa…' : 'Xóa thành viên'}
+            {kick.isPending ? t('kick.removing') : t('kick.confirm')}
           </PrimaryButton>
         </>
       }
     >
-      <b>{member.name}</b> sẽ mất quyền truy cập cộng đồng nhưng vẫn có thể tham gia lại (nếu cộng đồng cho phép). Muốn chặn hẳn, hãy dùng "Cấm thành viên".
+      <Trans ns="communities" i18nKey="kick.body" values={{ name: member.name }} components={{ b: <b /> }} />
     </Modal>
   );
 }
 
 function BanDialog({ courseId, member, onClose, onNotify, onFail }: DialogProps & { onFail: (e: unknown) => void }) {
+  const { t } = useTranslation('communities');
   const ban = useBanMember(courseId);
   const [reason, setReason] = useState('');
   return (
     <Modal
-      title="Cấm thành viên"
+      title={t('memberMenu.banMember')}
       icon="block"
       onClose={onClose}
       footer={
@@ -246,7 +250,7 @@ function BanDialog({ courseId, member, onClose, onNotify, onFail }: DialogProps 
                 { userId: member.id, reason: reason.trim() },
                 {
                   onSuccess: () => {
-                    onNotify(`Đã cấm ${member.name} khỏi cộng đồng.`);
+                    onNotify(t('ban.banned', { name: member.name }));
                     onClose();
                   },
                   onError: (e) => {
@@ -257,14 +261,14 @@ function BanDialog({ courseId, member, onClose, onNotify, onFail }: DialogProps 
               )
             }
           >
-            {ban.isPending ? 'Đang cấm…' : 'Cấm thành viên'}
+            {ban.isPending ? t('ban.banning') : t('memberMenu.banMember')}
           </PrimaryButton>
         </>
       }
     >
-      <b>{member.name}</b> sẽ bị xóa khỏi cộng đồng và không thể tham gia lại cho đến khi bạn bỏ cấm (Cài đặt → Thành viên bị cấm).
+      <Trans ns="communities" i18nKey="ban.body" values={{ name: member.name }} components={{ b: <b /> }} />
       <label className="mt-3 block text-[13px] font-semibold text-stone-700">
-        Lý do (không bắt buộc)
+        {t('ban.reasonLabel')}
         <textarea value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} rows={3} className={`${INPUT_CLASS} mt-1.5 resize-none font-normal`} />
       </label>
     </Modal>
@@ -272,12 +276,13 @@ function BanDialog({ courseId, member, onClose, onNotify, onFail }: DialogProps 
 }
 
 function ReportDialog({ courseId, member, onClose, onNotify }: DialogProps) {
+  const { t } = useTranslation('communities');
   const report = useReportMember(courseId);
   const [reason, setReason] = useState<ReportReason>('spam');
   const [detail, setDetail] = useState('');
   return (
     <Modal
-      title="Báo cáo thành viên"
+      title={t('memberMenu.reportMember')}
       icon="flag"
       onClose={onClose}
       footer={
@@ -290,20 +295,20 @@ function ReportDialog({ courseId, member, onClose, onNotify }: DialogProps) {
                 { userId: member.id, reason, detail: detail.trim() || undefined },
                 {
                   onSuccess: () => {
-                    onNotify('Đã gửi báo cáo. Đội ngũ điều hành sẽ xem xét.');
+                    onNotify(t('report.sent'));
                     onClose();
                   },
                 },
               )
             }
           >
-            {report.isPending ? 'Đang gửi…' : 'Gửi báo cáo'}
+            {report.isPending ? t('report.sending') : t('report.send')}
           </PrimaryButton>
         </>
       }
     >
-      Báo cáo <b>{member.name}</b> cho điều hành viên của cộng đồng. Chọn lý do phù hợp nhất.
-      <div className="mt-3 flex flex-col gap-1.5" role="radiogroup" aria-label="Lý do báo cáo">
+      <Trans ns="communities" i18nKey="report.body" values={{ name: member.name }} components={{ b: <b /> }} />
+      <div className="mt-3 flex flex-col gap-1.5" role="radiogroup" aria-label={t('report.reasonGroup')}>
         {REPORT_REASONS.map((r) => (
           <label key={r.key} className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 text-[13.5px] text-stone-800 hover:bg-stone-50">
             <input type="radio" name="report-reason" checked={reason === r.key} onChange={() => setReason(r.key)} className="accent-[#f26a1b]" />
@@ -316,7 +321,7 @@ function ReportDialog({ courseId, member, onClose, onNotify }: DialogProps) {
         onChange={(e) => setDetail(e.target.value)}
         maxLength={1000}
         rows={3}
-        placeholder="Mô tả thêm (không bắt buộc)"
+        placeholder={t('report.detailPlaceholder')}
         className={`${INPUT_CLASS} mt-3 resize-none`}
       />
       {report.isError && <ErrorLine>{errorText(report.error)}</ErrorLine>}

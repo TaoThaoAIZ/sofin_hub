@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useEffect, useId, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { MaterialIcon } from './MaterialIcon';
 import { Button } from './Button';
@@ -73,6 +74,7 @@ export function Popup({
   dismissible = true,
   showClose = false,
 }: PopupProps) {
+  const { t: tr } = useTranslation('layout');
   const titleId = useId();
 
   useEffect(() => {
@@ -108,7 +110,7 @@ export function Popup({
         {showClose && (
           <button
             type="button"
-            aria-label="Đóng"
+            aria-label={tr('popup.close')}
             onClick={onClose}
             className="absolute right-4 top-4 grid size-8 place-items-center rounded-lg text-stone-500 hover:bg-stone-100"
           >
@@ -139,7 +141,7 @@ export function MessagePopup({
   title,
   message,
   tone = 'info',
-  okText = 'Đã hiểu',
+  okText,
   icon,
 }: {
   open: boolean;
@@ -150,8 +152,9 @@ export function MessagePopup({
   okText?: string;
   icon?: string | false;
 }) {
+  const { t } = useTranslation('layout');
   return (
-    <Popup open={open} onClose={onClose} title={title} tone={tone} icon={icon} footer={<PopupButton onClick={onClose}>{okText}</PopupButton>}>
+    <Popup open={open} onClose={onClose} title={title} tone={tone} icon={icon} footer={<PopupButton onClick={onClose}>{okText ?? t('popup.ok')}</PopupButton>}>
       {message}
     </Popup>
   );
@@ -165,8 +168,8 @@ export function ConfirmPopup({
   title,
   message,
   tone = 'warning',
-  confirmText = 'Đồng ý',
-  cancelText = 'Hủy',
+  confirmText,
+  cancelText,
   icon,
   loading = false,
 }: {
@@ -181,6 +184,7 @@ export function ConfirmPopup({
   icon?: string | false;
   loading?: boolean;
 }) {
+  const { t } = useTranslation('layout');
   return (
     <Popup
       open={open}
@@ -192,10 +196,10 @@ export function ConfirmPopup({
       footer={
         <>
           <PopupButton variant="secondary" onClick={onCancel} disabled={loading}>
-            {cancelText}
+            {cancelText ?? t('popup.cancel')}
           </PopupButton>
           <PopupButton variant={tone === 'danger' ? 'danger' : 'primary'} onClick={onConfirm} disabled={loading}>
-            {loading ? 'Đang xử lý…' : confirmText}
+            {loading ? t('popup.processing') : (confirmText ?? t('popup.confirm'))}
           </PopupButton>
         </>
       }

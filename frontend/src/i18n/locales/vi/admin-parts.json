@@ -1,0 +1,75 @@
+{
+  "table": {
+    "search": "Tìm kiếm",
+    "pagination": "Phân trang",
+    "prevPage": "Trang trước",
+    "nextPage": "Trang sau",
+    "all": "Tất cả",
+    "clearFilters": "Xóa bộ lọc",
+    "noResults": "Không có kết quả phù hợp.",
+    "selectAll": "Chọn tất cả",
+    "selectRow": "Chọn dòng",
+    "actions": "Thao tác",
+    "moreActions": "Thêm thao tác",
+    "showing": "Hiển thị {{shown}} / {{total}} kết quả"
+  },
+  "common": {
+    "noData": "Chưa có dữ liệu."
+  },
+  "chart": {
+    "seriesTotal": "{{name}} tổng {{total}}",
+    "loading": "Đang tải…",
+    "notEnoughData": "Chưa đủ dữ liệu để vẽ biểu đồ.",
+    "enableOneSeries": "Bật ít nhất một đường để xem biểu đồ."
+  },
+  "timeline": {
+    "empty": "Chưa có hoạt động nào."
+  },
+  "content": {
+    "context": "NGỮ CẢNH"
+  },
+  "action": {
+    "reason": "Lý do",
+    "typeToConfirm": "Gõ {{word}} để xác nhận"
+  },
+  "media": {
+    "empty": "Không có tệp nào.",
+    "reports": "{{count}} báo cáo"
+  },
+  "factors": {
+    "decrease": "Giảm {{label}}",
+    "increase": "Tăng {{label}}"
+  },
+  "featured": {
+    "empty": "Chưa có cộng đồng nào trong mục này.",
+    "start": "Bắt đầu {{name}}",
+    "end": "Kết thúc {{name}}",
+    "moveUp": "Chuyển lên",
+    "moveDown": "Chuyển xuống",
+    "remove": "Gỡ khỏi danh sách",
+    "add": "Tìm & thêm cộng đồng"
+  },
+  "preview": {
+    "close": "Đóng"
+  },
+  "history": {
+    "empty": "Chưa có thao tác quản trị nào.",
+    "system": "Hệ thống",
+    "reason": "Lý do: {{value}}",
+    "note": "Ghi chú: {{value}}"
+  },
+  "cohort": {
+    "empty": "Chưa có nhóm đăng ký nào.",
+    "group": "Nhóm",
+    "users": "Người dùng"
+  },
+  "matrix": {
+    "permission": "Quyền"
+  },
+  "email": {
+    "variables": "Biến có thể chèn",
+    "insertHint": "Bấm để chèn vào ô đang soạn",
+    "subject": "Tiêu đề",
+    "emptyBody": "Nội dung trống."
+  }
+}

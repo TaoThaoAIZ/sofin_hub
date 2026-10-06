@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 interface Props {
   page: number;
   totalPages: number;
@@ -24,16 +26,17 @@ const btn = (on: boolean) =>
   }`;
 
 export function Pagination({ page, totalPages, onChange }: Props) {
+  const { t } = useTranslation('course');
   if (totalPages <= 1) return null;
 
   return (
     <nav
-      aria-label="Phân trang"
+      aria-label={t('list.pagination')}
       className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-center gap-2 px-4 pt-10 pb-14 md:px-10"
     >
       <button
         type="button"
-        aria-label="Trang trước"
+        aria-label={t('list.prevPage')}
         disabled={page === 1}
         onClick={() => onChange(page - 1)}
         className={`${btn(false)} disabled:opacity-40`}
@@ -61,7 +64,7 @@ export function Pagination({ page, totalPages, onChange }: Props) {
 
       <button
         type="button"
-        aria-label="Trang sau"
+        aria-label={t('list.nextPage')}
         disabled={page === totalPages}
         onClick={() => onChange(page + 1)}
         className={`${btn(false)} disabled:opacity-40`}

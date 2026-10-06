@@ -1,29 +1,31 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { useAuth } from '../../auth/AuthContext';
 import { useCommunityDetail } from '../../courses/queries';
 import { usePost, usePostsFeed } from '../queries';
-import { POST_CATEGORIES, type PostCategory } from '../types';
+import { categoryLabel, POST_CATEGORIES, type PostCategory } from '../types';
 import { CommunityRightSidebar } from './CommunityRightSidebar';
 import { errText, ErrorNote, ghostBtn, ToastHost } from './contentUi';
 import { CATEGORY_META, PostCard } from './PostCard';
 import { PostComposer } from './PostComposer';
 
 // Tên icon + màu chuyên mục: xem CATEGORY_META trong PostCard.tsx (lấy từ file thiết kế gốc).
-const FILTERS: { key: 'all' | 'trending' | PostCategory; label: string; icon?: string; color?: string }[] = [
-  { key: 'all', label: 'Tất cả' },
-  { key: 'trending', label: 'Đang thịnh hành', icon: 'local_fire_department', color: '#f26a1b' },
-  ...POST_CATEGORIES.map((c) => ({ key: c, label: c, icon: CATEGORY_META[c].icon, color: CATEGORY_META[c].color })),
+const FILTERS: { key: 'all' | 'trending' | PostCategory; icon?: string; color?: string }[] = [
+  { key: 'all' },
+  { key: 'trending', icon: 'local_fire_department', color: '#f26a1b' },
+  ...POST_CATEGORIES.map((c) => ({ key: c, icon: CATEGORY_META[c].icon, color: CATEGORY_META[c].color })),
 ];
 
 const WELCOME_ACTIONS = [
-  { key: 'video', icon: 'play_arrow', title: 'Xem video giới thiệu', desc: 'Khám phá cộng đồng trong 60s', comingSoon: true },
-  { key: 'popular', icon: 'description', title: 'Tìm bài viết yêu thích', desc: 'Khám phá những chủ đề hot', comingSoon: false },
-  { key: 'app', icon: 'groups', title: 'Tải ứng dụng', desc: 'Nhận thông báo nhanh chóng', comingSoon: true },
+  { key: 'video', icon: 'play_arrow', comingSoon: true },
+  { key: 'popular', icon: 'description', comingSoon: false },
+  { key: 'app', icon: 'groups', comingSoon: true },
 ] as const;
 
 export function FeedTab() {
+  const { t } = useTranslation('community');
   const { id: courseId = '' } = useParams();
   const { user } = useAuth();
   const { data: course } = useCommunityDetail(courseId);
@@ -72,9 +74,9 @@ export function FeedTab() {
             className="pointer-events-none absolute inset-0 size-full object-cover"
           />
           <div className="relative z-10">
-            <h2 className="m-0 text-[26px] font-extrabold tracking-tight">Chào mừng bạn trở lại, {user?.firstName ?? 'bạn'}!</h2>
+            <h2 className="m-0 text-[26px] font-extrabold tracking-tight">{t('feed.welcome', { name: user?.firstName ?? t('feed.welcomeFallbackName') })}</h2>
             <p className="mt-2 max-w-[520px] text-[14.5px] text-stone-700">
-              Cùng chia sẻ, học hỏi và phát triển với cộng đồng {course?.title ?? ''}.
+              {t('feed.welcomeSub', { title: course?.title ?? '' })}
             </p>
             <div className="mt-[22px] flex max-w-[800px] flex-wrap gap-3.5">
               {WELCOME_ACTIONS.map((a) => (
@@ -82,14 +84,14 @@ export function FeedTab() {
                   key={a.key}
                   type="button"
                   disabled={a.comingSoon}
-                  title={a.comingSoon ? 'Sắp ra mắt — chưa có nội dung này' : undefined}
+                  title={a.comingSoon ? t('feed.comingSoon') : undefined}
                   onClick={a.key === 'popular' ? () => setSort('popular') : undefined}
                   className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl bg-white/90 px-4 py-3.5 text-left shadow-[0_6px_18px_rgba(120,60,20,.08)] hover:bg-white disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   <MaterialIcon name={a.icon} size={28} filled color="#f26a1b" className="flex-none" />
                   <div className="min-w-0">
-                    <div className="truncate text-[14.5px] font-bold">{a.title}</div>
-                    <div className="mt-[3px] truncate text-xs text-stone-500">{a.desc}</div>
+                    <div className="truncate text-[14.5px] font-bold">{t(`feed.actions.${a.key}.title`)}</div>
+                    <div className="mt-[3px] truncate text-xs text-stone-500">{t(`feed.actions.${a.key}.desc`)}</div>
                   </div>
                 </button>
               ))}
@@ -117,7 +119,7 @@ export function FeedTab() {
                 }`}
               >
                 {f.icon && <MaterialIcon name={f.icon} size={17} filled={f.key === 'trending'} color={active ? '#fff' : f.color} />}
-                {f.label}
+                {f.key === 'all' ? t('feed.all') : f.key === 'trending' ? t('feed.trending') : categoryLabel(f.key)}
               </button>
             );
           })}
@@ -125,10 +127,10 @@ export function FeedTab() {
 
         {tag && (
           <div className="flex items-center gap-2 text-[13.5px]">
-            <span className="text-stone-500">Đang lọc theo thẻ</span>
+            <span className="text-stone-500">{t('feed.filteringByTag')}</span>
             <span className="flex items-center gap-1 rounded-lg bg-brand/10 px-2.5 py-1 font-semibold text-brand">
               #{tag}
-              <button type="button" aria-label="Bỏ lọc thẻ" onClick={() => setParam('tag')}>
+              <button type="button" aria-label={t('feed.clearTag')} onClick={() => setParam('tag')}>
                 <MaterialIcon name="close" size={15} color="#f26a1b" />
               </button>
             </span>
@@ -138,33 +140,33 @@ export function FeedTab() {
         {sharedPostId && !inList && (
           <div ref={sharedRef} className="flex flex-col gap-2">
             <div className="flex items-center justify-between text-[12.5px] text-stone-500">
-              <span>Bài viết được chia sẻ với bạn</span>
+              <span>{t('feed.sharedWithYou')}</span>
               <button type="button" onClick={() => setParam('post')} className="font-semibold text-brand">
-                Đóng
+                {t('feed.close')}
               </button>
             </div>
-            {shared.isPending && posts.isSuccess && <p className="glass rounded-2xl py-6 text-center text-sm text-stone-400">Đang tải bài viết…</p>}
-            {shared.isError && <ErrorNote message="Không mở được bài viết này (có thể đã bị xóa, bị ẩn hoặc bạn không có quyền xem)." />}
-            {shared.data && <PostCard courseId={courseId} post={shared.data} viewerRole={viewerRole} highlighted onTagClick={(t) => setParam('tag', t)} />}
+            {shared.isPending && posts.isSuccess && <p className="glass rounded-2xl py-6 text-center text-sm text-stone-400">{t('feed.loadingPost')}</p>}
+            {shared.isError && <ErrorNote message={t('feed.sharedError')} />}
+            {shared.data && <PostCard courseId={courseId} post={shared.data} viewerRole={viewerRole} highlighted onTagClick={(tg) => setParam('tag', tg)} />}
           </div>
         )}
 
-        {posts.isPending && <p className="py-10 text-center text-stone-400">Đang tải bảng tin…</p>}
-        {posts.isError && <ErrorNote message={errText(posts.error, 'Không tải được bảng tin')} />}
+        {posts.isPending && <p className="py-10 text-center text-stone-400">{t('feed.loadingFeed')}</p>}
+        {posts.isError && <ErrorNote message={errText(posts.error, t('feed.loadFeedFailed'))} />}
         {posts.isSuccess && list.length === 0 && (
           <p className="glass rounded-2xl py-10 text-center text-stone-500">
-            {tag ? `Chưa có bài viết nào gắn thẻ #${tag}.` : 'Chưa có bài viết nào. Hãy là người đăng đầu tiên!'}
+            {tag ? t('feed.emptyTag', { tag }) : t('feed.empty')}
           </p>
         )}
         {list.map((p) => (
-          <PostCard key={p.id} courseId={courseId} post={p} viewerRole={viewerRole} highlighted={p.id === sharedPostId} onTagClick={(t) => setParam('tag', t)} />
+          <PostCard key={p.id} courseId={courseId} post={p} viewerRole={viewerRole} highlighted={p.id === sharedPostId} onTagClick={(tg) => setParam('tag', tg)} />
         ))}
         {posts.hasNextPage && (
           <button type="button" onClick={() => posts.fetchNextPage()} disabled={posts.isFetchingNextPage} className={`${ghostBtn} self-center`}>
-            {posts.isFetchingNextPage ? 'Đang tải…' : `Tải thêm bài viết (${list.length}/${total})`}
+            {posts.isFetchingNextPage ? t('common.loading') : t('feed.loadMore', { loaded: list.length, total })}
           </button>
         )}
-        {posts.isFetchNextPageError && <ErrorNote message={errText(posts.error, 'Không tải thêm được')} />}
+        {posts.isFetchNextPageError && <ErrorNote message={errText(posts.error, t('feed.loadMoreFailed'))} />}
       </div>
 
       {course && <CommunityRightSidebar course={course} />}

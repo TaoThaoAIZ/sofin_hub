@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { MaterialIcon } from '../../components/ui/MaterialIcon';
 import { FieldError } from '../../components/ui/FieldMessage';
 
@@ -34,12 +35,13 @@ export function WField({
   children: ReactNode;
   htmlFor?: string;
 }) {
+  const { t } = useTranslation('wizard');
   return (
     <div className="flex gap-4">
       {icon && <IconBadge name={icon} />}
       <div className="min-w-0 flex-1">
         <label htmlFor={htmlFor} className="mb-2.5 block text-[15.5px] font-bold">
-          {label} {optional && <span className="font-medium text-stone-500">(không bắt buộc)</span>}
+          {label} {optional && <span className="font-medium text-stone-500">{t('ui.optional')}</span>}
         </label>
         {children}
         {error ? (
