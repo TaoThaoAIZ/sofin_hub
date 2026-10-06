@@ -10,6 +10,7 @@ import {
   createLessonSchema,
   createModuleSchema,
   listCoursesQuery,
+  moduleAccessSchema,
   reorderSchema,
   updateCourseSchema,
   updateLessonSchema,
@@ -157,7 +158,18 @@ classroomRouter.put(both('/modules/order'), requireAuth, async (req, res) => {
 classroomRouter.patch(both('/modules/:moduleId'), requireAuth, async (req, res) => {
   const communityId = await manage(req);
   const body = updateModuleSchema.parse(req.body);
-  res.json({ data: await classroomService.updateModule(communityId, req.params.moduleId as string, body, courseOf(req)) });
+  res.json({ data: await classroomService.updateModule(communityId, req.params.moduleId as string, body, courseOf(req), req.userId!) });
+});
+
+classroomRouter.get(both('/modules/:moduleId/access'), requireAuth, async (req, res) => {
+  const communityId = await manage(req);
+  res.json({ data: await classroomService.listModuleAccess(communityId, req.params.moduleId as string, courseOf(req)) });
+});
+
+classroomRouter.put(both('/modules/:moduleId/access'), requireAuth, async (req, res) => {
+  const communityId = await manage(req);
+  const { userIds } = moduleAccessSchema.parse(req.body);
+  res.json({ data: await classroomService.setModuleAccess(communityId, req.params.moduleId as string, userIds, courseOf(req)) });
 });
 
 classroomRouter.delete(both('/modules/:moduleId'), requireAuth, async (req, res) => {

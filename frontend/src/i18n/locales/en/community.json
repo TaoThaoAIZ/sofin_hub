@@ -599,5 +599,166 @@
   },
   "page": {
     "loading": "Loading community…"
+  },
+  "dialogForm": {
+    "cover": "Cover image",
+    "coverHint": "Upload image",
+    "coverChange": "Change image",
+    "coverUrlPh": "or paste an image URL (http/https)",
+    "courseName": "Course name",
+    "shortDesc": "Short description",
+    "status": "Publish status",
+    "moduleName": "Module name",
+    "lessonName": "Lesson name",
+    "lessonModule": "Module",
+    "lessonType": "Lesson type",
+    "videoLink": "Video link",
+    "lessonBody": "Content / notes",
+    "attachments": "Attachments",
+    "typeSub": "Choose a content type"
+  },
+  "modWizard": {
+    "title": {
+      "create": "Create new course",
+      "edit": "Edit course",
+      "lessonAdd": "Add lesson",
+      "lessonEdit": "Edit lesson",
+      "publish": "Publish course",
+      "done": "Course published!"
+    },
+    "sub": {
+      "info": "You can change everything later in course settings.",
+      "outline": "Add lessons. Click a lesson to edit its content.",
+      "publish": "Final check before members can see it."
+    },
+    "steps": {
+      "info": "Details",
+      "content": "Content",
+      "publish": "Publish"
+    },
+    "info": {
+      "cover": "Cover image",
+      "name": "Course name",
+      "namePh": "E.g. Start a business with AI",
+      "desc": "Short description",
+      "descPh": "What will learners achieve?",
+      "who": "Who can take this course?",
+      "all": {
+        "t": "All members",
+        "s": "Everyone in the community can learn right away."
+      },
+      "level": {
+        "t": "Unlock by level",
+        "s": "Reward active members on the leaderboard.",
+        "opt": "From Level {{n}}"
+      },
+      "paid": {
+        "t": "Separate purchase",
+        "s": "Members pay once more to unlock."
+      },
+      "selected": {
+        "t": "Selected people only",
+        "s": "You add members one by one, e.g. a 1-on-1 coaching group.",
+        "pick": "Choose members ({{n}})",
+        "search": "Search members…",
+        "none": "No matching members"
+      },
+      "seq": {
+        "t": "Learn in order",
+        "s": "Finish a lesson to unlock the next one. Good for guided paths."
+      },
+      "createdAs": "The course is created as a",
+      "draft": "Draft",
+      "stateDraft": "This course is a Draft",
+      "statePublished": "This course is published",
+      "cancel": "Cancel",
+      "submitCreate": "Create & add content →",
+      "submitEdit": "Save & continue →",
+      "saving": "Saving…",
+      "errName": "Enter a course name",
+      "errPrice": "Enter a price"
+    },
+    "outline": {
+      "summary": "{{n}} lessons · {{done}} with content",
+      "hasContent": "Has content",
+      "noContent": "No content yet",
+      "preview": "Preview",
+      "add": "Add lesson",
+      "saveDraft": "Save draft",
+      "next": "Continue →",
+      "empty": "No lessons yet.",
+      "type": {
+        "video": "Video",
+        "text": "Article",
+        "file": "Document"
+      },
+      "delete": "Delete lesson {{title}}",
+      "edit": "Edit lesson {{title}}",
+      "deleteTitle": "Delete lesson?",
+      "deleteMsg": "The lesson \"{{title}}\" will be permanently deleted.",
+      "deleteOk": "Delete lesson",
+      "deleted": "Lesson deleted"
+    },
+    "lesson": {
+      "name": "Lesson name",
+      "namePh": "E.g. Write captions with AI in 5 minutes",
+      "videoDrop": "Paste a YouTube or Vimeo link",
+      "videoHint": "Supports youtube.com, youtu.be, vimeo.com",
+      "fileDrop": "Upload lesson documents",
+      "fileHint": "PDF, DOCX, ZIP · up to 25MB",
+      "chooseFile": "Choose file",
+      "note": "Notes for learners",
+      "notePh": "Summary, reference links, homework...",
+      "text": "Article content",
+      "textPh": "Write the lesson content (at least 30 characters)...",
+      "free": "Free preview",
+      "freeSub": "People who haven't unlocked it can still view this lesson.",
+      "back": "← Back",
+      "save": "Save lesson",
+      "add": "Add lesson",
+      "errName": "Enter a lesson name",
+      "removeFile": "Remove file {{name}}"
+    },
+    "publish": {
+      "stat": {
+        "lessons": "Lessons",
+        "videos": "Videos",
+        "previews": "Preview lessons"
+      },
+      "check": {
+        "nameDesc": "Course name and description",
+        "hasLesson": "At least 1 lesson",
+        "allContent": "Every lesson has content",
+        "three": "3 or more lessons",
+        "hasPreview": "A free preview lesson"
+      },
+      "required": "Required",
+      "recommended": "Recommended",
+      "notify": {
+        "t": "Notify members",
+        "s": "Send a notification to the whole community"
+      },
+      "announce": {
+        "t": "Post an announcement to the Community",
+        "s": "Automatically creates a post introducing the course"
+      },
+      "block": "Complete the required items before publishing.",
+      "now": "Publish now",
+      "publishing": "Publishing…",
+      "finish": "Done",
+      "already": "This course is already published. Changes are saved right away."
+    },
+    "done": {
+      "text": "\"{{name}}\" now has {{n}} lessons in the Classroom.",
+      "notified": " Members will be notified right away.",
+      "copy": "Copy",
+      "copied": "Copied",
+      "finish": "Done"
+    },
+    "lock": {
+      "paid": "Separate purchase ${{price}}",
+      "selected": "Selected people only",
+      "draft": "Draft"
+    }
   }
 }

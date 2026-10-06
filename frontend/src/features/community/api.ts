@@ -12,6 +12,7 @@ import type {
   CreatePostInput,
   LessonDetail,
   LessonInput,
+  ModuleAccessMember,
   ModuleInput,
   PostQuery,
   PostShare,
@@ -189,3 +190,8 @@ export const fetchClassroomSettings = (cid: string, token: string, signal?: Abor
   apiGet<{ data: { certificatesEnabled: boolean } }>(`/communities/${cid}/classroom-settings`, undefined, signal, { token }).then(D);
 export const updateClassroomSettings = (cid: string, body: { certificatesEnabled: boolean }, token: string) =>
   apiPatch<{ data: { certificatesEnabled: boolean } }>(`/communities/${cid}/classroom-settings`, body, { token }).then(D);
+
+export const fetchModuleAccess = (cid: string, courseId: string, moduleId: string, token: string, signal?: AbortSignal) =>
+  apiGet<{ data: ModuleAccessMember[] }>(`${cBase(cid, courseId)}/modules/${moduleId}/access`, undefined, signal, { token }).then(D);
+export const setModuleAccess = (cid: string, courseId: string, moduleId: string, userIds: string[], token: string) =>
+  apiPut<{ data: ModuleAccessMember[] }>(`${cBase(cid, courseId)}/modules/${moduleId}/access`, { userIds }, { token }).then(D);

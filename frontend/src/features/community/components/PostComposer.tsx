@@ -4,7 +4,7 @@ import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { useAuth } from '../../auth/AuthContext';
 import { useUpload } from '../../uploads/useUpload';
 import { useCreatePost, useTags } from '../queries';
-import { categoryLabel, POST_CATEGORIES, type PostCategory } from '../types';
+import type { PostCategory } from '../types';
 import { absoluteUrl, areaCls, errText, ErrorNote, inputCls, toast } from './contentUi';
 
 const MAX_CONTENT = 4000;
@@ -22,7 +22,7 @@ export function PostComposer({ courseId }: { courseId: string }) {
   const fileInput = useRef<HTMLInputElement>(null);
 
   const [content, setContent] = useState('');
-  const [category, setCategory] = useState<PostCategory>('Thảo luận chung');
+  const category: PostCategory = 'Thảo luận chung';
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [showTags, setShowTags] = useState(false);
@@ -261,18 +261,6 @@ export function PostComposer({ courseId }: { courseId: string }) {
         <button type="button" onClick={() => setShowPoll((s) => !s)} className={toolBtn(showPoll)}>
           <MaterialIcon name="bar_chart" size={19} color="currentColor" /> {t('composer.poll')}
         </button>
-        <select
-          value={category}
-          onChange={(e) => setCategory(e.target.value as PostCategory)}
-          aria-label={t('composer.category')}
-          className="h-9 rounded-lg border border-[rgba(120,60,20,.12)] bg-white px-2 text-[13px] font-medium"
-        >
-          {POST_CATEGORIES.map((c) => (
-            <option key={c} value={c}>
-              {categoryLabel(c)}
-            </option>
-          ))}
-        </select>
         <button
           type="button"
           onClick={submit}

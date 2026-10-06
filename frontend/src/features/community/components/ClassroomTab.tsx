@@ -9,7 +9,8 @@ import { formatCompact } from '../../../lib/format';
 import { useClaimCertificate, useCourseList, useLessons, useModules, useProgress, useToggleLessonComplete } from '../queries';
 import type { Certificate, ClassroomModule } from '../types';
 import { CertificateDialog } from './CertificateCard';
-import { ClassroomEditor, LessonFormDialog, ModuleFormDialog } from './ClassroomEditor';
+import { ClassroomEditor } from './ClassroomEditor';
+import { ModuleWizard } from './ModuleWizard';
 import { CourseManager, publishBadgeCls, publishLabel } from './CourseManager';
 import { errText, ErrorNote, ghostBtn, isAdminPlus, isModPlus, primaryBtn, safeUrl, toast, ToastHost } from './contentUi';
 
@@ -28,22 +29,26 @@ function LessonList({ communityId, courseId, moduleId }: { communityId: string; 
           <button
             type="button"
             onClick={() => toggle.mutate(l.id, { onError: (e) => toast(errText(e), 'error') })}
-            disabled={toggle.isPending}
+            disabled={toggle.isPending || l.locked}
             aria-label={l.completed ? t('classroom.lessonList.markUndone', { title: l.title }) : t('classroom.lessonList.markDone', { title: l.title })}
             title={l.completed ? t('classroom.lessonList.titleUndone') : t('classroom.lessonList.titleDone')}
             className={`grid size-8 flex-none place-items-center rounded-full ${l.completed ? 'bg-brand text-white' : 'bg-stone-100 text-stone-500 hover:bg-brand/10'}`}
           >
             <MaterialIcon name="check" size={16} color={l.completed ? '#fff' : '#a8a29e'} />
           </button>
-          <Link to={lessonPath(communityId, l.id)} className="min-w-0 flex-1">
+          <Link to={lessonPath(communityId, l.id)} className={`min-w-0 flex-1 ${l.locked ? 'pointer-events-none opacity-60' : ''}`} aria-disabled={l.locked}>
             <div className={`truncate text-[13.5px] font-medium hover:text-brand ${l.completed ? 'text-stone-400 line-through' : 'text-stone-900'}`}>{l.title}</div>
             <div className="text-[11.5px] text-stone-400">
               {t('classroom.lessonList.meta', { n: l.durationMin, type: l.type === 'video' ? t('editor.lesson.typeVideo') : l.type === 'file' ? t('editor.lesson.typeFile') : t('editor.lesson.typeText') })}
             </div>
           </Link>
-          <Link to={lessonPath(communityId, l.id)} aria-label={t('classroom.lessonList.learn', { title: l.title })} className="grid size-8 flex-none place-items-center rounded-full bg-brand/10 hover:bg-brand/20">
-            <MaterialIcon name="play_arrow" size={18} filled color="#f26a1b" />
-          </Link>
+          {l.locked ? (
+            <span className="grid size-8 flex-none place-items-center rounded-full bg-stone-100"><MaterialIcon name="lock" size={16} filled color="#a8a29e" /></span>
+          ) : (
+            <Link to={lessonPath(communityId, l.id)} aria-label={t('classroom.lessonList.learn', { title: l.title })} className="grid size-8 flex-none place-items-center rounded-full bg-brand/10 hover:bg-brand/20">
+              <MaterialIcon name="play_arrow" size={18} filled color="#f26a1b" />
+            </Link>
+          )}
         </div>
       ))}
     </div>
@@ -55,6 +60,8 @@ function lockText(m: ClassroomModule) {
     return m.requiredLevel
       ? i18n.t('classroom.lock.levelReq', { ns: 'community', level: m.requiredLevel })
       : i18n.t('classroom.lock.levelHigher', { ns: 'community' });
+  if (m.lockReason === 'paid') return i18n.t('modWizard.lock.paid', { ns: 'community', price: Math.round((m.priceCents ?? 0) / 100) });
+  if (m.lockReason === 'selected') return i18n.t('modWizard.lock.selected', { ns: 'community' });
   return i18n.t('classroom.lock.prevModule', { ns: 'community' });
 }
 
@@ -83,8 +90,7 @@ export function ClassroomTab() {
   const [page, setPage] = useState(1);
   const [editMode, setEditMode] = useState(false);
   const [cert, setCert] = useState<Certificate | null>(null);
-  const [editingModule, setEditingModule] = useState<ClassroomModule | null>(null);
-  const [addingLesson, setAddingLesson] = useState(false);
+  const [wizard, setWizard] = useState<ClassroomModule | 'new' | null>(null);
 
   const role = community?.viewerRole;
   const canEdit = isModPlus(role);
@@ -137,24 +143,28 @@ export function ClassroomTab() {
   return (
     <div className="flex flex-col gap-4">
       <ToastHost />
-      <div className="flex flex-wrap items-center gap-5 px-1 py-2">
-        <div>
-          <h1 className="m-0 text-[28px] leading-tight font-extrabold tracking-tight">{t('classroom.title')}</h1>
-          <p className="mt-1 text-sm text-stone-700">{t('classroom.subtitle')}</p>
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-4 px-1 py-1.5">
+        <div className="min-w-0 flex-1 basis-[300px]">
+          <h1 className="m-0 text-[32px] leading-tight font-extrabold tracking-tight">{t('classroom.title')}</h1>
+          <p className="mt-1 mb-0 text-sm text-stone-700 [text-wrap:pretty]">{t('classroom.subtitle')}</p>
         </div>
-        <div className="ml-auto flex gap-6 text-sm text-stone-600">
+        <div className="ml-auto flex items-center divide-x divide-stone-200/80 py-2">
           {[
-            { value: list.length, label: t('classroom.statModules') },
-            { value: totalLessons, label: t('classroom.statLessons') },
-            { value: formatCompact(community?.stats.members ?? 0), label: t('classroom.statStudents') },
+            { icon: 'school', value: list.length, label: t('classroom.statModules') },
+            { icon: 'article', value: totalLessons, label: t('classroom.statLessons') },
+            { icon: 'group', value: formatCompact(community?.stats.members ?? 0), label: t('classroom.statStudents') },
           ].map((s) => (
-            <div key={s.label}>
-              <span className="font-extrabold text-stone-900">{s.value}</span> {s.label}
+            <div key={s.label} className="flex items-center gap-2.5 px-5 first:pl-0 last:pr-0">
+              <MaterialIcon name={s.icon} size={24} color="#f26a1b" />
+              <div>
+                <div className="text-[17px] leading-tight font-extrabold">{s.value}</div>
+                <div className="mt-0.5 text-xs text-stone-600">{s.label}</div>
+              </div>
             </div>
           ))}
         </div>
-        {canEdit && list.length > 0 && (
-          <button type="button" onClick={() => setAddingLesson(true)} className={`${primaryBtn} h-12 rounded-2xl px-6`}>
+        {canEdit && (
+          <button type="button" onClick={() => setWizard('new')} className={`${primaryBtn} h-14 flex-none rounded-2xl px-6 text-[15px] whitespace-nowrap`}>
             <MaterialIcon name="add" size={22} color="#fff" />
             {t('classroom.addLesson')}
           </button>
@@ -263,13 +273,16 @@ export function ClassroomTab() {
                 {canEdit && (
                   <button
                     type="button"
-                    onClick={() => setEditingModule(m)}
+                    onClick={() => setWizard(m)}
                     title={t('classroom.editModuleTitle')}
                     className="absolute top-3 right-3 z-[3] flex h-[34px] items-center gap-1.5 rounded-[10px] bg-white/95 px-3 text-[13px] font-bold shadow-[0_6px_16px_rgba(0,0,0,.18)] hover:bg-white hover:text-brand"
                   >
                     <MaterialIcon name="edit" size={17} />
                     {t('classroom.editBtn')}
                   </button>
+                )}
+                {m.publishStatus === 'draft' && (
+                  <span className="absolute top-3 left-3 z-[3] rounded-lg bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800">{t('modWizard.lock.draft')}</span>
                 )}
                 {m.locked && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[rgba(12,8,6,.62)] px-5 text-center text-sm font-bold text-white backdrop-blur-[2px]">
@@ -290,7 +303,7 @@ export function ClassroomTab() {
                   </div>
                   <button
                     type="button"
-                    disabled={m.locked}
+                    disabled={m.locked && !(m.hasPreview && m.lockReason !== 'previous_module')}
                     onClick={() => setOpenId(openId === m.id ? null : m.id)}
                     aria-label={t('classroom.openAria', { title: m.title })}
                     title={m.locked ? lockText(m) : undefined}
@@ -325,10 +338,7 @@ export function ClassroomTab() {
         <span>{list.length ? t('classroom.range', { from: start + 1, to: start + shown.length, total: list.length }) : ''}</span>
       </div>
 
-      {editingModule && <ModuleFormDialog communityId={communityId} courseId={courseId} module={editingModule} onClose={() => setEditingModule(null)} />}
-      {addingLesson && (
-        <LessonFormDialog communityId={communityId} courseId={courseId} moduleId={(openModule ?? list[0]!).id} modules={list} onClose={() => setAddingLesson(false)} />
-      )}
+      {wizard && <ModuleWizard communityId={communityId} courseId={courseId} module={wizard === 'new' ? null : wizard} onClose={() => setWizard(null)} />}
       {cert && <CertificateDialog cert={cert} onClose={() => setCert(null)} />}
     </div>
   );

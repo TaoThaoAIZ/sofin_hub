@@ -65,13 +65,27 @@ export interface ClassroomModule {
   locked: boolean;
   thumbnail?: string;
   requiredLevel?: number;
-  lockReason?: 'previous_module' | 'level' | null;
+  lockReason?: 'previous_module' | 'level' | 'paid' | 'selected' | null;
   learningCourseId?: string;
+  accessMode?: ModuleAccessMode;
+  /** Chỉ có khi accessMode = 'paid'. */
+  priceCents?: number;
+  /** Bài trong module phải học tuần tự. */
+  sequential?: boolean;
+  publishStatus?: 'published' | 'draft' | 'archived';
+  /** Có ít nhất 1 bài xem thử miễn phí. */
+  hasPreview?: boolean;
 }
+
+export type ModuleAccessMode = 'all' | 'level' | 'paid' | 'selected';
 
 export interface ClassroomLesson {
   id: string;
   index: number;
+  /** Bài xem thử miễn phí: người chưa mở khóa module vẫn xem được. */
+  isPreview?: boolean;
+  /** Người xem hiện chưa mở được bài này (khóa module / học tuần tự). */
+  locked?: boolean;
   title: string;
   type: 'video' | 'text' | 'file';
   durationMin: number;
@@ -285,6 +299,19 @@ export interface ModuleInput {
   description: string;
   thumbnail?: string | null;
   requiredLevel?: number | null;
+  accessMode?: ModuleAccessMode;
+  priceCents?: number | null;
+  sequential?: boolean;
+  publishStatus?: 'published' | 'draft' | 'archived';
+  /** Chỉ gửi khi chuyển nháp → xuất bản (hành động một lần, không lưu). */
+  notifyMembers?: boolean;
+  announce?: boolean;
+}
+
+export interface ModuleAccessMember {
+  id: string;
+  name: string;
+  avatarUrl?: string;
 }
 
 export interface LessonInput {
@@ -294,6 +321,7 @@ export interface LessonInput {
   body: string;
   videoUrl?: string | null;
   attachments?: LessonAttachment[];
+  isPreview?: boolean;
 }
 
 // ---- Khóa học (Course) nằm trong cộng đồng ----

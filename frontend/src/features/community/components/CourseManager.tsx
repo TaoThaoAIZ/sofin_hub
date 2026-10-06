@@ -1,11 +1,11 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../../i18n';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
-import { useUpload } from '../../uploads/useUpload';
 import { useArchiveCourse, useClassroomSettings, useCourseList, useCreateCourse, useDeleteCourse, useReorderCourses, useUpdateCourse } from '../queries';
 import type { LearningCourse } from '../types';
-import { absoluteUrl, areaCls, ConfirmDialog, Dialog, errText, ErrorNote, ghostBtn, inputCls, primaryBtn, safeUrl, toast } from './contentUi';
+import { areaCls, ConfirmDialog, Dialog, errText, ErrorNote, FieldLabel, ghostBtn, inputCls, primaryBtn, safeUrl, toast } from './contentUi';
+import { CoverField } from './CoverField';
 
 const iconBtn = 'grid size-8 place-items-center rounded-lg text-stone-500 hover:bg-stone-100 disabled:opacity-30';
 const su = (u: string | null | undefined) => safeUrl(u ?? undefined);
@@ -50,8 +50,7 @@ function CourseFormDialog({ communityId, course, isAdmin, onClose }: { community
   const create = useCreateCourse(communityId);
   const update = useUpdateCourse(communityId);
   const settings = useClassroomSettings(communityId);
-  const { upload, uploading, error: uploadError } = useUpload();
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [title, setTitle] = useState(course?.title ?? '');
   const [description, setDescription] = useState(course?.description ?? '');
   const [thumb, setThumb] = useState(course?.thumbnailUrl ?? '');
@@ -98,51 +97,46 @@ function CourseFormDialog({ communityId, course, isAdmin, onClose }: { community
           <button type="button" onClick={onClose} className={ghostBtn}>
             {t('ui.cancel')}
           </button>
-          <button type="button" onClick={submit} disabled={pending || uploading || !title.trim()} className={primaryBtn}>
+          <button type="button" onClick={submit} disabled={pending || !title.trim()} className={primaryBtn}>
             {pending ? t('courseForm.saving') : t('courseForm.save')}
           </button>
         </>
       }
     >
-      <div className="flex flex-col gap-2.5">
-        <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} placeholder={t('courseForm.name')} aria-label={t('courseForm.name')} className={inputCls} />
-        <textarea value={description} onChange={(e) => setDescription(e.target.value)} maxLength={1000} rows={3} placeholder={t('courseForm.descPh')} aria-label={t('courseForm.descPh')} className={areaCls} />
-        <div className="flex gap-2">
-          <input value={thumb} onChange={(e) => setThumb(e.target.value)} placeholder={t('courseForm.thumbPh')} aria-label={t('courseForm.thumbAria')} className={inputCls} />
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif"
-            hidden
-            onChange={async (e) => {
-              const f = e.target.files?.[0];
-              e.target.value = '';
-              if (!f) return;
-              try {
-                const up = await upload(f, { purpose: 'cover' });
-                setThumb(absoluteUrl(up.url));
-              } catch {
-                /* lỗi hiển thị qua uploadError */
-              }
-            }}
-          />
-          <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading} className={`${ghostBtn} flex-none`}>
-            {uploading ? t('courseForm.uploading') : t('courseForm.uploadBtn')}
-          </button>
+      <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-4 sm:flex-row">
+          <CoverField value={thumb} onChange={setThumb} onError={setUploadError} ariaLabel={t('courseForm.thumbAria')} />
+          <div className="flex min-w-0 flex-1 flex-col gap-4">
+            <div>
+              <FieldLabel>{t('dialogForm.courseName')}</FieldLabel>
+              <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} placeholder={t('courseForm.name')} aria-label={t('courseForm.name')} className={inputCls} />
+            </div>
+            <div>
+              <FieldLabel>{t('dialogForm.shortDesc')}</FieldLabel>
+              <textarea value={description} onChange={(e) => setDescription(e.target.value)} maxLength={1000} rows={4} placeholder={t('courseForm.descPh')} aria-label={t('courseForm.descPh')} className={areaCls} />
+            </div>
+          </div>
         </div>
-        {su(thumb) && <img src={su(thumb)!} alt={t('courseForm.previewAlt')} className="h-28 w-full rounded-xl object-cover" />}
-        <label className="flex items-center gap-2 text-[13px]">
-          {t('courseForm.status')}
-          <select value={status} onChange={(e) => setStatus(e.target.value as typeof status)} aria-label={t('courseForm.statusAria')} className="h-9 rounded-lg border border-[rgba(120,60,20,.12)] bg-white px-2">
-            <option value="published">{t('courseForm.optPublished')}</option>
-            <option value="draft">{t('courseForm.optDraft')}</option>
-            {course?.publishStatus === 'archived' && (
-              <option value="archived" disabled>
-                {t('publish.archived')}
-              </option>
-            )}
-          </select>
-        </label>
+        <div>
+          <FieldLabel>{t('dialogForm.status')}</FieldLabel>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {([['published', t('courseForm.optPublished')], ['draft', t('courseForm.optDraft')]] as const).map(([v, label]) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setStatus(v)}
+                aria-pressed={status === v}
+                className={`flex items-center gap-3 rounded-2xl border-[1.5px] px-4 py-3 text-left text-[13.5px] font-semibold ${status === v ? 'border-brand bg-brand-soft text-stone-900' : 'border-[rgba(120,60,20,.12)] bg-white text-stone-700 hover:border-brand/50'}`}
+              >
+                <span className={`grid size-5 flex-none place-items-center rounded-full border-2 ${status === v ? 'border-brand' : 'border-stone-300'}`}>
+                  {status === v && <span className="size-2.5 rounded-full bg-brand" />}
+                </span>
+                {label}
+              </button>
+            ))}
+          </div>
+          {course?.publishStatus === 'archived' && <p className="mt-2 mb-0 text-xs text-stone-500">{t('publish.archived')}</p>}
+        </div>
         {isAdmin && course && <CertModeSelect value={cert} communityDefault={settings.data?.certificatesEnabled} onChange={setCert} />}
         <ErrorNote message={err ?? uploadError} />
       </div>
