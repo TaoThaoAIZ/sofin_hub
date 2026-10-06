@@ -31,7 +31,7 @@ const moduleId = (communityId: string, n: number) => `mod-${communityId}-${n}`;
 const lessonId = (communityId: string, n: number, m: number) => `les-${communityId}-${n}-${m}`;
 
 interface Plan {
-  modules: { id: string; communityId: string; learningCourseId: string; index: number; title: string; description: string; requiredLevel: number | null }[];
+  modules: { id: string; communityId: string; learningCourseId: string; index: number; title: string; description: string; requiredLevel: number | null; accessMode: 'all' | 'level' }[];
   lessons: {
     id: string; moduleId: string; communityId: string; index: number; title: string; type: 'video' | 'text'; durationMin: number; body: string;
   }[];
@@ -55,6 +55,7 @@ function plan(course: { id: string; lessons: number; durationMinutes: number }, 
       title: tpl.title,
       description: tpl.description,
       requiredLevel: course.id === 'yt' && mi === 1 ? 2 : null,
+      accessMode: course.id === 'yt' && mi === 1 ? 'level' : 'all',
     });
     for (let li = 0; li < lessonCount; li++) {
       out.lessons.push({

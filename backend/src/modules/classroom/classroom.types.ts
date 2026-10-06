@@ -23,7 +23,11 @@ export interface ClassroomLesson {
   /** URL nhúng đã chuẩn hóa từ videoUrl — FE chỉ cần đưa vào iframe. */
   embedUrl?: string;
   attachments: LessonAttachment[];
+  /** Bài xem thử miễn phí: mở được kể cả khi module bị khóa theo quyền truy cập. */
+  isPreview: boolean;
 }
+
+export type ModuleAccessMode = 'all' | 'level' | 'paid' | 'selected';
 
 export interface ClassroomModule {
   id: string;
@@ -38,10 +42,18 @@ export interface ClassroomModule {
   thumbnail?: string;
   /** Cấp độ tối thiểu (1..9) để mở khóa module; không đặt = không yêu cầu. */
   requiredLevel?: number;
+  accessMode: ModuleAccessMode;
+  /** Giá (cent) — chỉ khi accessMode = paid. */
+  priceCents?: number;
+  /** Bài trong module phải hoàn thành lần lượt. */
+  sequential: boolean;
+  publishStatus: CoursePublishStatus;
   lessonIds: string[];
+  /** Id các bài xem thử (tập con của lessonIds). */
+  previewIds: string[];
 }
 
-export type LockReason = 'previous_module' | 'level' | null;
+export type LockReason = 'previous_module' | 'level' | 'paid' | 'selected' | null;
 
 export interface ClassroomModuleView {
   id: string;
@@ -56,11 +68,18 @@ export interface ClassroomModuleView {
   locked: boolean;
   thumbnail?: string;
   requiredLevel?: number;
+  accessMode: ModuleAccessMode;
+  priceCents?: number;
+  sequential: boolean;
+  publishStatus: CoursePublishStatus;
+  hasPreview: boolean;
   lockReason: LockReason;
 }
 
 export interface ClassroomLessonView extends Omit<ClassroomLesson, 'moduleId' | 'courseId' | 'communityId'> {
   completed: boolean;
+  /** Người xem chưa mở được bài này (khóa theo quyền truy cập hoặc học tuần tự); nội dung bị ẩn khi true. */
+  locked: boolean;
 }
 
 export interface ClassroomLessonDetail extends ClassroomLessonView {

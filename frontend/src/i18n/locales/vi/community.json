@@ -599,5 +599,166 @@
   },
   "page": {
     "loading": "Đang tải cộng đồng…"
+  },
+  "dialogForm": {
+    "cover": "Ảnh bìa",
+    "coverHint": "Tải ảnh lên",
+    "coverChange": "Đổi ảnh",
+    "coverUrlPh": "hoặc dán URL ảnh (http/https)",
+    "courseName": "Tên khóa học",
+    "shortDesc": "Mô tả ngắn",
+    "status": "Trạng thái xuất bản",
+    "moduleName": "Tên module",
+    "lessonName": "Tên bài học",
+    "lessonModule": "Thuộc module",
+    "lessonType": "Loại bài học",
+    "videoLink": "Link video",
+    "lessonBody": "Nội dung / ghi chú",
+    "attachments": "Tệp đính kèm",
+    "typeSub": "Chọn loại nội dung"
+  },
+  "modWizard": {
+    "title": {
+      "create": "Tạo khóa học mới",
+      "edit": "Chỉnh sửa khóa học",
+      "lessonAdd": "Thêm bài học",
+      "lessonEdit": "Sửa bài học",
+      "publish": "Xuất bản khóa học",
+      "done": "Khóa học đã xuất bản!"
+    },
+    "sub": {
+      "info": "Mọi thứ đều sửa được sau trong Cài đặt khóa học.",
+      "outline": "Thêm bài học. Bấm vào bài để soạn nội dung.",
+      "publish": "Kiểm tra lần cuối trước khi thành viên nhìn thấy."
+    },
+    "steps": {
+      "info": "Thông tin",
+      "content": "Nội dung",
+      "publish": "Xuất bản"
+    },
+    "info": {
+      "cover": "Ảnh bìa",
+      "name": "Tên khóa học",
+      "namePh": "Ví dụ: Khởi nghiệp với AI",
+      "desc": "Mô tả ngắn",
+      "descPh": "Học viên sẽ đạt được gì?",
+      "who": "Ai được học khóa này?",
+      "all": {
+        "t": "Tất cả thành viên",
+        "s": "Ai trong cộng đồng cũng học được ngay."
+      },
+      "level": {
+        "t": "Mở khóa theo cấp độ",
+        "s": "Thưởng cho thành viên tích cực trên bảng xếp hạng.",
+        "opt": "Từ Cấp {{n}}"
+      },
+      "paid": {
+        "t": "Mua riêng",
+        "s": "Thành viên trả thêm một lần để mở khóa."
+      },
+      "selected": {
+        "t": "Chỉ người được chọn",
+        "s": "Bạn tự thêm từng thành viên, ví dụ nhóm coaching 1-1.",
+        "pick": "Chọn thành viên ({{n}})",
+        "search": "Tìm thành viên…",
+        "none": "Không có thành viên phù hợp"
+      },
+      "seq": {
+        "t": "Học theo thứ tự",
+        "s": "Hoàn thành bài trước mới mở bài sau. Phù hợp khóa có lộ trình."
+      },
+      "createdAs": "Khóa học được tạo ở dạng",
+      "draft": "Bản nháp",
+      "stateDraft": "Khóa học đang ở dạng Bản nháp",
+      "statePublished": "Khóa học đã xuất bản",
+      "cancel": "Hủy",
+      "submitCreate": "Tạo & thêm nội dung →",
+      "submitEdit": "Lưu & tiếp tục →",
+      "saving": "Đang lưu…",
+      "errName": "Nhập tên khóa học",
+      "errPrice": "Nhập giá mua riêng"
+    },
+    "outline": {
+      "summary": "{{n}} bài học · {{done}} bài đã có nội dung",
+      "hasContent": "Đã có nội dung",
+      "noContent": "Chưa có nội dung",
+      "preview": "Xem thử",
+      "add": "Thêm bài học",
+      "saveDraft": "Lưu nháp",
+      "next": "Tiếp tục →",
+      "empty": "Chưa có bài học nào.",
+      "type": {
+        "video": "Video",
+        "text": "Bài viết",
+        "file": "Tài liệu"
+      },
+      "delete": "Xóa bài {{title}}",
+      "edit": "Sửa bài {{title}}",
+      "deleteTitle": "Xóa bài học?",
+      "deleteMsg": "Bài học \"{{title}}\" sẽ bị xóa vĩnh viễn.",
+      "deleteOk": "Xóa bài học",
+      "deleted": "Đã xóa bài học"
+    },
+    "lesson": {
+      "name": "Tên bài học",
+      "namePh": "Ví dụ: Viết caption bằng AI trong 5 phút",
+      "videoDrop": "Dán link video YouTube hoặc Vimeo",
+      "videoHint": "Hỗ trợ youtube.com, youtu.be, vimeo.com",
+      "fileDrop": "Tải tài liệu cho bài học",
+      "fileHint": "PDF, DOCX, ZIP · tối đa 25MB",
+      "chooseFile": "Chọn tệp",
+      "note": "Ghi chú cho học viên",
+      "notePh": "Tóm tắt, link tham khảo, bài tập về nhà...",
+      "text": "Nội dung bài viết",
+      "textPh": "Viết nội dung bài học (tối thiểu 30 ký tự)...",
+      "free": "Cho xem thử miễn phí",
+      "freeSub": "Người chưa mở khóa vẫn xem được bài này.",
+      "back": "← Quay lại",
+      "save": "Lưu bài học",
+      "add": "Thêm bài học",
+      "errName": "Nhập tên bài học",
+      "removeFile": "Bỏ tệp {{name}}"
+    },
+    "publish": {
+      "stat": {
+        "lessons": "Bài học",
+        "videos": "Video",
+        "previews": "Bài xem thử"
+      },
+      "check": {
+        "nameDesc": "Tên và mô tả khóa học",
+        "hasLesson": "Có ít nhất 1 bài học",
+        "allContent": "Mọi bài học đều có nội dung",
+        "three": "Từ 3 bài học trở lên",
+        "hasPreview": "Có bài cho xem thử miễn phí"
+      },
+      "required": "Bắt buộc",
+      "recommended": "Nên có",
+      "notify": {
+        "t": "Thông báo cho thành viên",
+        "s": "Gửi thông báo tới cả cộng đồng"
+      },
+      "announce": {
+        "t": "Đăng bài giới thiệu lên Cộng đồng",
+        "s": "Tự tạo bài viết giới thiệu khóa học"
+      },
+      "block": "Hoàn thành các mục bắt buộc trước khi xuất bản.",
+      "now": "Xuất bản ngay",
+      "publishing": "Đang xuất bản…",
+      "finish": "Hoàn tất",
+      "already": "Khóa học đã được xuất bản. Các thay đổi được lưu ngay."
+    },
+    "done": {
+      "text": "\"{{name}}\" đã có {{n}} bài học trong Lớp học.",
+      "notified": " Thành viên sẽ nhận được thông báo ngay.",
+      "copy": "Sao chép",
+      "copied": "Đã sao chép",
+      "finish": "Xong"
+    },
+    "lock": {
+      "paid": "Mua riêng ${{price}}",
+      "selected": "Chỉ người được chọn",
+      "draft": "Bản nháp"
+    }
   }
 }

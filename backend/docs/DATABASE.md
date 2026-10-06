@@ -374,3 +374,6 @@ Thay đổi khác cùng đợt (không đo bằng số): mọi route lớp học
 - `Payment` / `Subscription` thêm `interval` (mặc định monthly) + `paymentCardId` (FK `PaymentCard`, SET NULL); `Subscription.trialReminderSentAt` (claim nhắc idempotent).
 - Bảng mới: `PaymentCard` (userId, gatewayToken, brand, last4, expMonth, expYear; unique(userId, gatewayToken) — KHÔNG PAN/CVC), `HostingPlan` (1/cộng đồng, MÔ PHỎNG), `PayoutAccount` (1/cộng đồng, chỉ 4 số cuối, MÔ PHỎNG).
 - Seed (`prisma/seed/community-wizard.ts`, chạy cuối `runSeed`): 3 nháp của owner test (`draft-gom-cuoi-tuan`, `draft-chay-bo-5k` có gói hosting dùng thử + thẻ mô phỏng, `draft-viet-content` sẵn sàng publish + payout mô phỏng), 3 danh mục Discovery mới, cộng đồng `annual-demo` ($7/tháng, $48/năm) trong `communities-scenarios.ts`. Các seed khác lọc `draft` nên không sinh thành viên/bài viết cho nháp; chạy 2 lần cho số liệu giống nhau.
+
+## Migration `20261009100000_classroom_module_access`
+- Enum `ModuleAccessMode` (all/level/paid/selected), `ModuleAccessSource` (selected/purchase). `ClassroomModule` + `accessMode` (mặc định `all`; backfill `level` nếu `requiredLevel IS NOT NULL`), `priceCents`, `sequential`. `ClassroomLesson.isPreview`. Bảng `ModuleAccess(moduleId,userId,source,createdAt)` PK (moduleId,userId), cascade theo module/user.

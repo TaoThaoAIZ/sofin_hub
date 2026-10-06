@@ -6,6 +6,7 @@ import { notify } from '../notifications/notifications.service.js';
 import { atLeast, getRole } from '../permissions/policy.js';
 import { levelFor } from '../points/points.levels.js';
 import { pointsService } from '../points/points.service.js';
+import { postsService } from '../posts/posts.service.js';
 import { toEmbedUrl } from './classroom.schema.js';
 import { classroomRepository, type ClassroomRepository, type LessonPatch, type ModulePatch } from './classroom.repository.js';
 import {
@@ -30,16 +31,24 @@ import type {
   LearningCourseView,
   LessonAttachment,
   LessonType,
+  ModuleAccessMode,
   PublicCertificateView,
 } from './classroom.types.js';
 
 interface ModuleState {
   view: ClassroomModuleView;
   module: ClassroomModule;
+  /** Bài người xem chưa mở được (mod+: luôn rỗng). */
+  lockedLessons: Set<string>;
+  /** Module đang khóa do thứ tự (xem thử KHÔNG vượt được khóa này). */
+  orderLocked: boolean;
 }
 
 const moduleLocked = (msg = 'Module này đang bị khóa. Hãy hoàn thành module trước đó hoặc đạt đủ cấp độ yêu cầu') =>
   new HttpError(403, 'MODULE_LOCKED', msg);
+
+const lessonLocked = (msg = 'Bài học này đang bị khóa. Hãy hoàn thành các bài học trước đó trong module') =>
+  new HttpError(403, 'LESSON_LOCKED', msg);
 
 const courseNotFound = () => HttpError.notFound('Không tìm thấy khóa học');
 
@@ -52,8 +61,21 @@ export interface ResolvedCourse {
 export function createClassroomService(repo: ClassroomRepository = classroomRepository, courses: LearningCourseRepository = learningCourseRepository) {
   const lessonView = (l: ClassroomLesson, doneIds: Set<string>): ClassroomLessonView => {
     const { moduleId: _moduleId, courseId: _courseId, communityId: _communityId, ...rest } = l;
-    return { ...rest, completed: doneIds.has(l.id) };
+    return { ...rest, completed: doneIds.has(l.id), locked: false };
   };
+
+  /** Bài đang khóa với người xem: giấu nội dung (thân bài, video, tệp đính kèm), chỉ giữ thông tin hiển thị danh sách. */
+  const lockedLessonView = (l: ClassroomLesson, doneIds: Set<string>): ClassroomLessonView => {
+    const { videoUrl: _v, embedUrl: _e, ...rest } = lessonView(l, doneIds);
+    return { ...rest, body: '', attachments: [], locked: true };
+  };
+
+  /** Ném đúng lỗi khóa nếu người xem không mở được bài (module khóa thứ tự/quyền truy cập, hoặc học tuần tự). */
+  function assertLessonOpen(s: ModuleState, lesson: Pick<ClassroomLesson, 'id' | 'isPreview'>) {
+    if (!s.lockedLessons.has(lesson.id)) return;
+    if (s.view.locked && (s.orderLocked || !lesson.isPreview)) throw moduleLocked();
+    throw lessonLocked();
+  }
 
   const isStaff = async (communityId: string, userId: string) => atLeast(await getRole(userId, communityId), 'mod');
 
@@ -81,9 +103,9 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
 
   /** Khóa chứa module (module phải hiển thị + thuộc cộng đồng; `courseId` nếu truyền phải khớp). */
   async function moduleContext(communityId: string, moduleId: string, courseId: string | undefined, userId: string) {
-    const mod = await repo.findModule(communityId, moduleId);
-    if (!mod || (courseId && mod.learningCourseId !== courseId)) throw HttpError.notFound('Không tìm thấy module');
     const staff = await isStaff(communityId, userId);
+    const mod = await repo.findModule(communityId, moduleId, staff);
+    if (!mod || (courseId && mod.learningCourseId !== courseId)) throw HttpError.notFound('Không tìm thấy module');
     const course = mod.course;
     if (course.removedAt || (course.publishStatus !== 'published' && !staff)) throw HttpError.notFound('Không tìm thấy module');
     return { mod, course, staff } as const;
@@ -92,19 +114,39 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
   /** Trạng thái các module của 1 user TRONG MỘT KHÓA HỌC; khóa luôn tính ở server (tuần tự theo thứ tự + theo cấp độ). Mod+ không bị khóa. */
   async function state(communityId: string, course: LearningCourseRecord, userId: string, staff: boolean) {
     // Route đã kiểm tra cộng đồng tồn tại + thành viên; không nạp lại ở đây.
-    const [modules, doneAt] = await Promise.all([repo.getModules(course.id), repo.completedAtMap(userId, course.id)]);
+    const [modules, doneAt] = await Promise.all([repo.getModules(course.id, staff), repo.completedAtMap(userId, course.id)]);
     const doneIds = new Set(doneAt.keys());
-    const needsLevel = modules.some((m) => m.requiredLevel);
+    const needsLevel = !staff && modules.some((m) => m.accessMode === 'level' && m.requiredLevel);
     const level = needsLevel ? levelFor(await pointsService.totalFor(communityId, userId, 'all')).level : 1;
+    const grantable = staff ? [] : modules.filter((m) => m.accessMode === 'paid' || m.accessMode === 'selected').map((m) => m.id);
+    const granted = await repo.accessModuleIds(userId, grantable);
 
     let prevFullyDone = true;
     const states: ModuleState[] = [];
     for (const m of modules) {
       const completedCount = m.lessonIds.filter((id) => doneIds.has(id)).length;
       const pct = m.lessonIds.length ? Math.round((completedCount / m.lessonIds.length) * 100) : 0;
-      const orderLocked = !prevFullyDone;
-      const levelLocked = !!m.requiredLevel && level < m.requiredLevel;
-      const locked = !staff && (orderLocked || levelLocked);
+      const orderLocked = !staff && !prevFullyDone;
+      const accessReason: 'level' | 'paid' | 'selected' | null =
+        staff || orderLocked
+          ? null
+          : m.accessMode === 'level'
+            ? m.requiredLevel && level < m.requiredLevel ? 'level' : null
+            : (m.accessMode === 'paid' || m.accessMode === 'selected') && !granted.has(m.id)
+              ? m.accessMode
+              : null;
+      const locked = orderLocked || accessReason !== null;
+      const lockedLessons = new Set<string>();
+      if (orderLocked) m.lessonIds.forEach((id) => lockedLessons.add(id));
+      else if (accessReason) m.lessonIds.filter((id) => !m.previewIds.includes(id)).forEach((id) => lockedLessons.add(id));
+      else if (!staff && m.sequential) {
+        // Học tuần tự: bài (không phải xem thử) khóa tới khi mọi bài đứng trước đã hoàn thành.
+        let allBeforeDone = true;
+        for (const id of m.lessonIds) {
+          if (!allBeforeDone && !m.previewIds.includes(id)) lockedLessons.add(id);
+          if (!doneIds.has(id)) allBeforeDone = false;
+        }
+      }
       states.push({
         module: m,
         view: {
@@ -119,25 +161,32 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
           pct,
           locked,
           ...(m.thumbnail ? { thumbnail: m.thumbnail } : {}),
-          ...(m.requiredLevel ? { requiredLevel: m.requiredLevel } : {}),
-          lockReason: !locked ? null : orderLocked ? 'previous_module' : 'level',
+          ...(m.accessMode === 'level' && m.requiredLevel ? { requiredLevel: m.requiredLevel } : {}),
+          accessMode: m.accessMode,
+          ...(m.accessMode === 'paid' && m.priceCents ? { priceCents: m.priceCents } : {}),
+          sequential: m.sequential,
+          publishStatus: m.publishStatus,
+          hasPreview: m.previewIds.length > 0,
+          lockReason: orderLocked ? 'previous_module' : accessReason,
         },
+        lockedLessons,
+        orderLocked,
       });
       prevFullyDone = completedCount === m.lessonIds.length;
     }
     return { modules, states, doneIds, doneAt, staff };
   }
 
-  async function requireLesson(communityId: string, lessonId: string) {
-    const lesson = await repo.findLesson(lessonId, communityId);
+  async function requireLesson(communityId: string, lessonId: string, includeUnpublished = true) {
+    const lesson = await repo.findLesson(lessonId, communityId, includeUnpublished);
     if (!lesson) throw HttpError.notFound('Không tìm thấy bài học');
     return lesson;
   }
 
   /** Khóa chứa bài học (nhìn thấy được với người xem). */
   async function lessonContext(communityId: string, lessonId: string, userId: string) {
-    const lesson = await requireLesson(communityId, lessonId);
     const staff = await isStaff(communityId, userId);
+    const lesson = await requireLesson(communityId, lessonId, staff);
     const course = lesson.course;
     if (course.removedAt || (course.publishStatus !== 'published' && !staff)) throw HttpError.notFound('Không tìm thấy bài học');
     return { lesson, course, staff } as const;
@@ -200,6 +249,69 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
     });
   }
 
+  /**
+   * Gộp (hiện tại + yêu cầu) thành cấu hình truy cập hợp lệ của module. Tương thích cũ: chỉ gửi `requiredLevel` (không gửi accessMode)
+   * = chế độ `level`; gửi `requiredLevel: null` khi đang `level` = về `all`.
+   */
+  function resolveAccess(
+    cur: { accessMode: ModuleAccessMode; requiredLevel?: number | undefined; priceCents?: number | undefined },
+    req: { accessMode?: ModuleAccessMode | undefined; requiredLevel?: number | null | undefined; priceCents?: number | null | undefined },
+  ): { accessMode: ModuleAccessMode; requiredLevel: number | null; priceCents: number | null } {
+    let mode = req.accessMode;
+    if (!mode) {
+      if (typeof req.requiredLevel === 'number') mode = 'level';
+      else if (req.requiredLevel === null && cur.accessMode === 'level') mode = 'all';
+      else mode = cur.accessMode;
+    }
+    if (mode === 'level') {
+      const requiredLevel = req.requiredLevel !== undefined ? req.requiredLevel : (cur.requiredLevel ?? null);
+      if (!requiredLevel) throw HttpError.badRequest('Module yêu cầu cấp độ cần chọn cấp độ tối thiểu (1 đến 9)');
+      return { accessMode: mode, requiredLevel, priceCents: null };
+    }
+    if (mode === 'paid') {
+      const priceCents = req.priceCents !== undefined ? req.priceCents : (cur.priceCents ?? null);
+      if (!priceCents) throw HttpError.badRequest('Module trả phí cần nhập giá lớn hơn 0');
+      return { accessMode: mode, requiredLevel: null, priceCents };
+    }
+    return { accessMode: mode, requiredLevel: null, priceCents: null };
+  }
+
+  async function managedModule(communityId: string, moduleId: string, courseId: string | undefined) {
+    const mod = await repo.findModule(communityId, moduleId, true);
+    if (!mod || (courseId && mod.learningCourseId !== courseId)) throw HttpError.notFound('Không tìm thấy module');
+    return mod;
+  }
+
+  /** Sau khi module chuyển nháp → xuất bản: báo thành viên / đăng bài thông báo (cố gắng hết sức, lỗi không làm hỏng PATCH). */
+  async function announcePublished(communityId: string, actorId: string, mod: ClassroomModule, flags: { notifyMembers?: boolean | undefined; announce?: boolean | undefined }) {
+    const link = `/communities/${communityId}/community/lop-hoc`;
+    if (flags.notifyMembers) {
+      try {
+        const ids = (await repo.enrolledUserIds(communityId)).filter((id) => id !== actorId);
+        for (const userId of ids) {
+          notify({
+            userId,
+            type: 'system',
+            title: 'Module mới trong Lớp học',
+            body: `Module "${mod.title}" vừa được xuất bản.`,
+            link,
+            communityId,
+          });
+        }
+      } catch (e) {
+        console.error('[classroom] gửi thông báo module mới lỗi', e instanceof Error ? e.message : e);
+      }
+    }
+    if (flags.announce) {
+      try {
+        const desc = mod.description ? `\n${mod.description}` : '';
+        await postsService.create(communityId, actorId, `Module mới: ${mod.title}${desc}\nXem tại Lớp học: ${link}`.slice(0, 4000), 'Thông báo', []);
+      } catch (e) {
+        console.error('[classroom] đăng bài thông báo module mới lỗi', e instanceof Error ? e.message : e);
+      }
+    }
+  }
+
   return {
     // ================================================================ Khóa học (entity mới) ================================================================
     async listCourses(communityId: string, userId: string, statuses?: CoursePublishStatus[]): Promise<LearningCourseView[]> {
@@ -258,9 +370,9 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
       const { states, doneIds } = await state(communityId, course, userId, staff);
       const s = states.find((x) => x.module.id === mod.id);
       if (!s) throw HttpError.notFound('Không tìm thấy module');
-      if (s.view.locked) throw moduleLocked();
+      if (s.orderLocked) throw moduleLocked();
       const lessons = await repo.getLessons(moduleId);
-      return lessons.map((l) => lessonView(l, doneIds));
+      return lessons.map((l) => (s.lockedLessons.has(l.id) ? lockedLessonView(l, doneIds) : lessonView(l, doneIds)));
     },
 
     async getLesson(communityId: string, lessonId: string, userId: string): Promise<ClassroomLessonDetail> {
@@ -268,7 +380,7 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
       const { states, modules, doneIds } = await state(communityId, course, userId, staff);
       const s = states.find((x) => x.module.id === lesson.moduleId);
       if (!s) throw HttpError.notFound('Không tìm thấy module');
-      if (s.view.locked) throw moduleLocked();
+      assertLessonOpen(s, lesson);
       const flat = flatLessonIds(modules);
       const i = flat.indexOf(lessonId);
       return {
@@ -286,8 +398,10 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
     async toggleLessonComplete(communityId: string, lessonId: string, userId: string) {
       const { lesson, course, staff } = await lessonContext(communityId, lessonId, userId);
       const { states } = await state(communityId, course, userId, staff);
-      // Không tin FE: bài thuộc module đang khóa thì không được đánh dấu.
-      if (states.find((x) => x.module.id === lesson.moduleId)?.view.locked) throw moduleLocked();
+      // Không tin FE: bài đang khóa (module khóa / học tuần tự) thì không được đánh dấu.
+      const s = states.find((x) => x.module.id === lesson.moduleId);
+      if (!s) throw HttpError.notFound('Không tìm thấy module');
+      assertLessonOpen(s, lesson);
       // firstTime chỉ true đúng một lần (dòng LessonProgress được tạo nguyên tử) => điểm không bị cộng đôi kể cả gọi song song.
       const { completed, firstTime } = await repo.toggleCompleted(userId, lessonId);
       if (completed && firstTime) await pointsService.award(userId, communityId, 'lesson_complete', { type: 'lesson', id: lessonId });
@@ -302,7 +416,7 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
       const completedLessons = modules.reduce((n, m) => n + m.lessonIds.filter((id) => doneIds.has(id)).length, 0);
       const lastLessonId = [...doneAt.entries()].sort((a, b) => b[1].localeCompare(a[1]))[0]?.[0] ?? null;
       const open = states.filter((s) => !s.view.locked);
-      const nextId = open.flatMap((s) => s.module.lessonIds).find((id) => !doneIds.has(id));
+      const nextId = open.flatMap((s) => s.module.lessonIds.filter((id) => !s.lockedLessons.has(id))).find((id) => !doneIds.has(id));
       // Chỉ cần tên + module của đúng 1 bài kế tiếp (không nạp thân bài của cả khóa).
       const next = nextId ? await repo.findLessonBrief(nextId) : undefined;
       return {
@@ -322,33 +436,73 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
       communityId: string,
       courseId: string | undefined,
       userId: string,
-      input: { title: string; description: string; thumbnail?: string | undefined; requiredLevel?: number | undefined },
+      input: {
+        title: string;
+        description: string;
+        thumbnail?: string | undefined;
+        requiredLevel?: number | undefined;
+        accessMode?: ModuleAccessMode | undefined;
+        priceCents?: number | undefined;
+        sequential?: boolean | undefined;
+        publishStatus?: CoursePublishStatus | undefined;
+      },
     ) {
       const resolved = await resolveCourse(communityId, courseId, userId);
       const courseRecord = resolved?.course ?? (await this.ensureDefaultCourse(communityId));
-      const { thumbnail, requiredLevel, ...base } = input;
+      const { thumbnail, sequential, publishStatus, ...base } = input;
+      const access = resolveAccess({ accessMode: 'all' }, { accessMode: input.accessMode, requiredLevel: input.requiredLevel, priceCents: input.priceCents });
       return repo.createModule(communityId, courseRecord.id, {
-        ...base,
+        title: base.title,
+        description: base.description,
         ...(thumbnail ? { thumbnail } : {}),
-        ...(requiredLevel ? { requiredLevel } : {}),
+        accessMode: access.accessMode,
+        ...(access.requiredLevel ? { requiredLevel: access.requiredLevel } : {}),
+        ...(access.priceCents ? { priceCents: access.priceCents } : {}),
+        ...(sequential !== undefined ? { sequential } : {}),
+        ...(publishStatus ? { publishStatus } : {}),
       });
     },
 
-    async updateModule(communityId: string, moduleId: string, patch: ModulePatch, courseId?: string) {
-      const mod = await repo.findModule(communityId, moduleId);
-      if (!mod || (courseId && mod.learningCourseId !== courseId)) throw HttpError.notFound('Không tìm thấy module');
-      return (await repo.updateModule(communityId, moduleId, patch))!;
+    async updateModule(
+      communityId: string,
+      moduleId: string,
+      patch: ModulePatch & { notifyMembers?: boolean | undefined; announce?: boolean | undefined },
+      courseId?: string,
+      actorId?: string,
+    ) {
+      const mod = await managedModule(communityId, moduleId, courseId);
+      const { notifyMembers, announce, ...fields } = patch;
+      const touchesAccess = fields.accessMode !== undefined || fields.requiredLevel !== undefined || fields.priceCents !== undefined;
+      if (touchesAccess) Object.assign(fields, resolveAccess(mod, fields));
+      const updated = (await repo.updateModule(communityId, moduleId, fields))!;
+      if (mod.publishStatus === 'draft' && fields.publishStatus === 'published' && actorId && (notifyMembers || announce)) {
+        await announcePublished(communityId, actorId, updated, { notifyMembers, announce });
+      }
+      return updated;
+    },
+
+    async listModuleAccess(communityId: string, moduleId: string, courseId?: string) {
+      await managedModule(communityId, moduleId, courseId);
+      return Promise.all((await repo.listAccessUserIds(moduleId)).map((id) => userBriefView(id)));
+    },
+
+    async setModuleAccess(communityId: string, moduleId: string, userIds: string[], courseId?: string) {
+      await managedModule(communityId, moduleId, courseId);
+      const ids = [...new Set(userIds)];
+      const enrolled = new Set(await repo.enrolledAmong(communityId, ids));
+      if (ids.some((id) => !enrolled.has(id))) throw HttpError.badRequest('Chỉ có thể cấp quyền cho thành viên đã tham gia cộng đồng');
+      await repo.replaceAccess(moduleId, ids);
+      return this.listModuleAccess(communityId, moduleId, courseId);
     },
 
     async deleteModule(communityId: string, moduleId: string, courseId?: string) {
-      const mod = await repo.findModule(communityId, moduleId);
-      if (!mod || (courseId && mod.learningCourseId !== courseId)) throw HttpError.notFound('Không tìm thấy module');
+      await managedModule(communityId, moduleId, courseId);
       await repo.deleteModule(communityId, moduleId);
     },
 
     async reorderModules(communityId: string, courseId: string | undefined, userId: string, ids: string[]) {
       const { course } = await requireCourse(communityId, courseId, userId);
-      const mods = await repo.getModules(course.id);
+      const mods = await repo.getModules(course.id, true);
       assertPermutation(ids, mods.map((m) => m.id));
       await repo.reorderModules(course.id, ids);
     },
@@ -356,19 +510,18 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
     async createLesson(
       communityId: string,
       moduleId: string,
-      input: { title: string; type: LessonType; durationMin: number; body: string; videoUrl?: string | undefined; attachments?: LessonAttachment[] | undefined },
+      input: { title: string; type: LessonType; durationMin: number; body: string; videoUrl?: string | undefined; attachments?: LessonAttachment[] | undefined; isPreview?: boolean | undefined },
       courseId?: string,
     ) {
-      const mod = await repo.findModule(communityId, moduleId);
-      if (!mod || (courseId && mod.learningCourseId !== courseId)) throw HttpError.notFound('Không tìm thấy module');
-      const { videoUrl, attachments, ...base } = input;
-      return (await repo.createLesson(communityId, moduleId, { ...base, attachments: attachments ?? [], ...videoFields(videoUrl) }))!;
+      await managedModule(communityId, moduleId, courseId);
+      const { videoUrl, attachments, isPreview, ...base } = input;
+      return (await repo.createLesson(communityId, moduleId, { ...base, attachments: attachments ?? [], ...(isPreview !== undefined ? { isPreview } : {}), ...videoFields(videoUrl) }))!;
     },
 
     async updateLesson(
       communityId: string,
       lessonId: string,
-      input: Partial<{ title: string; type: LessonType; durationMin: number; body: string; videoUrl: string | null; attachments: LessonAttachment[] }>,
+      input: Partial<{ title: string; type: LessonType; durationMin: number; body: string; videoUrl: string | null; attachments: LessonAttachment[]; isPreview: boolean }>,
     ) {
       await requireLesson(communityId, lessonId);
       const { videoUrl, ...rest } = input;
@@ -384,8 +537,7 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
     },
 
     async reorderLessons(communityId: string, moduleId: string, ids: string[], courseId?: string) {
-      const mod = await repo.findModule(communityId, moduleId);
-      if (!mod || (courseId && mod.learningCourseId !== courseId)) throw HttpError.notFound('Không tìm thấy module');
+      const mod = await managedModule(communityId, moduleId, courseId);
       assertPermutation(ids, mod.lessonIds);
       await repo.reorderLessons(moduleId, ids);
     },

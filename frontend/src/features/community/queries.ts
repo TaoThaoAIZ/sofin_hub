@@ -465,3 +465,14 @@ export const useDeleteLesson = (cid: string) =>
   useClassroomMutation(cid, (lessonId: string, t) => api.deleteLesson(cid, lessonId, t));
 export const useReorderLessons = (cid: string, courseId: string) =>
   useClassroomMutation(cid, (v: { moduleId: string; ids: string[] }, t) => api.reorderLessons(cid, courseId, v.moduleId, v.ids, t));
+
+export const useModuleAccess = (cid: string, courseId: string | null, moduleId: string | null) => {
+  const { accessToken } = useAuth();
+  return useQuery({
+    queryKey: [...ck.modules(cid, courseId ?? ''), moduleId ?? '', 'access'] as const,
+    queryFn: ({ signal }) => api.fetchModuleAccess(cid, courseId!, moduleId!, accessToken!, signal),
+    enabled: !!courseId && !!moduleId && !!accessToken,
+  });
+};
+export const useSetModuleAccess = (cid: string, courseId: string) =>
+  useClassroomMutation(cid, (v: { moduleId: string; userIds: string[] }, t) => api.setModuleAccess(cid, courseId, v.moduleId, v.userIds, t));

@@ -284,6 +284,19 @@ enum ContentPublishStatus {
   archived
 }
 
+/// Ai được mở module: all = mọi thành viên; level = đủ cấp độ; paid = đã mua/được cấp; selected = chỉ người được chọn.
+enum ModuleAccessMode {
+  all
+  level
+  paid
+  selected
+}
+
+enum ModuleAccessSource {
+  selected
+  purchase
+}
+
 enum DiscoveryStatus {
   listed
   hidden
@@ -409,6 +422,7 @@ model User {
   eventRsvps          EventRsvp[]
   pointEvents         PointEvent[]
   lessonProgress      LessonProgress[]
+  moduleAccess        ModuleAccess[]
   certificates        Certificate[]
   notifications       Notification[]
   notificationPrefs   NotificationPreference?
@@ -914,6 +928,12 @@ model ClassroomModule {
   thumbnail        String?
   /// Cấp độ (1..9) tối thiểu để mở khóa; null = không yêu cầu.
   requiredLevel    Int?
+  /// Chế độ truy cập (all/level/paid/selected). `requiredLevel` chỉ có nghĩa khi accessMode = level.
+  accessMode       ModuleAccessMode     @default(all)
+  /// Giá (đơn vị cent) khi accessMode = paid.
+  priceCents       Int?
+  /// Bài trong module phải hoàn thành lần lượt.
+  sequential       Boolean              @default(false)
   /// Admin đợt 2: xuất bản + gỡ. Thành viên chỉ thấy module published và chưa bị gỡ.
   publishStatus    ContentPublishStatus @default(published)
   removedAt        DateTime?
@@ -926,6 +946,7 @@ model ClassroomModule {
   community Community         @relation(fields: [communityId], references: [id], onDelete: Cascade)
   course    Course            @relation(fields: [learningCourseId], references: [id], onDelete: Cascade)
   lessons   ClassroomLesson[]
+  access    ModuleAccess[]
 
   @@index([communityId, index])
   @@index([learningCourseId, index])
@@ -947,6 +968,8 @@ model ClassroomLesson {
   attachments Json       @default("[]")
   /// Admin đợt 2: ẩn / gỡ khỏi thành viên.
   hidden      Boolean    @default(false)
+  /// Bài xem thử miễn phí: mở được kể cả khi module bị khóa theo quyền truy cập.
+  isPreview   Boolean    @default(false)
   removedAt   DateTime?
   modReason   String?
   modAt       DateTime?
@@ -960,6 +983,20 @@ model ClassroomLesson {
 
   @@index([moduleId, index])
   @@index([communityId])
+}
+
+/// Quyền mở 1 module cho 1 user (accessMode = selected | paid).
+model ModuleAccess {
+  moduleId  String
+  userId    String
+  source    ModuleAccessSource @default(selected)
+  createdAt DateTime           @default(now())
+
+  module ClassroomModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  user   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([moduleId, userId])
+  @@index([userId])
 }
 
 /// Tiến độ học. Có dòng = ĐÃ TỪNG hoàn thành (để chỉ cộng điểm 1 lần); completedAt=null nghĩa là đã bỏ đánh dấu.

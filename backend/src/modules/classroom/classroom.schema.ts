@@ -63,6 +63,14 @@ const attachment = z.object({
   size: z.number().int().min(0).max(5_000_000_000).optional(),
 });
 
+const accessMode = z.enum(['all', 'level', 'paid', 'selected']);
+const modulePublishStatus = z.enum(['published', 'draft', 'archived']);
+const priceCents = z
+  .number()
+  .int('Giá phải là số nguyên (cent)')
+  .min(1, 'Giá phải lớn hơn 0')
+  .max(100000 * 100, 'Giá tối đa 100.000');
+
 export const createModuleSchema = z.object({
   /** Chỉ route cũ (/courses/:id/modules) dùng: khóa học đích; bỏ trống = khóa mặc định. Route mới lấy :courseId từ URL. */
   learningCourseId: z.string().min(1).max(100).optional(),
@@ -70,6 +78,10 @@ export const createModuleSchema = z.object({
   description: z.string().trim().max(1000, 'Mô tả tối đa 1000 ký tự'),
   thumbnail: httpUrl.optional(),
   requiredLevel: level.optional(),
+  accessMode: accessMode.optional(),
+  priceCents: priceCents.optional(),
+  sequential: z.boolean().optional(),
+  publishStatus: modulePublishStatus.optional(),
 });
 
 export const updateModuleSchema = z
@@ -78,6 +90,13 @@ export const updateModuleSchema = z
     description: z.string().trim().max(1000).optional(),
     thumbnail: httpUrl.nullable().optional(),
     requiredLevel: level.nullable().optional(),
+    accessMode: accessMode.optional(),
+    priceCents: priceCents.nullable().optional(),
+    sequential: z.boolean().optional(),
+    publishStatus: modulePublishStatus.optional(),
+    /** Cờ một lần, chỉ có tác dụng khi PATCH này chuyển draft → published; không được lưu. */
+    notifyMembers: z.boolean().optional(),
+    announce: z.boolean().optional(),
   })
   .refine((v) => Object.keys(v).length > 0, 'Không có trường nào để cập nhật');
 
@@ -88,12 +107,14 @@ const lessonFields = {
   body: z.string().max(50_000, 'Nội dung tối đa 50.000 ký tự'),
   videoUrl,
   attachments: z.array(attachment).max(20, 'Tối đa 20 tệp đính kèm'),
+  isPreview: z.boolean(),
 };
 
 export const createLessonSchema = z.object({
   ...lessonFields,
   videoUrl: lessonFields.videoUrl.optional(),
   attachments: lessonFields.attachments.optional(),
+  isPreview: lessonFields.isPreview.optional(),
 });
 
 export const updateLessonSchema = z
@@ -104,8 +125,13 @@ export const updateLessonSchema = z
     body: lessonFields.body.optional(),
     videoUrl: lessonFields.videoUrl.nullable().optional(),
     attachments: lessonFields.attachments.optional(),
+    isPreview: lessonFields.isPreview.optional(),
   })
   .refine((v) => Object.keys(v).length > 0, 'Không có trường nào để cập nhật');
+
+export const moduleAccessSchema = z.object({
+  userIds: z.array(z.string().min(1).max(100)).max(500, 'Tối đa 500 thành viên'),
+});
 
 export const reorderSchema = z.object({
   ids: z.array(z.string().min(1)).max(500),
