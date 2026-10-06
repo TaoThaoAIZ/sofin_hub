@@ -308,6 +308,7 @@ export function CourseDetailPage() {
                   <MaterialIcon name="arrow_forward" size={20} color="#fff" />
                 </ButtonLink>
               )}
+              {!course.viewerEnrolled && (
               <Button
                 onClick={handleJoin}
                 disabled={enroll.isPending || hasPendingRequest}
@@ -325,6 +326,7 @@ export function CourseDetailPage() {
                   <path d={course.viewerEnrolled ? 'M5 12l5 5 9-10' : 'M5 12h14M13 6l6 6-6 6'} />
                 </svg>
               </Button>
+              )}
               {isPrivate && !course.viewerEnrolled && !hasPendingRequest && (
                 <p className="text-center text-xs text-stone-500">{t('detail.privateNote')}</p>
               )}

@@ -91,7 +91,7 @@ export function CalendarTab() {
 
   return (
     <main className="flex min-w-0 flex-col gap-4">
-      <PageBanner image="cal-hero-bg.webp" icon="calendar_month" title={t('calendar.title')} className="min-h-[148px]" />
+      <PageBanner image="cal-hero-bg.webp" icon="calendar_month" title={t('calendar.title')} />
 
       <section className="glass rounded-3xl p-4">
         <div className="mb-4 flex flex-wrap items-center gap-4">

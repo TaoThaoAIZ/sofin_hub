@@ -58,15 +58,37 @@ async function doFetch(method: string, url: string, body: unknown, token: string
   });
 }
 
+/** Đọc `exp` (giây) từ JWT mà không kiểm chữ ký; null nếu không phải JWT hợp lệ. */
+function tokenExpiry(token: string): number | null {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]!.replace(/-/g, '+').replace(/_/g, '/'))) as { exp?: number };
+    return typeof payload.exp === 'number' ? payload.exp : null;
+  } catch {
+    return null;
+  }
+}
+
+let refreshing: Promise<string | null> | null = null;
+const refreshOnce = () => (refreshing ??= refreshHandler!().finally(() => (refreshing = null)));
+
 async function request<T>(method: string, url: string, body: unknown, opts?: RequestOptions): Promise<T> {
-  const token = opts?.token ?? currentToken;
+  let token = opts?.token ?? currentToken;
+  // Các endpoint "optionalAuth" của BE coi token hết hạn là khách (không trả 401) nên không tự refresh được:
+  // để web mở lâu, request sẽ bị hiểu nhầm là chưa tham gia cộng đồng. Làm mới token trước khi gửi nếu sắp/đã hết hạn.
+  if (token && refreshHandler && !opts?.skipAuthRetry) {
+    const exp = tokenExpiry(token);
+    if (exp !== null && exp * 1000 - Date.now() < 10_000) {
+      const fresh = await refreshOnce();
+      if (fresh) token = fresh;
+    }
+  }
   let res = await doFetch(method, url, body, token, opts?.signal, opts?.headers);
 
   // Access token hết hạn giữa phiên (khác lúc mới tải trang): thử xin token mới 1 lần rồi gọi lại
   // đúng request này. Bỏ qua cho chính các endpoint đăng nhập/đăng ký/refresh (`skipAuthRetry`) để
   // không tự gọi lại vô hạn hoặc "sửa hộ" một lỗi sai mật khẩu thành refresh phiên không liên quan.
   if (res.status === 401 && token && refreshHandler && !opts?.skipAuthRetry) {
-    const newToken = await refreshHandler();
+    const newToken = await refreshOnce();
     if (newToken) {
       res = await doFetch(method, url, body, newToken, opts?.signal, opts?.headers);
     } else {
@@ -119,7 +141,7 @@ export async function apiDownload(path: string, filename: string, opts?: Request
   const url = `${API_URL}${path}`;
   let res = await doFetch('GET', url, undefined, token);
   if (res.status === 401 && token && refreshHandler && !opts?.skipAuthRetry) {
-    const newToken = await refreshHandler();
+    const newToken = await refreshOnce();
     if (newToken) res = await doFetch('GET', url, undefined, newToken);
     else sessionExpiredHandler?.();
   }

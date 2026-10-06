@@ -169,7 +169,7 @@ export function ModerationPage() {
   }
   return (
     <main className="flex min-w-0 flex-col gap-4">
-      <PageBanner image="cal-hero-bg.webp" icon="shield" title={t('moderation.pageTitle')} subtitle={t('moderation.pageSubtitle')} className="min-h-[120px]" />
+      <PageBanner image="cal-hero-bg.webp" icon="shield" title={t('moderation.pageTitle')} subtitle={t('moderation.pageSubtitle')} />
       <ReportQueue courseId={courseId} />
     </main>
   );

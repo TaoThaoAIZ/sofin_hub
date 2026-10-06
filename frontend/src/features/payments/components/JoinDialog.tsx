@@ -276,8 +276,8 @@ export function JoinDialog({
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-stone-900/45 p-4 backdrop-blur-[2px] md:items-center" onClick={onClose}>
-      <div role="dialog" aria-modal="true" aria-label={t('join.choosePlan')} className="w-full max-w-[560px]" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex overflow-y-auto bg-stone-900/45 p-3 backdrop-blur-[2px] sm:p-4" onClick={onClose}>
+      <div role="dialog" aria-modal="true" aria-label={t('join.choosePlan')} className="m-auto w-full max-w-[560px]" onClick={(e) => e.stopPropagation()}>
         <JoinCheckout course={course} onClose={onClose} onDone={onDone} onNeedRequest={onNeedRequest} />
       </div>
     </div>
