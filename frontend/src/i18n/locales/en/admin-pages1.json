@@ -300,7 +300,9 @@
       "approve": "Approve",
       "approved": "Approved · {{name}}",
       "requestChanges": "Request changes",
-      "reject": "Reject"
+      "reject": "Reject",
+      "approveTitle": "Approve community?",
+      "approveBody": "{{name}} will become active and visible on the platform."
     },
     "suspended": {
       "title": "Suspended communities",

@@ -9,11 +9,12 @@ import { notify } from '../notifications/notifications.service.js';
 import { balanceView, paymentsService, payoutPolicy } from '../payments/payments.service.js';
 import { auditService } from './admin-audit.service.js';
 import { DAY, code, codePrefix, dateRangeFields, nameMap, pctRound, person, personSelect, ref, resolveRange } from './admin-b2.common.js';
-import { enumList, iso, noteField, pageMeta, pageQuery, reasonField } from './admin.common.js';
+import { likeEscape, enumList, iso, noteField, pageMeta, pageQuery, reasonField } from './admin.common.js';
 
 /** Admin đợt 2 — Payments: transactions, subscriptions, refunds, chargebacks (mô phỏng), creator revenue, payouts. Contract: docs/api/admin-batch2.md. */
 
-const likeAny = (q: string): Prisma.StringFilter => ({ contains: q, mode: 'insensitive' });
+const MAX_SERIES_DAYS = 400;
+const likeAny = (q: string): Prisma.StringFilter => ({ contains: likeEscape(q), mode: 'insensitive' });
 const userMatch = (q: string): Prisma.UserWhereInput => ({ OR: [{ firstName: likeAny(q) }, { lastName: likeAny(q) }, { email: likeAny(q) }] });
 
 const bp = (pct: number) => Math.round(pct * 100);
@@ -646,6 +647,7 @@ export const adminPaymentsService = {
       pendingBalanceCents: sum((r) => r.pendingBalanceCents),
       withdrawableCents: sum((r) => r.withdrawableCents),
       heldCents: sum((r) => r.heldCents),
+      reserveCents: sum((r) => r.reserveCents),
       debtCents: sum((r) => r.debtCents),
     };
   },
@@ -683,7 +685,7 @@ export const adminPaymentsService = {
     const mine = all.find((r) => r.ownerId === userId);
     if (!mine && !(await prisma.community.count({ where: { ownerId: userId } }))) throw HttpError.notFound('Người dùng này không sở hữu cộng đồng nào');
     const { ownerId: _o, communities: _c, ...kpis } = mine ?? { ownerId: userId, communities: 0, grossCents: 0, refundsCents: 0, platformFeeCents: 0, gatewayFeeCents: 0, netCents: 0, pendingBalanceCents: 0, paidOutCents: 0, withdrawableCents: 0, heldCents: 0, reserveCents: 0, debtCents: 0 };
-    const from = range.from ?? new Date(Date.now() - 29 * DAY);
+    // Không truyền from/to: KPI là toàn thời gian nên chuỗi cũng phủ toàn bộ giao dịch (từ ngày đầu tiên, tối thiểu 30 và tối đa MAX_SERIES_DAYS ngày gần nhất).
     const to = range.to ?? new Date();
     const r = rates();
     const [series, perCourse, txs, payouts] = await Promise.all([
@@ -693,7 +695,7 @@ export const adminPaymentsService = {
                    - (((p."amountCents"::bigint * ${r.gatewayFeeBp} + 5000) / 10000) + ${r.gatewayFeeFixedCents}))::bigint AS net
         FROM "Payment" p JOIN "Course" c ON c."id" = p."courseId"
         WHERE c."ownerId" = ${userId} AND p."status" IN ('succeeded', 'refunded')
-          AND COALESCE(p."confirmedAt", p."createdAt") >= ${from.toISOString()}::timestamp AND COALESCE(p."confirmedAt", p."createdAt") <= ${to.toISOString()}::timestamp
+          ${range.from ? Prisma.sql`AND COALESCE(p."confirmedAt", p."createdAt") >= ${range.from.toISOString()}::timestamp` : Prisma.empty} AND COALESCE(p."confirmedAt", p."createdAt") <= ${to.toISOString()}::timestamp
         GROUP BY 1`),
       prisma.$queryRaw<{ id: string; title: string; gross: bigint; net: bigint; requested: bigint }[]>(Prisma.sql`
         SELECT c."id", c."title",
@@ -706,9 +708,11 @@ export const adminPaymentsService = {
       prisma.payment.findMany({ where: { community: { ownerId: userId } }, orderBy: { createdAt: 'desc' }, take: 20, include: txInclude }),
       prisma.payout.findMany({ where: { community: { ownerId: userId } }, orderBy: { createdAt: 'desc' }, take: 10, include: payoutInclude }),
     ]);
+    const firstDay = series.reduce<Date | null>((m, x) => (!m || x.d < m ? x.d : m), null);
+    const from = range.from ?? new Date(Math.max(Math.min(firstDay?.getTime() ?? Infinity, to.getTime() - 29 * DAY), to.getTime() - (MAX_SERIES_DAYS - 1) * DAY));
     const byDay = new Map(series.map((s) => [s.d.toISOString().slice(0, 10), s]));
     const days: Array<{ date: string; grossCents: number; netCents: number; refundsCents: number }> = [];
-    for (let t = Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate()); t <= to.getTime() && days.length < 400; t += DAY) {
+    for (let t = Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate()); t <= to.getTime() && days.length < MAX_SERIES_DAYS; t += DAY) {
       const key = new Date(t).toISOString().slice(0, 10);
       const s = byDay.get(key);
       days.push({ date: key, grossCents: Number(s?.gross ?? 0), netCents: Number(s?.net ?? 0), refundsCents: Number(s?.refunds ?? 0) });

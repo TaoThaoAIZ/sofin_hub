@@ -163,7 +163,7 @@ export function CaseDetailView() {
           buttons={[
             { label: t('caseDetail.dismiss'), icon: 'check', disabled: !decidable, onClick: () => open('dismiss', c, note) },
             { label: t('caseDetail.warn'), icon: 'warning', disabled: !decidable || !c.reportedUser, onClick: () => open('warn', c) },
-            { label: t('caseDetail.remove'), icon: 'delete', kind: 'primary', disabled: !canRemove, onClick: () => open('remove', c) },
+            ...(c.targetType !== 'member' ? [{ label: t('caseDetail.remove'), icon: 'delete', kind: 'primary' as const, disabled: !canRemove, onClick: () => open('remove', c) }] : []),
             { label: t('caseDetail.restrict'), icon: 'block', disabled: !decidable || !c.reportedUser, onClick: () => open('restrict', c) },
             { label: t('caseDetail.suspend'), icon: 'pause_circle', kind: 'danger', disabled: !decidable || !c.reportedUser, onClick: () => open('suspend', c, note) },
             { label: t('caseDetail.ban'), icon: 'gavel', kind: 'solidDanger', disabled: !decidable || !c.reportedUser, onClick: () => open('ban', c, note) },

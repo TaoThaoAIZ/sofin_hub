@@ -8,7 +8,7 @@ import { caseCode } from './admin-cases.view.js';
 import {
   DAY, HOUR, bulkBody, code, codePrefix, excerpt, nameMap, person, personSelect, ref, startOfUtcDay,
 } from './admin-b2.common.js';
-import { enumList, iso, noteField, pageMeta, pageQuery, reasonField } from './admin.common.js';
+import { likeEscape, enumList, iso, noteField, pageMeta, pageQuery, reasonField } from './admin.common.js';
 
 /** Admin đợt 2 — Content: posts, comments, courses (ClassroomModule), lessons, events, media. Contract: docs/api/admin-batch2.md. */
 
@@ -366,7 +366,7 @@ async function toMediaItems(rows: MediaRow[]) {
   }));
 }
 
-const likeAny = (q: string): Prisma.StringFilter => ({ contains: q, mode: 'insensitive' });
+const likeAny = (q: string): Prisma.StringFilter => ({ contains: likeEscape(q), mode: 'insensitive' });
 const authorMatch = (q: string): Prisma.UserWhereInput => ({
   OR: [{ firstName: likeAny(q) }, { lastName: likeAny(q) }, { email: likeAny(q) }],
 });
@@ -543,9 +543,24 @@ export const adminContentService = {
     const orderBy: Prisma.CourseOrderByWithRelationInput[] =
       q.sort === 'oldest' ? [{ createdAt: 'asc' }, { id: 'asc' }]
         : q.sort === 'title' ? [{ title: 'asc' }, { id: 'asc' }]
-          : q.sort === 'lessons' ? [{ modules: { _count: 'desc' } }, { id: 'asc' }]
-            : q.sort === 'students' ? [{ community: { enrollments: { _count: 'desc' } } }, { id: 'asc' }]
+          : q.sort === 'students' ? [{ community: { enrollments: { _count: 'desc' } } }, { id: 'asc' }]
               : [{ createdAt: 'desc' }, { id: 'asc' }];
+    if (q.sort === 'lessons') {
+      // Prisma không sắp theo số bài học (lồng 2 cấp qua module) -> lấy id khớp bộ lọc, đếm bài học bằng SQL rồi phân trang.
+      const skip = (q.page - 1) * q.limit;
+      const ids = await prisma.course.findMany({ where, select: { id: true } });
+      const counts = ids.length
+        ? await prisma.$queryRaw<{ id: string; n: number }[]>(Prisma.sql`
+            SELECT m."learningCourseId" AS id, COUNT(*)::int AS n FROM "ClassroomLesson" l JOIN "ClassroomModule" m ON m."id" = l."moduleId"
+            WHERE m."learningCourseId" = ANY(${ids.map((r) => r.id)}::text[]) GROUP BY m."learningCourseId"`)
+        : [];
+      const n = new Map(counts.map((c) => [c.id, c.n]));
+      const sorted = ids.map((r) => r.id).sort((a, b) => (n.get(b) ?? 0) - (n.get(a) ?? 0) || a.localeCompare(b));
+      const pageIds = sorted.slice(skip, skip + q.limit);
+      const rows = await prisma.course.findMany({ where: { id: { in: pageIds } }, include: courseInclude });
+      const by = new Map(rows.map((r) => [r.id, r]));
+      return { data: await toCourseItems(pageIds.map((id) => by.get(id)!).filter(Boolean)), meta: pageMeta(q.page, q.limit, sorted.length) };
+    }
     const [rows, total] = await Promise.all([
       prisma.course.findMany({ where, orderBy, skip: (q.page - 1) * q.limit, take: q.limit, include: courseInclude }),
       prisma.course.count({ where }),

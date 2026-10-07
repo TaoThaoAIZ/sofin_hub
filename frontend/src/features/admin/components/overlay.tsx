@@ -171,6 +171,22 @@ export function ModalShell({
   }, [onClose, pending]);
 
   const blocked = disabled || pending;
+  // Khóa đồng bộ bằng ref: bấm đúp rất nhanh chưa kịp re-render (pending chưa bật) vẫn chỉ gửi 1 lần.
+  const lock = useRef(false);
+  const pendingRef = useRef(pending);
+  pendingRef.current = pending;
+  useEffect(() => {
+    if (!pending) lock.current = false;
+  }, [pending]);
+  const confirm = () => {
+    if (lock.current || blocked) return;
+    lock.current = true;
+    // Nếu hành động không kích hoạt pending (vd. xác nhận đồng bộ) thì mở khóa sau một nhịp.
+    setTimeout(() => {
+      if (!pendingRef.current) lock.current = false;
+    }, 500);
+    onConfirm();
+  };
   return createPortal(
     <div
       className="fixed inset-0 z-[80] grid place-items-center overflow-y-auto bg-[rgba(28,25,23,.4)] p-5 backdrop-blur-[3px]"
@@ -209,7 +225,7 @@ export function ModalShell({
           </button>
           <button
             type="button"
-            onClick={onConfirm}
+            onClick={confirm}
             disabled={blocked}
             className={`h-[46px] flex-1 rounded-[13px] border-0 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-45 ${danger ? 'bg-[#dc2626]' : 'bg-gradient-to-b from-[#ff8f45] to-[#f26a1b]'}`}
           >

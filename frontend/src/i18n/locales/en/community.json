@@ -300,7 +300,9 @@
     "deleteTitle": "Delete event?",
     "deleteMsg": "The event \"{{title}}\" will be deleted and registered attendees will be notified.",
     "deleteConfirm": "Delete event",
-    "deleted": "Event deleted"
+    "deleted": "Event deleted",
+    "cancelled": "Cancelled",
+    "cancelledEvent": "This event has been cancelled"
   },
   "ui": {
     "close": "Close",

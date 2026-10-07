@@ -3,7 +3,7 @@ import { Prisma } from '../../generated/prisma/client.js';
 import { prisma } from '../../db/prisma.js';
 import { userBriefView } from '../auth/user-view.js';
 import { adminRequestContext } from './admin-staff.service.js';
-import { pageMeta, type PageQuery } from './admin.common.js';
+import { likeEscape, pageMeta, type PageQuery } from './admin.common.js';
 
 export interface AuditEntry {
   action: string;
@@ -97,11 +97,11 @@ export const auditService = {
       ...(q.q
         ? {
             OR: [
-              { targetLabel: { contains: q.q, mode: 'insensitive' } },
-              { actorName: { contains: q.q, mode: 'insensitive' } },
-              { reason: { contains: q.q, mode: 'insensitive' } },
-              { action: { contains: q.q, mode: 'insensitive' } },
-              { caseId: { contains: q.q, mode: 'insensitive' } },
+              { targetLabel: { contains: likeEscape(q.q), mode: 'insensitive' } },
+              { actorName: { contains: likeEscape(q.q), mode: 'insensitive' } },
+              { reason: { contains: likeEscape(q.q), mode: 'insensitive' } },
+              { action: { contains: likeEscape(q.q), mode: 'insensitive' } },
+              { caseId: { contains: likeEscape(q.q), mode: 'insensitive' } },
             ],
           }
         : {}),

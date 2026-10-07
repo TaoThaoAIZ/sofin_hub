@@ -1,6 +1,7 @@
 {
   "api": {
-    "requestFailed": "Request failed ({{status}})"
+    "requestFailed": "Request failed ({{status}})",
+    "networkError": "Cannot reach the server. Please check your connection and try again"
   },
   "card": {
     "brandUnknown": "Card",

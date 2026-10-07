@@ -110,6 +110,8 @@ export interface CommunityEvent {
   rsvpCount: number;
   viewerRsvped: boolean;
   isPast: boolean;
+  /** Thời điểm admin hủy sự kiện (null/undefined = còn hiệu lực). */
+  cancelledAt?: string | null;
 }
 
 export type MemberFilter = 'all' | 'online' | 'admin';

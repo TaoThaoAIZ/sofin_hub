@@ -2,7 +2,9 @@ import { Router } from 'express';
 import { optionalAuth, requireAuth } from '../../middlewares/auth.js';
 import { enrollmentService } from '../enrollments/enrollments.service.js';
 import { reviewsService } from '../communities/reviews.service.js';
-import { getRole } from '../permissions/policy.js';
+import { prisma } from '../../db/prisma.js';
+import { HttpError } from '../../utils/http-error.js';
+import { getRole, isStaff } from '../permissions/policy.js';
 import { z } from 'zod';
 import { FEATURE_SECTIONS, listFeaturedCourses } from '../discovery/featured.js';
 import { listCommunitiesQuery } from './catalog.schema.js';
@@ -28,6 +30,12 @@ catalogRouter.get('/featured', async (req, res) => {
 
 catalogRouter.get('/:id', optionalAuth, async (req, res) => {
   const id = req.params.id as string;
+  // Cộng đồng chưa được duyệt (chờ duyệt / cần chỉnh sửa / bị từ chối) chỉ owner, thành viên và nhân viên admin xem được; người khác 404.
+  const pre = await prisma.community.findFirst({ where: { id, deletedAt: null }, select: { ownerId: true, moderationStatus: true } });
+  if (pre && ['pending_review', 'changes_requested', 'rejected'].includes(pre.moderationStatus)) {
+    const mine = !!req.userId && (pre.ownerId === req.userId || (await enrollmentService.isEnrolled(req.userId, id)) || (await isStaff(req.userId)));
+    if (!mine) throw HttpError.notFound('Không tìm thấy khóa học');
+  }
   const viewerEnrolled = req.userId ? await enrollmentService.isEnrolled(req.userId, id) : undefined;
   const detail = await catalogService.getDetailById(id, viewerEnrolled, await reviewsService.forDetail(id));
   const viewerRole = req.userId ? await getRole(req.userId, id) : null;

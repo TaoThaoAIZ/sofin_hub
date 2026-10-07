@@ -67,6 +67,7 @@ export function ActionDialog({
   flagDefault?: boolean;
   confirmWord?: string;
   successMessage: string;
+  /** Có thể trả `{ message }` để thay thông báo thành công mặc định (vd. gộp cả phần bị bỏ qua vào một toast). */
   run: (v: ActionResult) => Promise<unknown>;
   onClose: () => void;
   onDone?: () => void;
@@ -84,11 +85,12 @@ export function ActionDialog({
   const disabled = !!disabledExtra || (!!requireReason && !reason) || (!!requireNote && !note.trim()) || (!!confirmWord && word !== confirmWord);
 
   const submit = async () => {
+    if (pending) return;
     setPending(true);
     setError(null);
     try {
-      await run({ reason, note: note.trim(), flag });
-      toast.success(successMessage);
+      const res = (await run({ reason, note: note.trim(), flag })) as { message?: string } | undefined;
+      toast.success(typeof res?.message === 'string' ? res.message : successMessage);
       onClose();
       onDone?.();
     } catch (e) {
@@ -149,8 +151,8 @@ export function MediaGrid({ items, title, sub, tools, chips }: { items: MediaCar
         <div className="grid gap-3.5" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))' }}>
           {items.map((m) => (
             <div key={m.id} className="overflow-hidden rounded-[14px] border border-[#f1ebe6]">
-              <div className="relative grid h-[120px] place-items-center bg-[#f5f1ed]">
-                {m.kind === 'image' && m.thumbUrl ? <img src={m.thumbUrl} alt="" loading="lazy" className="size-full object-cover" /> : <MaterialIcon name={mediaIcon(m.kind)} size={38} color="#c9bfb6" />}
+              <div className="relative grid h-[120px] place-items-center overflow-hidden bg-[#f5f1ed]">
+                {m.kind === 'image' && m.thumbUrl ? <img src={m.thumbUrl} alt="" loading="lazy" className="absolute inset-0 size-full object-cover" /> : <MaterialIcon name={mediaIcon(m.kind)} size={38} color="#c9bfb6" />}
                 {!!m.reports && <span className="absolute top-2 right-2 rounded-full bg-[#dc2626] px-2 py-0.5 text-[11px] font-bold text-white">{t('media.reports', { count: m.reports })}</span>}
               </div>
               <div className="px-3 py-2.5">

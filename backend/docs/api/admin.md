@@ -6,7 +6,7 @@
 
 ## Quy ước chung
 - Thành công: `{ "data": ... }`; danh sách phân trang: `{ "data": [...], "meta": { "page", "limit", "total", "totalPages" } }`. Query chung: `page` (>=1, mặc định 1), `limit` (1..100, mặc định 20).
-- Lỗi: `{ "error": { "code", "message", "details"? } }` (như các module khác). Validate sai → 400 `VALIDATION_ERROR`. Chuyển trạng thái không hợp lệ → 409 `CONFLICT`. Không thấy → 404 `NOT_FOUND`.
+- Lỗi: `{ "error": { "code", "message", "details"? } }` (như các module khác). Validate sai (kể cả filter enum lạ như `status=bogus`, `until` quá khứ, ghi chú >500 ký tự) → 400 `VALIDATION_ERROR`. Route `/admin/*` không tồn tại: staff không phải Super Admin nhận 403, Super Admin nhận 404. Ô tìm kiếm `q` coi `%`, `_`, `\` là ký tự thường. `oldestWaitingHours` = `null` khi không có cộng đồng chờ duyệt; `pendingReports.value` chỉ đếm report `open` (khớp moderation `summary.open`). Audit duyệt/từ chối cộng đồng ghi `metadata: { from, to }`. Chuyển trạng thái không hợp lệ → 409 `CONFLICT`. Không thấy → 404 `NOT_FOUND`.
 - Thời điểm: ISO 8601 UTC. Tiền: **cent** (`*Cents`, Int) hoặc USD ở trường `priceUsd`.
 - Mã trạng thái là chuỗi thường (FE tự map nhãn hiển thị):
   - `UserStatus`: `active | restricted | suspended | banned`

@@ -142,7 +142,7 @@ function GlobalSearch() {
     },
     {
       title: t('layout.search.communities'),
-      items: (coms.data?.data ?? []).map((c) => ({ icon: 'groups', t: c.name, s: t('layout.search.owner', { name: c.owner.name }), id: c.id, to: `/admin/communities/${c.id}` })),
+      items: (coms.data?.data ?? []).map((c) => ({ icon: 'groups', t: c.name, s: t('layout.search.owner', { name: (c.owner?.name ?? '—') }), id: c.id, to: `/admin/communities/${c.id}` })),
     },
     {
       title: t('layout.search.cases'),

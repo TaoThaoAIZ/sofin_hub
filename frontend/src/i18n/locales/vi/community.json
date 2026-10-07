@@ -300,7 +300,9 @@
     "deleteTitle": "Xóa sự kiện?",
     "deleteMsg": "Sự kiện \"{{title}}\" sẽ bị xóa và những người đã đăng ký sẽ nhận được thông báo.",
     "deleteConfirm": "Xóa sự kiện",
-    "deleted": "Đã xóa sự kiện"
+    "deleted": "Đã xóa sự kiện",
+    "cancelled": "Đã hủy",
+    "cancelledEvent": "Sự kiện này đã bị hủy"
   },
   "ui": {
     "close": "Đóng",

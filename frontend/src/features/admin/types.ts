@@ -91,7 +91,7 @@ export interface AdminCommunity {
   statusReason: string | null;
   statusNote: string | null;
   statusUntil: string | null;
-  owner: { id: string; name: string; email: string };
+  owner: { id: string; name: string; email: string } | null;
   members: number;
   mrrCents: number;
   discovery: 'listed' | 'hidden' | 'unlisted';
@@ -121,7 +121,7 @@ export interface ReviewQueueItem extends AdminCommunity {
 export interface TrashItem {
   id: string;
   name: string;
-  owner: NameRef;
+  owner: NameRef | null;
   category: string;
   deletedAt: string;
   deletedBy: NameRef | null;
@@ -458,6 +458,12 @@ export const DECISION_LABEL: Record<string, string> = {
   get restriction() { return tl('labels.decisionLabel.restriction'); },
   get suspension() { return tl('labels.decisionLabel.suspension'); },
   get ban() { return tl('labels.decisionLabel.ban'); },
+};
+
+/** Nhãn quyết định: chấp nhận cả mã loại ('warning') lẫn mã hành động ('case.warn', 'user.ban'); mã lạ giữ nguyên. */
+export const decisionLabel = (code: string): string => {
+  const tail = code.split('.').pop() ?? code;
+  return DECISION_LABEL[code] ?? AUDIT_ACTION[code] ?? CASE_EVENT_LABEL[tail] ?? code;
 };
 
 /** Nhãn hành động của lịch sử vụ việc (history.type) — khóa lạ giữ nguyên. */

@@ -77,10 +77,12 @@ const forgotLimiter = rateLimit({
 
 // Giới hạn theo IP cho đăng ký / OTP (chặn spam hộp thư và dò mã). Ngoài ra OTP còn có giới hạn theo từng mã/tài khoản (otp.service.ts).
 // Test chạy hàng loạt từ 1 IP nên nới rất lớn.
+// Cùng quy tắc với middlewares/rate-limit.ts: tắt khi NODE_ENV=test hoặc RATE_LIMIT_DISABLED=1.
 const ipLimiter = (windowMs: number, limit: number, message: string) =>
   rateLimit({
     windowMs,
     limit: process.env.NODE_ENV === 'test' ? 100_000 : limit,
+    skip: () => process.env.NODE_ENV === 'test' || process.env.RATE_LIMIT_DISABLED === '1',
     standardHeaders: true,
     legacyHeaders: false,
     handler: (_req, _res, next) => next(HttpError.tooMany(message)),

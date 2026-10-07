@@ -8,7 +8,7 @@ import { FEATURE_SECTIONS, SECTION_LABELS, activeWindow, publiclyListable, type 
 import { notify } from '../notifications/notifications.service.js';
 import { auditService } from './admin-audit.service.js';
 import { nameMap, person, personSelect } from './admin-b2.common.js';
-import { enumList, iso, noteField, pageMeta, pageQuery } from './admin.common.js';
+import { likeEscape, enumList, iso, noteField, pageMeta, pageQuery } from './admin.common.js';
 
 /** Admin đợt 2 — Discovery. Contract: docs/api/admin-batch2.md (mục C). */
 
@@ -154,7 +154,7 @@ export const adminDiscoveryService = {
     const statuses = enumList(q.status, EFF, 'status');
     const where: Prisma.CommunityWhereInput = {
       ...(q.category ? { category: q.category } : {}),
-      ...(q.q ? { OR: [{ title: { contains: q.q, mode: 'insensitive' } }, { id: { contains: q.q, mode: 'insensitive' } }, { owner: { OR: [{ firstName: { contains: q.q, mode: 'insensitive' } }, { lastName: { contains: q.q, mode: 'insensitive' } }] } }] } : {}),
+      ...(q.q ? { OR: [{ title: { contains: likeEscape(q.q), mode: 'insensitive' } }, { id: { contains: likeEscape(q.q), mode: 'insensitive' } }, { owner: { OR: [{ firstName: { contains: likeEscape(q.q), mode: 'insensitive' } }, { lastName: { contains: likeEscape(q.q), mode: 'insensitive' } }] } }] } : {}),
     };
     const [courses, sec, names] = await Promise.all([loadCourses(where), activeSections(), categoryNames()]);
     let rows = courses.filter((c) => !statuses.length || statuses.includes(effectiveDiscovery(c, (sec.get(c.id) ?? []).includes('featured'))));
@@ -367,7 +367,7 @@ export const adminDiscoveryService = {
     const ds = enumList(q.discoveryStatus, EFF, 'discoveryStatus');
     const where: Prisma.CommunityWhereInput = {
       ...(sv.length ? { searchVisibility: { in: sv } } : {}),
-      ...(q.q ? { OR: [{ title: { contains: q.q, mode: 'insensitive' } }, { id: { contains: q.q, mode: 'insensitive' } }] } : {}),
+      ...(q.q ? { OR: [{ title: { contains: likeEscape(q.q), mode: 'insensitive' } }, { id: { contains: likeEscape(q.q), mode: 'insensitive' } }] } : {}),
     };
     const [courses, sec] = await Promise.all([loadCourses(where), activeSections()]);
     const rows = courses.filter((c) => !ds.length || ds.includes(effectiveDiscovery(c, (sec.get(c.id) ?? []).includes('featured'))));

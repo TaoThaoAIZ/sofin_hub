@@ -6,7 +6,7 @@ import { notify } from '../notifications/notifications.service.js';
 import { paymentsService } from '../payments/payments.service.js';
 import { auditService } from './admin-audit.service.js';
 import { caseInclude, toCaseViews } from './admin-cases.view.js';
-import { durationFields, enumList, iso, likeEscape, noteField, pageMeta, pageQuery, reasonField, resolveUntil, type PageQuery } from './admin.common.js';
+import { durationFields, shortNoteField, enumList, iso, likeEscape, noteField, pageMeta, pageQuery, reasonField, resolveUntil, type PageQuery } from './admin.common.js';
 
 const STATUSES = ['pending_review', 'changes_requested', 'rejected', 'active', 'suspended', 'deleted'] as const;
 type CommunityStatus = (typeof STATUSES)[number];
@@ -25,7 +25,7 @@ export const listCommunitiesQuery = pageQuery.extend({
 export type ListCommunitiesQuery = z.infer<typeof listCommunitiesQuery>;
 export const trashQuery = pageQuery.extend({ q: z.string().trim().max(100).optional() });
 export const membersQuery = pageQuery.extend({ q: z.string().trim().max(100).optional(), role: z.enum(['member', 'mod', 'admin', 'owner']).optional() });
-export const approveBody = z.object({ note: noteField });
+export const approveBody = z.object({ note: shortNoteField });
 export const requestChangesBody = z.object({ note: z.string().trim().min(1, 'Vui lòng ghi rõ cần chỉnh sửa gì').max(2000) });
 export const rejectBody = z.object({ reason: reasonField, note: noteField });
 export const suspendCommunityBody = z.object({ reason: reasonField, ...durationFields, note: noteField });
@@ -130,7 +130,7 @@ async function notifyOwner(id: string, title: string, body: string) {
   if (c?.ownerId) notify({ userId: c.ownerId, type: 'system', title, body, communityId: id });
 }
 
-async function finish(actorId: string, id: string, action: string, extra: { reason?: string | null; note?: string | null; metadata?: Record<string, unknown> }) {
+async function finish(actorId: string, id: string, action: string, from: string, extra: { reason?: string | null; note?: string | null; metadata?: Record<string, unknown> }) {
   const row = await getRow(id);
   await auditService.record(actorId, {
     action,
@@ -139,10 +139,13 @@ async function finish(actorId: string, id: string, action: string, extra: { reas
     targetLabel: row.title,
     reason: extra.reason,
     note: extra.note,
-    metadata: { status: row.status, ...extra.metadata },
+    metadata: { from, to: row.status, ...extra.metadata },
   });
   return toItem(row);
 }
+
+/** Trạng thái kiểm duyệt hiện tại (trước khi chuyển) để ghi audit `{ from, to }`. */
+const statusBefore = async (id: string): Promise<string> => (await prisma.community.findUnique({ where: { id }, select: { moderationStatus: true } }))?.moderationStatus ?? 'unknown';
 
 const stamp = (actorId: string, extra: Patch = {}): Patch => ({ moderatedById: actorId, moderationUpdatedAt: new Date(), ...extra });
 
@@ -229,7 +232,7 @@ export const adminCommunitiesService = {
   async trash(q: z.infer<typeof trashQuery>) {
     const where: Prisma.CommunityWhereInput = {
       deletedAt: { not: null },
-      ...(q.q ? { OR: [{ title: { contains: q.q, mode: 'insensitive' } }, { id: { contains: q.q, mode: 'insensitive' } }] } : {}),
+      ...(q.q ? { OR: [{ title: { contains: likeEscape(q.q), mode: 'insensitive' } }, { id: { contains: likeEscape(q.q), mode: 'insensitive' } }] } : {}),
     };
     const [rows, total] = await Promise.all([
       prisma.community.findMany({
@@ -336,7 +339,7 @@ export const adminCommunitiesService = {
       communityId: id,
       ...(q.role ? { role: q.role } : {}),
       ...(q.q
-        ? { user: { OR: [{ firstName: { contains: q.q, mode: 'insensitive' } }, { lastName: { contains: q.q, mode: 'insensitive' } }, { email: { contains: q.q, mode: 'insensitive' } }] } }
+        ? { user: { OR: [{ firstName: { contains: likeEscape(q.q), mode: 'insensitive' } }, { lastName: { contains: likeEscape(q.q), mode: 'insensitive' } }, { email: { contains: likeEscape(q.q), mode: 'insensitive' } }] } }
         : {}),
     };
     const [rows, total] = await Promise.all([
@@ -383,24 +386,28 @@ export const adminCommunitiesService = {
 
   /* ---- hành động ---- */
   async approve(actorId: string, id: string, body: z.infer<typeof approveBody>) {
+    const from = await statusBefore(id);
     await transition(id, { moderationStatus: { in: ['pending_review', 'changes_requested'] } }, stamp(actorId, { moderationStatus: 'active', moderationReason: null, moderationNote: body.note ?? null }), 'Chỉ duyệt được cộng đồng đang chờ duyệt');
     await notifyOwner(id, 'Cộng đồng đã được duyệt', 'Cộng đồng của bạn đã được duyệt và hiển thị công khai.');
-    return finish(actorId, id, 'community.approve', { note: body.note });
+    return finish(actorId, id, 'community.approve', from, { note: body.note });
   },
 
   async requestChanges(actorId: string, id: string, body: z.infer<typeof requestChangesBody>) {
+    const from = await statusBefore(id);
     await transition(id, { moderationStatus: 'pending_review' }, stamp(actorId, { moderationStatus: 'changes_requested', moderationNote: body.note }), 'Chỉ yêu cầu chỉnh sửa với cộng đồng đang chờ duyệt');
     await notifyOwner(id, 'Cộng đồng cần chỉnh sửa', `Vui lòng chỉnh sửa trước khi được duyệt: ${body.note}`);
-    return finish(actorId, id, 'community.request_changes', { note: body.note });
+    return finish(actorId, id, 'community.request_changes', from, { note: body.note });
   },
 
   async reject(actorId: string, id: string, body: z.infer<typeof rejectBody>) {
+    const from = await statusBefore(id);
     await transition(id, { moderationStatus: { in: ['pending_review', 'changes_requested'] } }, stamp(actorId, { moderationStatus: 'rejected', moderationReason: body.reason, moderationNote: body.note ?? null }), 'Chỉ từ chối được cộng đồng đang chờ duyệt');
     await notifyOwner(id, 'Cộng đồng bị từ chối', `Cộng đồng của bạn không được duyệt. Lý do: ${body.reason}`);
-    return finish(actorId, id, 'community.reject', { reason: body.reason, note: body.note });
+    return finish(actorId, id, 'community.reject', from, { reason: body.reason, note: body.note });
   },
 
   async suspend(actorId: string, id: string, body: z.infer<typeof suspendCommunityBody>) {
+    const from = await statusBefore(id);
     const until = resolveUntil(body);
     // Dùng lại cờ locked sẵn có để chặn truy cập/ẩn danh sách công khai.
     await transition(
@@ -412,10 +419,11 @@ export const adminCommunitiesService = {
     // Đình chỉ: dừng gia hạn mọi gói (hủy cuối kỳ) — không trừ tiền cộng đồng đang bị đình chỉ.
     await paymentsService.endAllForCommunity(id, 'cancel_at_period_end', 'Cộng đồng đang bị đình chỉ nên gói thành viên của bạn sẽ không được gia hạn.');
     await notifyOwner(id, 'Cộng đồng bị đình chỉ', `Cộng đồng của bạn bị đình chỉ. Lý do: ${body.reason}`);
-    return finish(actorId, id, 'community.suspend', { reason: body.reason, note: body.note, metadata: { until: iso(until) } });
+    return finish(actorId, id, 'community.suspend', from, { reason: body.reason, note: body.note, metadata: { until: iso(until) } });
   },
 
   async restore(actorId: string, id: string, body: z.infer<typeof restoreBody>) {
+    const from = await statusBefore(id);
     await transition(
       id,
       { OR: [{ moderationStatus: 'suspended' }, { moderationStatus: 'active', locked: true }] },
@@ -423,10 +431,11 @@ export const adminCommunitiesService = {
       'Chỉ khôi phục được cộng đồng đang bị đình chỉ',
     );
     await notifyOwner(id, 'Cộng đồng đã hoạt động trở lại', 'Cộng đồng của bạn đã được khôi phục.');
-    return finish(actorId, id, 'community.restore', { note: body.note });
+    return finish(actorId, id, 'community.restore', from, { note: body.note });
   },
 
   async remove(actorId: string, id: string, body: z.infer<typeof deleteCommunityBody>) {
+    const from = await statusBefore(id);
     const cur = await prisma.community.findUnique({ where: { id }, select: { moderationStatus: true, deletedAt: true, title: true } });
     if (!cur) throw HttpError.notFound('Không tìm thấy cộng đồng');
     if (cur.deletedAt) throw HttpError.conflict('Cộng đồng đã bị xóa');
@@ -439,10 +448,11 @@ export const adminCommunitiesService = {
     // Xóa: kết thúc mọi gói ngay (không trừ tiền cộng đồng đã xóa), có thông báo cho từng thành viên trả phí.
     await paymentsService.endAllForCommunity(id, 'end_now', `Cộng đồng "${cur.title}" đã bị xóa nên gói thành viên của bạn đã được hủy và sẽ không bị tính phí thêm.`);
     await notifyOwner(id, 'Cộng đồng đã bị xóa', `Cộng đồng "${cur.title}" đã bị xóa. Lý do: ${body.reason}. Dữ liệu được giữ ${RETENTION_DAYS} ngày.`);
-    return finish(actorId, id, 'community.delete', { reason: body.reason, note: body.note });
+    return finish(actorId, id, 'community.delete', from, { reason: body.reason, note: body.note });
   },
 
   async undelete(actorId: string, id: string, body: z.infer<typeof restoreBody>) {
+    const from = await statusBefore(id);
     const cur = await prisma.community.findUnique({ where: { id }, select: { moderationStatus: true, preDeleteStatus: true, deletedAt: true } });
     if (!cur) throw HttpError.notFound('Không tìm thấy cộng đồng');
     if (!cur.deletedAt) throw HttpError.conflict('Cộng đồng chưa bị xóa');
@@ -457,7 +467,7 @@ export const adminCommunitiesService = {
     });
     if (r.count === 0) throw HttpError.conflict('Cộng đồng chưa bị xóa');
     await notifyOwner(id, 'Cộng đồng đã được khôi phục', 'Cộng đồng của bạn đã được khôi phục sau khi xóa.');
-    return finish(actorId, id, 'community.undelete', { note: body.note });
+    return finish(actorId, id, 'community.undelete', from, { note: body.note });
   },
 };
 

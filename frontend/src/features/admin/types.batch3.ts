@@ -241,7 +241,9 @@ export interface TemplatePreview {
   subject: string;
   text: string;
   html: string;
-  missingVariables: string[];
+  missingVariables?: string[];
+  /** Tên trường BE mới: danh sách biến thiếu/để trống. */
+  missing?: string[];
 }
 
 export interface PlatformSettings {

@@ -156,3 +156,6 @@ R.get('/admin/audit-logs/export', ...adminOnly, async (req, res) => {
   res.setHeader('Content-Disposition', `attachment; filename="audit-logs-${new Date().toISOString().slice(0, 10)}.csv"`);
   res.send(csv);
 });
+
+// Chốt chặn cuối cho mọi /admin/* không khớp route nào: quyền suy ra = 'super' -> staff không phải Super Admin nhận 403 (không lộ 404), Super Admin rơi xuống 404.
+R.use('/admin', ...adminOnly);

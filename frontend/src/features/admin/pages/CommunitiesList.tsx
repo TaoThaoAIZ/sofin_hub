@@ -26,7 +26,7 @@ export function communityColumns(categoryLabel: (id: string) => string): Column<
   return [
     { key: 'name', label: t('communities.colCommunity'), w: 2.2, render: (c) => <MainCell name={c.name} sub={`/${c.slug}`} shape="square" avatarSrc={c.thumbnail} seed={c.id} /> },
     { key: 'id', label: t('communities.colId'), render: (c) => <MonoCell>{c.id}</MonoCell> },
-    { key: 'owner', label: t('communities.colOwner'), render: (c) => <TextCell>{c.owner.name}</TextCell> },
+    { key: 'owner', label: t('communities.colOwner'), render: (c) => <TextCell>{(c.owner?.name ?? '—')}</TextCell> },
     { key: 'cat', label: t('communities.colCategory'), render: (c) => <TextCell>{categoryLabel(c.category)}</TextCell> },
     { key: 'members', label: t('communities.colMembers'), w: 0.8, render: (c) => <NumCell>{fmtNum(c.members)}</NumCell> },
     { key: 'price', label: t('communities.colPrice'), render: (c) => <NumCell>{c.pricing === 'free' ? PRICING_LABEL.free : `$${c.priceUsd}`}</NumCell> },

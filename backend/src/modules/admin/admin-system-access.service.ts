@@ -66,8 +66,8 @@ const slug = (s: string) =>
 function checkPerms(perms: string[]): string[] {
   const uniq = [...new Set(perms)];
   const bad = uniq.find((p) => !PERMISSION_KEYS.includes(p));
-  if (bad) throw HttpError.badRequest(`Khóa quyền "${bad}" không hợp lệ`);
-  if (uniq.includes('admin.manage')) throw HttpError.badRequest('Quyền "admin.manage" chỉ dành riêng cho Super Admin');
+  if (bad) throw HttpError.validation(`Khóa quyền "${bad}" không hợp lệ`);
+  if (uniq.includes('admin.manage')) throw HttpError.validation('Quyền "admin.manage" chỉ dành riêng cho Super Admin');
   return uniq;
 }
 const orderPerms = (perms: string[]) => PERMISSIONS.map((p) => p.key as string).filter((k) => perms.includes(k));
@@ -126,7 +126,7 @@ async function loadStaffTarget(userId: string, actorId: string) {
 }
 async function requireRole(key: string) {
   const role = await prisma.adminRole.findUnique({ where: { key } });
-  if (!role) throw HttpError.badRequest(`Vai trò "${key}" không tồn tại`);
+  if (!role) throw HttpError.validation(`Vai trò "${key}" không tồn tại`);
   return role;
 }
 

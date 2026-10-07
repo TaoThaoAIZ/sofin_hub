@@ -181,10 +181,10 @@ AdminChargeback = { "id","code":"CB-00771","paymentId","transactionCode","custom
 ```
 
 ## B5. Creator Revenue (tổng hợp theo chủ cộng đồng từ `Payment`; công thức như `/courses/:id/revenue`)
-| GET | `/admin/payments/creators/summary` | `from?`, `to?` | `{ data: { creators, grossCents, refundsCents, platformFeeCents, gatewayFeeCents, netCents, pendingBalanceCents } }` |
+| GET | `/admin/payments/creators/summary` | `from?`, `to?` | `{ data: { creators, grossCents, refundsCents, platformFeeCents, gatewayFeeCents, netCents, pendingBalanceCents, withdrawableCents, heldCents, reserveCents /* Quỹ dự phòng: tổng reserve từng creator */, debtCents } }` |
 |---|---|---|---|
 | GET | `/admin/payments/creators` | `q` (tên/email/cộng đồng), `sort` (`net|gross|pending|name`), `from`, `to`, page, limit | `{ data: AdminCreatorRevenue[], meta }` |
-| GET | `/admin/payments/creators/:userId` | `from?`, `to?` | `{ data: { creator: Person, kpis: {grossCents,refundsCents,platformFeeCents,gatewayFeeCents,netCents,pendingBalanceCents,paidOutCents}, series: [{ date, grossCents, netCents, refundsCents }] /* theo ngày, mặc định 30 ngày gần nhất hoặc theo from/to */, communities: [{ id,name,grossCents,netCents,pendingBalanceCents }], transactions: [AdminTransaction ×20], payouts: [AdminPayout ×10] } }` |
+| GET | `/admin/payments/creators/:userId` | `from?`, `to?` | `{ data: { creator: Person, kpis: {grossCents,refundsCents,platformFeeCents,gatewayFeeCents,netCents,pendingBalanceCents,paidOutCents}, series: [{ date, grossCents, netCents, refundsCents }] /* theo ngày; không có from/to ⇒ phủ toàn thời gian (từ giao dịch đầu tiên, tối thiểu 30, tối đa 400 ngày gần nhất) khớp với kpis; có from/to ⇒ theo khoảng đó */, communities: [{ id,name,grossCents,netCents,pendingBalanceCents }], transactions: [AdminTransaction ×20], payouts: [AdminPayout ×10] } }` |
 ```json
 AdminCreatorRevenue = { "creator": Person,"communities":2,"grossCents","refundsCents","platformFeeCents","gatewayFeeCents","netCents",
   "pendingBalanceCents" /* net toàn thời gian − payout chưa bị từ chối */,"paidOutCents" }

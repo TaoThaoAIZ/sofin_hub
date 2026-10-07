@@ -88,7 +88,8 @@ export const adminDashboardService = {
       prisma.community.count({ where: { deletedAt: null, moderationStatus: 'active', locked: false } }),
       prisma.community.count({ where: { deletedAt: null, moderationStatus: 'active', locked: false, createdAt: { lt: since } } }),
       prisma.subscription.findMany({ select: { priceCents: true, status: true, createdAt: true, canceledAt: true, currentPeriodEnd: true } }),
-      prisma.report.count({ where: { status: { in: ['open', 'under_review'] } } }),
+      // Cùng định nghĩa với moderation summary.open: chỉ report `open` (under_review đã có người nhận xử lý).
+      prisma.report.count({ where: { status: 'open' } }),
       prisma.report.count({ where: { status: { in: ['open', 'under_review'] }, risk: 'critical' } }),
       prisma.community.count({ where: { deletedAt: null, moderationStatus: 'pending_review' } }),
       prisma.community.findFirst({ where: { deletedAt: null, moderationStatus: 'pending_review' }, orderBy: { createdAt: 'asc' }, select: { createdAt: true } }),
@@ -177,7 +178,7 @@ export const adminDashboardService = {
       },
       series: { userGrowth, communityGrowth, revenue, engagement },
       needsAttention: {
-        pendingReviewCommunities: { count: pendingReview, oldestWaitingHours: oldestPending ? Math.floor((now.getTime() - oldestPending.createdAt.getTime()) / 3_600_000) : 0 },
+        pendingReviewCommunities: { count: pendingReview, oldestWaitingHours: oldestPending ? Math.floor((now.getTime() - oldestPending.createdAt.getTime()) / 3_600_000) : null },
         openReports: { count: pendingReports, critical: criticalReports },
         suspiciousUsers: { count: suspicious[0]?.n ?? 0 },
         pendingPayouts: { count: payouts._count._all, amountCents: payouts._sum.amountCents ?? 0 },

@@ -1,6 +1,7 @@
 {
   "api": {
-    "requestFailed": "Yêu cầu thất bại ({{status}})"
+    "requestFailed": "Yêu cầu thất bại ({{status}})",
+    "networkError": "Không kết nối được máy chủ, vui lòng kiểm tra mạng và thử lại"
   },
   "card": {
     "brandUnknown": "Thẻ",

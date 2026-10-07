@@ -33,7 +33,8 @@
     "removeTitle": "Remove {{n}} posts?",
     "restoreTitle": "Restore {{n}} posts?",
     "done": "{{n}} posts processed",
-    "skipped": "Skipped {{n}} posts: {{reason}}"
+    "skipped": "Skipped {{n}} posts: {{reason}}",
+    "doneSkipped": "{{n}} posts processed; skipped {{skipped}}: {{reason}}"
   },
   "common": {
     "selected": "{{n}} selected",

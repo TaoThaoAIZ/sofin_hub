@@ -387,12 +387,12 @@ export function DataTable<T>(props: DataTableProps<T>) {
         </div>
       )}
 
-      {page && !loading && !error && rows.length > 0 && (
+      {(page || props.footerNote) && !loading && !error && rows.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#f1ebe6] px-[18px] py-3 text-[12.5px] text-stone-500">
           <span>
-            {props.footerNote ?? t('table.showing', { shown: fmtNum(rows.length), total: fmtNum(page.total) })}
+            {props.footerNote ?? (page ? t('table.showing', { shown: fmtNum(rows.length), total: fmtNum(page.total) }) : null)}
           </span>
-          {page.totalPages > 1 && <TablePager info={page} />}
+          {page && page.totalPages > 1 && <TablePager info={page} />}
         </div>
       )}
       {menuEl}

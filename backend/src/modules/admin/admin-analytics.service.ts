@@ -56,8 +56,9 @@ function fillDays(w: Win, rows: DayRow[], keys: string[]): Array<Record<string, 
   }
   return out;
 }
-const DAYS = (w: Win) => Prisma.sql`generate_series(${w.from}::timestamptz, ${new Date(w.to.getTime() - DAY)}::timestamptz, interval '1 day')`;
-const D = Prisma.sql`to_char(d.day AT TIME ZONE 'UTC', 'YYYY-MM-DD')`;
+/** Bucket ngày theo UTC: sinh `timestamp` (không tz) = 00:00 UTC; ép `::timestamp` (không qua timestamptz) nên không phụ thuộc timezone session DB. */
+const DAYS = (w: Win) => Prisma.sql`generate_series(${w.from}::timestamp, ${new Date(w.to.getTime() - DAY)}::timestamp, interval '1 day')`;
+const D = Prisma.sql`to_char(d.day, 'YYYY-MM-DD')`;
 
 const countUsers = (before: Date) => prisma.user.count({ where: { deletedAt: null, createdAt: { lt: before } } });
 async function activeDistinct(a: Date, b: Date): Promise<number> {
@@ -200,7 +201,7 @@ export const adminAnalyticsService = {
     const [cNow, cPrev] = await Promise.all([completion(w.to), completion(w.from)]);
     const day = (table: string, col: string) =>
       prisma.$queryRawUnsafe<Array<{ d: string; n: bigint }>>(
-        `SELECT to_char(d.day AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS d, count(t."${col}") AS n FROM generate_series($1::timestamptz, $2::timestamptz, interval '1 day') AS d(day)
+        `SELECT to_char(d.day, 'YYYY-MM-DD') AS d, count(t."${col}") AS n FROM generate_series($1::timestamp, $2::timestamp, interval '1 day') AS d(day)
          LEFT JOIN "${table}" t ON t."${col}" >= d.day AND t."${col}" < d.day + interval '1 day' GROUP BY 1`,
         w.from,
         new Date(w.to.getTime() - DAY),
@@ -228,6 +229,7 @@ export const adminAnalyticsService = {
         { key: 'comments', label: 'Comments', count: comments },
         { key: 'completions', label: 'Lesson completions', count: comp },
         { key: 'posts', label: 'Posts', count: posts },
+        { key: 'rsvps', label: 'Event participation', count: rsvps },
       ]),
     };
   },

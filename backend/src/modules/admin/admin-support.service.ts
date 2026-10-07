@@ -9,7 +9,7 @@ import { notify } from '../notifications/notifications.service.js';
 import { addMessage, createTicket, findTicketOrThrow, listMessages, OPEN_STATUSES, TICKET_BASE, ticketCode, ticketViews } from '../support/tickets.core.js';
 import { auditService, toAuditItem } from './admin-audit.service.js';
 import { DAY, excerpt, startOfUtcDay } from './admin-b2.common.js';
-import { enumList, noteField, pageMeta, pageQuery, reasonField } from './admin.common.js';
+import { likeEscape, enumList, noteField, pageMeta, pageQuery, reasonField } from './admin.common.js';
 import { hasPermission, staffWithPermission } from './admin-staff.service.js';
 
 const CATEGORIES = ['user', 'creator', 'payment'] as const;
@@ -99,9 +99,9 @@ export const adminSupportService = {
       const code = /^T-(\d{1,9})$/i.exec(q.q);
       and.push({
         OR: [
-          { subject: { contains: q.q, mode: 'insensitive' } },
-          { requesterName: { contains: q.q, mode: 'insensitive' } },
-          { requesterEmail: { contains: q.q, mode: 'insensitive' } },
+          { subject: { contains: likeEscape(q.q), mode: 'insensitive' } },
+          { requesterName: { contains: likeEscape(q.q), mode: 'insensitive' } },
+          { requesterEmail: { contains: likeEscape(q.q), mode: 'insensitive' } },
           ...(code ? [{ number: Number(code[1]) - TICKET_BASE }] : []),
         ],
       });
@@ -239,15 +239,23 @@ export const adminSupportService = {
     }
     const now = new Date();
     const verb = { resolved: 'giải quyết', closed: 'đóng', open: 'mở lại' }[to];
-    await addMessage(
-      t.id,
-      { kind: 'system', authorId: actorId, authorName: (await userBriefView(actorId)).name, body: `Đã ${verb} ticket${b.note ? `: ${b.note}` : ''}` },
+    const authorName = (await userBriefView(actorId)).name;
+    const patch: Prisma.SupportTicketUpdateManyMutationInput =
       to === 'resolved'
         ? { status: 'resolved', resolvedAt: now }
         : to === 'closed'
           ? { status: 'closed', closedAt: now, resolvedAt: t.resolvedAt ?? now }
-          : { status: 'open', resolvedAt: null, closedAt: null },
-    );
+          : { status: 'open', resolvedAt: null, closedAt: null };
+    // Chuyển trạng thái nguyên tử: điều kiện status nằm trong UPDATE, hai request song song chỉ một bên thắng (bên thua 409, không ghi message).
+    const ok = await prisma.$transaction(async (tx) => {
+      const r = await tx.supportTicket.updateMany({ where: { id: t.id, status: { in: allowed[to] } }, data: { ...patch, lastActivityAt: now } });
+      if (r.count === 0) return false;
+      await tx.supportTicketMessage.create({
+        data: { ticketId: t.id, kind: 'system', authorId: actorId, authorName, body: `Đã ${verb} ticket${b.note ? `: ${b.note}` : ''}` },
+      });
+      return true;
+    });
+    if (!ok) throw HttpError.conflict(to === 'open' ? 'Ticket đang mở' : to === 'closed' ? 'Ticket đã đóng' : 'Ticket đã được giải quyết');
     await auditService.record(actorId, {
       action: `support.ticket.${to === 'open' ? 'reopen' : to === 'closed' ? 'close' : 'resolve'}`,
       targetType: 'ticket',

@@ -49,7 +49,7 @@ const num = (icon: string, label: string, k: AKpi, bad?: boolean): Kpi => ({ ico
 const cents = (icon: string, label: string, k: AKpi, bad?: boolean): Kpi => ({ icon, label, value: formatCents(Math.round(k.value)), delta: delta(k), bad });
 const percent = (icon: string, label: string, k: AKpi, bad?: boolean): Kpi => ({ icon, label, value: pct1(k.value), delta: delta(k), bad });
 
-const shares = (list: Share[], labels?: Record<string, string>) => list.map((s) => ({ label: (s.key && labels?.[s.key]) || s.label, value: `${pct1(s.pct)} · ${fmtNum(s.count)}`, pct: s.pct }));
+const shares = (list: Share[], labels?: Record<string, string>) => list.map((s) => ({ label: labels?.[s.key ?? ''] || labels?.[s.label.toLowerCase()] || s.label, value: `${pct1(s.pct)} · ${fmtNum(s.count)}`, pct: s.pct }));
 
 /** Khung chung: tiêu đề + chip khoảng thời gian + tải/lỗi; `render` nhận dữ liệu đã tải. */
 function AnalyticsPage<T>({ title, path, children }: { title: string; path: string; children: (d: T, range: RangeDays) => ReactNode }) {

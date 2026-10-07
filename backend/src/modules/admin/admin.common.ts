@@ -39,12 +39,14 @@ export const csv = (s?: string): string[] => (s ? s.split(',').map((x) => x.trim
 export function enumList<T extends string>(raw: string | undefined, allowed: readonly T[], name: string): T[] {
   const out = csv(raw);
   const bad = out.find((v) => !(allowed as readonly string[]).includes(v));
-  if (bad) throw HttpError.badRequest(`Giá trị "${bad}" không hợp lệ cho ${name}`);
+  if (bad) throw HttpError.validation(`Giá trị "${bad}" không hợp lệ cho ${name}`);
   return out as T[];
 }
 
-export const reasonField = z.string().trim().min(1, 'Vui lòng nhập lý do').max(500);
+export const reasonField = z.string({ error: 'Vui lòng nhập lý do' }).trim().min(1, 'Vui lòng nhập lý do').max(500);
 export const noteField = z.string().trim().max(2000).optional();
+/** Ghi chú ngắn của quyết định duyệt/bỏ qua/giải quyết: tối đa 500 ký tự. */
+export const shortNoteField = z.string().trim().max(500, 'Ghi chú tối đa 500 ký tự').optional();
 
 const DURATION_MS = { '24h': 24 * 3_600_000, '7d': 7 * 86_400_000, '30d': 30 * 86_400_000 } as const;
 export const durationFields = {
@@ -56,7 +58,7 @@ export const durationFields = {
 export function resolveUntil(input: { duration?: '24h' | '7d' | '30d' | 'indefinite'; until?: string }): Date | null {
   if (input.until) {
     const d = new Date(input.until);
-    if (d.getTime() <= Date.now()) throw HttpError.badRequest('Thời hạn phải ở tương lai');
+    if (d.getTime() <= Date.now()) throw HttpError.validation('Thời hạn phải ở tương lai');
     return d;
   }
   if (input.duration && input.duration !== 'indefinite') return new Date(Date.now() + DURATION_MS[input.duration]);
@@ -66,4 +68,4 @@ export function resolveUntil(input: { duration?: '24h' | '7d' | '30d' | 'indefin
 export const iso = (d: Date | null | undefined) => (d ? d.toISOString() : null);
 
 /** Escape ký tự đặc biệt của LIKE/ILIKE để tìm theo chuỗi thường. */
-export const likeEscape = (s: string) => s.replace(/[\%_]/g, (c) => `\${c}`);
+export const likeEscape = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`);

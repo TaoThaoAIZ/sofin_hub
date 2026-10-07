@@ -10,7 +10,7 @@ import { caseColumns } from '../components/caseColumns';
 import { useCaseActions } from '../components/caseActions';
 import { fmtNum } from '../components/ui';
 import { useAssignees, useCases, useDecisions, useModerationSummary } from '../queries';
-import { CASE_RISK, DECISION_LABEL, REASON_LABEL, type CaseReason, type CaseRisk, type DecisionType } from '../types';
+import { CASE_RISK, decisionLabel, REASON_LABEL, type CaseReason, type CaseRisk, type DecisionType } from '../types';
 
 const LIMIT = 20;
 
@@ -132,7 +132,7 @@ export function ModerationLog({ kind }: { kind: 'warnings' | 'removals' | 'suspe
         columns={[
           { key: 'case', label: t('moderation.log.col.caseCode'), render: (d) => <MonoCell>{d.case?.caseCode ?? '—'}</MonoCell> },
           { key: 'target', label: cfg.targetLabel, w: 2, render: (d) => <MainCell name={d.target.name} sub={d.target.type === 'user' ? t('moderation.log.user') : d.target.type === 'content' ? t('moderation.log.content') : d.target.type} icon={kind === 'removals' ? 'article' : undefined} avatar={kind !== 'removals'} /> },
-          { key: 'decision', label: t('moderation.log.col.decision'), render: (d) => <TextCell>{DECISION_LABEL[d.decision] ?? d.decision}</TextCell> },
+          { key: 'decision', label: t('moderation.log.col.decision'), render: (d) => <TextCell>{decisionLabel(d.decision)}</TextCell> },
           { key: 'admin', label: t('moderation.log.col.admin'), render: (d) => <TextCell>{d.admin.name}</TextCell> },
           { key: 'reason', label: t('moderation.log.col.reason'), render: (d) => <TextCell>{d.reason ?? '—'}</TextCell> },
           { key: 'evidence', label: t('moderation.log.col.evidence'), w: 1.5, render: (d) => <TextCell>{d.evidence ?? '—'}</TextCell> },

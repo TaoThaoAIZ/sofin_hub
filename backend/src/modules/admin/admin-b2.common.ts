@@ -18,8 +18,12 @@ export const person = (u: PersonRow | null | undefined) =>
   u ? { id: u.id, name: fullName(u), email: u.email, avatarUrl: u.avatarUrl } : null;
 export const ref = (c: { id: string; title: string }) => ({ id: c.id, name: c.title });
 
-/** Mã hiển thị: tiền tố + 8 ký tự đầu của uuid (viết hoa). */
-export const code = (prefix: string, id: string) => `${prefix}-${id.replace(/-/g, '').slice(0, 8).toUpperCase()}`;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** Mã hiển thị: tiền tố + 8 ký tự đầu của uuid (viết hoa). Id không phải uuid (vd. dữ liệu seed `seed-admin-post-1`) lấy 8 ký tự chữ/số CUỐI để không trùng mã. */
+export const code = (prefix: string, id: string) => {
+  const flat = id.replace(/-/g, '');
+  return `${prefix}-${(UUID_RE.test(id) ? flat.slice(0, 8) : id.replace(/[^0-9a-z]/gi, '').slice(-8)).toUpperCase()}`;
+};
 /** Ngược lại: chuỗi tìm kiếm dạng `POST-3FA2B1C4` / `3fa2` -> tiền tố uuid chữ thường (undefined nếu không giống mã). */
 export function codePrefix(q: string, prefix: string): string | undefined {
   const m = new RegExp(`^(?:${prefix}-)?([0-9a-f]{4,8})$`, 'i').exec(q.trim());
@@ -66,7 +70,7 @@ export const dateRangeFields = {
 export function resolveRange(q: { from?: string; to?: string }): { from?: Date; to?: Date } {
   const from = q.from ? new Date(q.from) : undefined;
   const to = q.to ? new Date(new Date(q.to).getTime() + (q.to.length === 10 ? DAY - 1 : 0)) : undefined;
-  if (from && to && from > to) throw HttpError.badRequest('`from` phải trước `to`');
+  if (from && to && from > to) throw HttpError.validation('`from` phải trước `to`');
   return { from, to };
 }
 

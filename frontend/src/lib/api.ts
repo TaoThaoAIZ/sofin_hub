@@ -49,13 +49,19 @@ async function doFetch(method: string, url: string, body: unknown, token: string
   const headers: Record<string, string> = { ...extra };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   if (token) headers.Authorization = `Bearer ${token}`;
-  return fetch(url, {
-    method,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-    credentials: 'include',
-    signal,
-  });
+  try {
+    return await fetch(url, {
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      credentials: 'include',
+      signal,
+    });
+  } catch (e) {
+    // Mất mạng / server không phản hồi: trình duyệt ném TypeError('Failed to fetch') bằng tiếng Anh -> dịch sang thông báo tiếng Việt.
+    if (e instanceof TypeError) throw new ApiError(0, i18n.t('api.networkError', { ns: 'misc' }), 'NETWORK_ERROR');
+    throw e;
+  }
 }
 
 /** Đọc `exp` (giây) từ JWT mà không kiểm chữ ký; null nếu không phải JWT hợp lệ. */

@@ -5,7 +5,7 @@ import { HttpError } from '../../utils/http-error.js';
 import { revokeSession } from '../auth/tokens.js';
 import { RESTRICTIONS } from '../auth/user-status.js';
 import { notify } from '../notifications/notifications.service.js';
-import { isPlatformAdmin, isStaff } from '../permissions/policy.js';
+import { hasStaffAccount, isPlatformAdmin } from '../permissions/policy.js';
 import { auditService } from './admin-audit.service.js';
 import { caseInclude, toCaseViews } from './admin-cases.view.js';
 import { bumpTokenVersionAndRevoke } from './admin-sessions.js';
@@ -137,7 +137,7 @@ async function loadTarget(actorId: string, userId: string) {
   if (!u || u.deletedAt) throw HttpError.notFound('Không tìm thấy người dùng');
   if (u.id === actorId) throw HttpError.forbidden('Bạn không thể tự áp dụng hình phạt lên chính mình');
   if (u.isDemo) throw HttpError.badRequest('Không thể tác động lên thành viên minh họa');
-  if (await isStaff(u.id)) throw HttpError.forbidden('Không thể tác động lên tài khoản admin (quản lý ở System > Admin Accounts)');
+  if (await hasStaffAccount(u.id)) throw HttpError.forbidden('Không thể tác động lên tài khoản admin (quản lý ở System > Admin Accounts)');
   return u;
 }
 

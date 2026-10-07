@@ -300,7 +300,9 @@
       "approve": "Duyệt",
       "approved": "Đã duyệt · {{name}}",
       "requestChanges": "Yêu cầu chỉnh sửa",
-      "reject": "Từ chối"
+      "reject": "Từ chối",
+      "approveTitle": "Duyệt cộng đồng?",
+      "approveBody": "{{name}} sẽ chuyển sang hoạt động và hiển thị trên nền tảng."
     },
     "suspended": {
       "title": "Tạm ngưng cộng đồng",

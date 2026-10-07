@@ -21,7 +21,7 @@ import {
   type SettingKey,
 } from '../settings/settings.service.js';
 import { auditService } from './admin-audit.service.js';
-import { pageMeta, pageQuery } from './admin.common.js';
+import { likeEscape, pageMeta, pageQuery } from './admin.common.js';
 
 /** System: Feature Flags · Integrations · Notifications · Email Templates · Global Settings. Contract: docs/api/admin-batch3.md (C4..C9). */
 
@@ -83,7 +83,7 @@ const flagService = {
       where: {
         ...(q.stage ? { stage: q.stage } : {}),
         ...(q.enabled ? { enabled: q.enabled === 'true' } : {}),
-        ...(q.q ? { OR: [{ key: { contains: q.q, mode: 'insensitive' } }, { name: { contains: q.q, mode: 'insensitive' } }] } : {}),
+        ...(q.q ? { OR: [{ key: { contains: likeEscape(q.q), mode: 'insensitive' } }, { name: { contains: likeEscape(q.q), mode: 'insensitive' } }] } : {}),
       },
       orderBy: [{ createdAt: 'asc' }, { key: 'asc' }],
     });
@@ -382,7 +382,7 @@ const templateService = {
     const rows = await prisma.emailTemplate.findMany({
       where: {
         ...(q.status ? { status: q.status } : {}),
-        ...(q.q ? { OR: [{ key: { contains: q.q, mode: 'insensitive' } }, { name: { contains: q.q, mode: 'insensitive' } }] } : {}),
+        ...(q.q ? { OR: [{ key: { contains: likeEscape(q.q), mode: 'insensitive' } }, { name: { contains: likeEscape(q.q), mode: 'insensitive' } }] } : {}),
       },
       orderBy: [{ isSystem: 'desc' }, { createdAt: 'asc' }, { key: 'asc' }],
     });
@@ -436,7 +436,9 @@ const templateService = {
     return { deleted: true };
   },
   async preview(key: string, b: z.infer<typeof previewTemplateBody>) {
-    const r = renderTemplate(await this.get(key), b.language, b.variables);
+    // Preview: biến để trống/chỉ khoảng trắng coi như CHƯA điền (liệt kê trong missingVariables); gửi thật không đổi.
+    const vars = Object.fromEntries(Object.entries(b.variables).filter(([, v]) => v.trim() !== ''));
+    const r = renderTemplate(await this.get(key), b.language, vars);
     return { subject: r.subject, text: r.text, html: r.html, missingVariables: r.missing };
   },
   async testSend(actorId: string, key: string, b: z.infer<typeof testSendBody>) {
@@ -495,7 +497,7 @@ const settingsService = {
   },
   async reset(actorId: string, b: z.infer<typeof resetSettingsBody>) {
     const bad = (b.keys ?? []).find((k) => !(SETTING_KEYS as string[]).includes(k));
-    if (bad) throw HttpError.badRequest(`Khóa cấu hình "${bad}" không hợp lệ`);
+    if (bad) throw HttpError.validation(`Khóa cấu hình "${bad}" không hợp lệ`);
     const next: Overrides = { ...getOverrides() };
     const keys = b.keys?.length ? (b.keys as SettingKey[]) : (Object.keys(next) as SettingKey[]);
     for (const k of keys) delete next[k];

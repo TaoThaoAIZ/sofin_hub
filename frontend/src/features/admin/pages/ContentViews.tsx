@@ -196,7 +196,6 @@ function PostPreview({ kind, id, onClose }: { kind: 'posts' | 'comments'; id: st
 export function PostsView() {
   const { t } = useTranslation('admin-content');
   const navigate = useNavigate();
-  const toast = useToast();
   const [params] = useSearchParams();
   const ts = useTableState({ sort: '' }, '');
   const [selected, setSelected] = useState<string[]>([]);
@@ -220,8 +219,8 @@ export function PostsView() {
         successMessage={t('bulk.done', { n })}
         run={async (v) => {
           const r = (await bulk.mutateAsync({ path: '/content/posts/bulk', body: { action, ids: selected, reason: v.reason || undefined } })) as { updated: number; skipped: { id: string; reason: string }[] } | undefined;
-          if (r?.skipped?.length) toast.error(t('bulk.skipped', { n: r.skipped.length, reason: r.skipped[0]!.reason }));
           setSelected([]);
+          if (r?.skipped?.length) return { message: t('bulk.doneSkipped', { n: r.updated ?? n - r.skipped.length, skipped: r.skipped.length, reason: r.skipped[0]!.reason }) };
         }}
         onClose={close}
       />
@@ -943,7 +942,7 @@ export function MediaView() {
     id: m.key,
     kind: m.kind,
     name: m.filename,
-    meta: `${fmtBytes(m.size)} · ${m.owner.name} · ${formatRelative(m.uploadedAt)}`,
+    meta: `${fmtBytes(m.size)} · ${(m.owner?.name ?? '—')} · ${formatRelative(m.uploadedAt)}`,
     // Chỉ ảnh công khai có thumbnail trực tiếp; file riêng tư cần URL ký nên xem qua nút Xem trước.
     thumbUrl: m.url && ['avatar', 'cover', 'post_image'].includes(m.purpose) ? resolveApiPath(m.url) : null,
     reports: m.reports,

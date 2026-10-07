@@ -92,7 +92,8 @@ function EditorForm({ initial, act, toast, onBack }: { initial?: EmailTemplateDe
     try {
       const r = (await act.mutateAsync({ path: `/system/email-templates/${initial.key}/preview`, body: { language: lang, variables: sample } })) as TemplatePreview | undefined;
       setServer(r ?? null);
-      if (r?.missingVariables?.length) toast.error(t('emailTemplates.toast.missingVars', { vars: r.missingVariables.join(', ') }));
+      const missing = [...new Set([...(r?.missing ?? []), ...(r?.missingVariables ?? [])])];
+      if (missing.length) toast.error(t('emailTemplates.toast.missingVars', { vars: missing.join(', ') }));
     } catch (e) {
       toast.error(errMessage(e));
     }

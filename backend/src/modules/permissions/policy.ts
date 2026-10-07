@@ -74,6 +74,12 @@ export async function isStaff(userId: string): Promise<boolean> {
   return acc?.status === 'active';
 }
 
+/** Có tài khoản nhân viên admin (kể cả `suspended`) hoặc Super Admin env? Dùng để bảo vệ đích bị tác động, KHÔNG dùng để cấp quyền. */
+export async function hasStaffAccount(userId: string): Promise<boolean> {
+  if (await isPlatformAdmin(userId)) return true;
+  return !!(await prisma.adminAccount.findUnique({ where: { userId }, select: { userId: true } }));
+}
+
 /** 403 nếu không phải nhân viên admin (dùng cho service mà route đã kiểm tra quyền chi tiết ở tầng admin). */
 export async function requireStaff(userId: string): Promise<void> {
   if (!(await isStaff(userId))) throw HttpError.forbidden('Chỉ nhân viên admin mới có quyền này');

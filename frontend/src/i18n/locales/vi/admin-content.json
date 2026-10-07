@@ -33,7 +33,8 @@
     "removeTitle": "Gỡ {{n}} bài viết?",
     "restoreTitle": "Khôi phục {{n}} bài viết?",
     "done": "Đã xử lý {{n}} bài viết",
-    "skipped": "Bỏ qua {{n}} bài: {{reason}}"
+    "skipped": "Bỏ qua {{n}} bài: {{reason}}",
+    "doneSkipped": "Đã xử lý {{n}} bài viết; bỏ qua {{skipped}} bài: {{reason}}"
   },
   "common": {
     "selected": "Đã chọn {{n}}",

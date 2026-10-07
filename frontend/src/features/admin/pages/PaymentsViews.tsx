@@ -767,7 +767,7 @@ export function CreatorsView() {
             { icon: 'hourglass_top', label: t('common.pendingBalance'), value: formatCents(s.pendingBalanceCents) },
             ...(s.withdrawableCents !== undefined ? [{ icon: 'savings', label: t('common.withdrawable'), value: formatCents(s.withdrawableCents) }] : []),
             ...(s.heldCents !== undefined ? [{ icon: 'lock_clock', label: t('creators.heldHolding'), value: formatCents(s.heldCents) }] : []),
-            ...(s.reserveCents !== undefined ? [{ icon: 'shield', label: t('creators.reserveFund'), value: formatCents(s.reserveCents) }] : []),
+            ...(typeof s.reserveCents === 'number' ? [{ icon: 'shield', label: t('creators.reserveFund'), value: formatCents(s.reserveCents) }] : []),
             ...(s.debtCents !== undefined ? [{ icon: 'warning', label: t('creators.creatorDebt'), value: formatCents(s.debtCents), bad: s.debtCents > 0 }] : []),
           ]}
         />
@@ -849,7 +849,7 @@ export function CreatorDetailView() {
               { icon: 'hourglass_top', label: t('common.pendingBalance'), value: formatCents(d.kpis.pendingBalanceCents) },
               ...(d.kpis.withdrawableCents !== undefined ? [{ icon: 'savings', label: t('common.withdrawable'), value: formatCents(d.kpis.withdrawableCents) }] : []),
               ...(d.kpis.heldCents !== undefined ? [{ icon: 'lock_clock', label: t('creators.heldHolding'), value: formatCents(d.kpis.heldCents) }] : []),
-              ...(d.kpis.reserveCents !== undefined ? [{ icon: 'shield', label: t('creators.reserveFund'), value: formatCents(d.kpis.reserveCents) }] : []),
+              ...(typeof d.kpis.reserveCents === 'number' ? [{ icon: 'shield', label: t('creators.reserveFund'), value: formatCents(d.kpis.reserveCents) }] : []),
               ...(d.kpis.debtCents !== undefined ? [{ icon: 'warning', label: t('creators.creatorDebt'), value: formatCents(d.kpis.debtCents), bad: d.kpis.debtCents > 0 }] : []),
             ]}
           />

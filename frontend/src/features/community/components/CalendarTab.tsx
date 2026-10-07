@@ -247,9 +247,10 @@ export function CalendarTab() {
                         key={ev.id}
                         onClick={() => setSelectedId(ev.id)}
                         className={`truncate rounded-md px-1.5 py-1 text-left text-[11.5px] font-semibold ${
-                          ev.isPast ? 'bg-stone-100 text-stone-500 opacity-60' : 'bg-brand/15 text-brand-dark hover:bg-brand/25'
+                          ev.cancelledAt ? 'bg-stone-100 text-stone-500 line-through opacity-60' : ev.isPast ? 'bg-stone-100 text-stone-500 opacity-60' : 'bg-brand/15 text-brand-dark hover:bg-brand/25'
                         }`}
                       >
+                        {ev.cancelledAt && <span className="no-underline">[{t('calendar.cancelled')}] </span>}
                         {timeOf(ev.startAt)} {ev.title}
                       </button>
                     ))}
@@ -394,7 +395,8 @@ function EventDialog({
           <span>
             {t('calendar.registered', { n: ev.rsvpCount, capacity: ev.capacity ? `/${ev.capacity}` : '' })}
           </span>
-          {ev.isPast && <span className="rounded-md bg-stone-200 px-1.5 py-0.5 text-xs font-semibold text-stone-600">{t('calendar.past')}</span>}
+          {ev.cancelledAt && <span className="rounded-md bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-700">{t('calendar.cancelled')}</span>}
+          {ev.isPast && !ev.cancelledAt && <span className="rounded-md bg-stone-200 px-1.5 py-0.5 text-xs font-semibold text-stone-600">{t('calendar.past')}</span>}
           {full && <span className="rounded-md bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-700">{t('calendar.full')}</span>}
         </div>
         {link && (
@@ -403,7 +405,9 @@ function EventDialog({
           </a>
         )}
 
-        {!ev.isPast ? (
+        {ev.cancelledAt ? (
+          <p className="mt-5 text-center text-sm text-stone-500">{t('calendar.cancelledEvent')}</p>
+        ) : !ev.isPast ? (
           <button
             onClick={onRsvp}
             disabled={rsvpPending || full}

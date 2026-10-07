@@ -9,7 +9,7 @@ import { postsService } from '../posts/posts.service.js';
 import { auditService } from './admin-audit.service.js';
 import { caseCode, caseInclude, nextRisk, toCaseViews } from './admin-cases.view.js';
 import { adminUsersService, banBody, restrictBody, suspendBody, warnBody, type ActionCtx } from './admin-users.service.js';
-import { enumList, iso, noteField, pageMeta, pageQuery, reasonField } from './admin.common.js';
+import { likeEscape, enumList, iso, shortNoteField, pageMeta, pageQuery, reasonField } from './admin.common.js';
 
 const CASE_STATUSES = ['open', 'under_review', 'resolved', 'dismissed'] as const;
 const RISKS = ['low', 'medium', 'high', 'critical'] as const;
@@ -40,7 +40,7 @@ export const removeContentBody = z.object({ reason: reasonField, notifyAuthor: z
 export const caseRestrictBody = restrictBody.extend(closeCase);
 export const caseSuspendBody = suspendBody.extend(closeCase);
 export const caseBanBody = banBody.extend(closeCase);
-export const noteBody = z.object({ note: noteField });
+export const noteBody = z.object({ note: shortNoteField });
 export const decisionsQuery = pageQuery.extend({
   type: z.enum(['warning', 'removal', 'restriction', 'suspension', 'ban']).optional(),
   q: z.string().trim().max(100).optional(),
@@ -169,13 +169,13 @@ export const adminModerationService = {
     if (q.q) {
       const m = /^case-?0*(\d+)$/i.exec(q.q);
       const nameLike = (rel: 'targetUser' | 'reporter'): Prisma.ReportWhereInput => ({
-        [rel]: { OR: [{ firstName: { contains: q.q!, mode: 'insensitive' } }, { lastName: { contains: q.q!, mode: 'insensitive' } }] },
+        [rel]: { OR: [{ firstName: { contains: likeEscape(q.q!), mode: 'insensitive' } }, { lastName: { contains: likeEscape(q.q!), mode: 'insensitive' } }] },
       });
       and.push({
         OR: [
           ...(m ? [{ caseNo: Number(m[1]) }] : []),
-          { targetExcerpt: { contains: q.q, mode: 'insensitive' as const } },
-          { detail: { contains: q.q, mode: 'insensitive' as const } },
+          { targetExcerpt: { contains: likeEscape(q.q), mode: 'insensitive' as const } },
+          { detail: { contains: likeEscape(q.q), mode: 'insensitive' as const } },
           nameLike('targetUser'),
           nameLike('reporter'),
         ],
@@ -357,7 +357,7 @@ export const adminModerationService = {
     const actions = q.type ? DECISION_ACTIONS[q.type]! : Object.values(DECISION_ACTIONS).flat();
     const where: Prisma.AdminAuditLogWhereInput = {
       action: { in: actions },
-      ...(q.q ? { OR: [{ targetLabel: { contains: q.q, mode: 'insensitive' } }, { reason: { contains: q.q, mode: 'insensitive' } }, { actorName: { contains: q.q, mode: 'insensitive' } }] } : {}),
+      ...(q.q ? { OR: [{ targetLabel: { contains: likeEscape(q.q), mode: 'insensitive' } }, { reason: { contains: likeEscape(q.q), mode: 'insensitive' } }, { actorName: { contains: likeEscape(q.q), mode: 'insensitive' } }] } : {}),
     };
     const [rows, total] = await Promise.all([
       prisma.adminAuditLog.findMany({ where, orderBy: { createdAt: 'desc' }, skip: (q.page - 1) * q.limit, take: q.limit }),

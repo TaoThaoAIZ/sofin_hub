@@ -127,7 +127,7 @@ export function DashboardView() {
             <AttentionCard
               title={t('dashboard.attention')}
               items={[
-                { icon: 'how_to_reg', label: t('dashboard.attPending'), sub: na.pendingReviewCommunities.oldestWaitingHours != null ? t('dashboard.oldestWaiting', { hours: na.pendingReviewCommunities.oldestWaitingHours }) : t('dashboard.noneWaiting'), count: fmtNum(na.pendingReviewCommunities.count), tone: 'o', onClick: go('/admin/communities/review') },
+                { icon: 'how_to_reg', label: t('dashboard.attPending'), sub: na.pendingReviewCommunities.count > 0 && na.pendingReviewCommunities.oldestWaitingHours ?  t('dashboard.oldestWaiting', { hours: na.pendingReviewCommunities.oldestWaitingHours }) : t('dashboard.noneWaiting'), count: fmtNum(na.pendingReviewCommunities.count), tone: 'o', onClick: go('/admin/communities/review') },
                 { icon: 'flag', label: t('dashboard.attReports'), sub: t('dashboard.criticalReports', { n: na.openReports.critical }), count: fmtNum(na.openReports.count), tone: 'r', onClick: go('/admin/moderation') },
                 { icon: 'person_alert', label: t('dashboard.attSuspicious'), sub: t('dashboard.suspiciousSub'), count: fmtNum(na.suspiciousUsers.count), tone: 'r', onClick: go('/admin/users?sort=reports') },
                 { icon: 'account_balance', label: t('dashboard.attPayouts'), sub: t('dashboard.amountWaiting', { amount: formatCents(na.pendingPayouts.amountCents) }), count: fmtNum(na.pendingPayouts.count), tone: 'o', onClick: go('/admin/payments/payouts') },

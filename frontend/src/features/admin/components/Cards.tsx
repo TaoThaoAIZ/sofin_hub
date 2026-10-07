@@ -90,6 +90,7 @@ export function ChartCard({
 }) {
   const { t } = useTranslation('admin-parts');
   const [hidden, setHidden] = useState<Record<string, boolean>>({});
+  const [hover, setHover] = useState<number | null>(null);
   const n = labels.length;
   const step = Math.max(1, Math.ceil(n / 8)); // tối đa ~8 nhãn trục X để không chồng chữ
   const shown = series.filter((s) => !hidden[s.name]);
@@ -129,6 +130,22 @@ export function ChartCard({
             ))}
           </div>
           <div className="min-w-0 flex-1">
+            <div
+              className="relative"
+              tabIndex={0}
+              onMouseMove={(e) => {
+                const r = e.currentTarget.getBoundingClientRect();
+                setHover(Math.min(n - 1, Math.max(0, Math.round(((e.clientX - r.left) / Math.max(1, r.width)) * (n - 1)))));
+              }}
+              onMouseLeave={() => setHover(null)}
+              onFocus={() => setHover((h) => h ?? n - 1)}
+              onBlur={() => setHover(null)}
+              onKeyDown={(e) => {
+                if (e.key === 'ArrowLeft') { e.preventDefault(); setHover((h) => Math.max(0, (h ?? n) - 1)); }
+                else if (e.key === 'ArrowRight') { e.preventDefault(); setHover((h) => Math.min(n - 1, (h ?? -1) + 1)); }
+                else if (e.key === 'Escape') setHover(null);
+              }}
+            >
             <svg role="img" aria-label={summary} viewBox="0 0 100 100" preserveAspectRatio="none" className="block h-[200px] w-full overflow-visible">
               {[4, 34.7, 65.3].map((y) => (
                 <line key={y} x1="0" x2="100" y1={y} y2={y} stroke="#f1ebe6" strokeDasharray="4 4" vectorEffect="non-scaling-stroke" />
@@ -149,6 +166,30 @@ export function ChartCard({
                 ),
               )}
             </svg>
+            {hover !== null && hover < n && (
+              <>
+                <div className="pointer-events-none absolute inset-y-0 w-px bg-stone-300" style={{ left: `${n <= 1 ? 50 : (hover / (n - 1)) * 100}%` }} aria-hidden="true" />
+                <div
+                  role="status"
+                  className="pointer-events-none absolute top-1 z-10 min-w-[120px] rounded-lg border border-[#ece5df] bg-white px-2.5 py-2 text-xs shadow-[0_6px_20px_rgba(28,25,23,.12)]"
+                  style={{ left: `${n <= 1 ? 50 : (hover / (n - 1)) * 100}%`, transform: `translateX(${hover / Math.max(1, n - 1) > 0.6 ? 'calc(-100% - 10px)' : '10px'})` }}
+                >
+                  <div className="mb-1 font-bold text-stone-800">{labels[hover]}</div>
+                  {series.map((sr, si) =>
+                    hidden[sr.name] ? null : (
+                      <div key={sr.name} className="flex items-center justify-between gap-3">
+                        <span className="flex items-center gap-1.5 text-stone-600">
+                          <span className="size-2 rounded-full" style={{ background: sr.color ?? SERIES_COLORS[si % 5] }} />
+                          {sr.name}
+                        </span>
+                        <b>{fmt(sr.values[hover] ?? 0)}</b>
+                      </div>
+                    ),
+                  )}
+                </div>
+              </>
+            )}
+            </div>
             <div className="mt-2 flex justify-between text-[11px] text-stone-400" aria-hidden="true">
               {labels.map((l, i) => (
                 <span key={i} className="flex w-0 justify-center whitespace-nowrap">

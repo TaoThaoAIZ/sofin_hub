@@ -8,7 +8,7 @@ import { DataTable, MainCell, MonoCell, MutedCell, TextCell } from '../component
 import { useCategoryLabel, useCommunityActions } from '../components/communityActions';
 import { PageHeader } from '../components/PageHeader';
 import { StatusBadge, errMessage, fmtNum } from '../components/ui';
-import { useToast } from '../components/overlay';
+import { ModalShell, useToast } from '../components/overlay';
 import { LockTab } from '../components/AdminTabs';
 import { Card } from '../components/ui';
 import { useAdminCommunities, useApproveCommunity, useCommunitySummary, useReviewQueue, useTrash } from '../queries';
@@ -30,7 +30,7 @@ export function CommunityReview() {
   const { label: categoryLabel } = useCategoryLabel();
   const [note, setNote] = useState('');
   const [manual, setManual] = useState<Record<string, boolean>>({});
-  const [modal, setModal] = useState<'changes' | 'reject' | null>(null);
+  const [modal, setModal] = useState<'approve' | 'changes' | 'reject' | null>(null);
 
   const items = queue.data?.data ?? [];
   const selId = params.get('id');
@@ -78,7 +78,7 @@ export function CommunityReview() {
           title={t('queues.review.queue')}
           sub={queue.data ? t('queues.review.waiting', { n: fmtNum(queue.data.meta.total) }) : undefined}
           columns={[
-            { key: 'name', label: t('queues.review.colCommunity'), w: 2, render: (c) => <MainCell name={c.name} sub={c.owner.name} shape="square" avatarSrc={c.thumbnail} seed={c.id} /> },
+            { key: 'name', label: t('queues.review.colCommunity'), w: 2, render: (c) => <MainCell name={c.name} sub={(c.owner?.name ?? '—')} shape="square" avatarSrc={c.thumbnail} seed={c.id} /> },
             { key: 'submitted', label: t('queues.review.colSubmitted'), render: (c) => <MutedCell>{formatRelative(c.submittedAt)}</MutedCell> },
             { key: 'status', label: t('queues.review.colStatus'), render: (c) => <StatusBadge tone={COMMUNITY_STATUS[c.status].tone}>{COMMUNITY_STATUS[c.status].label}</StatusBadge> },
           ]}
@@ -99,7 +99,7 @@ export function CommunityReview() {
             onLink={() => navigate(`/admin/communities/${sel.id}`)}
             items={[
               { k: t('queues.review.kvName'), v: sel.name },
-              { k: t('queues.review.kvOwner'), v: sel.owner.name },
+              { k: t('queues.review.kvOwner'), v: (sel.owner?.name ?? '—') },
               { k: t('queues.review.kvDesc'), v: sel.description || '—' },
               { k: t('queues.review.kvCategory'), v: categoryLabel(sel.category) },
               { k: t('queues.review.kvPrice'), v: sel.pricing === 'free' ? PRICING_LABEL.free : t('queues.review.perMonth', { price: sel.priceUsd }) },
@@ -125,17 +125,30 @@ export function CommunityReview() {
                 icon: 'check_circle',
                 kind: 'primary',
                 disabled: approve.isPending,
-                onClick: () =>
-                  approve.mutate(
-                    { id: sel.id, note: note.trim() || undefined },
-                    { onSuccess: () => { toast.success(t('queues.review.approved', { name: sel.name })); setNote(''); }, onError: (e) => toast.error(errMessage(e)) },
-                  ),
+                onClick: () => setModal('approve'),
               },
               { label: t('queues.review.requestChanges'), icon: 'edit_note', disabled: sel.status !== 'pending_review', onClick: () => setModal('changes') },
               { label: t('queues.review.reject'), icon: 'block', kind: 'danger', onClick: () => setModal('reject') },
             ]}
           />
         </Row>
+      )}
+      {modal === 'approve' && sel && (
+        <ModalShell
+          icon="check_circle"
+          title={t('queues.review.approveTitle')}
+          body={t('queues.review.approveBody', { name: sel.name })}
+          cta={t('queues.review.approve')}
+          pending={approve.isPending}
+          error={approve.isError ? errMessage(approve.error) : null}
+          onClose={() => { approve.reset(); setModal(null); }}
+          onConfirm={() =>
+            approve.mutate(
+              { id: sel.id, note: note.trim() || undefined },
+              { onSuccess: () => { toast.success(t('queues.review.approved', { name: sel.name })); setNote(''); setModal(null); } },
+            )
+          }
+        />
       )}
       {modal === 'changes' && ref && <RequestChangesModal community={ref} onClose={() => setModal(null)} />}
       {modal === 'reject' && ref && <RejectCommunityModal community={ref} onClose={() => setModal(null)} />}
@@ -211,7 +224,7 @@ export function CommunityTrash() {
       <PageHeader title={t('queues.trash.title')} subtitle={t('queues.trash.subtitle')} />
       <DataTable<TrashItem>
         columns={[
-          { key: 'name', label: t('queues.trash.colCommunity'), w: 2, render: (c) => <MainCell name={c.name} sub={c.owner.name} shape="square" seed={c.id} /> },
+          { key: 'name', label: t('queues.trash.colCommunity'), w: 2, render: (c) => <MainCell name={c.name} sub={(c.owner?.name ?? '—')} shape="square" seed={c.id} /> },
           { key: 'id', label: t('queues.trash.colId'), render: (c) => <MonoCell>{c.id}</MonoCell> },
           { key: 'cat', label: t('queues.trash.colCategory'), render: (c) => <TextCell>{categoryLabel(c.category)}</TextCell> },
           { key: 'by', label: t('queues.trash.colDeletedBy'), render: (c) => <TextCell>{c.deletedByOwner ? t('queues.trash.owner') : (c.deletedBy?.name ?? '—')}</TextCell> },

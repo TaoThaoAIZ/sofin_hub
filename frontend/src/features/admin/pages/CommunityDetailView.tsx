@@ -41,7 +41,7 @@ function Overview({ c, categoryLabel }: { c: CommunityDetail; categoryLabel: (id
         <KvCard
           title={t('communityDetail.info')}
           items={[
-            { k: t('communityDetail.owner'), v: c.owner.name },
+            { k: t('communityDetail.owner'), v: (c.owner?.name ?? '—') },
             { k: t('communityDetail.createdOn'), v: formatDate(c.createdAt) },
             { k: t('communityDetail.category'), v: categoryLabel(c.category) },
             { k: t('communityDetail.visibility'), v: c.visibility === 'public' ? t('communityDetail.public') : t('communityDetail.private') },
@@ -182,7 +182,7 @@ export function CommunityDetailView() {
         status={st}
         meta={[
           { icon: 'tag', text: t('communityDetail.communityId', { id: c.id }) },
-          { icon: 'person', text: t('communityDetail.ownerLine', { name: c.owner.name }) },
+          { icon: 'person', text: t('communityDetail.ownerLine', { name: (c.owner?.name ?? '—') }) },
           { icon: 'category', text: categoryLabel(c.category) },
           { icon: 'calendar_today', text: t('communityDetail.createdLine', { date: formatDate(c.createdAt) }) },
         ]}
@@ -197,7 +197,7 @@ export function CommunityDetailView() {
               icon="mail"
               onClick={() => {
                 clearError();
-                void startConversation(c.owner.id);
+                if (c.owner) void startConversation(c.owner.id);
               }}
             >
               {t('communityDetail.messageOwner')}
@@ -270,7 +270,7 @@ export function CommunityDetailView() {
               { k: t('communityDetail.language'), v: c.language === 'vi' ? t('communityDetail.langVi') : c.language === 'en' ? t('communityDetail.langEn') : c.language },
               { k: t('communityDetail.access'), v: c.visibility === 'public' ? t('communityDetail.public') : t('communityDetail.private') },
               { k: t('communityDetail.memberPrice'), v: c.pricing === 'free' ? PRICING_LABEL.free : t('communityDetail.perMonth', { price: c.priceUsd }) },
-              { k: t('communityDetail.owner'), v: `${c.owner.name} · ${c.owner.email}` },
+              { k: t('communityDetail.owner'), v: `${(c.owner?.name ?? '—')} · ${c.owner.email}` },
             ]}
             link={t('communityDetail.openSettings')}
             onLink={() => window.open(`/communities/${c.id}/community/cai-dat`, '_blank', 'noopener')}
