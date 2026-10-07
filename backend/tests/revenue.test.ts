@@ -42,7 +42,7 @@ describe('doanh thu & payout cho Owner', () => {
     ({ prisma } = await import('../src/db/prisma.js'));
     ({ enrollmentService } = await import('../src/modules/enrollments/enrollments.service.js'));
     ({ notificationStore } = await import('../src/modules/notifications/notifications.service.js'));
-    const r = await c.call('POST', '/auth/register', { body: { email: ADMIN_EMAIL, password: 'Passw0rd!x', firstName: 'Plat', lastName: 'Admin' } });
+    const r = await c.registerVerified({ email: ADMIN_EMAIL, password: 'Passw0rd!x', firstName: 'Plat', lastName: 'Admin' });
     admin = { token: r.body.data.accessToken, id: r.body.data.user.id };
     owner = await c.registerUser('owner');
     await enrollmentService.grant(owner.id, COURSE, 'owner'); // chưa có API tạo cộng đồng nên cấp owner trực tiếp

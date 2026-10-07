@@ -23,7 +23,7 @@ describe('kiểm duyệt', () => {
     const { notificationStore } = await import('../src/modules/notifications/notifications.service.js');
     notifications = () => notificationStore.all() as any;
 
-    const r = await c.call('POST', '/auth/register', { body: { email: ADMIN_EMAIL, password: 'Passw0rd!x', firstName: 'Plat', lastName: 'Admin' } });
+    const r = await c.registerVerified({ email: ADMIN_EMAIL, password: 'Passw0rd!x', firstName: 'Plat', lastName: 'Admin' });
     assert.ok(r.status < 300, JSON.stringify(r.body));
     admin = { token: r.body.data.accessToken, id: r.body.data.user.id };
   });

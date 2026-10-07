@@ -1,5 +1,6 @@
 import type { Job } from './infra/scheduler.js';
 import { runEventRemindersOnce } from './modules/events/events.reminders.js';
+import { purgeUnverifiedUsers } from './modules/auth/unverified.js';
 import { paymentsService } from './modules/payments/payments.service.js';
 import { referralsService } from './modules/referrals/referrals.service.js';
 
@@ -19,5 +20,7 @@ export function allJobs(): Job[] {
     { name: 'referrals.reconcile', intervalMs: 10 * 60_000, run: () => referralsService.reconcileCommissions(new Date()) },
     // Nhắc lịch sự kiện cho người đã RSVP (còn <= 1 giờ).
     { name: 'events.reminders', intervalMs: 60_000, run: () => runEventRemindersOnce() },
+    // Dọn tài khoản đăng ký dở (chưa nhập OTP) quá 7 ngày để không chiếm email.
+    { name: 'auth.purgeUnverified', intervalMs: 60 * 60_000, run: () => purgeUnverifiedUsers(new Date()) },
   ];
 }

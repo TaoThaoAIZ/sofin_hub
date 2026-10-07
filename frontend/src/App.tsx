@@ -39,6 +39,8 @@ import { RegisterPage } from './pages/RegisterPage';
 import { TermsPage } from './pages/TermsPage';
 import { CertificateVerifyPage } from './pages/CertificateVerifyPage';
 import { LessonPage } from './pages/LessonPage';
+import { VerifyOtpPage } from './pages/VerifyOtpPage';
+import { OAuthCallbackPage } from './pages/OAuthCallbackPage';
 import { ModerationPage } from './features/community/components/ModerationPanel';
 import { AboutTab } from './features/community/components/AboutTab';
 import { CalendarTab } from './features/community/components/CalendarTab';
@@ -61,6 +63,8 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/verify-otp" element={<VerifyOtpPage />} />
+        <Route path="/oauth/callback" element={<OAuthCallbackPage />} />
         <Route path="/communities/:id" element={<CourseDetailPage />} />
         <Route path="/communities/:id/checkout" element={<CheckoutPage />} />
         {/* URL cũ vẫn dùng được: chuyển sang đường dẫn chuẩn /communities/:id/... */}

@@ -68,8 +68,31 @@ export async function registerViaApi(page: Page, user: TestUser = uniqueUser()) 
     data: { firstName: user.firstName, lastName: user.lastName, email: user.email, password: user.password },
   });
   if (!res.ok()) throw new Error(`register via API thất bại: ${res.status()} ${await res.text()}`);
-  const body = (await res.json()) as { data: { user: { id: string }; accessToken: string } };
+  const verified = await verifyOtpViaApi(page, user.email);
+  if (!verified.ok()) throw new Error(`verify OTP via API thất bại: ${verified.status()} ${await verified.text()}`);
+  const body = (await verified.json()) as { data: { user: { id: string }; accessToken: string } };
   return { ...user, accessToken: body.data.accessToken, userId: body.data.user.id };
+}
+
+/** Mã OTP mới nhất gửi tới `email`, đọc từ hộp thư dev (cần backend chạy với ENABLE_DEV_OUTBOX=1). */
+export async function readOtp(page: Page, email: string): Promise<string> {
+  const res = await page.request.get(`${API_BASE}/dev/outbox?to=${encodeURIComponent(email)}`);
+  if (!res.ok()) throw new Error(`không đọc được /dev/outbox: ${res.status()}`);
+  const mails = ((await res.json()) as { data: { subject: string }[] }).data;
+  const code = mails.map((m) => m.subject.match(/\b(\d{6})\b/)?.[1]).filter(Boolean).at(-1);
+  if (!code) throw new Error(`không có OTP trong outbox cho ${email}`);
+  return code;
+}
+
+/** Xác thực OTP đăng ký qua API (cookie refresh được Playwright lưu vào context như đăng nhập). */
+export async function verifyOtpViaApi(page: Page, email: string) {
+  return page.request.post(`${API_BASE}/auth/register/verify`, { data: { email, code: await readOtp(page, email) } });
+}
+
+/** Nhập mã OTP vào 6 ô ở trang /verify-otp (gõ liên tiếp, focus tự nhảy ô). */
+export async function typeOtp(page: Page, code: string) {
+  await page.getByLabel('Chữ số 1').click();
+  await page.keyboard.type(code);
 }
 
 export async function fillRegisterForm(page: Page, user: TestUser) {

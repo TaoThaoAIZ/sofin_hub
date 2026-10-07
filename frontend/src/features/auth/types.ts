@@ -47,3 +47,15 @@ export interface RegisterInput {
   /** Mã giới thiệu đã lưu từ link /gioi-thieu/:code hoặc ?ref=. */
   referralCode?: string;
 }
+
+/** Kết quả đăng ký: chưa có phiên, cần nhập mã OTP gửi về email. */
+export interface RegistrationPending {
+  verificationRequired: true;
+  email: string;
+  /** false = nhà cung cấp email lỗi, người dùng cần bấm "Gửi lại". */
+  emailSent: boolean;
+  /** Số giây tới lần gửi lại hợp lệ. */
+  resendInSec: number;
+}
+
+export type SocialProvider = 'google' | 'facebook';

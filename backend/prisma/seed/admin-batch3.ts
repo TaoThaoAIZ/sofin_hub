@@ -110,6 +110,11 @@ const TEMPLATES = [
     body: { en: 'Hi {{name}},\n\nConfirm your email address using the link below (valid for 24 hours):\n{{link}}', vi: 'Xin chào {{name}},\n\nBấm vào liên kết sau để xác thực email (hiệu lực 24 giờ):\n{{link}}' },
   },
   {
+    key: 'register_otp', name: 'Registration OTP', status: 'active', variables: ['name', 'code', 'minutes'],
+    subject: { en: '{{code}} is your SofinHub verification code', vi: '{{code}} là mã xác thực SofinHub của bạn' },
+    body: { en: 'Hi {{name}},\n\nYour SofinHub verification code is: {{code}}\nIt is valid for {{minutes}} minutes and can be used once. Do not share it with anyone.\n\nIf you did not sign up, ignore this email.', vi: 'Xin chào {{name}},\n\nMã xác thực email SofinHub của bạn là: {{code}}\nMã có hiệu lực {{minutes}} phút và chỉ dùng được một lần. Không chia sẻ mã này cho bất kỳ ai.\n\nNếu bạn không đăng ký tài khoản, hãy bỏ qua email này.' },
+  },
+  {
     key: 'reset_password', name: 'Reset password', status: 'active', variables: ['name', 'link'],
     subject: { en: 'Reset your SofinHub password', vi: 'Đặt lại mật khẩu SofinHub' },
     body: { en: 'Hi {{name}},\n\nUse the link below to reset your password (valid for 30 minutes):\n{{link}}\n\nIf you did not request this, ignore this email.', vi: 'Xin chào {{name}},\n\nBấm vào liên kết sau để đặt lại mật khẩu (hiệu lực 30 phút):\n{{link}}\n\nNếu bạn không yêu cầu, hãy bỏ qua email này.' },

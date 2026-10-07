@@ -55,7 +55,7 @@ describe('cộng đồng ↔ khóa học', () => {
     c = makeClient(server.baseUrl);
     ({ enrollmentService } = await import('../src/modules/enrollments/enrollments.service.js'));
     [owner, admin, mod, member, outsider] = await Promise.all(['own', 'adm', 'mod', 'mem', 'out'].map((p) => c.registerUser(p)));
-    const r = await c.call('POST', '/auth/register', { body: { email: ADMIN_EMAIL, password: 'Passw0rd!x', firstName: 'Plat', lastName: 'Admin' } });
+    const r = await c.registerVerified({ email: ADMIN_EMAIL, password: 'Passw0rd!x', firstName: 'Plat', lastName: 'Admin' });
     platform = { token: r.body.data.accessToken, id: r.body.data.user.id };
   });
   after(() => server.close());

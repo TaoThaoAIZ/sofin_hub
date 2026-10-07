@@ -24,7 +24,7 @@ describe('thanh toán, gói thành viên, hoàn tiền, webhook', () => {
     ({ enrollmentService } = await import('../src/modules/enrollments/enrollments.service.js'));
     ({ paymentsService } = await import('../src/modules/payments/payments.service.js'));
     ({ mockGateway, signWebhookPayload } = await import('../src/modules/payments/payments.gateway.js'));
-    const r = await c.call('POST', '/auth/register', { body: { email: ADMIN_EMAIL, password: 'Passw0rd!x', firstName: 'Plat', lastName: 'Admin' } });
+    const r = await c.registerVerified({ email: ADMIN_EMAIL, password: 'Passw0rd!x', firstName: 'Plat', lastName: 'Admin' });
     admin = { token: r.body.data.accessToken, id: r.body.data.user.id };
   });
   after(() => server.close());

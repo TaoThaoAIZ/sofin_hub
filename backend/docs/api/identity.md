@@ -6,6 +6,12 @@ Tất cả path dưới đây nằm sau tiền tố `/api`. Thành công: `{ dat
 
 | Method | Path | Auth | Body / Query | Response | Lỗi |
 |---|---|---|---|---|---|
+| POST | /auth/register | - (rate limit IP: 20/giờ) | `{firstName, lastName, email, password, referralCode?}` | 202 `{verificationRequired:true, email, emailSent, resendInSec}` — **không cấp phiên**, gửi OTP 6 số về email | 400, 409 (email đã xác thực), 429 (đăng ký lại email chưa xác thực trong cooldown) |
+| POST | /auth/register/verify | - (rate limit IP: 30/15 phút) | `{email, code, referralCode?}` | 200 `{user, accessToken}` + cookie refresh (như login) | 400 `OTP_INVALID` (`details.attemptsLeft`) / `OTP_EXPIRED` / `OTP_LOCKED` (sai 5 lần, mã bị hủy) |
+| POST | /auth/register/resend | - (rate limit IP: 20/giờ) | `{email}` | 202 `{verificationRequired, email, emailSent, resendInSec}` (email lạ/đã xác thực: cùng kết quả, không gửi) | 429 `OTP_RATE_LIMITED` (`details.retryAfterSec`): cooldown 60s, tối đa 5 lần/giờ/tài khoản |
+| POST | /auth/login | - | `{email, password}` | phiên / `{twoFactorRequired, ticket}` | 401, **403 `EMAIL_NOT_VERIFIED`** (`details.email`; server tự gửi lại OTP) |
+| GET | /auth/oauth/:provider/start?ref= | - | `provider` = `google` \| `facebook` | 302 sang trang đồng ý của nhà cung cấp (đặt cookie `oauth_nonce`) | chưa cấu hình: 302 về FE `#error=not_configured` |
+| GET | /auth/oauth/:provider/callback | - | `code`, `state` (nhà cung cấp gọi lại) | 302 về `FRONTEND_URL/oauth/callback`: thành công = cookie refresh đã đặt (FE gọi `/auth/refresh`); `#ticket=` nếu bật 2FA; `#error=<mã>` nếu lỗi | - |
 | POST | /auth/forgot-password | - (rate limit IP: 5/15 phút) | `{email}` | 200 `{message}` (luôn giống nhau) | 400, 429 |
 | POST | /auth/reset-password | - | `{token, password}` | 200 `{message}` | 400 (token sai/hết hạn/đã dùng, mật khẩu yếu) |
 | POST | /auth/change-password | Bearer | `{currentPassword, newPassword}` | 200 `{message}` | 400 (sai mật khẩu hiện tại, trùng cũ, mật khẩu yếu), 401 |
@@ -26,6 +32,10 @@ Tất cả path dưới đây nằm sau tiền tố `/api`. Thành công: `{ dat
 | GET | /dev/outbox?to= | - | chỉ mount khi `ENABLE_DEV_OUTBOX=1` (độc lập NODE_ENV; production cấm bật, app không khởi động) | `[{id,to,subject,text,html,sentAt}]` | - |
 
 ## Quyết định thiết kế
+
+- **OTP đăng ký** (`auth/otp.service.ts`, bảng `EmailOtp`, unique `(userId, purpose)`): 6 số từ `crypto.randomInt`, lưu HMAC-SHA256 với `OTP_PEPPER` (không lưu mã thô). Hiệu lực 10 phút, dùng 1 lần, sai tối đa 5 lần (số lần thử được tăng nguyên tử TRƯỚC khi so khớp nên request song song không vượt hạn mức), so khớp `timingSafeEqual`. Gửi lại: cooldown 60s, tối đa 5 lần/giờ; mã mới vô hiệu mã cũ. Đăng ký lại bằng email của tài khoản **chưa xác thực** thì ghi đè họ tên/mật khẩu; tài khoản chưa xác thực quá 7 ngày bị job `auth.purgeUnverified` xóa. Người giới thiệu chỉ được ghi nhận **sau** khi xác thực OTP thành công (FE gửi `referralCode` ở bước verify). Link đặt lại mật khẩu cũng đánh dấu `emailVerified` (đã chứng minh sở hữu email; là đường vào của admin được mời).
+- **Gửi mail**: `SMTP_HOST` (+`SMTP_USER/SMTP_PASS/SMTP_PORT/SMTP_SECURE/MAIL_FROM`) bật SMTP thật qua nodemailer; không có thì dev/test dùng outbox RAM, production chỉ log. Mẫu `register_otp` (biến `{{name}}`, `{{code}}`, `{{minutes}}`) sửa được trong Admin, có bản mặc định trong code. `mailService.send` trả `false` khi lỗi (không ném) → API trả `emailSent:false`, FE nhắc bấm "Gửi lại".
+- **Đăng nhập Google/Facebook** (`auth/oauth.ts`, bảng `SocialAccount`): OAuth2 authorization-code chạy ở backend, không thêm thư viện. `state` là JWT ký 10 phút + nonce khớp cookie httpOnly (chống CSRF). Redirect URI khai báo ở console nhà cung cấp: `<OAUTH_REDIRECT_BASE>/api/auth/oauth/<provider>/callback`. Thứ tự: đã liên kết → dùng tài khoản đó; trùng email với tài khoản đã xác thực → liên kết; trùng email với tài khoản **chưa** xác thực → xác thực và **vô hiệu mật khẩu cũ** (chống chiếm email); chưa có → tạo mới (đã xác thực, không có mật khẩu — dùng "Quên mật khẩu" nếu muốn đặt). Chỉ tin email do nhà cung cấp xác minh. Tài khoản bật 2FA vẫn phải nhập mã (vé 2FA qua `#ticket=`). Biến: `GOOGLE_CLIENT_ID/SECRET`, `FACEBOOK_APP_ID/SECRET`; thiếu thì nhà cung cấp đó bị tắt.
 
 - **Token một lần** (`auth/one-time-tokens.ts`, bảng `OneTimeToken`, unique `(userId, purpose)` nên phát hành mới = upsert đè token cũ): 32 byte ngẫu nhiên (base64url), chỉ lưu sha256; reset TTL 30 phút, verify TTL 24 giờ; dùng xong hoặc phát hành token mới cùng mục đích thì token cũ vô hiệu. Token không bao giờ nằm trong response API, chỉ trong email (dev: `/dev/outbox`).
 - **Link email**: `{FRONTEND_URL}/reset-password?token=...`, `{FRONTEND_URL}/verify-email?token=...`. Env mới: `FRONTEND_URL`, `SUPPORT_EMAIL`.

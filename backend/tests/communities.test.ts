@@ -13,9 +13,7 @@ describe('cộng đồng: tạo, tham gia, vai trò, lời mời', () => {
   before(async () => {
     server = await startTestServer();
     c = makeClient(server.baseUrl);
-    const r = await c.call('POST', '/auth/register', {
-      body: { email: ADMIN_EMAIL, password: 'Passw0rd!x', firstName: 'Root', lastName: 'Admin' },
-    });
+    const r = await c.registerVerified({ email: ADMIN_EMAIL, password: 'Passw0rd!x', firstName: 'Root', lastName: 'Admin' });
     pa = { token: r.body.data.accessToken, id: r.body.data.user.id };
   });
   after(() => server.close());

@@ -4,10 +4,13 @@ import {
   bypassLegalConsent,
   fillLoginForm,
   fillRegisterForm,
+  readOtp,
   registerViaApi,
   snapEvidence,
+  typeOtp,
   uniqueUser,
   VALID_PASSWORD,
+  verifyOtpViaApi,
 } from './helpers';
 
 test.afterEach(async ({ page }, testInfo) => {
@@ -23,6 +26,9 @@ test.describe('Tài khoản & Xác thực', () => {
     await expect(page.getByRole('checkbox')).toBeEnabled();
     await page.getByRole('checkbox').check();
     await page.getByRole('button', { name: 'Đăng ký ngay' }).click();
+    // Đăng ký không cấp phiên: sang màn nhập OTP gửi về email, nhập đúng mã mới vào được hệ thống.
+    await expect(page).toHaveURL(/\/verify-otp\?email=/);
+    await typeOtp(page, await readOtp(page, user.email));
     await expect(page).toHaveURL('/');
     await expect(page.getByRole('button', { name: user.firstName })).toBeVisible();
   });
@@ -197,7 +203,7 @@ test.describe('Tài khoản & Xác thực', () => {
     const res = await page.request.post(`${API_BASE}/auth/register`, {
       data: { ...user, password: 'Aa1@bcde' },
     });
-    expect(res.status(), await res.text()).toBe(200);
+    expect(res.status(), await res.text()).toBe(202);
   });
 
   test('TC-AUTH-026: Họ tên chứa ký tự tiếng Việt có dấu', async ({ page }) => {
@@ -206,7 +212,9 @@ test.describe('Tài khoản & Xác thực', () => {
       data: { ...user, firstName: 'Nguyễn', lastName: 'Văn Ánh' },
     });
     expect(res.ok(), await res.text()).toBeTruthy();
-    const body = (await res.json()).data.user;
+    const verified = await verifyOtpViaApi(page, user.email);
+    expect(verified.ok(), await verified.text()).toBeTruthy();
+    const body = (await verified.json()).data.user;
     expect(body.firstName).toBe('Nguyễn');
     expect(body.lastName).toBe('Văn Ánh');
   });
@@ -215,6 +223,8 @@ test.describe('Tài khoản & Xác thực', () => {
     const user = uniqueUser('case-norm');
     const first = await page.request.post(`${API_BASE}/auth/register`, { data: user });
     expect(first.ok()).toBeTruthy();
+    // Email của tài khoản CHƯA xác thực được đăng ký lại (ghi đè); chỉ email đã xác thực mới bị coi là trùng.
+    expect((await verifyOtpViaApi(page, user.email)).ok()).toBeTruthy();
     const second = await page.request.post(`${API_BASE}/auth/register`, {
       data: { ...uniqueUser('case-norm2'), email: user.email.toUpperCase() },
     });
@@ -229,8 +239,8 @@ test.describe('Tài khoản & Xác thực', () => {
     await fillRegisterForm(page, { ...user, password });
     await page.getByRole('checkbox').check();
     await page.getByRole('button', { name: 'Đăng ký ngay' }).click();
-    // FE (validateNewPassword) không có rule chặn khoảng trắng -> phải đăng ký thành công, về trang chủ
-    await expect(page).toHaveURL('/', { timeout: 5000 });
+    // FE (validateNewPassword) không có rule chặn khoảng trắng -> đăng ký thành công, sang màn nhập OTP
+    await expect(page).toHaveURL(/\/verify-otp\?email=/, { timeout: 5000 });
     const beRes = await page.request.post(`${API_BASE}/auth/register`, {
       data: { ...uniqueUser('space-pw-api'), password },
     });

@@ -40,6 +40,26 @@ const schema = z.object({
   // Hộp thư nhận form liên hệ.
   SUPPORT_EMAIL: z.string().default('support@sofinhub.local'),
 
+  // --- Gửi email thật (SMTP qua nodemailer). Bỏ trống SMTP_HOST: dev/test dùng outbox RAM, production chỉ log (KHÔNG gửi). ---
+  SMTP_HOST: z.string().optional().transform((v) => v?.trim() || undefined),
+  SMTP_PORT: z.coerce.number().int().positive().default(587),
+  /** true = TLS ngay từ đầu (cổng 465); false = STARTTLS (cổng 587). */
+  SMTP_SECURE: z.string().optional().transform((v) => v === '1' || v === 'true'),
+  SMTP_USER: z.string().optional().transform((v) => v?.trim() || undefined),
+  SMTP_PASS: z.string().optional().transform((v) => v || undefined),
+  MAIL_FROM: z.string().default('SofinHub <no-reply@sofinhub.local>'),
+
+  // Bí mật HMAC cho mã OTP email. BẮT BUỘC đặt riêng khi production (giá trị dev-* bị env-guard chặn).
+  OTP_PEPPER: z.string().min(1).default('dev-otp-pepper-change-me'),
+
+  // --- Đăng nhập mạng xã hội (OAuth2 authorization code). Thiếu cặp id/secret = nhà cung cấp đó bị tắt. ---
+  // URL công khai của BACKEND (nơi Google/Facebook gọi lại), ví dụ https://api.sofinhub.com. Redirect URI = <OAUTH_REDIRECT_BASE>/api/auth/oauth/<provider>/callback
+  OAUTH_REDIRECT_BASE: z.string().default('http://localhost:4000'),
+  GOOGLE_CLIENT_ID: z.string().optional().transform((v) => v?.trim() || undefined),
+  GOOGLE_CLIENT_SECRET: z.string().optional().transform((v) => v?.trim() || undefined),
+  FACEBOOK_APP_ID: z.string().optional().transform((v) => v?.trim() || undefined),
+  FACEBOOK_APP_SECRET: z.string().optional().transform((v) => v?.trim() || undefined),
+
   // --- Upload file (module uploads) ---
   UPLOAD_DIR: z.string().default('data/uploads'),
   // Bí mật ký vé upload (HMAC). BẮT BUỘC đặt riêng khi production.

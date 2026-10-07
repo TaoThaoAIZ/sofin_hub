@@ -57,7 +57,7 @@ export function renderTemplate(t: { subject: unknown; body: unknown }, lang: Lan
 
 export const mailTemplates = {
   /** Gửi email theo mẫu `key` nếu đang `active` (đã sửa/duyệt trong Admin); ngược lại dùng nội dung mặc định `fallback` trong code. */
-  async send(key: string, to: string, vars: Record<string, string>, fallback: Omit<MailMessage, 'to'>): Promise<void> {
+  async send(key: string, to: string, vars: Record<string, string>, fallback: Omit<MailMessage, 'to'>): Promise<boolean> {
     let message: MailMessage = { to, ...fallback };
     try {
       const t = await prisma.emailTemplate.findUnique({ where: { key } });
@@ -68,6 +68,6 @@ export const mailTemplates = {
     } catch {
       // Lỗi đọc mẫu không được chặn việc gửi mail (token đặt lại mật khẩu...) -> dùng bản mặc định.
     }
-    await mailService.send(message);
+    return mailService.send(message);
   },
 };

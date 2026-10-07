@@ -34,7 +34,7 @@ describe('điểm thưởng không farm được + chính sách quyền ở ranh
     ({ enrollmentService } = await import('../src/modules/enrollments/enrollments.service.js'));
     ({ pointsService } = await import('../src/modules/points/points.service.js'));
     rl = await import('../src/middlewares/rate-limit.js');
-    const r = await c.call('POST', '/auth/register', { body: { email: ADMIN_EMAIL, password: 'Passw0rd!x', firstName: 'Plat', lastName: 'Admin' } });
+    const r = await c.registerVerified({ email: ADMIN_EMAIL, password: 'Passw0rd!x', firstName: 'Plat', lastName: 'Admin' });
     admin = { token: r.body.data.accessToken, id: r.body.data.user.id };
   });
   after(() => server.close());

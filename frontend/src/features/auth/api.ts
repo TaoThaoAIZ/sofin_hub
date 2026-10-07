@@ -1,8 +1,19 @@
-import { apiPost } from '../../lib/api';
-import type { AuthSession, AuthUser, LoginInput, RegisterInput, TwoFactorChallenge } from './types';
+import { API_URL, apiPost } from '../../lib/api';
+import type { AuthSession, AuthUser, LoginInput, RegisterInput, RegistrationPending, SocialProvider, TwoFactorChallenge } from './types';
 
+// Đăng ký KHÔNG cấp phiên: server gửi OTP về email, hoàn tất bằng verifyRegistration.
 export const register = (input: RegisterInput) =>
-  apiPost<{ data: AuthSession }>('/auth/register', input).then((r) => r.data);
+  apiPost<{ data: RegistrationPending }>('/auth/register', input, { skipAuthRetry: true }).then((r) => r.data);
+
+export const verifyRegistration = (email: string, code: string, referralCode?: string) =>
+  apiPost<{ data: AuthSession }>('/auth/register/verify', { email, code, referralCode }, { skipAuthRetry: true }).then((r) => r.data);
+
+export const resendRegistrationOtp = (email: string) =>
+  apiPost<{ data: RegistrationPending }>('/auth/register/resend', { email }, { skipAuthRetry: true }).then((r) => r.data);
+
+/** URL bắt đầu đăng nhập Google/Facebook (trình duyệt điều hướng thẳng tới backend, không phải fetch). */
+export const socialStartUrl = (provider: SocialProvider, referralCode?: string) =>
+  `${API_URL}/auth/oauth/${provider}/start${referralCode ? `?ref=${encodeURIComponent(referralCode)}` : ''}`;
 
 // skipAuthRetry: sai mật khẩu cũng trả 401 — không phải access token hết hạn, đừng tự refresh phiên khác rồi thử lại.
 export const login = (input: LoginInput) =>

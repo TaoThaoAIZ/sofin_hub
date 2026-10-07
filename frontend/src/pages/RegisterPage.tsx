@@ -6,8 +6,9 @@ import { FieldError, FieldHint } from '../components/ui/FieldMessage';
 import { FormField } from '../components/ui/FormField';
 import { ApiError } from '../lib/api';
 import { useAuth } from '../features/auth/AuthContext';
+import { SOCIAL_LOGIN_ENABLED, SocialButtons } from '../features/auth/SocialButtons';
 import { hasReadPrivacy, hasReadTerms } from '../features/auth/legalConsent';
-import { clearReferralCode, readReferralCode } from '../features/referral/storage';
+import { readReferralCode } from '../features/referral/storage';
 import { validateEmail, validateNewPassword, validateRequired } from '../features/auth/validation';
 
 interface FieldErrors {
@@ -100,10 +101,13 @@ export function RegisterPage() {
     setSubmitting(true);
     setError(null);
     try {
-      await register({ firstName, lastName, email, password, referralCode: readReferralCode() });
-      clearReferralCode();
+      const pending = await register({ firstName, lastName, email, password, referralCode: readReferralCode() });
+      // Chưa có phiên: sang màn nhập OTP. Mã giới thiệu giữ lại tới khi xác thực xong (gửi kèm ở bước verify).
       clearDraft();
-      navigate('/', { replace: true });
+      navigate(`/verify-otp?email=${encodeURIComponent(pending.email)}`, {
+        replace: true,
+        state: { resendInSec: pending.resendInSec, emailSent: pending.emailSent },
+      });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('register.fail'));
     } finally {
@@ -242,6 +246,18 @@ export function RegisterPage() {
             </svg>
           </Button>
         </form>
+
+        {SOCIAL_LOGIN_ENABLED && (
+          <>
+            <div className="flex items-center gap-4 text-[15px] text-stone-500">
+              <span className="h-px flex-1 bg-[rgba(120,60,20,.14)]" />
+              {t('register.orWith')}
+              <span className="h-px flex-1 bg-[rgba(120,60,20,.14)]" />
+            </div>
+
+            <SocialButtons />
+          </>
+        )}
 
         <div className="flex flex-wrap items-center justify-center gap-4 text-[15px] whitespace-nowrap text-stone-700">
           <span className="hidden h-px flex-1 bg-[rgba(120,60,20,.14)] sm:block" />

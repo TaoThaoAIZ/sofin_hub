@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { isProd } from '../../config/env.js';
+import nodemailer from 'nodemailer';
+import { env, isProd } from '../../config/env.js';
 
 export interface MailMessage {
   to: string;
@@ -44,23 +45,47 @@ export const logOnlyMailProvider: MailProvider = {
   },
 };
 
-let provider: MailProvider = isProd ? logOnlyMailProvider : memoryMailProvider;
+/** SMTP thật qua nodemailer (Gmail App Password / Brevo / Resend SMTP...). Chỉ dựng khi có SMTP_HOST. */
+export function createSmtpMailProvider(): MailProvider {
+  const transport = nodemailer.createTransport({
+    host: env.SMTP_HOST,
+    port: env.SMTP_PORT,
+    secure: env.SMTP_SECURE,
+    auth: env.SMTP_USER ? { user: env.SMTP_USER, pass: env.SMTP_PASS } : undefined,
+  });
+  return {
+    async send(m) {
+      await transport.sendMail({ from: env.MAIL_FROM, to: m.to, subject: m.subject, text: m.text, html: m.html });
+    },
+  };
+}
+
+// SMTP_HOST có thì luôn gửi thật (kể cả dev, để thử); không thì dev/test = outbox RAM, production = log-only.
+let provider: MailProvider = env.SMTP_HOST && process.env.NODE_ENV !== 'test' ? createSmtpMailProvider() : isProd ? logOnlyMailProvider : memoryMailProvider;
 // Outbox in-memory CHỈ dành cho dev/test (không bao giờ dùng khi production: lộ token, mất khi restart, lệch giữa instance).
 // Production mặc định log-only => thư reset/verify bị bỏ: cảnh báo to ngay lúc khởi động để không bị bỏ sót.
-if (isProd) console.warn('[mail] CẢNH BÁO: production đang dùng provider log-only — email (đặt lại mật khẩu, xác thực...) KHÔNG được gửi. Gọi setMailProvider() với SES/SMTP trước khi mở cho người dùng thật.');
+if (isProd && !env.SMTP_HOST) console.warn('[mail] CẢNH BÁO: production đang dùng provider log-only — email (đặt lại mật khẩu, xác thực...) KHÔNG được gửi. Đặt SMTP_HOST (+SMTP_USER/SMTP_PASS/MAIL_FROM) hoặc gọi setMailProvider() với SES trước khi mở cho người dùng thật.');
 
 export function setMailProvider(p: MailProvider) {
   provider = p;
 }
 
 export const mailService = {
-  async send(message: MailMessage): Promise<void> {
-    // Lỗi gửi mail không được làm hỏng request chính (đặc biệt forgot-password không được lộ trạng thái).
+  /** Trả true nếu provider nhận thư. Lỗi KHÔNG ném ra (forgot-password không được lộ trạng thái); caller cần biết (OTP) thì xem kết quả. */
+  async send(message: MailMessage): Promise<boolean> {
     try {
       await provider.send(message);
+      return true;
     } catch (err) {
       console.error('[mail] gửi thất bại:', err instanceof Error ? err.message : err);
+      return false;
     }
+  },
+
+  /** Chỉ dùng cho test: xóa thư của một địa chỉ khỏi outbox. */
+  dropOutbox(to: string): void {
+    const target = to.trim().toLowerCase();
+    for (let i = outbox.length - 1; i >= 0; i--) if (outbox[i]!.to.toLowerCase() === target) outbox.splice(i, 1);
   },
 
   /** Chỉ dùng cho dev/test. */

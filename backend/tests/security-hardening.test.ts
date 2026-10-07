@@ -32,6 +32,7 @@ const PROD_OK: Record<string, string> = {
   JWT_REFRESH_SECRET: 'b'.repeat(48),
   PAYMENT_WEBHOOK_SECRET: 'c'.repeat(48),
   UPLOAD_SIGNING_SECRET: 'd'.repeat(48),
+  OTP_PEPPER: 'e'.repeat(48),
 };
 
 describe('4.1 NODE_ENV bắt buộc + hộp thư dev opt-in', () => {
@@ -79,11 +80,13 @@ describe('4.1 NODE_ENV bắt buộc + hộp thư dev opt-in', () => {
   it('cookie refresh có cờ Secure khi không phải development', async () => {
     const server = await startTestServer();
     try {
-      const res = await fetch(`${server.baseUrl}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: `cookie-${Date.now()}@test.local`, password: 'Passw0rd!x', firstName: 'C', lastName: 'K' }),
-      });
+      const email = `cookie-${Date.now()}@test.local`;
+      const post = (path: string, body: unknown) =>
+        fetch(`${server.baseUrl}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      assert.ok((await post('/auth/register', { email, password: 'Passw0rd!x', firstName: 'C', lastName: 'K' })).status < 300);
+      const { makeClient } = await import('./helpers.js');
+      const code = await makeClient(server.baseUrl).otpFor(email);
+      const res = await post('/auth/register/verify', { email, code });
       assert.ok(res.status < 300);
       assert.match(res.headers.get('set-cookie') ?? '', /;\s*Secure/i);
     } finally {

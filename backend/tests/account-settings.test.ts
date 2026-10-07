@@ -7,10 +7,11 @@ describe('cài đặt hồ sơ & bảo mật', () => {
   let server: TestServer;
   let call: ReturnType<typeof makeClient>['call'];
   let registerUser: ReturnType<typeof makeClient>['registerUser'];
+  let registerVerified: ReturnType<typeof makeClient>['registerVerified'];
 
   before(async () => {
     server = await startTestServer();
-    ({ call, registerUser } = makeClient(server.baseUrl));
+    ({ call, registerUser, registerVerified } = makeClient(server.baseUrl));
   });
   after(() => server.close());
 
@@ -232,7 +233,7 @@ describe('cài đặt hồ sơ & bảo mật', () => {
       const db = (await useTestDb()).prisma;
       const token = await lastToken(target, 'verify-email');
       // Người khác đăng ký đúng email đó trong lúc chờ
-      const reg = await call('POST', '/auth/register', { body: { email: target, password: 'Passw0rd!x', firstName: 'Kẻ', lastName: 'Chen' } });
+      const reg = await registerVerified({ email: target, password: 'Passw0rd!x', firstName: 'Kẻ', lastName: 'Chen' });
       assert.equal(reg.status, 200);
       assert.equal((await call('POST', '/auth/verify-email', { body: { token } })).status, 409);
       assert.equal((await db.user.findUniqueOrThrow({ where: { id: u.id } })).email, u.email);

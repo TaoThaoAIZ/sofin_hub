@@ -1,7 +1,7 @@
 import { Router, type Request } from 'express';
 import rateLimit from 'express-rate-limit';
 import { requireAuth } from '../../middlewares/auth.js';
-import { isDev, isProd } from '../../config/env.js';
+import { env, isDev, isProd } from '../../config/env.js';
 import { HttpError } from '../../utils/http-error.js';
 import {
   changeEmailBody,
@@ -12,14 +12,26 @@ import {
   loginTwoFactorBody,
   preferencesBody,
   registerBody,
+  resendOtpBody,
   resetPasswordBody,
   twoFactorCodeBody,
   twoFactorDisableBody,
   updateProfileBody,
   verifyEmailBody,
+  verifyRegistrationBody,
 } from './auth.schema.js';
 import { accountService } from './account.service.js';
 import { authService, FORGOT_PASSWORD_MESSAGE, type AuthSession } from './auth.service.js';
+import {
+  buildAuthUrl,
+  createOAuthState,
+  fetchSocialProfile,
+  isSocialProvider,
+  OAUTH_NONCE_COOKIE,
+  OAUTH_NONCE_MAX_AGE_MS,
+  socialEnabled,
+  verifyOAuthState,
+} from './oauth.js';
 import { parseUserAgent } from './user-agent.js';
 import { peekSessionId, REFRESH_COOKIE_MAX_AGE_MS, REFRESH_COOKIE_NAME, type SessionMeta } from './tokens.js';
 
@@ -61,11 +73,76 @@ const forgotLimiter = rateLimit({
   handler: (_req, _res, next) => next(HttpError.tooMany('Bạn yêu cầu quá nhiều lần, vui lòng thử lại sau ít phút')),
 });
 
+// Giới hạn theo IP cho đăng ký / OTP (chặn spam hộp thư và dò mã). Ngoài ra OTP còn có giới hạn theo từng mã/tài khoản (otp.service.ts).
+// Test chạy hàng loạt từ 1 IP nên nới rất lớn.
+const ipLimiter = (windowMs: number, limit: number, message: string) =>
+  rateLimit({
+    windowMs,
+    limit: process.env.NODE_ENV === 'test' ? 100_000 : limit,
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (_req, _res, next) => next(HttpError.tooMany(message)),
+  });
+const registerLimiter = ipLimiter(60 * 60 * 1000, 20, 'Bạn đăng ký quá nhiều lần, vui lòng thử lại sau');
+const otpResendLimiter = ipLimiter(60 * 60 * 1000, 20, 'Bạn yêu cầu gửi mã quá nhiều lần, vui lòng thử lại sau');
+const otpVerifyLimiter = ipLimiter(15 * 60 * 1000, 30, 'Bạn nhập mã quá nhiều lần, vui lòng thử lại sau ít phút');
+
 const metaOf = (req: Request): SessionMeta => ({ ip: req.ip, userAgent: req.get('user-agent')?.slice(0, 200) });
 
-authRouter.post('/register', async (req, res) => {
+// Đăng ký KHÔNG cấp phiên: tạo tài khoản chưa xác thực + gửi OTP về email. Hoàn tất ở /register/verify.
+authRouter.post('/register', registerLimiter, async (req, res) => {
   const body = registerBody.parse(req.body);
-  sendSession(res, await authService.register(body, metaOf(req)));
+  res.status(202).json({ data: await authService.register(body) });
+});
+
+authRouter.post('/register/verify', otpVerifyLimiter, async (req, res) => {
+  const body = verifyRegistrationBody.parse(req.body);
+  sendSession(res, await authService.verifyRegistration(body, metaOf(req)));
+});
+
+authRouter.post('/register/resend', otpResendLimiter, async (req, res) => {
+  const { email } = resendOtpBody.parse(req.body);
+  res.status(202).json({ data: await authService.resendRegistrationOtp({ email }) });
+});
+
+// ---- Đăng nhập Google / Facebook (OAuth2 authorization code, xem oauth.ts) ----
+const oauthRedirect = (hash: string) => `${env.FRONTEND_URL.replace(/\/$/, '')}/oauth/callback${hash}`;
+const oauthFail = (res: import('express').Response, code: string) => {
+  res.clearCookie(OAUTH_NONCE_COOKIE, { path: '/api/auth/oauth' });
+  res.redirect(oauthRedirect(`#error=${encodeURIComponent(code)}`));
+};
+
+authRouter.get('/oauth/:provider/start', otpResendLimiter, (req, res) => {
+  const provider = String(req.params.provider);
+  if (!isSocialProvider(provider) || !socialEnabled(provider)) return oauthFail(res, 'not_configured');
+  const ref = typeof req.query.ref === 'string' ? req.query.ref.trim().slice(0, 64) : undefined;
+  const { state, nonce } = createOAuthState(provider, ref);
+  // Cookie của chính trình duyệt này, lax để vẫn được gửi khi nhà cung cấp chuyển hướng (GET cấp cao) về callback.
+  res.cookie(OAUTH_NONCE_COOKIE, nonce, { httpOnly: true, secure: !isDev, sameSite: 'lax', maxAge: OAUTH_NONCE_MAX_AGE_MS, path: '/api/auth/oauth' });
+  res.redirect(buildAuthUrl(provider, state));
+});
+
+authRouter.get('/oauth/:provider/callback', async (req, res) => {
+  const provider = String(req.params.provider);
+  if (!isSocialProvider(provider) || !socialEnabled(provider)) return oauthFail(res, 'not_configured');
+  const checked = verifyOAuthState(req.query.state, req.cookies?.[OAUTH_NONCE_COOKIE], provider);
+  if (!checked) return oauthFail(res, 'invalid_state');
+  const code = typeof req.query.code === 'string' ? req.query.code : '';
+  // Người dùng bấm "Hủy" ở trang đồng ý (error=access_denied) hoặc thiếu code.
+  if (!code || req.query.error) return oauthFail(res, 'cancelled');
+  try {
+    const profile = await fetchSocialProfile(provider, code);
+    const result = await authService.loginWithSocial(profile, checked.referralCode, metaOf(req));
+    res.clearCookie(OAUTH_NONCE_COOKIE, { path: '/api/auth/oauth' });
+    if ('twoFactorRequired' in result) return res.redirect(oauthRedirect(`#ticket=${encodeURIComponent(result.ticket)}`));
+    // Phiên được giao qua cookie refresh (httpOnly); FE gọi /auth/refresh để lấy access token như khi tải lại trang. Không đưa token lên URL.
+    setRefreshCookie(res, result.refreshToken);
+    res.redirect(oauthRedirect(''));
+  } catch (e) {
+    const code = e instanceof HttpError ? (e.code === 'CONFLICT' ? 'email_conflict' : e.code.toLowerCase()) : 'failed';
+    if (!(e instanceof HttpError)) console.error('[oauth] đăng nhập thất bại:', e instanceof Error ? e.message : e);
+    oauthFail(res, code);
+  }
 });
 
 authRouter.post('/login', loginLimiter, async (req, res) => {

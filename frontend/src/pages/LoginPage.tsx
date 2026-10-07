@@ -5,6 +5,7 @@ import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
 import { ApiError } from '../lib/api';
 import { useAuth } from '../features/auth/AuthContext';
+import { SOCIAL_LOGIN_ENABLED, SocialButtons } from '../features/auth/SocialButtons';
 import { validateEmail, validateLoginPassword } from '../features/auth/validation';
 
 interface FieldErrors {
@@ -50,6 +51,11 @@ export function LoginPage() {
       }
       navigate(redirectTo, { replace: true });
     } catch (err) {
+      // Chưa xác thực email: server đã gửi lại OTP, đưa người dùng sang màn nhập mã.
+      if (err instanceof ApiError && err.code === 'EMAIL_NOT_VERIFIED') {
+        navigate(`/verify-otp?email=${encodeURIComponent(email.trim().toLowerCase())}`, { state: { from: redirectTo, resendInSec: 60 } });
+        return;
+      }
       setError(err instanceof ApiError ? err.message : t('login.fail'));
     } finally {
       setSubmitting(false);
@@ -176,16 +182,17 @@ export function LoginPage() {
         </form>
         )}
 
-        <div className="flex items-center gap-4 text-[15px] text-stone-500">
-          <span className="h-px flex-1 bg-[rgba(120,60,20,.14)]" />
-          {t('login.orWith')}
-          <span className="h-px flex-1 bg-[rgba(120,60,20,.14)]" />
-        </div>
+        {SOCIAL_LOGIN_ENABLED && (
+          <>
+            <div className="flex items-center gap-4 text-[15px] text-stone-500">
+              <span className="h-px flex-1 bg-[rgba(120,60,20,.14)]" />
+              {t('login.orWith')}
+              <span className="h-px flex-1 bg-[rgba(120,60,20,.14)]" />
+            </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <SocialButton label="Google" />
-          <SocialButton label="Facebook" />
-        </div>
+            <SocialButtons />
+          </>
+        )}
 
         <div className="text-center text-[15px] text-stone-700">
           {t('login.noAccount')}{' '}
@@ -197,37 +204,3 @@ export function LoginPage() {
     </div>
   );
 }
-
-function SocialButton({ label }: { label: string }) {
-  const { t } = useTranslation('auth');
-  const [note, setNote] = useState(false);
-  return (
-    <div className="flex flex-col items-stretch gap-1.5">
-      <button
-        type="button"
-        onClick={() => setNote(true)}
-        className="flex h-14 items-center justify-center gap-2.5 rounded-2xl border border-[rgba(120,60,20,.12)] bg-white/85 text-[15px] font-semibold hover:bg-white"
-      >
-        {label === 'Google' ? <GoogleMark /> : <FacebookMark />}
-        {label}
-      </button>
-      {note && <span className="text-center text-xs text-stone-500">{t('login.comingSoon')}</span>}
-    </div>
-  );
-}
-
-const GoogleMark = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24">
-    <path
-      fill="#EA4335"
-      d="M12 10.2v3.9h5.5c-.2 1.3-1.6 3.9-5.5 3.9-3.3 0-6-2.7-6-6.1s2.7-6.1 6-6.1c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.8 3.3 14.6 2.4 12 2.4 6.7 2.4 2.4 6.7 2.4 12s4.3 9.6 9.6 9.6c5.5 0 9.2-3.9 9.2-9.4 0-.6-.1-1.1-.2-1.6H12z"
-    />
-  </svg>
-);
-
-const FacebookMark = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24">
-    <circle cx="12" cy="12" r="10" fill="#1877F2" />
-    <path fill="#fff" d="M13.2 21.9v-7h2.3l.4-2.8h-2.7v-1.8c0-.8.3-1.4 1.4-1.4H16V6.4c-.3 0-1.1-.1-2.1-.1-2.1 0-3.5 1.3-3.5 3.6v2.2H8v2.8h2.4v7z" />
-  </svg>
-);

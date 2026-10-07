@@ -39,7 +39,7 @@ describe('admin đợt 2', () => {
     notifs = () => svc.notificationStore.all() as never;
     ({ enrollmentService } = await import('../src/modules/enrollments/enrollments.service.js'));
     ({ mockGateway } = await import('../src/modules/payments/payments.gateway.js'));
-    const r = await c.call('POST', '/auth/register', { body: { email: ADMIN_EMAIL, password: PW, firstName: 'Plat', lastName: 'Admin' } });
+    const r = await c.registerVerified({ email: ADMIN_EMAIL, password: PW, firstName: 'Plat', lastName: 'Admin' });
     assert.ok(r.status < 300, JSON.stringify(r.body));
     admin = { token: r.body.data.accessToken, id: r.body.data.user.id };
   });

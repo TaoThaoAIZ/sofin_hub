@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { setAuthHandlers, setAuthToken } from '../../lib/api';
 import * as authApi from './api';
-import type { AuthSession, AuthUser, LoginInput, RegisterInput, TwoFactorChallenge } from './types';
+import type { AuthSession, AuthUser, LoginInput, RegisterInput, RegistrationPending, TwoFactorChallenge } from './types';
 
 type AuthStatus = 'loading' | 'authenticated' | 'guest';
 
@@ -12,7 +12,12 @@ interface AuthContextValue {
   /** Trả về user, hoặc `TwoFactorChallenge` khi tài khoản bật 2FA (gọi tiếp `completeTwoFactor`). */
   login: (input: LoginInput) => Promise<AuthUser | TwoFactorChallenge>;
   completeTwoFactor: (ticket: string, code: string) => Promise<AuthUser>;
-  register: (input: RegisterInput) => Promise<AuthUser>;
+  /** Không đăng nhập: server gửi OTP về email, tiếp tục bằng `verifyRegistration`. */
+  register: (input: RegisterInput) => Promise<RegistrationPending>;
+  verifyRegistration: (email: string, code: string, referralCode?: string) => Promise<AuthUser>;
+  resendRegistrationOtp: (email: string) => Promise<RegistrationPending>;
+  /** Sau khi đăng nhập mạng xã hội: backend đã đặt cookie refresh, lấy phiên từ đó. */
+  completeSocialLogin: () => Promise<AuthUser>;
   logout: () => Promise<void>;
   /** Ghi đè thông tin user hiện tại (sau khi sửa hồ sơ / xác thực email). */
   updateUser: (user: AuthUser) => void;
@@ -95,15 +100,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [applySession],
   );
 
-  const register = useCallback(
-    async (input: RegisterInput) => {
-      const session = await authApi.register(input);
+  const register = useCallback((input: RegisterInput) => authApi.register(input), []);
+
+  const verifyRegistration = useCallback(
+    async (email: string, code: string, referralCode?: string) => {
+      const session = await authApi.verifyRegistration(email, code, referralCode);
       applySession(session);
       setStatus('authenticated');
       return session.user;
     },
     [applySession],
   );
+
+  const resendRegistrationOtp = useCallback((email: string) => authApi.resendRegistrationOtp(email), []);
+
+  const completeSocialLogin = useCallback(async () => {
+    const session = await authApi.refresh();
+    applySession(session);
+    setStatus('authenticated');
+    return session.user;
+  }, [applySession]);
 
   const logout = useCallback(async () => {
     if (accessToken) await authApi.logout(accessToken).catch(() => {});
@@ -113,7 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updateUser = useCallback((next: AuthUser) => setUser(next), []);
 
   return (
-    <AuthContext.Provider value={{ user, accessToken, status, login, completeTwoFactor, register, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, accessToken, status, login, completeTwoFactor, register, verifyRegistration, resendRegistrationOtp, completeSocialLogin, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

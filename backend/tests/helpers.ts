@@ -187,18 +187,41 @@ export function makeClient(baseUrl: string) {
     return { status: res.status, body, headers: res.headers };
   }
 
+  /** Mã OTP mới nhất trong hộp thư dev của `email` (đọc thẳng outbox trong process, không qua HTTP). */
+  async function otpFor(email: string): Promise<string> {
+    const { mailService } = await import('../src/modules/mail/mail.service.js');
+    const mails = mailService.listOutbox(email).filter((m) => /\b\d{6}\b/.test(m.subject));
+    const code = mails.at(-1)?.subject.match(/\b(\d{6})\b/)?.[1];
+    if (!code) throw new Error(`không có OTP trong outbox cho ${email}`);
+    return code;
+  }
+
+  /**
+   * Đăng ký + xác thực OTP, trả kết quả của /auth/register/verify (cùng hình dạng phiên như /auth/login). Nếu đăng ký bị từ chối thì trả
+   * thẳng kết quả đăng ký. Xóa thư OTP khỏi outbox để test đếm thư của user không bị lệch.
+   */
+  async function registerVerified(body: { email: string; password: string; firstName: string; lastName: string; referralCode?: string }): Promise<ApiResult> {
+    const reg = await call('POST', '/auth/register', { body });
+    if (reg.status >= 300) return reg;
+    const code = await otpFor(body.email);
+    const verified = await call('POST', '/auth/register/verify', { body: { email: body.email, code, ...(body.referralCode !== undefined ? { referralCode: body.referralCode } : {}) } });
+    const { mailService } = await import('../src/modules/mail/mail.service.js');
+    mailService.dropOutbox(body.email);
+    return verified;
+  }
+
   let counter = 0;
   /** Đăng ký user mới (mật khẩu đạt quy tắc: >= 8 ký tự, có chữ hoa và ký tự đặc biệt) và trả về token + id. */
   async function registerUser(prefix = 'user') {
     const email = `${prefix}-${Date.now()}-${counter++}@test.local`;
     const password = 'Passw0rd!x';
-    const r = await call('POST', '/auth/register', { body: { email, password, firstName: 'Test', lastName: prefix } });
+    const r = await registerVerified({ email, password, firstName: 'Test', lastName: prefix });
     if (r.status >= 300) throw new Error(`register failed: ${r.status} ${JSON.stringify(r.body)}`);
     const data = r.body.data;
     return { email, password, token: data.accessToken as string, id: data.user.id as string };
   }
 
-  return { call, registerUser };
+  return { call, registerUser, registerVerified, otpFor };
 }
 
 /** Id khóa học mặc định của cộng đồng nền (xem seedBase) — dùng khi test tạo module bằng Prisma trực tiếp. */

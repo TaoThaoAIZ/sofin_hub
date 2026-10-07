@@ -29,7 +29,7 @@ describe('chương trình giới thiệu: mã, ghi nhận, hoa hồng, KPI', () 
   /** Đăng ký user (tùy chọn kèm mã giới thiệu) qua API thật. */
   async function signup(prefix: string, referralCode?: string) {
     const email = `${prefix}-${Date.now()}-${n++}@test.local`;
-    const r = await c.call('POST', '/auth/register', { body: { email, password: 'Passw0rd!x', firstName: 'Ref', lastName: prefix, ...(referralCode !== undefined ? { referralCode } : {}) } });
+    const r = await c.registerVerified({ email, password: 'Passw0rd!x', firstName: 'Ref', lastName: prefix, ...(referralCode !== undefined ? { referralCode } : {}) });
     assert.ok(r.status < 300, JSON.stringify(r.body));
     return { token: r.body.data.accessToken as string, id: r.body.data.user.id as string };
   }
@@ -122,7 +122,7 @@ describe('chương trình giới thiệu: mã, ghi nhận, hoa hồng, KPI', () 
     });
 
     it('mã quá dài → 400', async () => {
-      const r = await c.call('POST', '/auth/register', { body: { email: `long-${Date.now()}@test.local`, password: 'Passw0rd!x', firstName: 'A', lastName: 'B', referralCode: 'x'.repeat(65) } });
+      const r = await c.registerVerified({ email: `long-${Date.now()}@test.local`, password: 'Passw0rd!x', firstName: 'A', lastName: 'B', referralCode: 'x'.repeat(65) });
       assert.equal(r.status, 400);
     });
 

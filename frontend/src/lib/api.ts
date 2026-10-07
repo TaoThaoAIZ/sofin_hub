@@ -1,6 +1,6 @@
 import i18n from '../i18n';
 
-const API_URL = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/$/, '');
+export const API_URL = (import.meta.env.VITE_API_URL ?? '/api').replace(/\/$/, '');
 
 export class ApiError extends Error {
   constructor(

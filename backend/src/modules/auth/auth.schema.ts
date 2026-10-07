@@ -22,6 +22,18 @@ export const registerBody = z.object({
 });
 export type RegisterBody = z.infer<typeof registerBody>;
 
+const otpCode = z
+  .string()
+  .trim()
+  .transform((v) => v.replace(/\s/g, ''))
+  .refine((v) => /^\d{6}$/.test(v), 'Mã gồm 6 chữ số');
+
+export const verifyRegistrationBody = z.object({ email: emailField, code: otpCode, referralCode: referralCodeField });
+export type VerifyRegistrationBody = z.infer<typeof verifyRegistrationBody>;
+
+export const resendOtpBody = z.object({ email: emailField });
+export type ResendOtpBody = z.infer<typeof resendOtpBody>;
+
 export const loginBody = z.object({
   email: z.string().trim().toLowerCase().email('Email không hợp lệ'),
   password: z.string().min(1, 'Vui lòng nhập mật khẩu'),

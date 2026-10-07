@@ -6,10 +6,11 @@ describe('auth bổ sung: quên/đổi mật khẩu, hồ sơ, xác thực email
   let server: TestServer;
   let call: ReturnType<typeof makeClient>['call'];
   let registerUser: ReturnType<typeof makeClient>['registerUser'];
+  let registerVerified: ReturnType<typeof makeClient>['registerVerified'];
 
   before(async () => {
     server = await startTestServer();
-    ({ call, registerUser } = makeClient(server.baseUrl));
+    ({ call, registerUser, registerVerified } = makeClient(server.baseUrl));
   });
   after(() => server.close());
 
@@ -114,7 +115,7 @@ describe('auth bổ sung: quên/đổi mật khẩu, hồ sơ, xác thực email
       assert.equal((await call('PATCH', '/auth/me', { body: { bio: 'x' } })).status, 401);
     });
 
-    it('cập nhật hồ sơ, GET /auth/me trả đủ trường + emailVerified=false', async () => {
+    it('cập nhật hồ sơ, GET /auth/me trả đủ trường + emailVerified=true (đã xác thực OTP khi đăng ký)', async () => {
       const u = await registerUser('prof');
       const r = await call('PATCH', '/auth/me', {
         token: u.token,
@@ -127,7 +128,7 @@ describe('auth bổ sung: quên/đổi mật khẩu, hồ sơ, xác thực email
       assert.equal(me.body.data.location, 'Hà Nội');
       assert.equal(me.body.data.website, 'https://example.com');
       assert.equal(me.body.data.avatarUrl, '/files/avatars/a.png');
-      assert.equal(me.body.data.emailVerified, false);
+      assert.equal(me.body.data.emailVerified, true);
       assert.equal('passwordHash' in me.body.data, false);
 
       const cleared = await call('PATCH', '/auth/me', { token: u.token, body: { bio: '' } });
@@ -154,6 +155,8 @@ describe('auth bổ sung: quên/đổi mật khẩu, hồ sơ, xác thực email
   describe('xác thực email', () => {
     it('gửi thư, xác thực bằng token, dùng lại token: 400, đã xác thực: 409', async () => {
       const u = await registerUser('ver');
+      // registerUser đã xác thực email qua OTP; luồng link này dành cho email chưa xác thực nên hạ cờ lại.
+      await (await useTestDb()).prisma.user.update({ where: { id: u.id }, data: { emailVerified: false } });
       assert.equal((await call('POST', '/auth/send-verification')).status, 401);
 
       const sent = await call('POST', '/auth/send-verification', { token: u.token });
@@ -279,7 +282,7 @@ describe('auth bổ sung: quên/đổi mật khẩu, hồ sơ, xác thực email
       assert.equal((await call('POST', '/auth/refresh', { headers: { Cookie: refreshCookie } })).status, 401);
       assert.equal((await call('GET', `/users/${u.id}`, { token: viewer.token })).status, 404);
       // Email cũ dùng đăng ký lại được (tài khoản mới, không dính dữ liệu cũ).
-      const again = await call('POST', '/auth/register', { body: { email: u.email, password: u.password, firstName: 'Mới', lastName: 'Toanh' } });
+      const again = await registerVerified({ email: u.email, password: u.password, firstName: 'Mới', lastName: 'Toanh' });
       assert.ok(again.status < 300);
       assert.notEqual(again.body.data.user.id, u.id);
     });
