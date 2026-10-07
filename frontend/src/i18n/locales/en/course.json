@@ -16,8 +16,8 @@
     "loginToJoin": "You need to log in to join this course"
   },
   "tag": {
-    "hot": "Hot",
-    "bestseller": "Bestseller",
+    "hot": "Featured",
+    "bestseller": "Most loved",
     "new": "New"
   },
   "filter": {

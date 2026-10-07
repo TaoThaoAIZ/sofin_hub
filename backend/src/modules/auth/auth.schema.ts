@@ -2,19 +2,19 @@ import { z } from 'zod';
 import { referralCodeField } from '../referrals/referrals.schema.js';
 import { checkHandleFormat } from './handle.js';
 
-const emailField = z.string().trim().toLowerCase().email('Email không hợp lệ').max(180);
+const emailField = z.string().trim().toLowerCase().email('Email không hợp lệ').max(180, 'Email tối đa 180 ký tự');
 
 /** Quy tắc mật khẩu dùng chung: >= 8 ký tự, có chữ in hoa và ký tự đặc biệt. */
 export const passwordRule = z
   .string()
   .min(8, 'Mật khẩu cần ít nhất 8 ký tự')
-  .max(200)
+  .max(200, 'Mật khẩu tối đa 200 ký tự')
   .regex(/[A-Z]/, 'Mật khẩu cần ít nhất 1 chữ in hoa')
   .regex(/[^A-Za-z0-9]/, 'Mật khẩu cần ít nhất 1 ký tự đặc biệt');
 
 export const registerBody = z.object({
-  firstName: z.string().trim().min(1, 'Vui lòng nhập tên').max(80),
-  lastName: z.string().trim().min(1, 'Vui lòng nhập họ').max(80),
+  firstName: z.string().trim().min(1, 'Vui lòng nhập tên').max(80, 'Tên tối đa 80 ký tự'),
+  lastName: z.string().trim().min(1, 'Vui lòng nhập họ').max(80, 'Họ tối đa 80 ký tự'),
   email: emailField,
   password: passwordRule,
   /** Mã giới thiệu (?ref=) — tùy chọn; mã lạ bị bỏ qua êm. */
@@ -35,8 +35,8 @@ export const resendOtpBody = z.object({ email: emailField });
 export type ResendOtpBody = z.infer<typeof resendOtpBody>;
 
 export const loginBody = z.object({
-  email: z.string().trim().toLowerCase().email('Email không hợp lệ'),
-  password: z.string().min(1, 'Vui lòng nhập mật khẩu'),
+  email: z.string().trim().toLowerCase().email('Email không hợp lệ').max(180, 'Email tối đa 180 ký tự'),
+  password: z.string().min(1, 'Vui lòng nhập mật khẩu').max(200, 'Mật khẩu tối đa 200 ký tự'),
 });
 export type LoginBody = z.infer<typeof loginBody>;
 

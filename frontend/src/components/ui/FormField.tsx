@@ -20,11 +20,12 @@ interface FormFieldProps {
   hint?: string;
   autoComplete?: string;
   minLength?: number;
+  maxLength?: number;
   icon?: ReactNode;
 }
 
 /** Ô nhập kiểu "pill" có icon đầu dòng, viền đỏ + thông báo lỗi khi có `error`; mật khẩu tự có nút hiện/ẩn. */
-export function FormField({ type, value, onChange, placeholder, error, hint, autoComplete, minLength, icon }: FormFieldProps) {
+export function FormField({ type, value, onChange, placeholder, error, hint, autoComplete, minLength, maxLength, icon }: FormFieldProps) {
   const { t } = useTranslation('layout');
   const [showPassword, setShowPassword] = useState(false);
   const isPassword = type === 'password';
@@ -41,6 +42,7 @@ export function FormField({ type, value, onChange, placeholder, error, hint, aut
           type={isPassword ? (showPassword ? 'text' : 'password') : type}
           autoComplete={autoComplete}
           minLength={minLength}
+          maxLength={maxLength}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}

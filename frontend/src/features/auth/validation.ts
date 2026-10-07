@@ -19,8 +19,10 @@ export function validateLoginPassword(value: string): string | null {
 
 /** Mật khẩu khi đăng ký: khớp quy tắc phía backend (auth.schema.ts). */
 export function validateNewPassword(value: string): string | null {
-  if (value.length < 8) return i18n.t('validation.passwordMin', { ns: 'auth' });
-  if (!/[A-Z]/.test(value)) return i18n.t('validation.passwordUpper', { ns: 'auth' });
-  if (!/[^A-Za-z0-9]/.test(value)) return i18n.t('validation.passwordSpecial', { ns: 'auth' });
-  return null;
+  // Gom đủ mọi lỗi (như backend trả về trong fieldErrors) thay vì chỉ lỗi đầu tiên.
+  const errs: string[] = [];
+  if (value.length < 8) errs.push(i18n.t('validation.passwordMin', { ns: 'auth' }));
+  if (!/[A-Z]/.test(value)) errs.push(i18n.t('validation.passwordUpper', { ns: 'auth' }));
+  if (!/[^A-Za-z0-9]/.test(value)) errs.push(i18n.t('validation.passwordSpecial', { ns: 'auth' }));
+  return errs.length ? errs.join('. ') : null;
 }

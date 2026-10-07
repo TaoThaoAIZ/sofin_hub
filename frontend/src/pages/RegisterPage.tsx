@@ -151,6 +151,7 @@ export function RegisterPage() {
               <FormField
                 type="text"
                 autoComplete="given-name"
+                maxLength={80}
                 value={firstName}
                 onChange={(v) => {
                   setFirstName(v);
@@ -164,6 +165,7 @@ export function RegisterPage() {
               <FormField
                 type="text"
                 autoComplete="family-name"
+                maxLength={80}
                 value={lastName}
                 onChange={(v) => {
                   setLastName(v);
@@ -178,6 +180,7 @@ export function RegisterPage() {
           <FormField
             type="email"
             autoComplete="email"
+            maxLength={180}
             value={email}
             onChange={(v) => {
               setEmail(v);
@@ -190,6 +193,7 @@ export function RegisterPage() {
           <FormField
             type="password"
             autoComplete="new-password"
+            maxLength={200}
             value={password}
             onChange={(v) => {
               setPassword(v);

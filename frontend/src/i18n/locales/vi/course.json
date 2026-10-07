@@ -16,8 +16,8 @@
     "loginToJoin": "Bạn cần đăng nhập để tham gia khóa học"
   },
   "tag": {
-    "hot": "Hot",
-    "bestseller": "Bán chạy",
+    "hot": "Nổi bật",
+    "bestseller": "Được yêu thích",
     "new": "Mới"
   },
   "filter": {

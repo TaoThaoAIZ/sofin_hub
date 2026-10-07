@@ -41,6 +41,8 @@ const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 10,
   skipSuccessfulRequests: true, // chỉ đếm lần đăng nhập THẤT BẠI (khớp thông báo "đăng nhập sai")
+  // Đếm theo (IP + email) thay vì chỉ IP: nhiều thiết bị/người cùng mạng (NAT) hoặc đăng nhập tài khoản khác không còn "đá" nhau.
+  keyGenerator: (req) => `${req.ip ?? ''}|${typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : ''}`,
   standardHeaders: true,
   legacyHeaders: false,
   handler: (_req, _res, next) => next(HttpError.tooMany('Đăng nhập sai quá nhiều lần, vui lòng thử lại sau ít phút')),

@@ -111,14 +111,12 @@ function userScore(a: string, t: SearchTerms, S: string | null) {
 
 /** Khóa học công khai tìm được: chưa xóa/khóa, đang `active`, không bị admin ẩn khỏi tìm kiếm (listed/unlisted đều được). */
 /**
- * Điều kiện khớp văn bản cho khóa học (không kèm quy tắc hiển thị) — dùng chung cho tìm kiếm toàn cục và `GET /courses?q=`:
- * toàn văn (tiền tố từng từ) OR chuỗi con trong tên/tên giảng viên OR gõ sai tên. Alias bảng bắt buộc là `c`.
+ * Điều kiện khớp văn bản cho khóa học (không kèm quy tắc hiển thị) — dùng chung cho tìm kiếm toàn cục và `GET /courses?q=`.
+ * CHỈ tìm theo tiêu đề (không mô tả, không tên giảng viên): chuỗi con không phân biệt hoa/thường/dấu OR gõ sai tên. Alias bảng bắt buộc là `c`.
  */
-export function courseTextMatch(t: SearchTerms, S: string | null, opts: { instructor?: boolean } = {}) {
+export function courseTextMatch(t: SearchTerms, S: string | null) {
   const title = Prisma.sql`sf_fold(c."title")`;
   const parts: Prisma.Sql[] = [Prisma.sql`${title} LIKE ${t.like}`];
-  if (t.tsq) parts.push(Prisma.sql`c."searchVector" @@ ${tsqOf(t)}`);
-  if (opts.instructor) parts.push(Prisma.sql`sf_fold(c."instructorName") LIKE ${t.like}`);
   const f = fuzzyOp(t, S, title);
   if (f) parts.push(f);
   return Prisma.sql`(${Prisma.join(parts, ' OR ')})`;
@@ -128,7 +126,7 @@ export function courseTextMatch(t: SearchTerms, S: string | null, opts: { instru
 export async function matchingCourseIds(q: string): Promise<string[]> {
   const S = await trgmSchema();
   const t = buildTerms(q, S !== null);
-  const rows = await prisma.$queryRaw<{ id: string }[]>`SELECT c."id" FROM "Course" c WHERE ${courseTextMatch(t, S, { instructor: true })}`;
+  const rows = await prisma.$queryRaw<{ id: string }[]>`SELECT c."id" FROM "Course" c WHERE ${courseTextMatch(t, S)}`;
   return rows.map((r) => r.id);
 }
 
