@@ -1,5 +1,6 @@
 import type { RequestHandler } from 'express';
 import { authenticateAccessToken } from '../modules/auth/tokens.js';
+import { prisma } from '../db/prisma.js';
 import { HttpError } from '../utils/http-error.js';
 
 declare global {
@@ -37,6 +38,23 @@ export const optionalAuth: RequestHandler = async (req, _res, next) => {
     const auth = await authenticate(req.headers.authorization);
     req.userId = auth?.userId;
     req.sessionId = auth?.sid;
+    next();
+  } catch (e) {
+    next(e);
+  }
+};
+
+/**
+ * Dùng SAU requireAuth cho thao tác cần email đã xác thực (đăng bài/bình luận, thanh toán...).
+ * 403 EMAIL_NOT_VERIFIED kèm hướng dẫn; FE bắt mã này để mời người dùng xác thực email.
+ */
+export const requireVerifiedEmail: RequestHandler = async (req, _res, next) => {
+  try {
+    const u = req.userId ? await prisma.user.findUnique({ where: { id: req.userId }, select: { emailVerified: true } }) : null;
+    if (!u) return next(HttpError.unauthorized());
+    if (!u.emailVerified) {
+      return next(HttpError.coded(403, 'EMAIL_NOT_VERIFIED', 'Vui lòng xác thực email trước khi thực hiện thao tác này (Cài đặt > Bảo mật > Gửi email xác thực)'));
+    }
     next();
   } catch (e) {
     next(e);

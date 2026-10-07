@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../../i18n';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { lessonPath } from '../../../lib/paths';
+import { communityCheckout, lessonPath } from '../../../lib/paths';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { useCommunityDetail } from '../../courses/queries';
 import { formatCompact } from '../../../lib/format';
@@ -14,7 +14,7 @@ import { ModuleWizard } from './ModuleWizard';
 import { CourseManager, publishBadgeCls, publishLabel } from './CourseManager';
 import { errText, ErrorNote, ghostBtn, isAdminPlus, isModPlus, primaryBtn, safeUrl, toast, ToastHost } from './contentUi';
 
-function LessonList({ communityId, courseId, moduleId }: { communityId: string; courseId: string; moduleId: string }) {
+function LessonList({ communityId, courseId, moduleId, payUrl }: { communityId: string; courseId: string; moduleId: string; payUrl?: string }) {
   const { t } = useTranslation('community');
   const lessons = useLessons(communityId, courseId, moduleId);
   const toggle = useToggleLessonComplete(communityId);
@@ -43,7 +43,11 @@ function LessonList({ communityId, courseId, moduleId }: { communityId: string; 
             </div>
           </Link>
           {l.locked ? (
-            <span className="grid size-8 flex-none place-items-center rounded-full bg-stone-100"><MaterialIcon name="lock" size={16} filled color="#a8a29e" /></span>
+            payUrl ? (
+              <Link to={payUrl} aria-label={t('classroom.unlockBuy')} title={t('classroom.unlockBuy')} className="grid size-8 flex-none place-items-center rounded-full bg-brand/10 hover:bg-brand/20"><MaterialIcon name="lock" size={16} filled color="#f26a1b" /></Link>
+            ) : (
+              <span className="grid size-8 flex-none place-items-center rounded-full bg-stone-100"><MaterialIcon name="lock" size={16} filled color="#a8a29e" /></span>
+            )
           ) : (
             <Link to={lessonPath(communityId, l.id)} aria-label={t('classroom.lessonList.learn', { title: l.title })} className="grid size-8 flex-none place-items-center rounded-full bg-brand/10 hover:bg-brand/20">
               <MaterialIcon name="play_arrow" size={18} filled color="#f26a1b" />
@@ -67,7 +71,7 @@ function lockText(m: ClassroomModule) {
 
 // Ảnh bìa module lấy từ file thiết kế gốc (slot module-img-0..8), ảnh đã có sẵn tiêu đề trong hình.
 const MODULE_IMAGE_COUNT = 9;
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 9; // 3 hàng × 3 cột
 export function ClassroomTab() {
   const { t } = useTranslation('community');
   const { id: communityId = '' } = useParams();
@@ -88,6 +92,13 @@ export function ClassroomTab() {
   const claim = useClaimCertificate(communityId, courseId ?? '');
   const [openId, setOpenId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const detailRef = useRef<HTMLDivElement>(null);
+  // Bấm nút mũi tên: mở danh sách bài và cuộn tới ngay để thấy chi tiết (không phải kéo xuống cuối trang).
+  const openModuleDetail = (id: string) => {
+    const next = openId === id ? null : id;
+    setOpenId(next);
+    if (next) setTimeout(() => detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+  };
   const [editMode, setEditMode] = useState(false);
   const [cert, setCert] = useState<Certificate | null>(null);
   const [wizard, setWizard] = useState<ClassroomModule | 'new' | null>(null);
@@ -136,6 +147,8 @@ export function ClassroomTab() {
   const shown = list.slice(start, start + PAGE_SIZE);
   const totalLessons = list.reduce((n, m) => n + m.lessonsCount, 0);
   const openModule = list.find((m) => m.id === openId);
+  // Module đang khóa trong cộng đồng có phí (hoặc module bán riêng) → đưa người học sang trang thanh toán để mở khóa.
+  const payUrlOf = (m: ClassroomModule) => (m.locked && !canEdit && (m.lockReason === 'paid' || (community?.priceUsd ?? 0) > 0) ? communityCheckout(communityId) : undefined);
   const prog = progress.data;
   const complete = !!prog && prog.totalLessons > 0 && prog.percent >= 100;
   const canClaim = complete && selected.certificatesEffective;
@@ -260,7 +273,7 @@ export function ClassroomTab() {
 
       {list.length === 0 && !editMode && <p className="glass rounded-2xl py-10 text-center text-stone-500">{t('classroom.empty')}</p>}
 
-      <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(270px,1fr))]">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {shown.map((m) => {
           const thumb = safeUrl(m.thumbnail) ?? `/images/community/module-img-${(m.index - 1 + MODULE_IMAGE_COUNT) % MODULE_IMAGE_COUNT}.webp`;
           return (
@@ -290,6 +303,11 @@ export function ClassroomTab() {
                       <MaterialIcon name="lock" size={24} filled color="#fff" />
                     </span>
                     {lockText(m)}
+                    {payUrlOf(m) && (
+                      <Link to={payUrlOf(m)!} className="mt-1 rounded-xl bg-brand px-4 py-1.5 text-[13px] font-bold text-white hover:opacity-90">
+                        {t('classroom.unlockBuy')}
+                      </Link>
+                    )}
                   </div>
                 )}
               </div>
@@ -301,16 +319,22 @@ export function ClassroomTab() {
                   <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-[rgba(120,60,20,.08)]">
                     <div className="h-full rounded-full bg-brand" style={{ width: `${m.pct}%` }} />
                   </div>
+                  {payUrlOf(m) && !(m.hasPreview && m.lockReason !== 'previous_module') ? (
+                    <Link to={payUrlOf(m)!} aria-label={t('classroom.unlockBuy')} title={t('classroom.unlockBuy')} className="grid size-[42px] flex-none place-items-center rounded-[14px] bg-brand/10 hover:bg-brand/20">
+                      <MaterialIcon name="lock_open" size={22} color="#f26a1b" />
+                    </Link>
+                  ) : (
                   <button
                     type="button"
                     disabled={m.locked && !(m.hasPreview && m.lockReason !== 'previous_module')}
-                    onClick={() => setOpenId(openId === m.id ? null : m.id)}
+                    onClick={() => openModuleDetail(m.id)}
                     aria-label={t('classroom.openAria', { title: m.title })}
                     title={m.locked ? lockText(m) : undefined}
                     className="grid size-[42px] flex-none place-items-center rounded-[14px] bg-brand/10 hover:bg-brand/20 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <MaterialIcon name="arrow_forward" size={22} color="#f26a1b" />
                   </button>
+                  )}
                 </div>
               </div>
             </article>
@@ -319,9 +343,9 @@ export function ClassroomTab() {
       </div>
 
       {openModule && (
-        <div className="glass overflow-hidden rounded-2xl">
+        <div ref={detailRef} className="glass scroll-mt-24 overflow-hidden rounded-2xl">
           <div className="px-4 py-3 text-[15px] font-bold">#{openModule.index}: {openModule.title}</div>
-          <LessonList communityId={communityId} courseId={courseId} moduleId={openModule.id} />
+          <LessonList communityId={communityId} courseId={courseId} moduleId={openModule.id} payUrl={payUrlOf(openModule)} />
         </div>
       )}
 

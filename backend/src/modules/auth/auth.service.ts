@@ -343,7 +343,10 @@ export function createAuthService(repo: UserRepository = userRepository) {
       if (!(await bcrypt.compare(password, user.passwordHash))) throw HttpError.badRequest('Mật khẩu không đúng');
       const blockers = await accountService.deleteBlockers(userId);
       if (blockers.ownedCommunities.length > 0 || blockers.activeSubscriptions > 0) {
-        throw HttpError.coded(409, 'ACCOUNT_DELETE_BLOCKED', 'Hãy chuyển quyền sở hữu cộng đồng và hủy các gói thành viên đang hoạt động trước khi xóa tài khoản', blockers);
+        const msg = blockers.ownedCommunities.length > 0
+          ? 'Bạn đang là chủ của một cộng đồng, hãy chuyển quyền sở hữu trước khi xóa tài khoản. Vào Cộng đồng > Cài đặt > Vùng nguy hiểm > Chuyển quyền sở hữu (hoặc xóa cộng đồng)' + (blockers.activeSubscriptions > 0 ? ' và hủy các gói thành viên đang hoạt động.' : '.')
+          : 'Hãy hủy các gói thành viên đang hoạt động (Cài đặt > Thanh toán) trước khi xóa tài khoản';
+        throw HttpError.coded(409, 'ACCOUNT_DELETE_BLOCKED', msg, blockers);
       }
       const memberships = await enrollmentService.listByUser(userId);
       for (const m of memberships) await enrollmentService.remove(userId, m.communityId);

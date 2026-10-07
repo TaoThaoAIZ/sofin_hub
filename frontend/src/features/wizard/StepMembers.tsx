@@ -80,6 +80,13 @@ export function StepMembers({
         </div>
       </SectionCard>
 
+      <SectionCard icon="language" title={t('members.language')}>
+        <select aria-label={t('members.language')} value={form.language} onChange={(e) => set({ language: e.target.value as 'vi' | 'en' })} className={`${inputCls()} h-12 w-full max-w-[320px] bg-white`}>
+          <option value="vi">Tiếng Việt</option>
+          <option value="en">English</option>
+        </select>
+      </SectionCard>
+
       <SectionCard icon="database" title={t('members.price')}>
         <SegTabs
           value={form.billing}

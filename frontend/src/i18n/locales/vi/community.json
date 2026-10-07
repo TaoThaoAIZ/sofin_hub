@@ -408,7 +408,9 @@
       "linkNameAria": "Tên liên kết",
       "urlPh": "hoặc dán URL https://…",
       "urlAria": "URL tệp",
-      "add": "Thêm"
+      "add": "Thêm",
+      "uploadVideo": "Tải video từ máy lên (mp4)",
+      "videoUploaded": "Đã tải video lên"
     },
     "row": {
       "collapse": "Thu gọn",
@@ -491,7 +493,8 @@
     "openAria": "Mở {{title}}",
     "prev": "‹ Trước",
     "next": "Tiếp theo ›",
-    "range": "{{from}}–{{to}} trên {{total}}"
+    "range": "{{from}}–{{to}} trên {{total}}",
+    "unlockBuy": "Mua để mở khóa"
   },
   "post": {
     "report": {
@@ -702,8 +705,8 @@
     "lesson": {
       "name": "Tên bài học",
       "namePh": "Ví dụ: Viết caption bằng AI trong 5 phút",
-      "videoDrop": "Dán link video YouTube hoặc Vimeo",
-      "videoHint": "Hỗ trợ youtube.com, youtu.be, vimeo.com",
+      "videoDrop": "Dán link YouTube/Vimeo hoặc tải video từ máy",
+      "videoHint": "Hỗ trợ youtube.com, youtu.be, vimeo.com hoặc tệp mp4 (tối đa 25 MB)",
       "fileDrop": "Tải tài liệu cho bài học",
       "fileHint": "PDF, DOCX, ZIP · tối đa 25MB",
       "chooseFile": "Chọn tệp",

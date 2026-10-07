@@ -96,7 +96,11 @@
     "cost": "Chi phí tham gia",
     "contentSome": "Cộng đồng có {{n}} bài học trong Lớp học. Nội dung chi tiết hiển thị cho thành viên.",
     "contentNone": "Cộng đồng này chưa có bài học nào trong Lớp học.",
-    "openClassroom": "Mở Lớp học →"
+    "openClassroom": "Mở Lớp học →",
+    "requestSent": "Đã gửi yêu cầu tham gia thành công. Quản trị viên sẽ xem xét và thông báo kết quả.",
+    "leave": "Rời khỏi cộng đồng",
+    "leaving": "Đang rời…",
+    "leftToast": "Bạn đã rời khỏi cộng đồng"
   },
   "lesson": {
     "loadingAttachment": "{{name}} (đang tải…)",

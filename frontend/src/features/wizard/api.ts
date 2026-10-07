@@ -32,6 +32,7 @@ export interface IdentityBody {
 }
 export interface MembersBody {
   visibility?: 'public' | 'private';
+  language?: 'vi' | 'en';
   priceUsd?: number;
   priceAnnualUsd?: number | null;
   memberTrialEnabled?: boolean;

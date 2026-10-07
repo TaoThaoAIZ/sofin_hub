@@ -409,7 +409,7 @@ export const classroomRepository: ClassroomRepository = {
       data.embedUrl = null;
     } else if (videoUrl !== undefined) {
       data.videoUrl = videoUrl;
-      if (embedUrl) data.embedUrl = embedUrl;
+      data.embedUrl = embedUrl ?? null; // đổi sang video tải lên thì bỏ embed cũ
     }
     try {
       return toLesson(await prisma.classroomLesson.update({ where: { id: lessonId }, data }));

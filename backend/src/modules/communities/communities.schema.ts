@@ -67,7 +67,7 @@ export const joinRequestsQuery = z.object({
 });
 
 export const createInviteBody = z.object({
-  maxUses: z.number().int().min(1).max(100000).optional(),
+  maxUses: z.number({ error: 'Số lượt tối đa phải là số nguyên từ 1 đến 100000' }).int('Số lượt tối đa phải là số nguyên').min(1, 'Số lượt tối đa tối thiểu là 1').max(100000, 'Số lượt tối đa không quá 100000').optional(),
   expiresAt: z
     .iso.datetime({ offset: true, error: 'Hạn dùng không hợp lệ' })
     .refine((v) => new Date(v).getTime() > Date.now(), { message: 'Hạn dùng phải ở tương lai' })

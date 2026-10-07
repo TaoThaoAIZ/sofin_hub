@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { toEmbedUrl } from '../classroom/classroom.schema.js';
-import { CATEGORY_IDS, VISIBILITIES } from '../catalog/community.types.js';
+import { CATEGORY_IDS, LANGUAGES, VISIBILITIES } from '../catalog/community.types.js';
 import { intervalField, paymentMethodInput } from '../payments/payments.schema.js';
 
 export const WIZARD_STEPS = ['basics', 'plan', 'identity', 'members'] as const;
@@ -14,7 +14,7 @@ export const SLUG_MAX = 40;
 
 export const slugField = z.string().trim().toLowerCase();
 
-const title = z.string().trim().min(3, 'Tên cộng đồng tối thiểu 3 ký tự').max(30, 'Tên cộng đồng tối đa 30 ký tự');
+const title = z.string().trim().min(3, 'Tên cộng đồng tối thiểu 3 ký tự').max(80, 'Tên cộng đồng tối đa 80 ký tự');
 const description = z.string().trim().min(1, 'Vui lòng nhập mô tả ngắn').max(150, 'Mô tả ngắn tối đa 150 ký tự');
 const category = z.enum(CATEGORY_IDS, { error: 'Danh mục không hợp lệ' });
 
@@ -64,6 +64,7 @@ export const joinQuestionsField = z
 /** Các trường "Thành viên & giá" — dùng chung cho bước wizard `members` và `PATCH /communities/:id` (sửa sau khi publish). */
 export const memberFields = {
   visibility: z.enum(VISIBILITIES, { error: 'Quyền riêng tư không hợp lệ' }).optional(),
+  language: z.enum(LANGUAGES, { error: 'Ngôn ngữ không hợp lệ (vi | en)' }).optional(),
   priceUsd: priceUsd.optional(),
   priceAnnualUsd: priceUsd.nullable().optional(),
   memberTrialEnabled: z.boolean().optional(),

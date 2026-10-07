@@ -13,6 +13,8 @@ type LessonType = 'video' | 'text' | 'file';
 export const lessonHasContent = (l: Pick<ClassroomLesson, 'type' | 'videoUrl' | 'attachments' | 'body'>) =>
   l.type === 'video' ? !!l.videoUrl : l.type === 'file' ? (l.attachments?.length ?? 0) > 0 : (l.body ?? '').trim().length >= 30;
 
+const isUploadedVideo = (u: string) => /\/api\/files\/[a-f0-9]{32}\.mp4$/i.test(u.trim());
+
 const TYPE_ICON: Record<LessonType, string> = { video: 'smart_display', text: 'article', file: 'attach_file' };
 
 /**
@@ -43,6 +45,7 @@ export function LessonEditor({
   const update = useUpdateLesson(communityId);
   const { upload, uploading, error: uploadError } = useUpload();
   const fileRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState(lesson?.title ?? '');
   const [type, setType] = useState<LessonType>(lesson?.type ?? 'video');
   const [duration, setDuration] = useState(String(lesson?.durationMin ?? 10));
@@ -101,14 +104,35 @@ export function LessonEditor({
 
         {type === 'video' && (
           <div className="flex flex-col items-center gap-1 rounded-xl border-[1.5px] border-dashed border-[#fdba74] bg-[#fff9f4] px-4 py-5 text-center">
+            <input
+              ref={videoRef}
+              type="file"
+              accept="video/mp4"
+              hidden
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                e.target.value = '';
+                if (!f) return;
+                try {
+                  const up = await upload(f, { purpose: 'lesson_attachment', courseId: communityId });
+                  setVideoUrl(absoluteUrl(up.url));
+                } catch {
+                  /* lỗi hiển thị qua uploadError */
+                }
+              }}
+            />
             <MaterialIcon name="cloud_upload" size={30} color="#e8590c" />
             <div className="text-sm font-bold">{t('modWizard.lesson.videoDrop')}</div>
             <div className="text-xs text-stone-500">{t('modWizard.lesson.videoHint')}</div>
+            <button type="button" onClick={() => videoRef.current?.click()} disabled={uploading} className="mt-2 h-9 rounded-xl border border-[#fdba74] bg-white px-4 text-[13px] font-bold text-[#e8590c] disabled:opacity-60">
+              {uploading ? t('courseForm.uploading') : t('editor.lesson.uploadVideo')}
+            </button>
+            {isUploadedVideo(videoUrl) && <div className="mt-1 text-xs font-semibold text-green-700">{t('editor.lesson.videoUploaded')}</div>}
             <input value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="https://" aria-label={t('editor.lesson.videoAria')} className={`${inputCls} mt-2 max-w-[420px] text-center`} />
           </div>
         )}
 
-        {type === 'file' && (
+        {(
           <div className="flex flex-col gap-2">
             <input
               ref={fileRef}

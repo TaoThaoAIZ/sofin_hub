@@ -94,7 +94,7 @@ describe('wizard tạo cộng đồng: nháp, slug, publish, câu hỏi gia nh�
       assert.equal(bad.body.error.code, 'VALIDATION_ERROR');
       assert.ok(bad.body.error.details.fieldErrors.title[0].includes('3 ký tự'));
       assert.equal((await c.call('POST', '/communities/drafts', { token: u.token, body: basics({ description: 'x'.repeat(151) }) })).status, 400);
-      assert.equal((await c.call('POST', '/communities/drafts', { token: u.token, body: basics({ title: 'x'.repeat(31) }) })).status, 400);
+      assert.equal((await c.call('POST', '/communities/drafts', { token: u.token, body: basics({ title: 'x'.repeat(81) }) })).status, 400);
       assert.equal((await c.call('POST', '/communities/drafts', { token: u.token, body: basics({ slug: 'admin' }) })).body.error.code, 'SLUG_RESERVED');
       assert.equal((await c.call('POST', '/communities/drafts', { token: u.token, body: basics({ slug: 'Bad Slug' }) })).body.error.code, 'SLUG_INVALID');
 

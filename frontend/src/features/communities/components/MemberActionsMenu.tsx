@@ -17,6 +17,8 @@ const ASSIGNABLE: AssignableRole[] = ['member', 'mod', 'admin'];
 export function canManageMember(viewerRole: ViewerRole | null | undefined, viewerId: string | undefined, m: CommunityMember) {
   if (!viewerRole || ROLE_RANK[viewerRole] < ROLE_RANK.admin) return false;
   if (m.id === viewerId) return false;
+  // Thành viên minh họa (isDemo, id 'demo-…') không phải người thật: BE coi như không tồn tại → ẩn menu quản trị.
+  if (m.id.startsWith('demo-')) return false;
   const target = m.roleDetail ?? (m.role === 'admin' ? 'admin' : 'member');
   if (target === 'owner') return false;
   return ROLE_RANK[viewerRole] > ROLE_RANK[target];

@@ -8,7 +8,7 @@
   },
   "validation": {
     "nameMin": "Tên cộng đồng tối thiểu 3 ký tự",
-    "nameMax": "Tên cộng đồng tối đa 30 ký tự",
+    "nameMax": "Tên cộng đồng tối đa 80 ký tự",
     "slugRequired": "Vui lòng nhập đường dẫn",
     "slugMin": "Đường dẫn tối thiểu 3 ký tự",
     "slugFormat": "Chỉ dùng chữ thường, số và dấu gạch ngang",
@@ -173,7 +173,8 @@
       "add": "+ Thêm điều"
     },
     "increase": "Tăng giá",
-    "decrease": "Giảm giá"
+    "decrease": "Giảm giá",
+    "language": "Ngôn ngữ cộng đồng"
   },
   "summary": {
     "edit": "Sửa",

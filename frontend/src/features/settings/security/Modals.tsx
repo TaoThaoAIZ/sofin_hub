@@ -7,6 +7,7 @@ import { useChangePassword } from '../../account/queries';
 import { useAuth } from '../../auth/AuthContext';
 import { validateEmail, validateNewPassword } from '../../auth/validation';
 import { ModalShell, useToast } from '../../admin/components/overlay';
+import { BlockersGuide } from './BlockersGuide';
 import { blockersSentence, groupKey } from './format';
 import type { DeleteBlockers } from './api';
 import { useChangeEmail, useDisableTwoFactor, useEnableTwoFactor, useSetupTwoFactor } from './queries';
@@ -253,6 +254,7 @@ export function DeleteModal({ blockers, onClose }: { blockers: DeleteBlockers | 
     <>
       {t('modals.deleteBody')}
       {blocked && <span className="mt-2 block font-semibold text-[#b91c1c]">{blocked}</span>}
+      <BlockersGuide blockers={blockers} onNavigate={onClose} />
     </>
   );
 

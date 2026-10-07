@@ -408,7 +408,9 @@
       "linkNameAria": "Link name",
       "urlPh": "or paste a URL https://…",
       "urlAria": "File URL",
-      "add": "Add"
+      "add": "Add",
+      "uploadVideo": "Upload video from device (mp4)",
+      "videoUploaded": "Video uploaded"
     },
     "row": {
       "collapse": "Collapse",
@@ -491,7 +493,8 @@
     "openAria": "Open {{title}}",
     "prev": "‹ Previous",
     "next": "Next ›",
-    "range": "{{from}}–{{to}} of {{total}}"
+    "range": "{{from}}–{{to}} of {{total}}",
+    "unlockBuy": "Buy to unlock"
   },
   "post": {
     "report": {
@@ -702,8 +705,8 @@
     "lesson": {
       "name": "Lesson name",
       "namePh": "E.g. Write captions with AI in 5 minutes",
-      "videoDrop": "Paste a YouTube or Vimeo link",
-      "videoHint": "Supports youtube.com, youtu.be, vimeo.com",
+      "videoDrop": "Paste a YouTube/Vimeo link or upload a video",
+      "videoHint": "Supports youtube.com, youtu.be, vimeo.com or an mp4 file (max 25 MB)",
       "fileDrop": "Upload lesson documents",
       "fileHint": "PDF, DOCX, ZIP · up to 25MB",
       "chooseFile": "Choose file",

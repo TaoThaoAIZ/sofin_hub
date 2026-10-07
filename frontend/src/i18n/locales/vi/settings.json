@@ -191,6 +191,15 @@
       "todoAdmin": "chuyển quyền quản trị",
       "todoSubs": "hủy các gói",
       "sentence": "Bạn đang {{parts}}. Hãy {{todo}} trước khi xóa."
+    },
+    "guide": {
+      "ownerTitle": "Cách chuyển quyền sở hữu cộng đồng",
+      "ownerStep1": "Mở cộng đồng bạn sở hữu → Cài đặt cộng đồng → tab “Vùng nguy hiểm”.",
+      "ownerStep2": "Ở mục “Chuyển quyền sở hữu”, chọn một thành viên và xác nhận (hoặc xóa cộng đồng nếu không cần nữa).",
+      "ownerStep3": "Lặp lại cho mọi cộng đồng bạn sở hữu rồi quay lại đây để xóa tài khoản.",
+      "transferLink": "Chuyển quyền “{{name}}” →",
+      "subsTitle": "Hủy các gói thành viên đang hoạt động",
+      "subsLink": "Mở Cài đặt › Thanh toán →"
     }
   },
   "modals": {

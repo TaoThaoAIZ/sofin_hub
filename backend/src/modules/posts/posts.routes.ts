@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requireAuth } from '../../middlewares/auth.js';
+import { requireAuth, requireVerifiedEmail } from '../../middlewares/auth.js';
 import { writeRateLimit } from '../../middlewares/rate-limit.js';
 import { enrollmentService } from '../enrollments/enrollments.service.js';
 import { requireRole } from '../permissions/policy.js';
@@ -28,7 +28,7 @@ postsRouter.get('/courses/:id/tags', requireAuth, async (req, res) => {
   res.json({ data: await postsService.popularTags(communityId) });
 });
 
-postsRouter.post('/courses/:id/posts', requireAuth, writeRateLimit('posts'), async (req, res) => {
+postsRouter.post('/courses/:id/posts', requireAuth, requireVerifiedEmail, writeRateLimit('posts'), async (req, res) => {
   const communityId = req.params.id as string;
   await enrollmentService.requireMembership(req.userId!, communityId);
   const body = createPostBody.parse(req.body);
@@ -92,7 +92,7 @@ postsRouter.get('/posts/:postId/comments', requireAuth, async (req, res) => {
   res.json(await postsService.listComments(post.id, req.userId!, q));
 });
 
-postsRouter.post('/posts/:postId/comments', requireAuth, writeRateLimit('comments'), async (req, res) => {
+postsRouter.post('/posts/:postId/comments', requireAuth, requireVerifiedEmail, writeRateLimit('comments'), async (req, res) => {
   const post = await loadPostAsMember(req.params.postId as string, req.userId!);
   const body = createCommentBody.parse(req.body);
   res.status(201).json({ data: await postsService.addComment(post.id, req.userId!, body.content) });

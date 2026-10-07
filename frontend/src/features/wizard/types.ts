@@ -102,6 +102,7 @@ export interface DraftView {
   };
   members: {
     visibility: 'public' | 'private';
+    language: 'vi' | 'en';
     priceUsd: number;
     priceAnnualUsd: number | null;
     annualSavingsPct?: number | null;

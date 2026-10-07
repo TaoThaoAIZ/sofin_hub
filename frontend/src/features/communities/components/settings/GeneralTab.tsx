@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { Button } from '../../../../components/ui/Button';
 import { useCategories } from '../../../courses/queries';
+import { CoverField } from '../../../community/components/CoverField';
 import type { CategoryId, CommunityDetail, Language, Visibility } from '../../../courses/types';
 import { useUpdateCommunity } from '../../queries';
 import { ROLE_RANK, type UpdateCommunityInput, type ViewerRole } from '../../types';
@@ -27,6 +28,7 @@ export function GeneralTab({ course, viewerRole }: { course: CommunityDetail; vi
   const [title, setTitle] = useState(course.title);
   const [description, setDescription] = useState(course.description);
   const [thumbnail, setThumbnail] = useState(course.thumbnail);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [category, setCategory] = useState<CategoryId>(course.category);
   const [language, setLanguage] = useState<Language>(course.language);
   const [visibility, setVisibility] = useState<Visibility>(course.visibility);
@@ -67,14 +69,8 @@ export function GeneralTab({ course, viewerRole }: { course: CommunityDetail; vi
       <Field label={t('general.description')}>
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} maxLength={2000} rows={5} className={`${INPUT_CLASS} resize-none`} />
       </Field>
-      <Field label={t('general.thumbnail')}>
-        <input value={thumbnail} onChange={(e) => setThumbnail(e.target.value)} maxLength={500} className={INPUT_CLASS} />
-      </Field>
-      {thumbnail.trim() && (
-        <div className="aspect-[16/6] max-w-[420px] overflow-hidden rounded-2xl bg-stone-100">
-          <img src={thumbnail.trim()} alt={t('general.thumbnailAlt')} className="size-full object-cover" />
-        </div>
-      )}
+      <CoverField value={thumbnail} onChange={setThumbnail} onError={setUploadError} label={t('general.thumbnail')} ariaLabel={t('general.thumbnail')} height={170} />
+      {uploadError && <p className="m-0 text-sm font-medium text-red-600">{uploadError}</p>}
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label={t('general.category')}>
           <select value={category} onChange={(e) => setCategory(e.target.value as CategoryId)} className={INPUT_CLASS}>

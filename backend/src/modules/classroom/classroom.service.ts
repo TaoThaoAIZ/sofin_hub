@@ -7,7 +7,7 @@ import { atLeast, getRole } from '../permissions/policy.js';
 import { levelFor } from '../points/points.levels.js';
 import { pointsService } from '../points/points.service.js';
 import { postsService } from '../posts/posts.service.js';
-import { toEmbedUrl } from './classroom.schema.js';
+import { toEmbedUrl, uploadedVideoPath } from './classroom.schema.js';
 import { classroomRepository, type ClassroomRepository, type LessonPatch, type ModulePatch } from './classroom.repository.js';
 import {
   learningCourseRepository,
@@ -201,8 +201,10 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
 
   function videoFields(videoUrl: string | undefined) {
     if (!videoUrl) return {};
+    const uploaded = uploadedVideoPath(videoUrl);
+    if (uploaded) return { videoUrl: uploaded }; // video tải lên: FE phát bằng <video> qua URL ký, không có embedUrl
     const embedUrl = toEmbedUrl(videoUrl);
-    if (!embedUrl) throw HttpError.badRequest('Chỉ chấp nhận link video YouTube hoặc Vimeo hợp lệ');
+    if (!embedUrl) throw HttpError.badRequest('Chỉ chấp nhận link video YouTube hoặc Vimeo hợp lệ, hoặc video mp4 tải lên');
     return { videoUrl: videoUrl.trim(), embedUrl };
   }
 

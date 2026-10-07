@@ -191,6 +191,15 @@
       "todoAdmin": "transfer admin rights",
       "todoSubs": "cancel your plans",
       "sentence": "You {{parts}}. Please {{todo}} before deleting."
+    },
+    "guide": {
+      "ownerTitle": "How to transfer community ownership",
+      "ownerStep1": "Open a community you own → Community settings → “Danger zone” tab.",
+      "ownerStep2": "Under “Transfer ownership”, pick a member and confirm (or delete the community if you no longer need it).",
+      "ownerStep3": "Repeat for every community you own, then come back here to delete your account.",
+      "transferLink": "Transfer “{{name}}” →",
+      "subsTitle": "Cancel your active memberships",
+      "subsLink": "Open Settings › Billing →"
     }
   },
   "modals": {

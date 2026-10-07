@@ -43,11 +43,11 @@ export function StepBasics({
   const { t } = useTranslation('wizard');
   return (
     <div className="flex flex-col gap-[22px] rounded-[18px] border border-[#f0ebe6] bg-white p-[22px] shadow-[0_4px_16px_rgba(120,60,20,.04)]">
-      <WField icon="auto_awesome" label={t('basics.name')} htmlFor="wz-name" error={errors.name} hint={t('basics.nameHint')} right={`${form.name.length}/30`}>
+      <WField icon="auto_awesome" label={t('basics.name')} htmlFor="wz-name" error={errors.name} hint={t('basics.nameHint')} right={`${form.name.length}/80`}>
         <input
           id="wz-name"
           value={form.name}
-          maxLength={30}
+          maxLength={80}
           onChange={(e) => onNameChange(e.target.value)}
           placeholder={t('basics.namePlaceholder')}
           aria-invalid={!!errors.name}

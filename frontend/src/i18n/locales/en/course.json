@@ -96,7 +96,11 @@
     "cost": "Cost to join",
     "contentSome": "This community has {{n}} lessons in the Classroom. Detailed content is shown to members.",
     "contentNone": "This community has no lessons in the Classroom yet.",
-    "openClassroom": "Open Classroom →"
+    "openClassroom": "Open Classroom →",
+    "requestSent": "Join request sent. An admin will review it and let you know.",
+    "leave": "Leave community",
+    "leaving": "Leaving…",
+    "leftToast": "You have left the community"
   },
   "lesson": {
     "loadingAttachment": "{{name}} (loading…)",

@@ -13,6 +13,19 @@ const isSafeEmbed = (u?: string) => !!u && EMBED_PREFIXES.some((p) => u.startsWi
 
 const fmtSize = (n?: number) => (n === undefined ? '' : n > 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 
+/** Video do chủ cộng đồng tải lên (mp4): file riêng tư theo khóa học nên phát bằng URL ký hạn ngắn. */
+function UploadedVideo({ url, title }: { url: string; title: string }) {
+  const { t } = useTranslation('course');
+  const src = useFileUrl(url);
+  if (src === undefined) return <div className="grid aspect-video w-full place-items-center bg-stone-100 text-sm text-stone-500">{t('lesson.loadingAttachment', { name: title })}</div>;
+  if (!src) return <div className="grid aspect-video w-full place-items-center bg-stone-100 text-sm text-stone-500">{t('lesson.noVideo')}</div>;
+  return (
+    <div className="aspect-video w-full bg-black">
+      <video src={src} title={title} controls controlsList="nodownload" playsInline preload="metadata" className="size-full" />
+    </div>
+  );
+}
+
 function LessonAttachmentLink({ a }: { a: { name: string; url: string; size?: number } }) {
   const { t } = useTranslation('course');
   // Tệp do hệ thống lưu là riêng tư theo khóa học: dùng URL ký hạn ngắn; link ngoài giữ nguyên (đã lọc safeUrl).
@@ -127,7 +140,8 @@ export function LessonPage() {
               />
             </div>
           )}
-          {l.type === 'video' && !embed && (
+          {l.type === 'video' && !embed && fileKeyOf(l.videoUrl) && <UploadedVideo url={l.videoUrl!} title={l.title} />}
+          {l.type === 'video' && !embed && !fileKeyOf(l.videoUrl) && (
             <div className="grid aspect-video w-full place-items-center bg-stone-100 text-sm text-stone-500">{t('lesson.noVideo')}</div>
           )}
           <div className="p-5">

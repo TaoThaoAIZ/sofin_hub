@@ -41,6 +41,14 @@ export function toEmbedUrl(raw: string): string | null {
   return null;
 }
 
+const UPLOADED_FILE_RE = /^(?:https?:\/\/[^/?#]+)?\/api\/files\/([a-f0-9]{32}\.mp4)$/i;
+
+/** Video do người dùng tải lên (POST /uploads/presign, mp4): trả đường dẫn nội bộ `/api/files/<key>`; null nếu không phải. */
+export function uploadedVideoPath(raw: string): string | null {
+  const m = UPLOADED_FILE_RE.exec(raw.trim());
+  return m ? `/api/files/${m[1]!.toLowerCase()}` : null;
+}
+
 const httpUrl = z
   .string()
   .trim()
@@ -51,7 +59,7 @@ const videoUrl = z
   .string()
   .trim()
   .max(500, 'Đường dẫn quá dài')
-  .refine((v) => toEmbedUrl(v) !== null, 'Chỉ chấp nhận link video YouTube hoặc Vimeo hợp lệ');
+  .refine((v) => toEmbedUrl(v) !== null || uploadedVideoPath(v) !== null, 'Chỉ chấp nhận link video YouTube hoặc Vimeo hợp lệ, hoặc video mp4 tải lên');
 
 const level = z.number().int('Cấp độ phải là số nguyên').min(1, 'Cấp độ từ 1 đến 9').max(9, 'Cấp độ từ 1 đến 9');
 

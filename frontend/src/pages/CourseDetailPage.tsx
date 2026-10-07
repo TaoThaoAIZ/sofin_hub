@@ -19,6 +19,7 @@ import { JoinRequestDialog, loadPendingRequestId, savePendingRequestId } from '.
 import { errorText } from '../features/communities/components/Modal';
 import { ReviewsSection } from '../features/communities/components/ReviewsSection';
 import { useCancelJoinRequest } from '../features/communities/queries';
+import { toast, ToastHost } from '../features/community/components/contentUi';
 import { isAtLeast } from '../features/communities/types';
 import { usePopup } from '../components/ui/usePopup';
 
@@ -140,7 +141,7 @@ export function CourseDetailPage() {
         }))
       )
         return;
-      enroll.mutate(undefined, { onError: (e) => setJoinNotice(errorText(e)) });
+      enroll.mutate(undefined, { onSuccess: () => toast(t('detail.leftToast')), onError: (e) => setJoinNotice(errorText(e)) });
       return;
     }
     // Đã gửi yêu cầu, đang chờ duyệt: không gửi lại.
@@ -308,6 +309,16 @@ export function CourseDetailPage() {
                   <MaterialIcon name="arrow_forward" size={20} color="#fff" />
                 </ButtonLink>
               )}
+              {course.viewerEnrolled && !isLocked && course.viewerRole !== 'owner' && (
+                <button
+                  type="button"
+                  onClick={handleJoin}
+                  disabled={enroll.isPending}
+                  className="h-11 rounded-2xl border-[1.5px] border-red-200 bg-white text-[15px] font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
+                >
+                  {enroll.isPending ? t('detail.leaving') : t('detail.leave')}
+                </button>
+              )}
               {!course.viewerEnrolled && (
               <Button
                 onClick={handleJoin}
@@ -412,6 +423,7 @@ export function CourseDetailPage() {
       </section>
 
       <Footer />
+      <ToastHost />
 
       {showRequestDialog && (
         <JoinRequestDialog
@@ -424,6 +436,7 @@ export function CourseDetailPage() {
           onSent={(req) => {
             savePendingRequestId(id, req.id);
             setPendingRequest(req.id);
+            toast(t('detail.requestSent'));
           }}
         />
       )}

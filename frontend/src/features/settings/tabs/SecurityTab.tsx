@@ -17,6 +17,7 @@ import {
   sortDevices,
   TIMEZONE_OPTIONS,
 } from '../security/format';
+import { BlockersGuide } from '../security/BlockersGuide';
 import { DeleteModal, EmailModal, PasswordModal, TwoFactorModal } from '../security/Modals';
 import { useDeleteBlockers, useRevokeOthers, useUpdatePreferences } from '../security/queries';
 
@@ -344,6 +345,7 @@ export function SecurityTab() {
               <div className="mt-1.5 text-sm leading-[1.6] text-stone-600">
                 {blockedText ?? t('securityTab.deleteDesc')}
               </div>
+              <BlockersGuide blockers={blockers.data} />
               <button
                 type="button"
                 onClick={() => setModal('delete')}

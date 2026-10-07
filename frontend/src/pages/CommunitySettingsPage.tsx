@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { ButtonLink } from '../components/ui/Button';
 import { MaterialIcon } from '../components/ui/MaterialIcon';
@@ -47,7 +47,9 @@ export function CommunitySettingsPage() {
   const { id = '' } = useParams();
   const { status } = useAuth();
   const { data: course, isPending, error } = useCommunityDetail(id);
-  const [tab, setTab] = useState<TabKey>('general');
+  const [params] = useSearchParams();
+  const initialTab = params.get('tab');
+  const [tab, setTab] = useState<TabKey>(TABS.some((tb) => tb.key === initialTab) ? (initialTab as TabKey) : 'general');
 
   if (isPending || status === 'loading') {
     return (

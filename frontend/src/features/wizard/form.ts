@@ -26,6 +26,7 @@ export interface WizardForm {
   videoUrl: string;
   // Bước 4 — members
   visibility: 'public' | 'private';
+  language: 'vi' | 'en';
   billing: 'free' | 'month' | 'year';
   priceMonthly: string;
   priceAnnual: string;
@@ -64,6 +65,7 @@ export const defaultForm = (): WizardForm => ({
   benefits: ['', '', ''],
   videoUrl: '',
   visibility: 'public',
+  language: 'vi',
   billing: 'free',
   priceMonthly: '',
   priceAnnual: '',
@@ -120,7 +122,7 @@ export function validateStep(step: number, f: WizardForm, ctx: ValidateCtx): Fie
   if (step === 0) {
     const name = f.name.trim();
     if (name.length < 3) e.name = tw('validation.nameMin');
-    else if (name.length > 30) e.name = tw('validation.nameMax');
+    else if (name.length > 80) e.name = tw('validation.nameMax');
     if (!f.slug) e.slug = tw('validation.slugRequired');
     else if (f.slug.length < 3) e.slug = tw('validation.slugMin');
     else if (!SLUG_RE.test(f.slug)) e.slug = tw('validation.slugFormat');

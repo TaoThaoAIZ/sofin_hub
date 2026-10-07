@@ -135,6 +135,7 @@ async function draftView(row: DraftRow) {
     identity: { logoUrl: row.logoUrl, coverUrl: row.coverUrl, brandColor: row.brandColor, promise: row.promise, benefits: row.benefits, introVideoUrl: row.introVideoUrl },
     members: {
       visibility: row.visibility,
+      language: row.language,
       priceUsd: centsToUsd(row.priceCents),
       priceAnnualUsd: annual,
       annualSavingsPct: annualSavingsPct(centsToUsd(row.priceCents), annual),
@@ -299,6 +300,7 @@ export const wizardService = {
     }
     data.priceAnnualCents = annual == null ? null : usdToCents(annual);
     if (b.visibility !== undefined) data.visibility = b.visibility;
+    if (b.language !== undefined) data.language = b.language;
     if (b.memberTrialEnabled !== undefined) data.memberTrialEnabled = b.memberTrialEnabled;
     if (b.joinQuestions !== undefined) data.joinQuestions = b.joinQuestions.filter((q) => q.trim());
     if (b.rules !== undefined) data.rules = b.rules as unknown as Prisma.InputJsonValue;

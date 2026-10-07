@@ -8,7 +8,7 @@
   },
   "validation": {
     "nameMin": "Community name must be at least 3 characters",
-    "nameMax": "Community name must be at most 30 characters",
+    "nameMax": "Community name must be at most 80 characters",
     "slugRequired": "Please enter a URL",
     "slugMin": "URL must be at least 3 characters",
     "slugFormat": "Use only lowercase letters, numbers and hyphens",
@@ -173,7 +173,8 @@
       "add": "+ Add rule"
     },
     "increase": "Increase price",
-    "decrease": "Decrease price"
+    "decrease": "Decrease price",
+    "language": "Community language"
   },
   "summary": {
     "edit": "Edit",

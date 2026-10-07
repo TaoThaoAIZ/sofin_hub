@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { optionalAuth, requireAuth } from '../../middlewares/auth.js';
+import { optionalAuth, requireAuth, requireVerifiedEmail } from '../../middlewares/auth.js';
 import { HttpError } from '../../utils/http-error.js';
 import { auditService } from '../admin/admin-audit.service.js';
 import { adminOnly } from '../admin/admin.common.js';
@@ -26,7 +26,7 @@ export const paymentsRouter = Router();
 const id = (v: unknown) => v as string;
 
 // ---- checkout / xác nhận (giữ nguyên hình dạng response cũ)
-paymentsRouter.post('/courses/:id/checkout', requireAuth, async (req, res) => {
+paymentsRouter.post('/courses/:id/checkout', requireAuth, requireVerifiedEmail, async (req, res) => {
   const body = createCheckoutBody.parse(req.body);
   const key = req.header('idempotency-key')?.trim().slice(0, 200) || undefined;
   res.status(201).json({ data: await paymentsService.checkout(id(req.params.id), req.userId!, body.method, key, { interval: body.interval, paymentMethod: body.paymentMethod }) });
@@ -85,7 +85,7 @@ paymentsRouter.get('/me/subscriptions', requireAuth, async (req, res) => {
   res.json({ data: await paymentsService.mySubscriptions(req.userId!) });
 });
 
-paymentsRouter.post('/courses/:id/trial', requireAuth, async (req, res) => {
+paymentsRouter.post('/courses/:id/trial', requireAuth, requireVerifiedEmail, async (req, res) => {
   const body = startTrialBody.parse(req.body ?? {});
   res.status(201).json({ data: await paymentsService.startTrial(id(req.params.id), req.userId!, new Date(), body) });
 });

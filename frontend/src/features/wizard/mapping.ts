@@ -24,6 +24,7 @@ export function formFromDraft(d: DraftView, base: WizardForm = defaultForm()): W
     benefits: d.identity.benefits.length ? [...d.identity.benefits] : ['', '', ''],
     videoUrl: d.identity.introVideoUrl ?? '',
     visibility: m.visibility,
+    language: m.language ?? 'vi',
     billing: m.priceUsd > 0 ? (annual ? 'year' : 'month') : 'free',
     priceMonthly: m.priceUsd > 0 ? String(m.priceUsd) : '',
     priceAnnual: annual ? String(m.priceAnnualUsd) : '',
@@ -73,6 +74,7 @@ export const membersBody = (f: WizardForm): MembersBody => {
   const paid = f.billing !== 'free';
   return {
     visibility: f.visibility,
+    language: f.language,
     priceUsd: paid ? parseMoney(f.priceMonthly) : 0,
     priceAnnualUsd: paid && f.billing === 'year' ? parseMoney(f.priceAnnual) : null,
     memberTrialEnabled: paid ? f.trialEnabled : false,
