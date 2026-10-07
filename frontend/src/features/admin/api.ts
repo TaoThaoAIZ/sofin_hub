@@ -121,6 +121,8 @@ export const warnUser = (id: string, body: { reason: string; message: string }) 
 
 /* ---- Moderation ---- */
 export interface CaseQuery {
+  /** 'true' = hiện cả báo cáo đang mở trùng đối tượng (mặc định server gộp, chỉ hiện báo cáo đầu tiên). */
+  includeDuplicates?: 'true';
   status?: string;
   risk?: CaseRisk | '';
   reason?: CaseReason | '';

@@ -214,7 +214,8 @@ function CommentRow({ courseId, postId, c, viewerId, canModerate }: { courseId: 
                 </button>
               )}
               {!own && (
-                <button type="button" onClick={() => setReporting(true)} className="hover:text-brand">
+                <button type="button" onClick={() => setReporting(true)} className="inline-flex items-center gap-1 font-medium text-stone-500 hover:text-brand">
+                  <MaterialIcon name="flag" size={13} />
                   {t('post.comment.report')}
                 </button>
               )}

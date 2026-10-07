@@ -31,9 +31,9 @@ export function ModerationQueue() {
   const { actionsFor, modalEl } = useCaseActions();
   const [tab, setTab] = useState<QueueTab>('open');
   const [q, setQ] = useState('');
-  const [f, setF] = useState({ risk: '', reason: '', assignee: '', sort: '' });
+  const [f, setF] = useState({ risk: '', reason: '', assignee: '', sort: '', dup: '' });
   const [page, setPage] = useState(1);
-  const list = useCases({ status: TAB_STATUS[tab], q: q || undefined, risk: (f.risk || undefined) as CaseRisk | undefined, reason: (f.reason || undefined) as CaseReason | undefined, assignee: f.assignee || undefined, sort: (f.sort || undefined) as 'risk' | undefined, page, limit: LIMIT });
+  const list = useCases({ status: TAB_STATUS[tab], q: q || undefined, risk: (f.risk || undefined) as CaseRisk | undefined, reason: (f.reason || undefined) as CaseReason | undefined, assignee: f.assignee || undefined, sort: (f.sort || undefined) as 'risk' | undefined, includeDuplicates: f.dup ? 'true' : undefined, page, limit: LIMIT });
   const s = summary.data;
   const set = (key: keyof typeof f) => (v: string) => {
     setF((o) => ({ ...o, [key]: v }));
@@ -72,8 +72,9 @@ export function ModerationQueue() {
           { key: 'reason', label: t('moderation.queue.filter.reason'), value: f.reason, options: REASON_OPTIONS, onChange: set('reason') },
           { key: 'assignee', label: t('moderation.queue.filter.assignee'), value: f.assignee, options: [{ value: 'me', label: t('moderation.queue.filter.me') }, { value: 'unassigned', label: t('moderation.queue.filter.unassigned') }, ...(assignees.data ?? []).map((a) => ({ value: a.id, label: a.name }))], onChange: set('assignee') },
           { key: 'sort', label: t('moderation.queue.filter.sort'), value: f.sort, options: [{ value: 'risk', label: t('moderation.queue.filter.byRisk') }], onChange: set('sort') },
+          { key: 'dup', label: t('moderation.queue.filter.duplicates'), value: f.dup, options: [{ value: 'true', label: t('moderation.queue.filter.showDuplicates') }], onChange: set('dup') },
         ]}
-        onClearFilters={() => { setF({ risk: '', reason: '', assignee: '', sort: '' }); setPage(1); }}
+        onClearFilters={() => { setF({ risk: '', reason: '', assignee: '', sort: '', dup: '' }); setPage(1); }}
         loading={list.isPending}
         error={list.isError ? list.error : null}
         onRetry={() => void list.refetch()}

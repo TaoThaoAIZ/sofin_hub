@@ -296,7 +296,8 @@
       "profile": "Profile & settings",
       "home": "Back to home",
       "logout": "Log out",
-      "platformAdmin": "Platform admin"
+      "platformAdmin": "Platform admin",
+      "language": "Switch language (VI/EN)"
     },
     "guard": {
       "title": "Insufficient permissions",

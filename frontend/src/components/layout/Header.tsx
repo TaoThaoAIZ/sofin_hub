@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useIsPlatformAdmin } from '../../features/admin/queries';
 import { useAuth } from '../../features/auth/AuthContext';
+import { useToggleLanguage } from '../../features/auth/useToggleLanguage';
 import { MessagesButton } from '../../features/messages/components/MessagesButton';
 import { NotificationBell } from '../../features/notifications/components/NotificationBell';
 import { useClickOutside } from '../../lib/useClickOutside';
@@ -19,6 +20,7 @@ const NAV_ITEMS: { key: string; to: string }[] = [
 export function Header({ active = 'discover' }: { active?: string }) {
   const { t, i18n } = useTranslation('common');
   const { user, status, logout } = useAuth();
+  const toggleLanguage = useToggleLanguage();
   const { isAdmin } = useIsPlatformAdmin();
   const navigate = useNavigate();
   const location = useLocation();
@@ -58,7 +60,7 @@ export function Header({ active = 'discover' }: { active?: string }) {
         )}
         <button
           type="button"
-          onClick={() => void i18n.changeLanguage(i18n.language === 'en' ? 'vi' : 'en')}
+          onClick={toggleLanguage}
           aria-label={t('header.language')}
           title={t('header.language')}
           className="flex items-center gap-1.5 rounded-xl px-2 py-1 text-sm font-medium hover:bg-brand/10 hover:text-brand"

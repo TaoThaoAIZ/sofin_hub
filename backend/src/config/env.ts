@@ -47,6 +47,8 @@ const schema = z.object({
   SMTP_SECURE: z.string().optional().transform((v) => v === '1' || v === 'true'),
   SMTP_USER: z.string().optional().transform((v) => v?.trim() || undefined),
   SMTP_PASS: z.string().optional().transform((v) => v || undefined),
+  // Gửi qua HTTP API của Brevo (cổng 443). Dùng khi host chặn cổng SMTP (Render gói Free). Có khoá này thì ưu tiên hơn SMTP.
+  BREVO_API_KEY: z.string().optional().transform((v) => v?.trim() || undefined),
   MAIL_FROM: z.string().default('SofinHub <no-reply@sofinhub.local>'),
 
   // Bí mật HMAC cho mã OTP email. BẮT BUỘC đặt riêng khi production (giá trị dev-* bị env-guard chặn).

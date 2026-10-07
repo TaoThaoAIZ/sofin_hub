@@ -102,7 +102,9 @@
         "me": "Tôi",
         "unassigned": "Chưa phân công",
         "sort": "Sắp xếp",
-        "byRisk": "Theo rủi ro"
+        "byRisk": "Theo rủi ro",
+        "duplicates": "Báo cáo trùng",
+        "showDuplicates": "Hiện cả báo cáo trùng đối tượng"
       },
       "emptyOpen": "Không có báo cáo nào đang chờ xử lý."
     },

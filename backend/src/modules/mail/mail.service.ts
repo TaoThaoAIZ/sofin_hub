@@ -52,6 +52,10 @@ export function createSmtpMailProvider(): MailProvider {
     port: env.SMTP_PORT,
     secure: env.SMTP_SECURE,
     auth: env.SMTP_USER ? { user: env.SMTP_USER, pass: env.SMTP_PASS } : undefined,
+    // Mặc định nodemailer chờ tới 2 phút khi cổng bị chặn => request đăng ký/quên mật khẩu treo. Thất bại nhanh để API còn trả lời.
+    connectionTimeout: 8_000,
+    greetingTimeout: 8_000,
+    socketTimeout: 15_000,
   });
   return {
     async send(m) {
@@ -60,11 +64,28 @@ export function createSmtpMailProvider(): MailProvider {
   };
 }
 
-// SMTP_HOST có thì luôn gửi thật (kể cả dev, để thử); không thì dev/test = outbox RAM, production = log-only.
-let provider: MailProvider = env.SMTP_HOST && process.env.NODE_ENV !== 'test' ? createSmtpMailProvider() : isProd ? logOnlyMailProvider : memoryMailProvider;
+/** Brevo HTTP API (https://developers.brevo.com): người gửi trong MAIL_FROM phải là "Sender" đã xác minh trong tài khoản Brevo. */
+export function createBrevoMailProvider(): MailProvider {
+  const m = /^\s*(?:"?([^"<]*?)"?\s*)?<([^>]+)>\s*$/.exec(env.MAIL_FROM);
+  const sender = m ? { name: m[1]?.trim() || undefined, email: m[2]!.trim() } : { email: env.MAIL_FROM.trim() };
+  return {
+    async send(msg) {
+      const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: { 'api-key': env.BREVO_API_KEY!, 'content-type': 'application/json', accept: 'application/json' },
+        body: JSON.stringify({ sender, to: [{ email: msg.to }], subject: msg.subject, textContent: msg.text, ...(msg.html ? { htmlContent: msg.html } : {}) }),
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!res.ok) throw new Error(`Brevo ${res.status}: ${(await res.text().catch(() => '')).slice(0, 200)}`);
+    },
+  };
+}
+
+// BREVO_API_KEY (HTTP) > SMTP_HOST (SMTP) thật; không có thì (kể cả dev, để thử); không thì dev/test = outbox RAM, production = log-only.
+let provider: MailProvider = process.env.NODE_ENV !== 'test' && env.BREVO_API_KEY ? createBrevoMailProvider() : env.SMTP_HOST && process.env.NODE_ENV !== 'test' ? createSmtpMailProvider() : isProd ? logOnlyMailProvider : memoryMailProvider;
 // Outbox in-memory CHỈ dành cho dev/test (không bao giờ dùng khi production: lộ token, mất khi restart, lệch giữa instance).
 // Production mặc định log-only => thư reset/verify bị bỏ: cảnh báo to ngay lúc khởi động để không bị bỏ sót.
-if (isProd && !env.SMTP_HOST) console.warn('[mail] CẢNH BÁO: production đang dùng provider log-only — email (đặt lại mật khẩu, xác thực...) KHÔNG được gửi. Đặt SMTP_HOST (+SMTP_USER/SMTP_PASS/MAIL_FROM) hoặc gọi setMailProvider() với SES trước khi mở cho người dùng thật.');
+if (isProd && !env.SMTP_HOST && !env.BREVO_API_KEY) console.warn('[mail] CẢNH BÁO: production đang dùng provider log-only — email (đặt lại mật khẩu, xác thực...) KHÔNG được gửi. Đặt SMTP_HOST (+SMTP_USER/SMTP_PASS/MAIL_FROM) hoặc gọi setMailProvider() với SES trước khi mở cho người dùng thật.');
 
 export function setMailProvider(p: MailProvider) {
   provider = p;

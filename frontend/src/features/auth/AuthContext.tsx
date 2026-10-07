@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import i18n from '../../i18n';
 import { setAuthHandlers, setAuthToken } from '../../lib/api';
 import * as authApi from './api';
 import type { AuthSession, AuthUser, LoginInput, RegisterInput, RegistrationPending, TwoFactorChallenge } from './types';
@@ -34,6 +35,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(session.user);
     setAccessToken(session.accessToken);
     setAuthToken(session.accessToken); // để lib/api.ts tự đính kèm token cho các request khác
+  }, []);
+
+  /** Đăng nhập (không phải refresh khi tải lại trang): theo ngôn ngữ đã lưu trong tài khoản. */
+  const applyAccountLanguage = useCallback((u: AuthUser) => {
+    if ((u.language === 'vi' || u.language === 'en') && i18n.language !== u.language) void i18n.changeLanguage(u.language);
   }, []);
 
   const clearSession = useCallback(() => {
@@ -84,20 +90,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const result = await authApi.login(input);
       if ('twoFactorRequired' in result) return result;
       applySession(result);
+      applyAccountLanguage(result.user);
       setStatus('authenticated');
       return result.user;
     },
-    [applySession],
+    [applySession, applyAccountLanguage],
   );
 
   const completeTwoFactor = useCallback(
     async (ticket: string, code: string) => {
       const session = await authApi.loginTwoFactor(ticket, code);
       applySession(session);
+      applyAccountLanguage(session.user);
       setStatus('authenticated');
       return session.user;
     },
-    [applySession],
+    [applySession, applyAccountLanguage],
   );
 
   const register = useCallback((input: RegisterInput) => authApi.register(input), []);

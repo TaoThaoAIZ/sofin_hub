@@ -296,7 +296,8 @@
       "profile": "Hồ sơ & cài đặt",
       "home": "Về trang chủ",
       "logout": "Đăng xuất",
-      "platformAdmin": "Quản trị nền tảng"
+      "platformAdmin": "Quản trị nền tảng",
+      "language": "Đổi ngôn ngữ (VI/EN)"
     },
     "guard": {
       "title": "Không đủ quyền",

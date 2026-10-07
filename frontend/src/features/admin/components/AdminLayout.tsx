@@ -4,7 +4,9 @@ import { Trans, useTranslation } from 'react-i18next';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { useClickOutside } from '../../../lib/useClickOutside';
+import { useIgnorePasswordManagers } from '../../../lib/ignorePasswordManagers';
 import { useAuth } from '../../auth/AuthContext';
+import { useToggleLanguage } from '../../auth/useToggleLanguage';
 import { NotificationBell } from '../../notifications/components/NotificationBell';
 import { matchNav, requiredPerm, visibleNav } from '../nav';
 import { useAdminCommunities, useAdminUsers, useCan, useCases, useIsPlatformAdmin, useModerationSummary } from '../queries';
@@ -202,7 +204,8 @@ function GlobalSearch() {
 /* ------------------------------ Topbar ------------------------------ */
 
 function Topbar({ onMenu }: { onMenu: () => void }) {
-  const { t } = useTranslation('admin-components');
+  const { t, i18n } = useTranslation('admin-components');
+  const toggleLanguage = useToggleLanguage();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { openMenu, menuEl } = useMenu();
@@ -244,6 +247,16 @@ function Topbar({ onMenu }: { onMenu: () => void }) {
       >
         <MaterialIcon name="bolt" size={19} filled color="#f26a1b" />
         {t('layout.topbar.quickActions')}
+      </button>
+      <button
+        type="button"
+        onClick={toggleLanguage}
+        aria-label={t('layout.topbar.language')}
+        title={t('layout.topbar.language')}
+        className="flex h-10 flex-none items-center gap-1.5 rounded-full border-0 bg-transparent px-3 text-[13.5px] font-semibold text-stone-800 hover:bg-[#fff1e6]"
+      >
+        <MaterialIcon name="language" size={20} />
+        {i18n.language === 'en' ? 'EN' : 'VI'}
       </button>
       <div className="grid size-10 flex-none place-items-center rounded-full text-stone-800 hover:bg-[#fff1e6]">
         <NotificationBell />
@@ -363,6 +376,7 @@ export function AdminLayout() {
   const { status } = useAuth();
   const location = useLocation();
   const { isAdmin, isLoading } = useIsPlatformAdmin();
+  useIgnorePasswordManagers();
 
   if (status === 'loading' || isLoading) {
     return (

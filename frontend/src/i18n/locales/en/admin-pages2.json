@@ -102,7 +102,9 @@
         "me": "Me",
         "unassigned": "Unassigned",
         "sort": "Sort",
-        "byRisk": "By risk"
+        "byRisk": "By risk",
+        "duplicates": "Duplicate reports",
+        "showDuplicates": "Show duplicate reports on the same target"
       },
       "emptyOpen": "No reports awaiting action."
     },
