@@ -1,0 +1,46 @@
+# Chạy SofinHub trên 1 EC2: Postgres + Backend + Nginx (phục vụ frontend build tĩnh và proxy /api).
+# Đặt cùng thư mục: .env (bí mật thật, xem .env.production.example), nginx/default.conf, web.Dockerfile, src/{backend,frontend}.
+# File upload nằm ở S3 (S3_BUCKET trong .env, credentials từ IAM role của EC2) nên container không cần volume cho uploads.
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sofinhub
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?đặt POSTGRES_PASSWORD trong .env}
+      POSTGRES_DB: sofinhub
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U sofinhub -d sofinhub']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    # Không publish cổng 5432 ra ngoài: chỉ backend trong mạng compose truy cập được.
+
+  backend:
+    build: ./src/backend
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Lấy credentials S3 từ IAM role của EC2 qua metadata (cần HttpPutResponseHopLimit=2 trên instance).
+
+  web:
+    build:
+      context: .
+      dockerfile: web.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      # Chỉ dùng khi bật HTTPS (nginx/https.conf.example): thư mục xác thực ACME và chứng chỉ Let's Encrypt.
+      - ./certbot-www:/var/www/certbot:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+
+volumes:
+  pgdata:

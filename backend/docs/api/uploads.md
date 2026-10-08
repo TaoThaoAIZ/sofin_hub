@@ -48,15 +48,15 @@ Hạn mức mỗi người: `UPLOAD_USER_QUOTA_MB` = 200MB (tính file đã uplo
   - **Thu hồi tin nhắn** (`DELETE /messages/:id`) xóa luôn file đính kèm (đĩa + bản ghi) nếu không còn tin nhắn sống nào khác dùng lại; mọi URL (kể cả URL ký còn hạn) trả 404.
 - **lesson_attachment**: nếu gửi `courseId` thì phải là mod trở lên (`requireRole`); nếu không gửi `courseId` thì không kiểm tra vai trò (theo yêu cầu "courseId tùy chọn").
 
-## Nối S3/MinIO (chưa làm, đã chừa chỗ)
+## Lưu file ở S3 (đã hiện thực)
 
-`uploads.storage.ts` định nghĩa `StorageProvider { createUploadTarget, put, getStream, delete, publicUrl }`. `S3Storage` hiện chỉ là khung ném lỗi "chưa cấu hình". Để nối:
+Đặt `S3_BUCKET` (và `S3_REGION`) thì `uploads.storage.ts` dùng `S3Storage`; bỏ trống thì dùng `LocalDiskStorage` như cũ (dev/test không cần AWS).
 
-1. Thêm `@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner`; env `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT` (MinIO), `S3_PUBLIC_BASE_URL`.
-2. `createUploadTarget`: `getSignedUrl(s3, new PutObjectCommand({Bucket, Key, ContentType, ContentLength: size}), {expiresIn})` -> trả `{uploadUrl: <url ký>, method:'PUT', headers:{'Content-Type': ct}}`. Nhớ ký kèm `ContentLength` và đặt CORS bucket cho origin FE.
-3. `publicUrl`: `${S3_PUBLIC_BASE_URL}/${key}` (CloudFront) hoặc route `/files` redirect 302 sang URL ký GET.
-4. Vì FE PUT thẳng lên S3, không còn bước `PUT /uploads/:key` nên cần xác nhận hoàn tất: thêm `POST /uploads/:key/complete` (HeadObject kiểm tra size/contentType, đánh dấu `uploaded`) hoặc lắng nghe S3 event. Magic bytes khi đó kiểm bằng cách đọc 16 byte đầu (Range GET).
-5. Đổi `export const storage = new S3Storage(...)` theo `NODE_ENV`/env.
+- **Luồng không đổi**: FE `POST /uploads/presign` -> `PUT /api/uploads/:key?token=` (vé HMAC) -> backend kiểm magic bytes + quota rồi `PutObject` lên S3. `GET /api/files/:key` kiểm quyền rồi stream từ `GetObject`. Bucket **luôn private**, không cần CORS bucket, không cần endpoint "complete". Đổi lại mọi byte đi qua backend (giới hạn 25MB/file nên chấp nhận được).
+- **Credentials**: chuỗi mặc định của AWS SDK, tức IAM role gắn vào EC2/ECS. Không đặt access key vào `.env`. Role chỉ cần `s3:GetObject/PutObject/DeleteObject` trên `arn:aws:s3:::<bucket>/*` và `s3:ListBucket` trên bucket. Chạy trong Docker trên EC2 thì instance metadata phải có `HttpPutResponseHopLimit=2`, nếu không container không lấy được credentials.
+- **Lỗi**: `NoSuchKey/NotFound` -> 404; lỗi khác (AccessDenied, mạng) được ném lên thành 500 để không che sai cấu hình IAM.
+- Test: `tests/uploads.s3.test.ts` (client giả, không cần AWS).
+- Chưa làm: presigned PUT/GET trực tiếp từ trình duyệt (bỏ qua backend), CloudFront, chuyển file cũ từ ổ đĩa sang S3 (copy tay `UPLOAD_DIR/*` lên bucket với cùng tên key là đủ vì bản ghi `Upload` giữ nguyên).
 
 ## Giới hạn hiện tại / Chưa làm
 

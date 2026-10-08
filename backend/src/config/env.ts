@@ -72,6 +72,10 @@ const schema = z.object({
   UPLOAD_MAX_AVATAR_MB: z.coerce.number().positive().default(3),
   UPLOAD_MAX_COVER_MB: z.coerce.number().positive().default(8),
   UPLOAD_USER_QUOTA_MB: z.coerce.number().positive().default(200),
+  // Có S3_BUCKET = lưu file ở S3 (bucket private, backend vẫn là cổng kiểm quyền); bỏ trống = LocalDiskStorage (UPLOAD_DIR).
+  // Credentials lấy theo chuỗi mặc định của AWS SDK (IAM role của EC2/ECS) — KHÔNG đặt access key tĩnh vào .env.
+  S3_BUCKET: z.string().optional().transform((v) => v?.trim() || undefined),
+  S3_REGION: z.string().optional().transform((v) => v?.trim() || undefined),
 
   // --- State chia sẻ giữa các instance (SSE fan-out, vé, rate limit...). Bỏ trống = in-memory (đúng cho 1 instance). ---
   REDIS_URL: z.string().optional().transform((v) => v?.trim() || undefined),

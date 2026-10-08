@@ -1,3 +1,4 @@
+import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { createReadStream } from 'node:fs';
 import { mkdir, rename, stat, unlink, writeFile } from 'node:fs/promises';
 import { isAbsolute, join, resolve } from 'node:path';
@@ -87,26 +88,59 @@ export class LocalDiskStorage implements StorageProvider {
   }
 }
 
-/** Khung cho S3/MinIO — chưa cấu hình nên mọi thao tác đều báo lỗi rõ ràng (không cài aws-sdk). */
+/**
+ * Lưu file ở S3 (bucket private). Giữ nguyên luồng hiện tại: FE vẫn PUT lên backend bằng vé HMAC, backend kiểm magic bytes + quota
+ * rồi mới ghi lên S3; mọi lần GET đều đi qua backend để kiểm quyền (bucket không bao giờ công khai, không cần CORS bucket).
+ * File tối đa vài chục MB nên việc backend làm trung gian chấp nhận được.
+ */
 export class S3Storage implements StorageProvider {
-  private fail(): never {
-    throw new Error('S3Storage chưa được cấu hình (xem docs/api/uploads.md mục "Nối S3/MinIO")');
+  constructor(
+    private readonly bucket: string,
+    private readonly client: Pick<S3Client, 'send'> = new S3Client({ region: env.S3_REGION }),
+  ) {}
+
+  createUploadTarget({ key, contentType, maxSize, userId }: { key: string; contentType: string; maxSize: number; userId: string }): UploadTarget {
+    assertKey(key);
+    const { token, expiresAt } = signUploadTicket({ key, contentType, maxSize, userId });
+    return {
+      uploadUrl: `/api/uploads/${key}?token=${encodeURIComponent(token)}`,
+      method: 'PUT',
+      headers: { 'Content-Type': contentType },
+      expiresAt,
+    };
   }
-  createUploadTarget(): UploadTarget {
-    return this.fail();
+
+  async put(key: string, data: Buffer, meta: { contentType: string }): Promise<void> {
+    assertKey(key);
+    await this.client.send(new PutObjectCommand({ Bucket: this.bucket, Key: key, Body: data, ContentType: meta.contentType }));
   }
-  async put(): Promise<void> {
-    this.fail();
+
+  async getStream(key: string) {
+    try {
+      assertKey(key);
+    } catch {
+      return null;
+    }
+    try {
+      const out = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
+      if (!out.Body) return null;
+      return { stream: out.Body as Readable, size: out.ContentLength ?? 0 };
+    } catch (e) {
+      // Chỉ "không có object" mới là 404; lỗi quyền/mạng phải nổi lên (500) để không che sự cố cấu hình IAM.
+      const name = (e as { name?: string }).name;
+      if (name === 'NoSuchKey' || name === 'NotFound') return null;
+      throw e;
+    }
   }
-  async getStream(): Promise<never> {
-    return this.fail();
+
+  async delete(key: string): Promise<void> {
+    assertKey(key);
+    await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
   }
-  async delete(): Promise<void> {
-    this.fail();
-  }
-  publicUrl(): string {
-    return this.fail();
+
+  publicUrl(key: string): string {
+    return `${FILE_URL_PREFIX}${key}`;
   }
 }
 
-export const storage: StorageProvider = new LocalDiskStorage();
+export const storage: StorageProvider = env.S3_BUCKET ? new S3Storage(env.S3_BUCKET) : new LocalDiskStorage();
