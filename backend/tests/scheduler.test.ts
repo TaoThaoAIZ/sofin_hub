@@ -140,7 +140,7 @@ describe('scheduler: nhiều instance, mỗi job chỉ chạy ở 1', () => {
     assert.equal(started, before, 'sau stop() không lên lịch thêm');
   });
 
-  it('allJobs() khai báo đủ job nền (gia hạn, đối soát, nhắc lịch) với tên duy nhất', async () => {
+  it('allJobs() khai báo đủ job nền (gia hạn, đối soát, nhắc lịch, dọn tài khoản chưa xác thực) với tên duy nhất', async () => {
     const { allJobs } = await import('../src/jobs.js');
     const names = allJobs().map((j) => j.name);
     assert.deepEqual([...names].sort(), ['auth.purgeUnverified', 'events.reminders', 'payments.reconcile', 'payments.subscriptions', 'payments.trialReminders', 'referrals.reconcile']);

@@ -19,6 +19,7 @@ import { JoinRequestDialog, loadPendingRequestId, savePendingRequestId } from '.
 import { errorText } from '../features/communities/components/Modal';
 import { ReviewsSection } from '../features/communities/components/ReviewsSection';
 import { useCancelJoinRequest } from '../features/communities/queries';
+import { usePendingItems } from '../features/settings/communities/queries';
 import { toast, ToastHost } from '../features/community/components/contentUi';
 import { isAtLeast } from '../features/communities/types';
 import { usePopup } from '../components/ui/usePopup';
@@ -64,6 +65,20 @@ export function CourseDetailPage() {
       setPendingRequest(null);
     }
   }, [course?.viewerEnrolled, pendingRequest, id]);
+
+  // Trạng thái "chờ duyệt" lấy theo BE: đã được duyệt/từ chối/hủy thì không còn trong danh sách → bỏ nhãn chờ để người dùng thanh toán/tham gia tiếp.
+  const serverPending = usePendingItems();
+  useEffect(() => {
+    if (!serverPending.data) return;
+    const mine = serverPending.data.requests.find((r) => r.communityId === id);
+    if (mine && pendingRequest === null) {
+      savePendingRequestId(id, mine.id);
+      setPendingRequest(mine.id);
+    } else if (!mine && pendingRequest !== null) {
+      savePendingRequestId(id, null);
+      setPendingRequest(null);
+    }
+  }, [serverPending.data, pendingRequest, id]);
 
   if (isPending) {
     return (
@@ -227,7 +242,7 @@ export function CourseDetailPage() {
                 <Trans t={t} i18nKey="detail.by" values={{ name: course.instructor.name }} components={{ b: <b className="text-stone-900" /> }} />
               </span>
             </div>
-            <p className="mt-3.5 max-w-[760px] text-base leading-[1.65] text-stone-700 text-pretty">
+            <p className="mt-3.5 max-w-[760px] text-base leading-[1.65] text-stone-700 text-pretty whitespace-pre-line break-words">
               {course.description}
             </p>
           </div>
@@ -465,7 +480,7 @@ function OverviewTab({ course, priceLabel }: { course: CommunityDetail; priceLab
     <div className="flex flex-col gap-[22px]">
       <section className="glass flex flex-col gap-4 rounded-[26px] p-6">
         <SectionTitle>{t('detail.aboutCourse')}</SectionTitle>
-        <p className="m-0 text-[15px] leading-[1.75] text-stone-600 text-pretty">{course.about}</p>
+        <p className="m-0 text-[15px] leading-[1.75] text-stone-600 text-pretty whitespace-pre-line break-words">{course.about}</p>
         {course.highlights.length > 0 && (
           <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,300px),1fr))] gap-3">
             {course.highlights.map((h) => (

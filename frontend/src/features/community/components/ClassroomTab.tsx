@@ -133,7 +133,7 @@ export function ClassroomTab() {
   const progress = useProgress(communityId, courseId);
   const claim = useClaimCertificate(communityId, courseId ?? '');
   const [page, setPage] = useState(1);
-  const [editMode, setEditMode] = useState(false);
+  const [editMode] = useState(false);
   const [cert, setCert] = useState<Certificate | null>(null);
   const [wizard, setWizard] = useState<ClassroomModule | 'new' | null>(null);
   const [buying, setBuying] = useState<ClassroomModule | null>(null);
@@ -290,12 +290,6 @@ export function ClassroomTab() {
         )}
         {complete && !selected.certificatesEffective && (
           <span className="text-[12.5px] text-stone-500">{t('classroom.certDisabled')}</span>
-        )}
-        {canEdit && (
-          <button type="button" onClick={() => setEditMode((e) => !e)} className={editMode ? primaryBtn : ghostBtn} aria-pressed={editMode}>
-            <MaterialIcon name={editMode ? 'close' : 'edit_note'} size={19} color={editMode ? '#fff' : undefined} />
-            {editMode ? t('classroom.exitEdit') : t('classroom.editClassroom')}
-          </button>
         )}
       </div>
 

@@ -57,7 +57,7 @@ export function CommunityInfoCard({ course, coverHeight = 150 }: { course: Commu
           <Link to={`/communities/${course.id}`} className="mt-1 block truncate text-[13px] text-stone-600 hover:text-brand">
             sofinhub.com/communities/{course.id}
           </Link>
-          <p className="mt-2.5 line-clamp-3 text-[13.5px] leading-[1.55] text-stone-800">{course.description}</p>
+          <p className="mt-2.5 line-clamp-3 whitespace-pre-line text-[13.5px] leading-[1.55] text-stone-800">{course.description}</p>
           <div className="mt-3.5 grid grid-cols-3 border-t border-[rgba(120,60,20,.08)] pt-3 text-center">
             {[
               { v: formatCompact(course.stats.members), l: t('info.members') },

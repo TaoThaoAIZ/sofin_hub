@@ -17,7 +17,7 @@ export const useMyCommunities = () => {
 
 export const usePendingItems = () => {
   const { status } = useAuth();
-  return useQuery({ queryKey: pendingKey, queryFn: ({ signal }) => api.fetchPending(signal), enabled: status === 'authenticated' });
+  return useQuery({ queryKey: pendingKey, queryFn: ({ signal }) => api.fetchPending(signal), enabled: status === 'authenticated', refetchOnMount: 'always' });
 };
 
 /** Đổi ngay trên giao diện, lỗi thì trả lại bản cũ rồi đồng bộ lại với BE. */
