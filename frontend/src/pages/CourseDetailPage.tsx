@@ -113,7 +113,9 @@ export function CourseDetailPage() {
   const scrollToReviews = () =>
     reviewsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-  const isPrivate = course.visibility === 'private';
+  const approved = !!course.viewerApproved && !course.viewerEnrolled;
+  // Đã được duyệt thì không còn là bước xin phép: đi tiếp luồng thanh toán như cộng đồng công khai.
+  const isPrivate = course.visibility === 'private' && !approved;
   const canJoinFlow = !course.viewerEnrolled;
   const hasPendingRequest = canJoinFlow && pendingRequest !== null;
   const isLocked = !!course.locked;
@@ -345,6 +347,8 @@ export function CourseDetailPage() {
                   ? t('detail.joined')
                   : hasPendingRequest
                     ? t('detail.requestPending')
+                    : approved
+                      ? t('detail.approvedPay')
                     : isPrivate
                       ? t('detail.requestJoin')
                       : t('detail.joinNow')}

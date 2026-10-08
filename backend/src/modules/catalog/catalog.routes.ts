@@ -39,7 +39,9 @@ catalogRouter.get('/:id', optionalAuth, async (req, res) => {
   const viewerEnrolled = req.userId ? await enrollmentService.isEnrolled(req.userId, id) : undefined;
   const detail = await catalogService.getDetailById(id, viewerEnrolled, await reviewsService.forDetail(id));
   const viewerRole = req.userId ? await getRole(req.userId, id) : null;
-  res.json({ data: { ...detail, viewerRole } });
+  // Cộng đồng riêng tư có phí: yêu cầu đã được duyệt nhưng chưa thanh toán → FE hiện "Thanh toán để tham gia" thay vì "Gửi yêu cầu".
+  const viewerApproved = req.userId && !viewerEnrolled ? (await prisma.joinRequest.count({ where: { userId: req.userId, communityId: id, status: 'approved' } })) > 0 : false;
+  res.json({ data: { ...detail, viewerRole, viewerApproved } });
 });
 
 catalogRouter.post('/:id/enroll', requireAuth, async (req, res) => {

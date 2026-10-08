@@ -146,3 +146,7 @@ Lưu ý: #7 nếu tester gọi thẳng API mà vẫn thiếu thì gửi lại re
 - Trang cộng đồng (cột phải): thêm nút "Rời cộng đồng" dưới "Đã tham gia" (ẩn với chủ cộng đồng); hộp xác nhận (có cảnh báo riêng cho cộng đồng có phí), toast, sau đó về trang chi tiết cộng đồng. ✅
 - Bảng tin hiện "Lỗi hệ thống" (ảnh tester, tài khoản Platform): local GET /communities/photo/posts (mọi sort/tag/trang) đều 200 → lỗi 500 ở môi trường tester; cần xem log server (nghi DB chưa chạy migration mới: `prisma migrate deploy`). ⏳
 - FEED-003: thêm nút **Video** riêng ở ô soạn bài (chọn mp4 ≤ 25 MB) — bài đăng phát bằng thẻ <video>. FEED-021/095/096: đã sửa ở đợt 7 (ảnh đủ khung, nút like cam đặc khi đã like); tester cần test lại trên bản mới (ghi chú cũ vẫn còn trong sheet). ✅
+
+## Đợt 16
+- Cộng đồng riêng tư CÓ PHÍ: yêu cầu được duyệt chỉ cấp quyền thanh toán/dùng thử (không vào thẳng). Sau reload trang vẫn hiện "Gửi yêu cầu tham gia" vì FE không biết đã được duyệt → API chi tiết thêm `viewerApproved`; FE hiện "Đã được duyệt – thanh toán để tham gia" và đi luồng thanh toán. (Cộng đồng riêng tư MIỄN PHÍ: duyệt xong vào thẳng như cũ.) ✅
+- Trang chủ: bỏ nút "Xem tất cả →" ở "Khóa học nổi bật". ✅

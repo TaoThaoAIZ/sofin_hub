@@ -110,6 +110,8 @@ export interface CourseDetail extends Course {
   facts: CourseFact[];
   stats: { members: number; online: number; admins: number };
   viewerEnrolled?: boolean;
+  /** Yêu cầu tham gia đã được duyệt nhưng chưa vào (cộng đồng riêng tư có phí: còn phải thanh toán/dùng thử). */
+  viewerApproved?: boolean;
   /** Câu hỏi gia nhập + nội quy (cộng đồng riêng tư): BE bắt buộc trả lời/đồng ý khi gửi yêu cầu. */
   joinQuestions?: string[];
   rules?: { title: string; body: string }[];

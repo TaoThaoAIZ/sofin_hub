@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { Footer } from '../components/layout/Footer';
 import { Header } from '../components/layout/Header';
 import { CategoryTabs } from '../features/courses/components/CategoryTabs';
@@ -57,9 +57,6 @@ export function HomePage() {
         className="mx-auto flex max-w-[1400px] scroll-mt-24 items-end justify-between gap-4 px-4 pt-8 md:px-10"
       >
         <h2 className="m-0 flex items-center gap-2.5 text-[26px] font-bold">{t('featured')}</h2>
-        <Link to="/search" className="text-[15px] font-medium whitespace-nowrap text-brand hover:text-brand-dark">
-          {t('viewAll')}
-        </Link>
       </div>
 
       <CategoryTabs

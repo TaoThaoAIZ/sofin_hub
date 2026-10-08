@@ -100,7 +100,8 @@
     "requestSent": "Đã gửi yêu cầu tham gia thành công. Quản trị viên sẽ xem xét và thông báo kết quả.",
     "leave": "Rời khỏi cộng đồng",
     "leaving": "Đang rời…",
-    "leftToast": "Bạn đã rời khỏi cộng đồng"
+    "leftToast": "Bạn đã rời khỏi cộng đồng",
+    "approvedPay": "Đã được duyệt – thanh toán để tham gia"
   },
   "lesson": {
     "loadingAttachment": "{{name}} (đang tải…)",

@@ -100,7 +100,8 @@
     "requestSent": "Join request sent. An admin will review it and let you know.",
     "leave": "Leave community",
     "leaving": "Leaving…",
-    "leftToast": "You have left the community"
+    "leftToast": "You have left the community",
+    "approvedPay": "Approved – pay to join"
   },
   "lesson": {
     "loadingAttachment": "{{name}} (loading…)",
