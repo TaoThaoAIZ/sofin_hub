@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Avatar } from '../../account/components/Avatar';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
@@ -172,7 +173,7 @@ function CommentRow({ courseId, postId, c, viewerId, canModerate }: { courseId: 
 
   return (
     <div className={`flex gap-2.5 text-[13.5px] ${c.hidden ? 'opacity-60' : ''}`}>
-      <span className="grid size-8 flex-none place-items-center rounded-full bg-stone-200 text-[11px] font-bold text-stone-700">{c.author.name.charAt(0).toUpperCase()}</span>
+      <Avatar url={c.author.avatarUrl} name={c.author.name} size={32} className="bg-stone-200 text-stone-700" />
       <div className="min-w-0 flex-1">
         {editing ? (
           <form
@@ -391,7 +392,7 @@ export function PostCard({
       } ${post.hidden ? 'opacity-70' : ''}`}
     >
       <div className="flex min-w-0 flex-1 gap-3">
-        <span className="grid size-[46px] flex-none place-items-center rounded-full bg-stone-200 text-sm font-bold text-stone-700">{post.author.name.charAt(0).toUpperCase()}</span>
+        <Avatar url={post.author.avatarUrl} name={post.author.name} size={46} className="bg-stone-200 text-stone-700" />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2 pr-16 text-[12.5px] text-stone-500">
             <Link to={`/users/${post.author.id}`} className="text-[14.5px] font-bold text-stone-900 hover:text-brand">

@@ -11,6 +11,7 @@ const ONLINE_WINDOW_MS = 5 * 60 * 1000;
 interface MemberView {
   id: string;
   name: string;
+  avatarUrl?: string;
   handle: string;
   role: 'admin' | 'member';
   /** Vai trò thật: member | mod | admin | owner (thêm mới, `role` cũ giữ nguyên cho FE). */
@@ -26,6 +27,7 @@ export function createCommunityService(repo = communityRepository) {
     return {
       id: m.userId,
       name,
+      avatarUrl: m.avatarUrl,
       handle: handleFor(name, m.userId),
       role: m.role === 'member' ? 'member' : 'admin', // FE chỉ phân biệt admin/member (mod/admin/owner đều là quản trị)
       roleDetail: m.role,
@@ -72,7 +74,7 @@ export function createCommunityService(repo = communityRepository) {
     async leaderboard(communityId: string, window: LeaderboardWindow) {
       const rows = await pointsService.leaderboard(communityId, window, 10);
       const names = await repo.namesOf(rows.map((r) => r.userId));
-      return rows.map((r) => ({ userId: r.userId, name: names.get(r.userId) ?? '', points: r.points, rank: r.rank }));
+      return rows.map((r) => ({ userId: r.userId, name: names.get(r.userId)?.name ?? '', avatarUrl: names.get(r.userId)?.avatarUrl, points: r.points, rank: r.rank }));
     },
 
     /** Hành trình thăng cấp: danh sách cấp + % thành viên ở mỗi cấp + vị trí/điểm của người đang xem. */

@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { Pager } from '../../../components/ui/Pager';
+import { JoinRequestsTab } from '../../communities/components/settings/JoinRequestsTab';
 import { useCommunityDetail } from '../../courses/queries';
 import { useReports, useResolveReport } from '../queries';
 import { reportReasonLabel, type Report, type ReportAction, type ReportStatus } from '../types';
-import { areaCls, ConfirmDialog, errText, ErrorNote, fmtDateTime, ghostBtn, isModPlus, toast, ToastHost } from './contentUi';
+import { areaCls, ConfirmDialog, errText, ErrorNote, fmtDateTime, ghostBtn, isAdminPlus, isModPlus, toast, ToastHost } from './contentUi';
 import { PageBanner } from './shared';
 
 const STATUS_TABS: ReadonlyArray<ReportStatus | 'all'> = ['open', 'resolved', 'dismissed', 'all'];
@@ -157,6 +158,7 @@ export function ModerationPage() {
   const { t } = useTranslation('community');
   const { id: courseId = '' } = useParams();
   const { data: course } = useCommunityDetail(courseId);
+  const [params, setParams] = useSearchParams();
   if (!course) return null;
   if (!isModPlus(course.viewerRole)) {
     return (
@@ -167,10 +169,28 @@ export function ModerationPage() {
       </div>
     );
   }
+  const canJoin = isAdminPlus(course.viewerRole);
+  const view = canJoin && params.get('tab') === 'requests' ? 'requests' : 'reports';
   return (
     <main className="flex min-w-0 flex-col gap-4">
       <PageBanner image="cal-hero-bg.webp" icon="shield" title={t('moderation.pageTitle')} subtitle={t('moderation.pageSubtitle')} />
-      <ReportQueue courseId={courseId} />
+      {canJoin && (
+        <div className="flex gap-2" role="tablist">
+          {(['reports', 'requests'] as const).map((key) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={view === key}
+              onClick={() => setParams(key === 'requests' ? { tab: 'requests' } : {}, { replace: true })}
+              className={`h-10 rounded-xl px-4 text-[13.5px] font-semibold ${view === key ? 'bg-brand text-white' : 'glass-chip text-stone-900'}`}
+            >
+              {t(`moderation.view.${key}`)}
+            </button>
+          ))}
+        </div>
+      )}
+      {view === 'requests' ? <JoinRequestsTab courseId={courseId} isPrivate={course.visibility === 'private'} /> : <ReportQueue courseId={courseId} />}
     </main>
   );
 }

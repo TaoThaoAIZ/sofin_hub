@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { usePopup } from '../../../components/ui/usePopup';
+import { Avatar } from '../../account/components/Avatar';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { formatCompact } from '../../../lib/format';
 import { useCommunities, useToggleEnrollment } from '../../courses/queries';
@@ -76,12 +77,8 @@ export function CommunityRightSidebar({ course }: { course: CommunityDetail }) {
           {shownMembers.length > 0 && (
             <div className="mt-3.5 flex items-center">
               {shownMembers.map((m, i) => (
-                <span
-                  key={m.id}
-                  className="grid size-[26px] flex-none place-items-center rounded-full border-2 border-white text-[9.5px] font-bold text-stone-700"
-                  style={{ background: AVATAR_PALETTE[i % AVATAR_PALETTE.length], marginLeft: i ? -6 : 0 }}
-                >
-                  {initials(m.name)}
+                <span key={m.id} className="flex-none rounded-full border-2 border-white" style={{ marginLeft: i ? -6 : 0 }}>
+                  <Avatar url={m.avatarUrl} name={m.name} size={22} text={initials(m.name)} className="text-stone-700" style={{ background: AVATAR_PALETTE[i % AVATAR_PALETTE.length], fontSize: 9.5 }} />
                 </span>
               ))}
               {remaining > 0 && <span className="ml-2 text-[12.5px] text-stone-600">+{formatCompact(remaining)}</span>}

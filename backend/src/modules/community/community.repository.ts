@@ -10,6 +10,7 @@ export interface MemberRow {
   userId: string;
   firstName: string;
   lastName: string;
+  avatarUrl?: string;
   role: MemberRole;
   enrolledAt: string;
   lastActiveAt: string;
@@ -60,7 +61,7 @@ export const communityRepository = {
         orderBy: [{ [field]: 'desc' }, { userId: 'asc' }],
         skip: q.skip,
         take: q.take,
-        include: { user: { select: { firstName: true, lastName: true } } },
+        include: { user: { select: { firstName: true, lastName: true, avatarUrl: true } } },
       }),
       prisma.enrollment.count({ where }),
     ]);
@@ -69,6 +70,7 @@ export const communityRepository = {
         userId: e.userId,
         firstName: e.user.firstName,
         lastName: e.user.lastName,
+        avatarUrl: e.user.avatarUrl ?? undefined,
         role: e.role,
         enrolledAt: e.enrolledAt.toISOString(),
         lastActiveAt: e.lastActiveAt.toISOString(),
@@ -82,10 +84,10 @@ export const communityRepository = {
     return (await this.listMembers(communityId, onlineSince, q)).rows;
   },
 
-  async namesOf(userIds: string[]): Promise<Map<string, string>> {
+  async namesOf(userIds: string[]): Promise<Map<string, { name: string; avatarUrl?: string }>> {
     if (userIds.length === 0) return new Map();
-    const rows = await prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, firstName: true, lastName: true } });
-    return new Map(rows.map((u) => [u.id, `${u.firstName} ${u.lastName}`]));
+    const rows = await prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, firstName: true, lastName: true, avatarUrl: true } });
+    return new Map(rows.map((u) => [u.id, { name: `${u.firstName} ${u.lastName}`, avatarUrl: u.avatarUrl ?? undefined }]));
   },
 
   /**

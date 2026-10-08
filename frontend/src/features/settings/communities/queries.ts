@@ -57,6 +57,7 @@ export const useLeaveCommunity = () => {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: myCommunitiesKey });
       void qc.invalidateQueries({ queryKey: ['account'] });
+      void qc.invalidateQueries({ queryKey: ['courses'] });
       void qc.invalidateQueries({ queryKey: ['notifications', 'settings'] });
     },
   });

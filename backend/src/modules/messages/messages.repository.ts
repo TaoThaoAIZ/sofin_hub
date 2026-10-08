@@ -43,7 +43,7 @@ export interface ConversationCursor {
 }
 export interface ConversationSummary {
   conversation: Conversation;
-  other: { id: string; name: string };
+  other: { id: string; name: string; avatarUrl?: string };
   lastMessage: MessageRecord | null;
   unreadCount: number;
   blockedByMe: boolean;
@@ -83,6 +83,7 @@ interface SummaryRow {
   otherId: string | null;
   firstName: string | null;
   lastName: string | null;
+  avatarUrl: string | null;
   otherDeletedAt: Date | null;
   lmId: string | null;
   lmSeq: number | null;
@@ -143,7 +144,7 @@ export const prismaMessageRepository: MessageRepository = {
       : Prisma.empty;
     const rows = await prisma.$queryRaw<SummaryRow[]>`
       SELECT c."id", c."userAId", c."userBId", c."createdAt", c."lastMessageAt", c."readSeqA", c."readSeqB", c."clearedSeqA", c."clearedSeqB",
-             o."id" AS "otherId", o."firstName", o."lastName", o."deletedAt" AS "otherDeletedAt",
+             o."id" AS "otherId", o."firstName", o."lastName", o."avatarUrl", o."deletedAt" AS "otherDeletedAt",
              lm."id" AS "lmId", lm."seq" AS "lmSeq", lm."senderId" AS "lmSenderId", lm."content" AS "lmContent",
              lm."attachments" AS "lmAttachments", lm."createdAt" AS "lmCreatedAt", lm."deletedAt" AS "lmDeletedAt",
              (SELECT COUNT(*)::int FROM "Message" m
@@ -161,7 +162,7 @@ export const prismaMessageRepository: MessageRepository = {
       LIMIT ${limit + 1}`;
     const items = rows.slice(0, limit).map((r): ConversationSummary => ({
       conversation: toConversation({ id: r.id, userAId: r.userAId, userBId: r.userBId, createdAt: r.createdAt, lastMessageAt: r.lastMessageAt, readSeqA: r.readSeqA, readSeqB: r.readSeqB, clearedSeqA: r.clearedSeqA, clearedSeqB: r.clearedSeqB }),
-      other: { id: r.otherId ?? (r.userAId === userId ? r.userBId : r.userAId), name: r.otherId && !r.otherDeletedAt ? `${r.firstName} ${r.lastName}` : DELETED_USER_NAME },
+      other: { id: r.otherId ?? (r.userAId === userId ? r.userBId : r.userAId), name: r.otherId && !r.otherDeletedAt ? `${r.firstName} ${r.lastName}` : DELETED_USER_NAME, avatarUrl: r.otherId && !r.otherDeletedAt ? (r.avatarUrl ?? undefined) : undefined },
       lastMessage: r.lmId
         ? {
             id: r.lmId,

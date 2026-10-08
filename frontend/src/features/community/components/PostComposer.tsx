@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { Avatar } from '../../account/components/Avatar';
 import { useTranslation } from 'react-i18next';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { useAuth } from '../../auth/AuthContext';
@@ -127,9 +128,7 @@ export function PostComposer({ courseId }: { courseId: string }) {
   return (
     <div className="glass flex flex-col gap-3 rounded-2xl p-4">
       <div className="flex items-start gap-3">
-        <span className="grid size-12 flex-none place-items-center rounded-full bg-brand/10 text-sm font-bold text-brand">
-          {(user?.firstName ?? '?').charAt(0).toUpperCase()}
-        </span>
+        <Avatar url={user?.avatarUrl} name={user?.firstName ?? '?'} size={48} className="bg-brand/10 text-brand" />
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}

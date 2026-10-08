@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Avatar } from '../features/account/components/Avatar';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
@@ -54,9 +55,7 @@ function MessagesInner() {
                     onClick={() => navigate(`/messages/${c.id}`)}
                     className={`flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-[#fff7f0] ${c.id === id ? 'bg-brand/10' : ''}`}
                   >
-                    <span className="grid size-11 flex-none place-items-center rounded-full bg-[#f5dcc8] text-[14px] font-bold">
-                      {c.other.name.charAt(0).toUpperCase()}
-                    </span>
+                    <Avatar url={c.other.avatarUrl} name={c.other.name} size={44} className="bg-[#f5dcc8]" />
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center gap-2">
                         <span className={`min-w-0 flex-1 truncate text-[14px] ${c.unreadCount > 0 ? 'font-bold' : 'font-semibold'}`}>{c.other.name}</span>

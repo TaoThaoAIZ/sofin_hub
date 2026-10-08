@@ -46,7 +46,7 @@ export function createCommunitiesService(repo: CommunitiesRepository = communiti
   async function notifyManagers(communityId: string, title: string, body: string) {
     // Chỉ owner/admin thật (loại minh họa) — lọc ngay trong SQL, không nạp toàn bộ thành viên (cộng đồng 50k người vẫn là 1 truy vấn nhỏ).
     const managers = await enrollmentService.memberIdsPage(communityId, { roles: ['owner', 'admin'], excludeDemo: true, limit: 1000 });
-    for (const userId of managers) notify({ userId, type: 'system', title, body, link: linkOf(communityId), communityId, category: 'joinRequest' });
+    for (const userId of managers) notify({ userId, type: 'system', title, body, link: `/communities/${communityId}/community/kiem-duyet?tab=requests`, communityId, category: 'joinRequest' });
   }
 
   /** Quy tắc thứ bậc kick/ban: actor (admin+) chỉ tác động được lên người có bậc THẤP HƠN; không bao giờ lên owner. */

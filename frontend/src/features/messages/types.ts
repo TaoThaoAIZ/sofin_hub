@@ -17,7 +17,7 @@ export interface MessageView {
 
 export interface ConversationView {
   id: string;
-  other: { id: string; name: string };
+  other: { id: string; name: string; avatarUrl?: string };
   lastMessage: MessageView | null;
   unreadCount: number;
   lastMessageAt: string;

@@ -53,6 +53,7 @@ export interface Comment {
 export interface PostAuthorView {
   id: string;
   name: string;
+  avatarUrl?: string;
 }
 
 export interface PollView extends PollDef {

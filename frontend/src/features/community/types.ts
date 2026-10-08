@@ -20,6 +20,7 @@ export const categoryLabel = (c: PostCategory) => i18n.t(`categories.${CATEGORY_
 export interface PostAuthor {
   id: string;
   name: string;
+  avatarUrl?: string;
 }
 
 export interface Post {
@@ -119,6 +120,7 @@ export type MemberFilter = 'all' | 'online' | 'admin';
 export interface CommunityMember {
   id: string;
   name: string;
+  avatarUrl?: string;
   handle: string;
   role: 'admin' | 'member';
   /** Vai trò thật (member | mod | admin | owner); `role` ở trên chỉ phân biệt admin/member. */
@@ -158,6 +160,7 @@ export interface LevelsResponse {
 export interface LeaderboardRow {
   userId: string;
   name: string;
+  avatarUrl?: string;
   points: number;
   rank: number;
 }

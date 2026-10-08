@@ -189,6 +189,10 @@
     "joinedFmt": "{{day}} {{month}}, {{year}}"
   },
   "moderation": {
+    "view": {
+      "reports": "Reports",
+      "requests": "Join requests"
+    },
     "status": {
       "open": "Pending",
       "resolved": "Resolved",
@@ -270,7 +274,7 @@
     "filterBtn": "Filter events",
     "icsToast": "Community calendar downloaded (.ics)",
     "icsTitle": "Download an .ics file with all community events to import into Google/Apple/Outlook Calendar",
-    "subscribeAll": "Subscribe to community calendar",
+    "subscribeAll": "Download community calendar",
     "close": "Close",
     "create": "Create event",
     "created": "Event created",

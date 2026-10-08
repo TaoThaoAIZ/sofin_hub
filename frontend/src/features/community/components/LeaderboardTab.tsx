@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { Avatar } from '../../account/components/Avatar';
 import { useParams } from 'react-router-dom';
 import i18n from '../../../i18n';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
@@ -78,12 +79,7 @@ function Board({ cfg, courseId, meId }: { cfg: (typeof BOARDS)[number]; courseId
           ) : (
             <span className="w-[26px] flex-none text-center text-[13px] text-stone-600">{r.rank}</span>
           )}
-          <span
-            className="grid size-[34px] flex-none place-items-center rounded-full text-[11.5px] font-bold text-stone-700"
-            style={{ background: AVATAR_PALETTE[(i + BOARDS.indexOf(cfg) * 3) % AVATAR_PALETTE.length] }}
-          >
-            {initials(r.name)}
-          </span>
+          <Avatar url={r.avatarUrl} name={r.name} size={34} text={initials(r.name)} className="text-stone-700" style={{ background: AVATAR_PALETTE[(i + BOARDS.indexOf(cfg) * 3) % AVATAR_PALETTE.length] }} />
           <span className="flex min-w-0 flex-1 items-center gap-1.5 truncate text-sm font-medium">
             <span className="truncate">{r.name}</span>
             {r.userId === meId && <span className="text-xs text-brand">{t('leaderboard.you')}</span>}
@@ -117,9 +113,7 @@ export function LeaderboardTab() {
         <div className="relative z-10 flex flex-[1_1_300px] flex-col items-center justify-center gap-2 py-2.5">
           <div className="relative size-[200px]">
             <div className="size-full rounded-full bg-gradient-to-b from-[#ffd29e] to-brand p-1.5 shadow-[0_14px_34px_rgba(242,106,27,.3)]">
-              <div className="grid size-full place-items-center overflow-hidden rounded-full border-4 border-white bg-[#f3ddd0] text-[64px] font-extrabold text-brand">
-                {initials(myName || '?')}
-              </div>
+              <Avatar url={user?.avatarUrl} name={myName || '?'} size={188} text={initials(myName || '?')} className="border-4 border-white bg-[#f3ddd0] text-brand" style={{ fontSize: 64, fontWeight: 800 }} />
             </div>
             {me?.rank === 1 && (
               <MaterialIcon name="crown" size={44} filled color="#f59e0b" className="pointer-events-none absolute -top-[30px] left-1/2 -translate-x-1/2" />

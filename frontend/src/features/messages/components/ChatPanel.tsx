@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Avatar } from '../../account/components/Avatar';
 import { useTranslation } from 'react-i18next';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { ApiError } from '../../../lib/api';
@@ -151,9 +152,7 @@ export function ChatPanel({ conversationId, conversation, onBack }: { conversati
         <button type="button" onClick={onBack} aria-label={t('chat.back')} className="md:hidden">
           <MaterialIcon name="arrow_back" size={22} />
         </button>
-        <span className="grid size-9 flex-none place-items-center rounded-full bg-[#f5dcc8] text-[13px] font-bold">
-          {(conversation?.other.name ?? '?').charAt(0).toUpperCase()}
-        </span>
+        <Avatar url={conversation?.other.avatarUrl} name={conversation?.other.name ?? '?'} size={36} className="bg-[#f5dcc8]" />
         <div className="min-w-0 flex-1 truncate text-[15px] font-bold">{conversation?.other.name ?? t('chat.conversation')}</div>
         {conversation && (
           <button

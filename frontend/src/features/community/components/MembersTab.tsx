@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Avatar } from '../../account/components/Avatar';
 import { useTranslation } from 'react-i18next';
 import { useParams, useSearchParams } from 'react-router-dom';
 import i18n, { currentLocale } from '../../../i18n';
@@ -178,12 +179,7 @@ export function MembersTab() {
               {members.data?.data.map((m, i) => (
                 <div key={m.id} className={`${GRID} items-center border-b border-[rgba(120,60,20,.06)] px-3 py-2.5 hover:bg-[#fff7f0]/80`}>
                   <div className="flex min-w-0 items-center gap-3">
-                    <span
-                      className="grid size-10 flex-none place-items-center rounded-full text-[13px] font-bold text-stone-700"
-                      style={{ background: AVATAR_PALETTE[i % AVATAR_PALETTE.length] }}
-                    >
-                      {initials(m.name)}
-                    </span>
+                    <Avatar url={m.avatarUrl} name={m.name} size={40} text={initials(m.name)} className="text-stone-700" style={{ background: AVATAR_PALETTE[i % AVATAR_PALETTE.length] }} />
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5 text-sm font-semibold">
                         <span className="truncate">{m.name}</span>

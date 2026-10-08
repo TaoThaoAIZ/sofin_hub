@@ -189,6 +189,10 @@
     "joinedFmt": "{{day}} Thg {{month}}, {{year}}"
   },
   "moderation": {
+    "view": {
+      "reports": "Báo cáo",
+      "requests": "Yêu cầu tham gia"
+    },
     "status": {
       "open": "Đang chờ",
       "resolved": "Đã xử lý",
@@ -270,7 +274,7 @@
     "filterBtn": "Lọc sự kiện",
     "icsToast": "Đã tải lịch cộng đồng (.ics)",
     "icsTitle": "Tải file .ics chứa mọi sự kiện của cộng đồng để nhập vào Google/Apple/Outlook Calendar",
-    "subscribeAll": "Đăng ký lịch cả cộng đồng",
+    "subscribeAll": "Tải lịch cả cộng đồng",
     "close": "Đóng",
     "create": "Tạo sự kiện",
     "created": "Đã tạo sự kiện",
