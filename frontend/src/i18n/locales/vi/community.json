@@ -43,7 +43,14 @@
     "premium2": "Tài liệu chuyên sâu",
     "premium3": "Hỗ trợ 1:1 từ chuyên gia",
     "comingSoonTitle": "Sắp ra mắt — Giai đoạn 8 trong PLAN.md (chưa chốt cổng thanh toán gói Premium)",
-    "upgrade": "Nâng cấp (sắp ra mắt)"
+    "upgrade": "Nâng cấp (sắp ra mắt)",
+    "leave": "Rời cộng đồng",
+    "leaving": "Đang rời…",
+    "left": "Bạn đã rời khỏi cộng đồng",
+    "leaveTitle": "Rời cộng đồng này?",
+    "leaveMsg": "Bạn sẽ mất quyền truy cập nội dung cộng đồng. Có thể tham gia lại sau.",
+    "leavePaidTitle": "Rời cộng đồng có phí này?",
+    "leavePaidMsg": "Bạn sẽ mất quyền truy cập ngay, gói thành viên bị hủy vào cuối kỳ hiện tại (không tính phí kỳ sau) và khoản đã trả cho kỳ này không được hoàn lại."
   },
   "certificate": {
     "title": "Chứng nhận hoàn thành",
@@ -604,7 +611,9 @@
     "posting": "Đang đăng…",
     "uploading": "Đang tải lên…",
     "submit": "Đăng bài",
-    "tooLong": "Nội dung quá dài"
+    "tooLong": "Nội dung quá dài",
+    "video": "Video",
+    "videoHint": "Tải video mp4 từ máy (tối đa 25 MB)"
   },
   "page": {
     "loading": "Đang tải cộng đồng…"

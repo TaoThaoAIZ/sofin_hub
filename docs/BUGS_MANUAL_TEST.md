@@ -141,3 +141,8 @@ Lưu ý: #7 nếu tester gọi thẳng API mà vẫn thiếu thì gửi lại re
 | SETR-059 | Admin › Hệ thống › Cài đặt chung thiếu nhóm referral | Thêm thẻ "Chương trình giới thiệu" (4 ô: tỉ lệ creator/member bps, cửa sổ ghi nhận ngày, ngày chi trả) có kiểm khoảng giá trị + nút khôi phục mặc định ✅ |
 | SETR-031 | Mô tả tab thành viên nói có "công tắc chương trình giới thiệu theo cộng đồng" nhưng không có | Sửa câu chữ: "Áp dụng cho mọi thanh toán của người được bạn giới thiệu" ✅ |
 | SETR-029, 030, 032 | Tính năng CHƯA làm, chờ quyết định (OPEN_DECISIONS A16/A17): hoa hồng creator từ phí hosting (chưa có luồng trừ tiền hosting), job chi trả pending→paid + ngưỡng tối thiểu, quy tắc chống gian lận nhiều tài khoản | ⏳ cần PO chốt |
+
+## Đợt 15 — Trang cộng đồng + FEED
+- Trang cộng đồng (cột phải): thêm nút "Rời cộng đồng" dưới "Đã tham gia" (ẩn với chủ cộng đồng); hộp xác nhận (có cảnh báo riêng cho cộng đồng có phí), toast, sau đó về trang chi tiết cộng đồng. ✅
+- Bảng tin hiện "Lỗi hệ thống" (ảnh tester, tài khoản Platform): local GET /communities/photo/posts (mọi sort/tag/trang) đều 200 → lỗi 500 ở môi trường tester; cần xem log server (nghi DB chưa chạy migration mới: `prisma migrate deploy`). ⏳
+- FEED-003: thêm nút **Video** riêng ở ô soạn bài (chọn mp4 ≤ 25 MB) — bài đăng phát bằng thẻ <video>. FEED-021/095/096: đã sửa ở đợt 7 (ảnh đủ khung, nút like cam đặc khi đã like); tester cần test lại trên bản mới (ghi chú cũ vẫn còn trong sheet). ✅

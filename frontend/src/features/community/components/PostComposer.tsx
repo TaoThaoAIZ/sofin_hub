@@ -19,6 +19,7 @@ export function PostComposer({ courseId }: { courseId: string }) {
   const tagsQuery = useTags(courseId);
   const { upload, uploading, error: uploadError } = useUpload();
   const imageInput = useRef<HTMLInputElement>(null);
+  const videoInput = useRef<HTMLInputElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const [content, setContent] = useState('');
@@ -248,9 +249,13 @@ export function PostComposer({ courseId }: { courseId: string }) {
 
       <div className="flex flex-wrap items-center gap-1">
         <input ref={imageInput} type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden onChange={(e) => { void pickImage(e.target.files?.[0]); e.target.value = ''; }} />
+        <input ref={videoInput} type="file" accept="video/mp4" hidden onChange={(e) => { void pickFile(e.target.files?.[0]); e.target.value = ''; }} />
         <input ref={fileInput} type="file" hidden onChange={(e) => { void pickFile(e.target.files?.[0]); e.target.value = ''; }} />
         <button type="button" onClick={() => imageInput.current?.click()} disabled={uploading} className={toolBtn(!!image)}>
           <MaterialIcon name="image" size={19} color="currentColor" /> {t('composer.image')}
+        </button>
+        <button type="button" onClick={() => videoInput.current?.click()} disabled={uploading} title={t('composer.videoHint')} className={toolBtn(files.some((f) => /\.mp4$/i.test(f.name)))}>
+          <MaterialIcon name="smart_display" size={19} color="currentColor" /> {t('composer.video')}
         </button>
         <button type="button" onClick={() => fileInput.current?.click()} disabled={uploading} className={toolBtn(files.length > 0)}>
           <MaterialIcon name="attach_file" size={19} color="currentColor" /> {t('composer.attachFile')}

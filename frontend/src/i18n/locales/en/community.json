@@ -43,7 +43,14 @@
     "premium2": "In-depth resources",
     "premium3": "1:1 support from experts",
     "comingSoonTitle": "Coming soon — Phase 8 in PLAN.md (Premium payment gateway not finalized)",
-    "upgrade": "Upgrade (coming soon)"
+    "upgrade": "Upgrade (coming soon)",
+    "leave": "Leave community",
+    "leaving": "Leaving…",
+    "left": "You have left the community",
+    "leaveTitle": "Leave this community?",
+    "leaveMsg": "You will lose access to the community content. You can join again later.",
+    "leavePaidTitle": "Leave this paid community?",
+    "leavePaidMsg": "You lose access immediately, your membership is cancelled at the end of the current period (no further charge) and the amount already paid is not refunded."
   },
   "certificate": {
     "title": "Certificate of completion",
@@ -604,7 +611,9 @@
     "posting": "Posting…",
     "uploading": "Uploading…",
     "submit": "Post",
-    "tooLong": "Content is too long"
+    "tooLong": "Content is too long",
+    "video": "Video",
+    "videoHint": "Upload an mp4 video from your device (max 25 MB)"
   },
   "page": {
     "loading": "Loading community…"

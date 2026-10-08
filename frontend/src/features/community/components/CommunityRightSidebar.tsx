@@ -1,8 +1,10 @@
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { usePopup } from '../../../components/ui/usePopup';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { formatCompact } from '../../../lib/format';
-import { useCommunities } from '../../courses/queries';
+import { useCommunities, useToggleEnrollment } from '../../courses/queries';
+import { errText, toast, ToastHost } from './contentUi';
 import type { CommunityDetail } from '../../courses/types';
 import { useMembers } from '../queries';
 
@@ -17,7 +19,28 @@ function initials(name: string) {
 
 export function CommunityRightSidebar({ course }: { course: CommunityDetail }) {
   const { t } = useTranslation('community');
+  const navigate = useNavigate();
+  const { confirm } = usePopup();
+  const leave = useToggleEnrollment(course.id);
   const members = useMembers(course.id, {});
+  const canLeave = course.viewerRole !== 'owner';
+  const onLeave = async () => {
+    const paid = course.priceUsd > 0;
+    const ok = await confirm({
+      title: paid ? t('rightSidebar.leavePaidTitle') : t('rightSidebar.leaveTitle'),
+      message: paid ? t('rightSidebar.leavePaidMsg') : t('rightSidebar.leaveMsg'),
+      tone: 'danger',
+      confirmText: t('rightSidebar.leave'),
+    });
+    if (!ok) return;
+    leave.mutate(undefined, {
+      onSuccess: () => {
+        toast(t('rightSidebar.left'));
+        navigate(`/communities/${course.id}`);
+      },
+      onError: (e) => toast(errText(e), 'error'),
+    });
+  };
   const suggested = useCommunities({ page: 1, limit: 4, sort: 'trending' });
   const shownMembers = members.data?.data.slice(0, 6) ?? [];
   const remaining = Math.max(0, course.stats.members - shownMembers.length);
@@ -75,6 +98,18 @@ export function CommunityRightSidebar({ course }: { course: CommunityDetail }) {
               {t('rightSidebar.joined')}
             </button>
           </div>
+          {canLeave && (
+            <button
+              type="button"
+              onClick={() => void onLeave()}
+              disabled={leave.isPending}
+              className="mt-2 flex h-[42px] w-full items-center justify-center gap-2 rounded-2xl border-[1.5px] border-red-200 bg-white text-[13.5px] font-bold text-red-600 hover:bg-red-50 disabled:opacity-50"
+            >
+              <MaterialIcon name="logout" size={19} color="#dc2626" />
+              {leave.isPending ? t('rightSidebar.leaving') : t('rightSidebar.leave')}
+            </button>
+          )}
+          <ToastHost />
         </div>
       </div>
 
