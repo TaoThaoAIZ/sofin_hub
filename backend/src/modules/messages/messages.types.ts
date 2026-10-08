@@ -13,6 +13,8 @@ export interface Conversation {
   lastMessageAt: string;
   /** Số thứ tự tin đã đọc gần nhất của từng người. */
   readSeq: Record<string, number>;
+  /** Mốc seq mà từng người đã "xóa cuộc trò chuyện" (tin <= mốc bị ẩn với người đó). */
+  clearedSeq: Record<string, number>;
 }
 
 export interface MessageRecord {

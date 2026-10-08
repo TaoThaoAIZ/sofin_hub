@@ -29,6 +29,8 @@ export const sendMessage = (conversationId: string, content: string, attachments
 export const markConversationRead = (conversationId: string) =>
   apiPost<{ data: { unreadCount: number } }>(`/conversations/${conversationId}/read`).then((r) => r.data);
 
+export const deleteConversation = (conversationId: string) => apiDelete<{ data: { deleted: boolean } }>(`/conversations/${conversationId}`).then((r) => r.data);
+
 export const recallMessage = (messageId: string) => apiDelete<{ data: MessageView }>(`/messages/${messageId}`).then((r) => r.data);
 
 export const fetchUnreadMessages = (signal?: AbortSignal) =>

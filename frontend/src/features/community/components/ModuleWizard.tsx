@@ -82,6 +82,9 @@ export function ModuleWizard({ communityId, courseId, module: initial, onClose }
     if (access.data) setPicked(Object.fromEntries(access.data.map((m) => [m.id, m.name])));
   }, [access.data]);
   const savingInfo = create.isPending || update.isPending || setAccess.isPending;
+  // Trường bắt buộc: tên + mô tả; chế độ trả phí cần giá > 0. Chưa đủ thì khóa nút "Tiếp tục".
+  const infoValid = !!title.trim() && !!description.trim() && (mode !== 'paid' || Number(price) > 0);
+  const hasModule = isEdit || !!moduleId; // đã có module (đang sửa, hoặc quay lại bước 1 sau khi tạo)
 
   // ---- Bước 3: xuất bản
   const [notifyMembers, setNotifyMembers] = useState(true);
@@ -108,6 +111,7 @@ export function ModuleWizard({ communityId, courseId, module: initial, onClose }
     setInfoErr(null);
     const name = title.trim();
     if (!name) return setInfoErr(t('modWizard.info.errName'));
+    if (!description.trim()) return setInfoErr(t('modWizard.info.errDesc'));
     const priceNum = Number(price);
     if (mode === 'paid' && !(priceNum > 0)) return setInfoErr(t('modWizard.info.errPrice'));
     const common = {
@@ -171,7 +175,12 @@ export function ModuleWizard({ communityId, courseId, module: initial, onClose }
   const steps: ShellStep[] | undefined =
     step === 'done'
       ? undefined
-      : (['info', 'content', 'publish'] as const).map((k, i) => ({ label: t(`modWizard.steps.${k}`), state: i < stepIndex ? 'done' : i === stepIndex ? 'active' : 'todo' }));
+      : (['info', 'content', 'publish'] as const).map((k, i) => ({
+          label: t(`modWizard.steps.${k}`),
+          state: i < stepIndex ? 'done' : i === stepIndex ? 'active' : 'todo',
+          // Quay lại bước đã qua bằng cách bấm vào thanh bước.
+          ...(i < stepIndex && moduleId ? { onSelect: () => { setEditing(null); setStep(i === 0 ? 'info' : 'outline'); } } : {}),
+        }));
 
   const heading: [string, string | undefined] =
     step === 'info'
@@ -260,12 +269,12 @@ export function ModuleWizard({ communityId, courseId, module: initial, onClose }
                 <CoverField value={thumb} onChange={setThumb} onError={setUploadError} height={118} label={t('modWizard.info.cover')} ariaLabel={t('editor.module.thumbAria')} />
                 <div className="flex flex-col gap-2.5">
                   <div>
-                    <FieldLabel>{t('modWizard.info.name')}</FieldLabel>
-                    <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} placeholder={t('modWizard.info.namePh')} aria-label={t('modWizard.info.name')} className={inputCls} />
+                    <FieldLabel required>{t('modWizard.info.name')}</FieldLabel>
+                    <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} placeholder={t('modWizard.info.namePh')} aria-label={t('modWizard.info.name')} aria-required="true" className={inputCls} />
                   </div>
                   <div>
-                    <FieldLabel>{t('modWizard.info.desc')}</FieldLabel>
-                    <textarea value={description} onChange={(e) => setDescription(e.target.value)} maxLength={1000} rows={3} placeholder={t('modWizard.info.descPh')} aria-label={t('modWizard.info.desc')} className={`${areaCls} resize-none`} />
+                    <FieldLabel required>{t('modWizard.info.desc')}</FieldLabel>
+                    <textarea value={description} onChange={(e) => setDescription(e.target.value)} maxLength={1000} rows={3} placeholder={t('modWizard.info.descPh')} aria-label={t('modWizard.info.desc')} aria-required="true" className={`${areaCls} resize-none`} />
                   </div>
                 </div>
               </div>
@@ -282,6 +291,7 @@ export function ModuleWizard({ communityId, courseId, module: initial, onClose }
                 </span>
                 <Toggle on={sequential} />
               </button>
+              <p className="m-0 text-[12px] text-stone-500"><span className="text-red-600">*</span> {t('modWizard.requiredHint')}</p>
               <ErrorNote message={infoErr ?? uploadError} />
             </ShellBody>
             <ShellFooter>
@@ -297,8 +307,8 @@ export function ModuleWizard({ communityId, courseId, module: initial, onClose }
               <button type="button" onClick={onClose} className={shellGhostBtn}>
                 {t('modWizard.info.cancel')}
               </button>
-              <button type="button" onClick={submitInfo} disabled={savingInfo} className={shellPrimaryBtn}>
-                {savingInfo ? t('modWizard.info.saving') : isEdit ? t('modWizard.info.submitEdit') : t('modWizard.info.submitCreate')}
+              <button type="button" onClick={submitInfo} disabled={savingInfo || !infoValid} className={shellPrimaryBtn}>
+                {savingInfo ? t('modWizard.info.saving') : hasModule ? t('modWizard.info.submitEdit') : t('modWizard.info.submitCreate')}
               </button>
             </ShellFooter>
           </>
@@ -455,6 +465,9 @@ export function ModuleWizard({ communityId, courseId, module: initial, onClose }
               </div>
             </div>
             <div className="px-[22px] pt-3.5 pb-5">
+              <button type="button" onClick={() => setStep('outline')} className={`${shellGhostBtn} mb-2.5 h-[46px] w-full`}>
+                {t('modWizard.done.backToEdit')}
+              </button>
               <button type="button" onClick={onClose} className={`${shellPrimaryBtn} h-[46px] w-full`}>
                 {t('modWizard.done.finish')}
               </button>

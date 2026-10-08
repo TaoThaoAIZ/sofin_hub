@@ -1136,6 +1136,9 @@ model Conversation {
   /// Message.seq đã đọc gần nhất của từng phía.
   readSeqA      Int      @default(0)
   readSeqB      Int      @default(0)
+  /// "Xóa cuộc trò chuyện" chỉ phía mình: tin có seq <= giá trị này bị ẩn với từng phía (tin mới hơn vẫn hiện).
+  clearedSeqA   Int      @default(0)
+  clearedSeqB   Int      @default(0)
 
   userA User @relation("ConversationUserA", fields: [userAId], references: [id], onDelete: Cascade)
   userB User @relation("ConversationUserB", fields: [userBId], references: [id], onDelete: Cascade)

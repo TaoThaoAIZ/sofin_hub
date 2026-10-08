@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { useClickOutside } from '../../../lib/useClickOutside';
+import { fileKeyOf, useFileUrl } from '../../../lib/files';
 import { useAuth } from '../../auth/AuthContext';
 import * as api from '../api';
 import {
@@ -239,6 +240,42 @@ function CommentRow({ courseId, postId, c, viewerId, canModerate }: { courseId: 
   );
 }
 
+// Tệp đính kèm bài viết được chèn vào cuối nội dung dạng "Tệp đính kèm: <tên> — <url>" (xem PostComposer). Tách ra để hiển thị video/tệp đúng dạng.
+const ATTACH_RE = /^(?:Tệp đính kèm|Attachment): (.+?) — (\S+)$/;
+const isVideoName = (n: string, url: string) => /\.mp4$/i.test(n) || /\.mp4(?:[?#]|$)/i.test(url);
+
+function splitContent(content: string) {
+  const text: string[] = [];
+  const files: { name: string; url: string }[] = [];
+  for (const line of content.split('\n')) {
+    const m = ATTACH_RE.exec(line.trim());
+    if (m) files.push({ name: m[1]!, url: m[2]! });
+    else text.push(line);
+  }
+  return { text: text.join('\n').trim(), files };
+}
+
+function PostFile({ name, url }: { name: string; url: string }) {
+  const signed = useFileUrl(url);
+  const href = fileKeyOf(url) ? signed : safeUrl(url);
+  const video = isVideoName(name, url);
+  if (href === undefined) return <div className="rounded-xl bg-stone-50 px-3 py-2 text-sm text-stone-400">{name}…</div>;
+  if (!href) return <div className="rounded-xl bg-stone-50 px-3 py-2 text-sm text-stone-400">{name}</div>;
+  if (video) {
+    return (
+      <div className="overflow-hidden rounded-2xl bg-black">
+        <video src={href} controls playsInline preload="metadata" aria-label={name} className="max-h-[480px] w-full" />
+      </div>
+    );
+  }
+  return (
+    <a href={href} target="_blank" rel="noreferrer noopener" download className="flex items-center gap-2.5 rounded-xl border border-[rgba(120,60,20,.1)] bg-white px-3 py-2 text-[13.5px] hover:border-brand">
+      <MaterialIcon name="attach_file" size={18} color="#f26a1b" />
+      <span className="min-w-0 flex-1 truncate font-medium">{name}</span>
+    </a>
+  );
+}
+
 function CommentsSection({ courseId, post, viewerId, canModerate }: { courseId: string; post: Post; viewerId?: string; canModerate: boolean }) {
   const { t } = useTranslation('community');
   const comments = useComments(post.id, true);
@@ -246,12 +283,6 @@ function CommentsSection({ courseId, post, viewerId, canModerate }: { courseId: 
   const [draft, setDraft] = useState('');
   return (
     <div className="mt-3 flex flex-col gap-3 border-t border-[rgba(120,60,20,.08)] pt-3">
-      {comments.isPending && <p className="text-xs text-stone-400">{t('post.comment.loading')}</p>}
-      {comments.isError && <ErrorNote message={errText(comments.error, t('post.comment.loadFailed'))} />}
-      {comments.data?.length === 0 && <p className="m-0 text-xs text-stone-400">{t('post.comment.empty')}</p>}
-      {comments.data?.map((c) => (
-        <CommentRow key={c.id} courseId={courseId} postId={post.id} c={c} viewerId={viewerId} canModerate={canModerate} />
-      ))}
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -266,6 +297,12 @@ function CommentsSection({ courseId, post, viewerId, canModerate }: { courseId: 
         </button>
       </form>
       <ErrorNote message={create.isError ? errText(create.error) : null} />
+      {comments.isPending && <p className="text-xs text-stone-400">{t('post.comment.loading')}</p>}
+      {comments.isError && <ErrorNote message={errText(comments.error, t('post.comment.loadFailed'))} />}
+      {comments.data?.length === 0 && <p className="m-0 text-xs text-stone-400">{t('post.comment.empty')}</p>}
+      {[...(comments.data ?? [])].reverse().map((c) => (
+        <CommentRow key={c.id} courseId={courseId} postId={post.id} c={c} viewerId={viewerId} canModerate={canModerate} />
+      ))}
     </div>
   );
 }
@@ -308,6 +345,7 @@ export function PostCard({
   const mod = isModPlus(viewerRole);
   const catMeta = CATEGORY_META[post.category];
   const img = safeUrl(post.imageUrl);
+  const parts = splitContent(post.content);
 
   const share = async () => {
     try {
@@ -400,10 +438,19 @@ export function PostCard({
               </div>
             </div>
           ) : (
-            <p className="mt-2 text-[14.5px] leading-[1.6] break-words whitespace-pre-wrap text-stone-800">{post.content}</p>
+            <>
+              {parts.text && <p className="mt-2 text-[14.5px] leading-[1.6] break-words whitespace-pre-wrap text-stone-800">{parts.text}</p>}
+              {parts.files.length > 0 && (
+                <div className="mt-3 flex flex-col gap-2">
+                  {parts.files.map((f, i) => (
+                    <PostFile key={f.url + i} name={f.name} url={f.url} />
+                  ))}
+                </div>
+              )}
+            </>
           )}
 
-          {img && !editing && <img src={img} alt={t('post.imageAlt')} loading="lazy" className="mt-3 max-h-[420px] w-full rounded-2xl border border-[rgba(120,60,20,.08)] object-cover" />}
+          {img && !editing && <img src={img} alt={t('post.imageAlt')} loading="lazy" className="mt-3 max-h-[560px] w-full rounded-2xl border border-[rgba(120,60,20,.08)] bg-stone-50 object-contain" />}
           {post.poll && !editing && <PollBlock courseId={courseId} post={post} />}
 
           {post.tags.length > 0 && (
@@ -421,9 +468,10 @@ export function PostCard({
               type="button"
               onClick={() => like.mutate(post.id)}
               disabled={like.isPending}
-              className={`flex h-9 items-center gap-2 rounded-xl px-3.5 text-[13px] font-bold ${post.viewerLiked ? 'bg-brand/20 text-brand' : 'bg-brand/10 text-brand'}`}
+              aria-pressed={!!post.viewerLiked}
+              className={`flex h-9 items-center gap-2 rounded-xl px-3.5 text-[13px] font-bold transition-colors ${post.viewerLiked ? 'bg-brand text-white shadow-[0_4px_12px_rgba(242,106,27,.35)]' : 'bg-stone-100 text-stone-700 hover:bg-brand/10'}`}
             >
-              <MaterialIcon name="thumb_up" size={16} filled={post.viewerLiked} color="#f26a1b" />
+              <MaterialIcon name="thumb_up" size={16} filled={post.viewerLiked} color={post.viewerLiked ? '#ffffff' : '#57534e'} />
               {post.likesCount}
             </button>
             <button type="button" onClick={() => setShowComments((s) => !s)} className="glass-chip flex h-9 items-center gap-2 rounded-xl px-3.5 text-[13px] font-semibold">

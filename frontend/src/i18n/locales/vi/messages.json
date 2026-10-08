@@ -32,7 +32,11 @@
     "attach": "Đính kèm tệp",
     "attachTitle": "Đính kèm ảnh / tệp",
     "placeholder": "Nhập tin nhắn…",
-    "send": "Gửi"
+    "send": "Gửi",
+    "deleteConversation": "Xóa cuộc trò chuyện",
+    "deleteConvTitle": "Xóa cuộc trò chuyện này?",
+    "deleteConvMessage": "Toàn bộ tin nhắn hiện có sẽ bị xóa khỏi hộp thư của bạn. Người kia vẫn giữ nội dung của họ.",
+    "deleteConvConfirm": "Xóa cuộc trò chuyện"
   },
   "button": {
     "label": "Tin nhắn",

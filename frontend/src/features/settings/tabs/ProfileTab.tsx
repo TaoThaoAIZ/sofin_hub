@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
-import { ApiError } from '../../../lib/api';
+import { ApiError, resolveApiPath } from '../../../lib/api';
 import { useUpdateProfile, usePublicProfile } from '../../account/queries';
 import { useAuth } from '../../auth/AuthContext';
 import { useUpload } from '../../uploads/useUpload';
@@ -133,7 +133,7 @@ export function ProfileTab() {
               <div
                 className={`grid size-28 place-items-center overflow-hidden rounded-full bg-[#2f4fa8] text-[34px] font-extrabold text-white ${dragOver ? 'ring-4 ring-[#fdba74]' : ''}`}
               >
-                {form.avatarUrl ? <img src={form.avatarUrl} alt={t('profileTab.avatarAlt')} className="size-full object-cover" /> : initialsOf(form.first, form.last)}
+                {form.avatarUrl ? <img src={resolveApiPath(form.avatarUrl)} alt={t('profileTab.avatarAlt')} className="size-full object-cover" /> : initialsOf(form.first, form.last)}
               </div>
               <button
                 type="button"

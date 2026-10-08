@@ -163,8 +163,13 @@ export function Dialog({
 }
 
 /** Nhãn đậm phía trên một ô nhập trong dialog. */
-export function FieldLabel({ children }: { children: ReactNode }) {
-  return <div className="mb-1.5 text-[13px] font-bold text-stone-900">{children}</div>;
+export function FieldLabel({ children, required = false }: { children: ReactNode; required?: boolean }) {
+  return (
+    <div className="mb-1.5 text-[13px] font-bold text-stone-900">
+      {children}
+      {required && <span className="ml-0.5 text-red-600" aria-hidden="true">*</span>}
+    </div>
+  );
 }
 
 export function ConfirmDialog({

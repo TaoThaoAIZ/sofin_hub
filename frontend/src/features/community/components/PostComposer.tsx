@@ -141,7 +141,7 @@ export function PostComposer({ courseId }: { courseId: string }) {
 
       {image && (
         <div className="relative w-fit">
-          <img src={image.url} alt={image.name} className="max-h-48 rounded-xl border border-[rgba(120,60,20,.1)] object-cover" />
+          <img src={image.url} alt={image.name} className="max-h-64 rounded-xl border border-[rgba(120,60,20,.1)] bg-stone-50 object-contain" />
           <button
             type="button"
             onClick={() => setImage(null)}

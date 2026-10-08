@@ -4,7 +4,7 @@ import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { useUpload } from '../../uploads/useUpload';
 import { useCreateLesson, useUpdateLesson } from '../queries';
 import type { ClassroomLesson, LessonAttachment } from '../types';
-import { absoluteUrl, errText, ErrorNote, inputCls } from './contentUi';
+import { absoluteUrl, errText, ErrorNote, FieldLabel, inputCls } from './contentUi';
 import { shellGhostBtn, shellPrimaryBtn, ShellBody, ShellFooter, Toggle } from './ModalShell';
 
 type LessonType = 'video' | 'text' | 'file';
@@ -59,6 +59,11 @@ export function LessonEditor({
   const [localErr, setLocalErr] = useState<string | null>(null);
   const [bodyErr, setBodyErr] = useState<string | null>(null);
   const pending = create.isPending || update.isPending;
+  // Trường bắt buộc: tên bài; thời lượng hợp lệ; bài viết cần đủ ký tự tối thiểu. Chưa đủ thì khóa nút lưu.
+  const durNum = Number(duration);
+  // Báo lỗi inline ngay khi đã gõ nhưng chưa đủ ký tự tối thiểu (bài viết).
+  const shortErr = type === 'text' && body.trim().length > 0 && body.trim().length < TEXT_MIN ? t('editor.lesson.bodyMin', { min: TEXT_MIN, n: body.trim().length }) : null;
+  const canSave = !!title.trim() && duration.trim() !== '' && Number.isInteger(durNum) && durNum >= 0 && durNum <= 1000 && (type !== 'text' || body.trim().length >= TEXT_MIN);
   const err = localErr ?? (create.isError ? errText(create.error) : update.isError ? errText(update.error) : null);
 
   const submit = () => {
@@ -84,8 +89,8 @@ export function LessonEditor({
     <>
       <ShellBody>
         <div>
-          <div className="mb-1.5 text-[13px] font-bold">{t('modWizard.lesson.name')}</div>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} placeholder={t('modWizard.lesson.namePh')} aria-label={t('modWizard.lesson.name')} className={inputCls} />
+          <FieldLabel required>{t('modWizard.lesson.name')}</FieldLabel>
+          <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} placeholder={t('modWizard.lesson.namePh')} aria-label={t('modWizard.lesson.name')} aria-required="true" className={inputCls} />
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -185,22 +190,22 @@ export function LessonEditor({
         )}
 
         <div>
-          <div className="mb-1.5 text-[13px] font-bold">{type === 'text' ? t('modWizard.lesson.text') : t('modWizard.lesson.note')}</div>
+          <FieldLabel required={type === 'text'}>{type === 'text' ? t('modWizard.lesson.text') : t('modWizard.lesson.note')}</FieldLabel>
           <textarea
             value={body}
             onChange={(e) => {
               setBody(e.target.value);
               if (bodyErr) setBodyErr(null);
             }}
-            aria-invalid={!!bodyErr}
+            aria-invalid={!!(bodyErr ?? shortErr)}
             maxLength={50000}
             placeholder={type === 'text' ? t('modWizard.lesson.textPh') : t('modWizard.lesson.notePh')}
             aria-label={type === 'text' ? t('modWizard.lesson.text') : t('modWizard.lesson.note')}
             style={{ height: type === 'text' ? 170 : 80 }}
-            className={`w-full resize-y rounded-[10px] border-[1.5px] px-3 py-2.5 text-[13.5px] leading-relaxed outline-0 focus:border-brand ${bodyErr ? 'border-red-400' : 'border-[#e7e0da]'}`}
+            className={`w-full resize-y rounded-[10px] border-[1.5px] px-3 py-2.5 text-[13.5px] leading-relaxed outline-0 focus:border-brand ${bodyErr ?? shortErr ? 'border-red-400' : 'border-[#e7e0da]'}`}
           />
-          {bodyErr && <p role="alert" className="m-0 mt-1.5 text-[12.5px] font-medium text-red-600">{bodyErr}</p>}
-          {type === 'text' && !bodyErr && <p className="m-0 mt-1 text-right text-[11.5px] text-stone-400">{body.trim().length}/{TEXT_MIN}+</p>}
+          {(bodyErr ?? shortErr) && <p role="alert" className="m-0 mt-1.5 text-[12.5px] font-medium text-red-600">{bodyErr ?? shortErr}</p>}
+          {type === 'text' && !bodyErr && !shortErr && <p className="m-0 mt-1 text-right text-[11.5px] text-stone-400">{body.trim().length}/{TEXT_MIN}+</p>}
         </div>
 
         <button type="button" onClick={() => setIsPreview((v) => !v)} aria-pressed={isPreview} className="flex items-center gap-3.5 rounded-xl bg-[#faf7f4] px-3.5 py-3 text-left">
@@ -210,6 +215,7 @@ export function LessonEditor({
           </span>
           <Toggle on={isPreview} />
         </button>
+        <p className="m-0 text-[12px] text-stone-500"><span className="text-red-600">*</span> {t('modWizard.requiredHint')}</p>
         <ErrorNote message={err ?? uploadError} />
       </ShellBody>
       <ShellFooter>
@@ -217,7 +223,7 @@ export function LessonEditor({
           {backLabel ?? t('modWizard.lesson.back')}
         </button>
         <div className="flex-1" />
-        <button type="button" onClick={submit} disabled={pending || uploading} className={shellPrimaryBtn}>
+        <button type="button" onClick={submit} disabled={pending || uploading || !canSave} className={shellPrimaryBtn}>
           {pending ? t('modWizard.info.saving') : lesson ? t('modWizard.lesson.save') : t('modWizard.lesson.add')}
         </button>
       </ShellFooter>

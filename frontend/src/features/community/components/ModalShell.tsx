@@ -7,6 +7,8 @@ export interface ShellStep {
   label: string;
   /** done | active | todo */
   state: 'done' | 'active' | 'todo';
+  /** Có thì bước đã hoàn thành bấm được để quay lại. */
+  onSelect?: () => void;
 }
 
 /** Khung popup nhiều bước theo thiết kế: tiêu đề + phụ đề + bước + nút đóng; phần thân/chân do từng bước tự dựng. */
@@ -45,14 +47,20 @@ export function ModalShell({
                 {steps.map((s, i) => (
                   <span key={s.label} className="contents">
                     {i > 0 && <span className="h-[1.5px] w-[18px] bg-[#e7e0da]" />}
-                    <span className={`flex items-center gap-1.5 text-[12.5px] font-semibold ${s.state === 'todo' ? 'text-stone-400' : 'text-stone-900'}`}>
+                    <button
+                      type="button"
+                      disabled={!(s.state === 'done' && s.onSelect)}
+                      onClick={s.onSelect}
+                      title={s.state === 'done' && s.onSelect ? s.label : undefined}
+                      className={`flex items-center gap-1.5 text-[12.5px] font-semibold disabled:cursor-default ${s.state === 'todo' ? 'text-stone-400' : 'text-stone-900'} ${s.state === 'done' && s.onSelect ? 'cursor-pointer hover:text-brand' : ''}`}
+                    >
                       <span
                         className={`grid size-[22px] place-items-center rounded-full text-[11.5px] font-extrabold ${s.state === 'todo' ? 'bg-[#f1efed] text-stone-500' : 'bg-brand text-white'}`}
                       >
                         {s.state === 'done' ? '✓' : i + 1}
                       </span>
                       {s.label}
-                    </span>
+                    </button>
                   </span>
                 ))}
               </div>

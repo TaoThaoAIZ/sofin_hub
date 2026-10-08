@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
-import { ApiError } from '../../../lib/api';
+import { ApiError, resolveApiPath } from '../../../lib/api';
 import i18n, { currentLocale } from '../../../i18n';
 import { formatCents, formatDate } from '../../../lib/datetime';
 import { formatMoney } from '../../../lib/format';
@@ -309,7 +309,7 @@ export function ReferralTab() {
                 <div key={r.userId} className={`grid ${COLS} items-center gap-3 border-b border-[#f3eee9] px-4 py-3.5 text-[15px]`}>
                   <span className="flex min-w-0 items-center gap-3.5">
                     {r.avatarUrl ? (
-                      <img src={r.avatarUrl} alt="" className="size-10 flex-none rounded-full object-cover" />
+                      <img src={resolveApiPath(r.avatarUrl)} alt="" className="size-10 flex-none rounded-full object-cover" />
                     ) : (
                       <span style={{ background: bg, color: fg }} className="grid size-10 flex-none place-items-center rounded-full text-[13px] font-bold">
                         {initials(r.name)}

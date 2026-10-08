@@ -108,8 +108,8 @@ function CourseFormDialog({ communityId, course, isAdmin, onClose }: { community
           <CoverField value={thumb} onChange={setThumb} onError={setUploadError} ariaLabel={t('courseForm.thumbAria')} />
           <div className="flex min-w-0 flex-1 flex-col gap-4">
             <div>
-              <FieldLabel>{t('dialogForm.courseName')}</FieldLabel>
-              <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} placeholder={t('courseForm.name')} aria-label={t('courseForm.name')} className={inputCls} />
+              <FieldLabel required>{t('dialogForm.courseName')}</FieldLabel>
+              <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} placeholder={t('courseForm.name')} aria-label={t('courseForm.name')} aria-required="true" className={inputCls} />
             </div>
             <div>
               <FieldLabel>{t('dialogForm.shortDesc')}</FieldLabel>

@@ -4,7 +4,7 @@ import { demoProfiles } from './demo-members.js';
 /**
  * Sổ điểm (PointEvent) của thành viên minh họa: mỗi người 3 bản ghi ứng với 3 cửa sổ của bảng xếp hạng
  * (≤7 ngày, 8–30 ngày, >30 ngày) nên tổng 7d/30d/all đúng bằng số cũ của community.seed.ts (phân phối giảm dần theo thứ hạng
- * => đủ Cấp 1..6). Id xác định + createMany skipDuplicates => chạy lại không nhân đôi.
+ * => đủ Cấp 1..6). Id xác định; mỗi lần seed xóa rồi tạo lại để mốc thời gian luôn tươi (không nhân đôi).
  * Thêm điểm cho member1..3 ở cộng đồng `photo` để bảng xếp hạng có tên tài khoản test.
  */
 const DAY = 86_400_000;
@@ -43,5 +43,7 @@ export async function seedPoints(ctx: SeedContext): Promise<void> {
     }
   }
 
+  // Làm mới mốc thời gian mỗi lần seed: nếu giữ bản ghi cũ (skipDuplicates) thì sau vài ngày cửa sổ 7 ngày của bảng xếp hạng sẽ trống.
+  await db.pointEvent.deleteMany({ where: { OR: [{ id: { startsWith: 'demo-pt-' } }, { id: { startsWith: 'seed-pt-' } }] } });
   for (let i = 0; i < data.length; i += CHUNK) await db.pointEvent.createMany({ data: data.slice(i, i + CHUNK), skipDuplicates: true });
 }

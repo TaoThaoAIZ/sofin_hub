@@ -62,6 +62,17 @@ export const useMarkConversationRead = () => {
   });
 };
 
+export const useDeleteConversation = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (conversationId: string) => api.deleteConversation(conversationId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: messageKeys.conversations });
+      void qc.invalidateQueries({ queryKey: messageKeys.unread });
+    },
+  });
+};
+
 export const useRecallMessage = (conversationId: string) => {
   const qc = useQueryClient();
   return useMutation({

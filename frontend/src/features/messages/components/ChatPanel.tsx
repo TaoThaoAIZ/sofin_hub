@@ -6,7 +6,7 @@ import { formatDateTime } from '../../../lib/datetime';
 import { useFileUrl } from '../../../lib/files';
 import { useAuth } from '../../auth/AuthContext';
 import { useUpload, type UploadedFile } from '../../uploads/useUpload';
-import { messageErrorText, useBlockToggle, useMarkConversationRead, useRecallMessage, useSendMessage, useThread } from '../queries';
+import { messageErrorText, useBlockToggle, useDeleteConversation, useMarkConversationRead, useRecallMessage, useSendMessage, useThread } from '../queries';
 import type { ConversationView, MessageView } from '../types';
 import { usePopup } from '../../../components/ui/usePopup';
 
@@ -56,7 +56,7 @@ function Bubble({ m, mine, onRecall, recalling }: { m: MessageView; mine: boolea
           aria-label={t('chat.recall')}
           className="mr-1 self-center text-stone-400 opacity-0 group-hover:opacity-100 hover:text-red-600 focus:opacity-100 max-md:opacity-100"
         >
-          <MaterialIcon name="undo" size={17} />
+          <MaterialIcon name="cancel_schedule_send" size={17} />
         </button>
       )}
       <div className={`max-w-[78%] rounded-2xl px-3.5 py-2 text-[14px] ${mine ? 'bg-brand text-white' : 'bg-stone-900/5 text-stone-900'} ${m.deleted ? 'italic opacity-70' : ''}`}>
@@ -79,6 +79,7 @@ export function ChatPanel({ conversationId, conversation, onBack }: { conversati
   const recall = useRecallMessage(conversationId);
   const markRead = useMarkConversationRead();
   const blockToggle = useBlockToggle();
+  const delConversation = useDeleteConversation();
   const { upload, uploading, error: uploadError } = useUpload();
   const [text, setText] = useState('');
   const [files, setFiles] = useState<UploadedFile[]>([]);
@@ -154,6 +155,22 @@ export function ChatPanel({ conversationId, conversation, onBack }: { conversati
           {(conversation?.other.name ?? '?').charAt(0).toUpperCase()}
         </span>
         <div className="min-w-0 flex-1 truncate text-[15px] font-bold">{conversation?.other.name ?? t('chat.conversation')}</div>
+        {conversation && (
+          <button
+            type="button"
+            disabled={delConversation.isPending}
+            title={t('chat.deleteConversation')}
+            aria-label={t('chat.deleteConversation')}
+            onClick={async () => {
+              if (!(await confirm({ title: t('chat.deleteConvTitle'), message: t('chat.deleteConvMessage'), tone: 'danger', confirmText: t('chat.deleteConvConfirm') }))) return;
+              setError(null);
+              delConversation.mutate(conversationId, { onSuccess: onBack, onError: (e) => setError(messageErrorText(e)) });
+            }}
+            className="grid size-9 flex-none place-items-center rounded-xl border border-[rgba(120,60,20,.12)] text-stone-600 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+          >
+            <MaterialIcon name="delete" size={18} />
+          </button>
+        )}
         {conversation && (
           <button
             type="button"

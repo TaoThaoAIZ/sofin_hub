@@ -233,7 +233,8 @@ Bạn có thể đổi cách nhận thông báo tại Cài đặt > Thông báo.
       info = await getDelivery(n.userId).catch(() => undefined);
       quiet = isQuietNow(prefs.quiet, info?.timezone ?? DEFAULT_TIMEZONE);
     }
-    if (!quiet) await emit(n);
+    // message_received đã được đẩy qua luồng tin nhắn (icon Tin nhắn): không đẩy vào luồng thông báo (chuông).
+    if (!quiet && n.type !== 'message_received') await emit(n);
     if (wantsEmail && !quiet && info) await sendEmail(n, info.email);
   }
 

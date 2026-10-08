@@ -294,7 +294,7 @@
     "rsvp": "Register to attend",
     "pastEvent": "This event has passed",
     "icsEventToast": "Calendar file downloaded (.ics)",
-    "addToCal": "Add to calendar (.ics)",
+    "addToCal": "Download calendar (.ics)",
     "edit": "Edit",
     "delete": "Delete",
     "deleteTitle": "Delete event?",
@@ -685,7 +685,8 @@
       "submitEdit": "Save & continue →",
       "saving": "Saving…",
       "errName": "Enter a course name",
-      "errPrice": "Enter a price"
+      "errPrice": "Enter a price",
+      "errDesc": "Please enter a description"
     },
     "outline": {
       "summary": "{{n}} lessons · {{done}} with content",
@@ -762,12 +763,14 @@
       "notified": " Members will be notified right away.",
       "copy": "Copy",
       "copied": "Copied",
-      "finish": "Done"
+      "finish": "Done",
+      "backToEdit": "← Back to editing"
     },
     "lock": {
       "paid": "Separate purchase ${{price}}",
       "selected": "Selected people only",
       "draft": "Draft"
-    }
+    },
+    "requiredHint": "Required field"
   }
 }

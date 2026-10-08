@@ -64,7 +64,8 @@ export const prismaNotificationsRepository: NotificationsRepository = {
   },
 
   async list(userId, { unreadOnly, skip, take }) {
-    const where = { userId, ...notExpired(), ...(unreadOnly ? { readAt: null } : {}) };
+    // Tin nhắn riêng có biểu tượng + bộ đếm riêng (Tin nhắn): không lẫn vào chuông thông báo.
+    const where = { userId, type: { not: 'message_received' as const }, ...notExpired(), ...(unreadOnly ? { readAt: null } : {}) };
     const [total, rows] = await Promise.all([
       prisma.notification.count({ where }),
       prisma.notification.findMany({ where, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], skip, take }),
@@ -72,7 +73,7 @@ export const prismaNotificationsRepository: NotificationsRepository = {
     return { items: rows.map(toDomain), total };
   },
 
-  unreadCount: (userId) => prisma.notification.count({ where: { userId, readAt: null } }),
+  unreadCount: (userId) => prisma.notification.count({ where: { userId, type: { not: 'message_received' }, readAt: null } }),
 
   async markRead(userId, id, at) {
     await prisma.notification.updateMany({ where: { id, userId, readAt: null }, data: { readAt: new Date(at) } });
@@ -85,7 +86,7 @@ export const prismaNotificationsRepository: NotificationsRepository = {
   },
 
   async markAllRead(userId, at) {
-    return (await prisma.notification.updateMany({ where: { userId, readAt: null }, data: { readAt: new Date(at) } })).count;
+    return (await prisma.notification.updateMany({ where: { userId, type: { not: 'message_received' }, readAt: null }, data: { readAt: new Date(at) } })).count;
   },
 
   async all() {

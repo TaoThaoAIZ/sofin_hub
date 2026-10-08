@@ -33,7 +33,11 @@
     "placeholder": "Type a message…",
     "send": "Send",
     "sentFiles_one": "Sent 1 attachment",
-    "sentFiles_other": "Sent {{count}} attachments"
+    "sentFiles_other": "Sent {{count}} attachments",
+    "deleteConversation": "Delete conversation",
+    "deleteConvTitle": "Delete this conversation?",
+    "deleteConvMessage": "All existing messages will be removed from your inbox. The other person keeps their copy.",
+    "deleteConvConfirm": "Delete conversation"
   },
   "button": {
     "label": "Messages",

@@ -9,6 +9,7 @@ import { NotificationBell } from '../../features/notifications/components/Notifi
 import { useClickOutside } from '../../lib/useClickOutside';
 import { ButtonLink } from '../ui/Button';
 import { GlobeIcon } from '../ui/icons';
+import { resolveApiPath } from '../../lib/api';
 
 // Chỉ giữ các mục có route thật.
 const NAV_ITEMS: { key: string; to: string }[] = [
@@ -77,7 +78,7 @@ export function Header({ active = 'discover' }: { active?: string }) {
               className="glass flex h-10 items-center gap-2 rounded-[14px] pr-3.5 pl-1.5 text-sm font-medium"
             >
               {user.avatarUrl ? (
-                <img src={user.avatarUrl} alt="" className="size-7 rounded-full object-cover" />
+                <img src={resolveApiPath(user.avatarUrl)} alt="" className="size-7 rounded-full object-cover" />
               ) : (
                 <span className="bg-brand-gradient grid size-7 place-items-center rounded-full text-[13px] font-bold text-white">
                   {user.firstName.charAt(0).toUpperCase()}

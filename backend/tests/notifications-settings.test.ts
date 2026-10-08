@@ -248,6 +248,8 @@ describe('Cài đặt thông báo: giờ im lặng, email, theo cộng đồng, 
     await c.call('POST', `/conversations/${conv2.body.data.id}/messages`, { token: a.token, body: { content: 'xin chào d' } });
     await svc.flushNotifications();
     assert.equal(mailsWith(d.email, subject).length, 0);
-    assert.ok((await stored(d)).some((n) => n.title === subject), 'thông báo trong chuông vẫn có');
+    // Tin nhắn có icon + bộ đếm riêng (messages/unread-count): không lẫn vào chuông thông báo.
+    assert.ok(!(await stored(d)).some((n) => n.title === subject), 'tin nhắn không nằm trong chuông thông báo');
+    assert.equal((await c.call('GET', '/messages/unread-count', { token: d.token })).body.data.unreadCount, 1);
   });
 });

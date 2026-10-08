@@ -294,7 +294,7 @@
     "rsvp": "Đăng ký tham gia",
     "pastEvent": "Sự kiện đã diễn ra",
     "icsEventToast": "Đã tải file lịch (.ics)",
-    "addToCal": "Thêm vào lịch (.ics)",
+    "addToCal": "Tải lịch xuống (.ics)",
     "edit": "Sửa",
     "delete": "Xóa",
     "deleteTitle": "Xóa sự kiện?",
@@ -685,7 +685,8 @@
       "submitEdit": "Lưu & tiếp tục →",
       "saving": "Đang lưu…",
       "errName": "Nhập tên khóa học",
-      "errPrice": "Nhập giá mua riêng"
+      "errPrice": "Nhập giá mua riêng",
+      "errDesc": "Vui lòng nhập mô tả"
     },
     "outline": {
       "summary": "{{n}} bài học · {{done}} bài đã có nội dung",
@@ -762,12 +763,14 @@
       "notified": " Thành viên sẽ nhận được thông báo ngay.",
       "copy": "Sao chép",
       "copied": "Đã sao chép",
-      "finish": "Xong"
+      "finish": "Xong",
+      "backToEdit": "← Quay lại chỉnh sửa"
     },
     "lock": {
       "paid": "Mua riêng ${{price}}",
       "selected": "Chỉ người được chọn",
       "draft": "Bản nháp"
-    }
+    },
+    "requiredHint": "Trường bắt buộc"
   }
 }

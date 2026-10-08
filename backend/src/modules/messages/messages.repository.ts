@@ -21,8 +21,10 @@ export interface MessageRepository {
   addMessage(conv: Conversation, senderId: string, content: string, attachments: Attachment[]): Promise<MessageRecord>;
   getMessage(id: string): Promise<MessageRecord | undefined>;
   /** Trả tối đa `limit` tin MỚI NHẤT có seq < beforeSeq, theo thứ tự cũ → mới; kèm cờ còn tin cũ hơn. */
-  page(conversationId: string, beforeSeq: number | undefined, limit: number): Promise<{ items: MessageRecord[]; hasMore: boolean }>;
-  lastMessage(conversationId: string): Promise<MessageRecord | undefined>;
+  page(conversationId: string, beforeSeq: number | undefined, limit: number, minSeq?: number): Promise<{ items: MessageRecord[]; hasMore: boolean }>;
+  lastMessage(conversationId: string, minSeq?: number): Promise<MessageRecord | undefined>;
+  /** Ẩn toàn bộ tin hiện có của cuộc trò chuyện với RIÊNG `userId` (đặt mốc đã xóa + đã đọc). */
+  clearForUser(conv: Conversation, userId: string): Promise<void>;
   unreadCount(conv: Conversation, userId: string): Promise<number>;
   /** Tổng chưa đọc của user trên mọi cuộc trò chuyện (1 truy vấn). */
   unreadTotal(userId: string): Promise<number>;
@@ -54,6 +56,7 @@ const toConversation = (c: ConversationRow): Conversation => ({
   createdAt: c.createdAt.toISOString(),
   lastMessageAt: c.lastMessageAt.toISOString(),
   readSeq: { [c.userAId]: c.readSeqA, [c.userBId]: c.readSeqB },
+  clearedSeq: { [c.userAId]: c.clearedSeqA, [c.userBId]: c.clearedSeqB },
 });
 
 const toMessage = (m: MessageRow): MessageRecord => ({
@@ -75,6 +78,8 @@ interface SummaryRow {
   lastMessageAt: Date;
   readSeqA: number;
   readSeqB: number;
+  clearedSeqA: number;
+  clearedSeqB: number;
   otherId: string | null;
   firstName: string | null;
   lastName: string | null;
@@ -137,7 +142,7 @@ export const prismaMessageRepository: MessageRepository = {
       ? Prisma.sql`AND (c."lastMessageAt", c."createdAt", c."id") < (${cursor.lastMessageAt}::timestamp, ${cursor.createdAt}::timestamp, ${cursor.id}::text)`
       : Prisma.empty;
     const rows = await prisma.$queryRaw<SummaryRow[]>`
-      SELECT c."id", c."userAId", c."userBId", c."createdAt", c."lastMessageAt", c."readSeqA", c."readSeqB",
+      SELECT c."id", c."userAId", c."userBId", c."createdAt", c."lastMessageAt", c."readSeqA", c."readSeqB", c."clearedSeqA", c."clearedSeqB",
              o."id" AS "otherId", o."firstName", o."lastName", o."deletedAt" AS "otherDeletedAt",
              lm."id" AS "lmId", lm."seq" AS "lmSeq", lm."senderId" AS "lmSenderId", lm."content" AS "lmContent",
              lm."attachments" AS "lmAttachments", lm."createdAt" AS "lmCreatedAt", lm."deletedAt" AS "lmDeletedAt",
@@ -147,12 +152,15 @@ export const prismaMessageRepository: MessageRepository = {
              EXISTS (SELECT 1 FROM "UserBlock" b WHERE b."blockerId" = ${userId} AND b."targetId" = o."id") AS "blocked"
       FROM "Conversation" c
       LEFT JOIN "User" o ON o."id" = CASE WHEN c."userAId" = ${userId} THEN c."userBId" ELSE c."userAId" END
-      LEFT JOIN LATERAL (SELECT * FROM "Message" m WHERE m."conversationId" = c."id" ORDER BY m."seq" DESC LIMIT 1) lm ON true
+      LEFT JOIN LATERAL (SELECT * FROM "Message" m WHERE m."conversationId" = c."id"
+                         AND m."seq" > CASE WHEN c."userAId" = ${userId} THEN c."clearedSeqA" ELSE c."clearedSeqB" END
+                         ORDER BY m."seq" DESC LIMIT 1) lm ON true
       WHERE (c."userAId" = ${userId} OR c."userBId" = ${userId}) ${after}
+        AND (lm."id" IS NOT NULL OR CASE WHEN c."userAId" = ${userId} THEN c."clearedSeqA" ELSE c."clearedSeqB" END = 0)
       ORDER BY c."lastMessageAt" DESC, c."createdAt" DESC, c."id" DESC
       LIMIT ${limit + 1}`;
     const items = rows.slice(0, limit).map((r): ConversationSummary => ({
-      conversation: toConversation({ id: r.id, userAId: r.userAId, userBId: r.userBId, createdAt: r.createdAt, lastMessageAt: r.lastMessageAt, readSeqA: r.readSeqA, readSeqB: r.readSeqB }),
+      conversation: toConversation({ id: r.id, userAId: r.userAId, userBId: r.userBId, createdAt: r.createdAt, lastMessageAt: r.lastMessageAt, readSeqA: r.readSeqA, readSeqB: r.readSeqB, clearedSeqA: r.clearedSeqA, clearedSeqB: r.clearedSeqB }),
       other: { id: r.otherId ?? (r.userAId === userId ? r.userBId : r.userAId), name: r.otherId && !r.otherDeletedAt ? `${r.firstName} ${r.lastName}` : DELETED_USER_NAME },
       lastMessage: r.lmId
         ? {
@@ -194,9 +202,9 @@ export const prismaMessageRepository: MessageRepository = {
     return m ? toMessage(m) : undefined;
   },
 
-  async page(conversationId, beforeSeq, limit) {
+  async page(conversationId, beforeSeq, limit, minSeq = 0) {
     const rows = await prisma.message.findMany({
-      where: { conversationId, ...(beforeSeq !== undefined ? { seq: { lt: beforeSeq } } : {}) },
+      where: { conversationId, seq: { gt: minSeq, ...(beforeSeq !== undefined ? { lt: beforeSeq } : {}) } },
       orderBy: { seq: 'desc' },
       take: limit + 1,
     });
@@ -204,8 +212,8 @@ export const prismaMessageRepository: MessageRepository = {
     return { items: rows.slice(0, limit).reverse().map(toMessage), hasMore };
   },
 
-  async lastMessage(conversationId) {
-    const m = await prisma.message.findFirst({ where: { conversationId }, orderBy: { seq: 'desc' } });
+  async lastMessage(conversationId, minSeq = 0) {
+    const m = await prisma.message.findFirst({ where: { conversationId, seq: { gt: minSeq } }, orderBy: { seq: 'desc' } });
     return m ? toMessage(m) : undefined;
   },
 
@@ -232,6 +240,13 @@ export const prismaMessageRepository: MessageRepository = {
     } else {
       await prisma.$executeRaw`UPDATE "Conversation" SET "readSeqB" = GREATEST("readSeqB", COALESCE((SELECT MAX(seq) FROM "Message" WHERE "conversationId" = ${conv.id}), 0)) WHERE id = ${conv.id}`;
     }
+  },
+
+  async clearForUser(conv, userId) {
+    const isA = conv.userIds[0] === userId;
+    const col = isA ? Prisma.raw('"clearedSeqA"') : Prisma.raw('"clearedSeqB"');
+    const read = isA ? Prisma.raw('"readSeqA"') : Prisma.raw('"readSeqB"');
+    await prisma.$executeRaw`UPDATE "Conversation" SET ${col} = COALESCE((SELECT MAX(seq) FROM "Message" WHERE "conversationId" = ${conv.id}), 0), ${read} = GREATEST(${read}, COALESCE((SELECT MAX(seq) FROM "Message" WHERE "conversationId" = ${conv.id}), 0)) WHERE id = ${conv.id}`;
   },
 
   async softDelete(id) {

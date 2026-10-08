@@ -29,6 +29,10 @@ messagesRouter.post('/conversations/:id/messages', requireAuth, async (req, res)
   res.status(201).json({ data: await messageService.send(req.userId!, req.params.id as string, body.content, body.attachments) });
 });
 
+messagesRouter.delete('/conversations/:id', requireAuth, async (req, res) => {
+  res.json({ data: await messageService.deleteConversation(req.userId!, req.params.id as string) });
+});
+
 messagesRouter.post('/conversations/:id/read', requireAuth, async (req, res) => {
   res.json({ data: await messageService.markRead(req.userId!, req.params.id as string) });
 });

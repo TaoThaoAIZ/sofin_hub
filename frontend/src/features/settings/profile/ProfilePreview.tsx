@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import i18n from '../../../i18n';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { initialsOf, type ProfileForm } from './form';
+import { resolveApiPath } from '../../../lib/api';
 
 export interface PreviewStats {
   level?: number;
@@ -34,7 +35,7 @@ export function ProfilePreview({ form, stats }: { form: ProfileForm; stats: Prev
       <div className="h-32 bg-gradient-to-b from-[#ffe2cc] to-[#ffc7a0]" />
       <div className="px-[18px] pb-[18px]">
         <div className="relative -mt-12 grid size-24 place-items-center overflow-hidden rounded-full border-4 border-white bg-[#2f4fa8] text-[28px] font-extrabold text-white shadow-[0_6px_16px_rgba(0,0,0,.12)]">
-          {form.avatarUrl ? <img src={form.avatarUrl} alt="" className="size-full object-cover" /> : initialsOf(form.first, form.last)}
+          {form.avatarUrl ? <img src={resolveApiPath(form.avatarUrl)} alt="" className="size-full object-cover" /> : initialsOf(form.first, form.last)}
         </div>
         <div className="mt-2.5 text-[21px] font-extrabold tracking-[-.01em] break-words">{fullName}</div>
         <div className="mt-0.5 text-sm text-stone-500 break-words">

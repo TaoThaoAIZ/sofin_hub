@@ -65,3 +65,37 @@ Lưu ý: #7 nếu tester gọi thẳng API mà vẫn thiếu thì gửi lại re
 ### Đợt 6b — chỉnh lại
 - Bài viết < 30 ký tự: KHÔNG cho lưu, hiện lỗi inline dưới ô nhập (viền đỏ, "cần tối thiểu 30 ký tự, hiện có N") + bộ đếm; điều kiện xuất bản vẫn ≥ 30 (khôi phục). Sửa ở `LessonEditor.tsx`.
 - COURSE-094: nút xóa chỉ hiện với mod trở lên; BE chốt quyền ở `manage()` (mod+) nên member gọi API xóa bài/module nhận 403.
+
+## Đợt 7 — FEED (Bảng tin)
+
+| TC | Vấn đề (ghi chú tester) | Xử lý | Trạng thái |
+|----|-------------------------|-------|-----------|
+| FEED-003 | Tải video lên nhưng không phát được trên bảng tin (tệp chỉ được chèn dạng dòng chữ "Tệp đính kèm: tên — url" cuối nội dung) | `PostCard` tách các dòng đính kèm: mp4 → `<video controls>` (URL ký), tệp khác → nút tải; không còn hiện chuỗi URL thô | ✅ |
+| FEED-003, 086 | Bình luận mới nhất phải hiện trên cùng | FE: ô nhập bình luận đặt trên đầu, danh sách đảo ngược (mới nhất trước). API vẫn trả tăng dần nên **TC-FEED-086 (thứ tự API) giữ nguyên**, chỉ thêm kiểm UI | ✅ |
+| FEED-021 | Ảnh bài viết hiển thị nhỏ/bị cắt | Ảnh bài viết + xem trước trong ô soạn: `object-contain` (đủ khung hình, cao tối đa 560px) | ✅ |
+| FEED-021 | "Chưa hiển thị lên trên cùng" | Chưa rõ: bài mới / toast? BE xếp ghim trước rồi mới nhất; cần tester nói rõ | ⏳ cần chi tiết |
+| FEED-095, 096 | Like/unlike không đổi màu | Nút like: đã like = nền cam đặc + chữ/icon trắng, chưa like = nền xám (trước chỉ khác độ trong suốt 10% vs 20% nên không thấy) + `aria-pressed` | ✅ |
+| FEED-093 | Không ghi chú. API: newbie PATCH và banned DELETE → 403 đúng; không token → 401 đúng; **Platform Admin (chưa ghi danh) DELETE → 200** (đúng thiết kế: Platform Admin được bỏ qua kiểm ghi danh, như COMM-074) | **Sửa test case**: bước 3 mong đợi 200 (admin nền tảng), không phải 403. Lưu ý case này xóa bình luận seed → chạy `db:seed` để khôi phục | ✅ (đổi test case) |
+| FEED-115 | Không ghi chú. `GET /posts/seed-post-photo-3` OK; FE có khối "Bài viết được chia sẻ với bạn" khi bài ngoài trang đầu | Cần tester mô tả hiện tượng (cuộn/viền cam/khối chia sẻ) | ⏳ cần chi tiết |
+
+## Đợt 8 — MEMBER / EVENT / NOTI + tách tin nhắn khỏi chuông
+
+| TC | Vấn đề | Xử lý | Trạng thái |
+|----|--------|-------|-----------|
+| MEMBER-038 | Bảng xếp hạng 7 ngày rỗng: điểm seed gắn mốc thời gian lúc seed (1–5 ngày trước) và `skipDuplicates` không làm mới → vài ngày sau cửa sổ 7d hết dữ liệu | `seed/points.ts` xóa-rồi-tạo lại mỗi lần `db:seed` (mốc luôn tươi). Kiểm: 7d → hạng 1 = 35 điểm, các hạng sau 13… | ✅ (tester chạy `db:seed` trước khi test) |
+| MEMBER-039 | 30d trả đúng: member1 65, member2 30. Hạng 3 là Trí Xuân/Tai Do (27) — test case ghi "Đoàn Thành" → sửa tên trong test case nếu cần | Không lỗi code | ✅ |
+| EVENT-076 | Đổi nút "Thêm vào lịch (.ics)" thành "Tải lịch xuống (.ics)" | i18n vi/en. **Sửa tiêu đề test case theo nhãn mới** | ✅ |
+| EVENT-087 | Không ghi chú. BE gắn link `/courses/<id>/community/lich` (FE chuyển hướng sang route chuẩn) | Cần tester mô tả nếu vẫn lỗi | ⏳ |
+| NOTI-006 | Email xác nhận không tới Gmail | Chưa cấu hình SMTP trong `backend/.env` (xem đợt 2). Khi lên AWS dùng SES/SMTP | ⏳ chờ cấu hình |
+| NOTI-036, 108, 115 | Ghi chú của tester chính là kết quả mong đợi. Kiểm API: 036 → 404 'Không tìm thấy thông báo'; 108 → 404 / 400; 115 → 404 'Không tìm thấy tin nhắn' — đúng | Không phải bug → Pass | ✅ |
+| NOTI-101 + header | Tin nhắn báo vào chuông thông báo | Tách riêng: chuông (list/unread-count/đánh dấu đã đọc/SSE) bỏ loại `message_received`; icon Tin nhắn có bộ đếm riêng (`/messages/unread-count`). Email "tin nhắn chưa đọc" vẫn theo tùy chọn. Test `notifications-settings` cập nhật | ✅ |
+| NOTI-156 | Đổi icon thu hồi; thêm icon xóa cuộc trò chuyện | Icon thu hồi `cancel_schedule_send`; nút thùng rác ở đầu khung chat → `DELETE /conversations/:id` (xóa phía mình: cột `clearedSeqA/B`, migration `20261011100000_conversation_clear`; người kia vẫn giữ, tin mới sau đó hiện lại) | ✅ |
+
+## Đợt 9 — Form tạo module/bài học (wizard)
+- Trường bắt buộc có dấu `*` đỏ (tên module, mô tả module, tên bài học, nội dung bài viết, tên khóa học); có dòng chú thích "* Trường bắt buộc".
+- Nút "Tạo & thêm nội dung" / "Lưu & tiếp tục" chỉ bật khi đủ: tên + mô tả (+ giá > 0 nếu trả phí). Nút lưu bài học chỉ bật khi có tên, thời lượng hợp lệ và (bài viết) ≥ 30 ký tự — lỗi inline hiện ngay khi gõ chưa đủ.
+- Quay lại: thanh bước (Thông tin / Nội dung / Xuất bản) bấm được để về bước đã qua; ở màn "Hoàn tất" có nút "← Quay lại chỉnh sửa"; bước Xuất bản vẫn có "← Quay lại".
+
+## Đợt 10 — Avatar header + mất lịch sử chat
+- Avatar trên header (và Cài đặt › Hồ sơ, xem trước hồ sơ, Giới thiệu) bị ảnh vỡ sau khi tải ảnh mới: `avatarUrl` lưu dạng `/api/files/<key>` (tương đối) nhưng `<img>` dùng thẳng → khi FE và API khác origin (`VITE_API_URL` tuyệt đối) trình duyệt tìm ảnh ở domain FE. Đã bọc `resolveApiPath()` ở 4 chỗ. ✅
+- Mất chat hôm qua: DB local KHÔNG mất dữ liệu do mình (seed không xóa tin nhắn, test chạy ở schema riêng). Trong DB local chỉ có 9 tin, tin thật cuối cùng 30/09, không có user "Linh" → ảnh chụp đến từ môi trường khác. ⏳ cần biết môi trường (xem câu hỏi gửi user).

@@ -129,7 +129,7 @@ export function createMessageService(repo: MessageRepository = prismaMessageRepo
     const otherId = otherOf(c, userId);
     const [other, last, unreadCount, blockedByMe] = await Promise.all([
       userBriefView(otherId),
-      repo.lastMessage(c.id),
+      repo.lastMessage(c.id, c.clearedSeq[userId] ?? 0),
       repo.unreadCount(c, userId),
       repo.isBlocked(userId, otherId),
     ]);
@@ -181,7 +181,7 @@ export function createMessageService(repo: MessageRepository = prismaMessageRepo
         if (!m || m.conversationId !== c.id) throw HttpError.badRequest('Mốc phân trang không hợp lệ');
         beforeSeq = m.seq;
       }
-      const { items, hasMore } = await repo.page(c.id, beforeSeq, limit);
+      const { items, hasMore } = await repo.page(c.id, beforeSeq, limit, c.clearedSeq[userId] ?? 0);
       return { data: items.map(toView), meta: { hasMore, nextBefore: hasMore ? items[0]!.id : null } };
     },
 
@@ -222,6 +222,14 @@ export function createMessageService(repo: MessageRepository = prismaMessageRepo
         body: content.length > 80 ? `${content.slice(0, 77)}...` : content,
         link: `/messages/${c.id}`,
       });
+    },
+
+    /** "Xóa cuộc trò chuyện" chỉ phía mình: ẩn mọi tin hiện có với người này; người kia vẫn thấy; tin mới sau đó vẫn hiện. */
+    async deleteConversation(userId: string, conversationId: string) {
+      const c = await requireParticipant(userId, conversationId);
+      await repo.clearForUser(c, userId);
+      await shared().kv.del(throttleKey(c.id, userId)).catch(() => undefined);
+      return { deleted: true };
     },
 
     async markRead(userId: string, conversationId: string) {
