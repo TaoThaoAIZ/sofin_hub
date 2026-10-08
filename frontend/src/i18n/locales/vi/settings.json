@@ -13,7 +13,8 @@
     "billing": "Thanh toán",
     "communities": "Cộng đồng của tôi",
     "referral": "Chương trình giới thiệu",
-    "title": "Cài đặt"
+    "title": "Cài đặt",
+    "unsavedConfirm": "Bạn có thay đổi chưa lưu ở tab Hồ sơ. Rời đi sẽ mất các thay đổi này. Vẫn rời đi?"
   },
   "card": {
     "addedToast": "Đã thêm thẻ •••• {{last4}}",
@@ -424,7 +425,11 @@
     "previewTitle": "Người khác thấy bạn như thế này",
     "cancel": "Hủy",
     "saving": "Đang lưu…",
-    "save": "Lưu thay đổi"
+    "save": "Lưu thay đổi",
+    "coverUpdated": "Đã cập nhật ảnh bìa",
+    "coverRemoved": "Đã xóa ảnh bìa",
+    "changeCover": "Đổi ảnh bìa",
+    "removeCover": "Xóa ảnh bìa"
   },
   "referral": {
     "kindCreator": "Giới thiệu người tạo cộng đồng",
@@ -466,7 +471,7 @@
     "heroCreator": "mỗi tháng từ người bạn giới thiệu mở cộng đồng",
     "heroMember": "mỗi tháng từ thành viên bạn mời vào cộng đồng trả phí",
     "heroSubCreator": "Hoa hồng định kỳ, trả mỗi tháng người đó còn dùng gói trả phí.",
-    "heroSubMember": "Áp dụng cho cộng đồng có bật chương trình giới thiệu thành viên.",
+    "heroSubMember": "Áp dụng cho mọi thanh toán của người được bạn giới thiệu.",
     "yourLink": "Link giới thiệu của bạn",
     "linkFail": "Không tải được link",
     "copyLinkLabel": "Sao chép link",

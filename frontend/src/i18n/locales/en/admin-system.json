@@ -142,7 +142,17 @@
     "checkPeriod": "Subscription period (1–365 days)",
     "checkFixedFee": "Fixed gateway fee",
     "nameRequired": "Platform name can't be empty.",
-    "emailInvalid": "Support email is invalid."
+    "emailInvalid": "Support email is invalid.",
+    "referralTitle": "Referral program",
+    "referralSub": "Commission rates, attribution window and payout day (temporary values).",
+    "refCreatorRate": "Community creator commission",
+    "refCreatorRateHint": "3000 bps = 30% of the hosting plan fee",
+    "refMemberRate": "Member commission",
+    "refMemberRateHint": "1000 bps = 10% of each payment",
+    "refAttributionDays": "Attribution window",
+    "refPayoutDay": "Monthly payout day",
+    "refPayoutDayHint": "1 to 28",
+    "refDayOfMonth": "day of month"
   },
   "notifications": {
     "rowHistory": "Notification",

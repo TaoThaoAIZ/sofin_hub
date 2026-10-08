@@ -42,8 +42,11 @@ export function CommunitiesTab() {
     const from = dragId;
     setDragId(null);
     if (!from || from === target.id) return;
-    const ids = all.map((c) => c.id).filter((id) => id !== from);
-    ids.splice(ids.indexOf(target.id), 0, from);
+    const order = all.map((c) => c.id); // luôn tính trên TOÀN BỘ danh sách (kể cả khi đang lọc)
+    const fromIdx = order.indexOf(from);
+    const ids = order.filter((id) => id !== from);
+    // Kéo xuống: thả sau hàng đích; kéo lên: thả trước hàng đích (nếu không, kéo xuống 1 hàng sẽ không đổi gì).
+    ids.splice(ids.indexOf(target.id) + (fromIdx < order.indexOf(target.id) ? 1 : 0), 0, from);
     reorder.mutate(ids, { onSuccess: () => toast.success(t('communitiesTab.orderUpdated')), onError: (e) => toast.error(errMsg(e)) });
   };
 

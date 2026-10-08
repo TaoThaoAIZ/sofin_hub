@@ -106,6 +106,13 @@ export const updateProfileBody = z.object({
       .max(500)
       .refine((v) => ((v.startsWith('/files/') || v.startsWith('/api/files/')) && !v.includes('..')) || httpUrl('x').safeParse(v).success, 'Ảnh đại diện phải là URL http/https hoặc đường dẫn /files/...'),
   ),
+  coverUrl: clearable(
+    z
+      .string()
+      .trim()
+      .max(500)
+      .refine((v) => ((v.startsWith('/files/') || v.startsWith('/api/files/')) && !v.includes('..')) || httpUrl('x').safeParse(v).success, 'Ảnh bìa phải là URL http/https hoặc đường dẫn /files/...'),
+  ),
 });
 export type UpdateProfileBody = z.infer<typeof updateProfileBody>;
 

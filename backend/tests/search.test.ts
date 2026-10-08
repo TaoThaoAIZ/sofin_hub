@@ -204,15 +204,16 @@ describe('tìm kiếm Postgres: toàn văn + trigram', () => {
     assert.ok(!ids(await search(u.token, 'type=courses&q=phx')).includes(course));
   });
 
-  it('xếp hạng theo độ liên quan: tên khóa chứa từ khóa > chỉ mô tả; reduced luôn xếp sau', async () => {
+  it('xếp hạng: chỉ khóa có từ khóa trong TÊN được tìm thấy (mô tả không tính); reduced luôn xếp sau', async () => {
     const u = await c.registerUser('rank');
     const w = uniq('quokka');
     const inDesc = await mkCourse({ title: 'Khóa A', description: `Có nhắc tới ${w} một lần`, createdAt: new Date('2030-01-01') });
     const inTitle = await mkCourse({ title: `Học ${w} cơ bản`, description: 'Mô tả khác', createdAt: new Date('2020-01-01') });
     const reducedTitle = await mkCourse({ title: `${w} ${w} ${w}`, searchVisibility: 'reduced' });
     const r = await search(u.token, `type=courses&q=${w}`);
-    assert.deepEqual(ids(r), [inTitle, inDesc, reducedTitle]);
-    assert.equal(r.body.counts.courses, 3);
+    assert.deepEqual(ids(r), [inTitle, reducedTitle]);
+    assert.ok(!ids(r).includes(inDesc), 'khóa chỉ có từ khóa ở mô tả không được trả');
+    assert.equal(r.body.counts.courses, 2);
   });
 
   it('phân trang vượt giới hạn 1.000 bài cũ: bài rất cũ vẫn tìm được, trang cuối chính xác', async () => {

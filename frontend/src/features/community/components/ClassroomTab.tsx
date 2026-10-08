@@ -305,7 +305,7 @@ export function ClassroomTab() {
                 {m.publishStatus === 'draft' && (
                   <span className="absolute top-3 left-3 z-[3] rounded-lg bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800">{t('modWizard.lock.draft')}</span>
                 )}
-                {m.locked && (
+                {m.locked && m.lockReason === 'paid' && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[rgba(12,8,6,.62)] px-5 text-center text-sm font-bold text-white backdrop-blur-[2px]">
                     <span className="grid size-11 place-items-center rounded-full border border-white/25 bg-white/15">
                       <MaterialIcon name="lock" size={24} filled color="#fff" />
@@ -318,6 +318,9 @@ export function ClassroomTab() {
                     )}
                   </div>
                 )}
+                {m.locked && m.lockReason !== 'paid' && (
+                  <span className="absolute bottom-3 left-3 z-[3] max-w-[calc(100%-24px)] truncate rounded-lg bg-black/60 px-2.5 py-1 text-xs font-semibold text-white">{lockText(m)}</span>
+                )}
               </div>
               <div className="flex flex-1 flex-col gap-1 px-[18px] pt-3.5 pb-4">
                 <div className="truncate text-[15.5px] font-bold">#{m.index - 1}: {m.title}</div>
@@ -327,12 +330,12 @@ export function ClassroomTab() {
                   <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-[rgba(120,60,20,.08)]">
                     <div className="h-full rounded-full bg-brand" style={{ width: `${m.pct}%` }} />
                   </div>
-                  {payUrlOf(m) && !(m.hasPreview && m.lockReason !== 'previous_module') ? (
+                  {payUrlOf(m) ? (
                     <Link to={payUrlOf(m)!} aria-label={t('classroom.unlockBuy')} title={t('classroom.unlockBuy')} className="grid size-[42px] flex-none place-items-center rounded-[14px] bg-brand/10 hover:bg-brand/20">
                       <MaterialIcon name="lock_open" size={22} color="#f26a1b" />
                     </Link>
                   ) : (
-                  m.locked && !(m.hasPreview && m.lockReason !== 'previous_module') ? (
+                  m.locked ? (
                     <span title={lockText(m)} className="grid size-[42px] flex-none cursor-not-allowed place-items-center rounded-[14px] bg-brand/10 opacity-50">
                       <MaterialIcon name="arrow_forward" size={22} color="#f26a1b" />
                     </span>

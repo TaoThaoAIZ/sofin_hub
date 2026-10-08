@@ -13,7 +13,8 @@
     "billing": "Billing",
     "communities": "My communities",
     "referral": "Referral program",
-    "title": "Settings"
+    "title": "Settings",
+    "unsavedConfirm": "You have unsaved changes on the Profile tab. Leaving will discard them. Leave anyway?"
   },
   "card": {
     "addedToast": "Card •••• {{last4}} added",
@@ -424,7 +425,11 @@
     "previewTitle": "How others see you",
     "cancel": "Cancel",
     "saving": "Saving…",
-    "save": "Save changes"
+    "save": "Save changes",
+    "coverUpdated": "Cover photo updated",
+    "coverRemoved": "Cover photo removed",
+    "changeCover": "Change cover photo",
+    "removeCover": "Remove cover photo"
   },
   "referral": {
     "kindCreator": "Refer community creators",
@@ -466,7 +471,7 @@
     "heroCreator": "every month from people you refer who start a community",
     "heroMember": "every month from members you invite to paid communities",
     "heroSubCreator": "Recurring commission, paid every month they stay on a paid plan.",
-    "heroSubMember": "Applies to communities that have the member referral program turned on.",
+    "heroSubMember": "Applies to every payment made by the people you refer.",
     "yourLink": "Your referral link",
     "linkFail": "Couldn’t load the link",
     "copyLinkLabel": "Copy link",

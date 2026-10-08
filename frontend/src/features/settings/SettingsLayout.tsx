@@ -4,6 +4,7 @@ import { MaterialIcon } from '../../components/ui/MaterialIcon';
 import { ToastProvider } from '../admin/components/overlay';
 import { RequireAuth } from '../auth/RequireAuth';
 import { Header } from '../../components/layout/Header';
+import { hasUnsavedProfile } from './profile/unsaved';
 
 interface NavItem {
   to: string;
@@ -35,6 +36,10 @@ function SideNav() {
             <NavLink
               to={n.to}
               end
+              onClick={(e) => {
+                // Rời tab Hồ sơ khi còn thay đổi chưa lưu: hỏi xác nhận.
+                if (hasUnsavedProfile() && !window.confirm(t('layout.unsavedConfirm'))) e.preventDefault();
+              }}
               className={({ isActive }) =>
                 `flex items-center gap-3.5 rounded-[14px] px-2.5 py-[9px] text-[15.5px] no-underline ${
                   isActive ? 'bg-gradient-to-r from-[#ffe9da] to-[#fff3ea] font-bold text-brand' : 'font-medium text-stone-800 hover:bg-[#faf5f1]'

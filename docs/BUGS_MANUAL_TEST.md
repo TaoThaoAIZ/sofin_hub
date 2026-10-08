@@ -99,3 +99,45 @@ Lưu ý: #7 nếu tester gọi thẳng API mà vẫn thiếu thì gửi lại re
 ## Đợt 10 — Avatar header + mất lịch sử chat
 - Avatar trên header (và Cài đặt › Hồ sơ, xem trước hồ sơ, Giới thiệu) bị ảnh vỡ sau khi tải ảnh mới: `avatarUrl` lưu dạng `/api/files/<key>` (tương đối) nhưng `<img>` dùng thẳng → khi FE và API khác origin (`VITE_API_URL` tuyệt đối) trình duyệt tìm ảnh ở domain FE. Đã bọc `resolveApiPath()` ở 4 chỗ. ✅
 - Mất chat hôm qua: DB local KHÔNG mất dữ liệu do mình (seed không xóa tin nhắn, test chạy ở schema riêng). Trong DB local chỉ có 9 tin, tin thật cuối cùng 30/09, không có user "Linh" → ảnh chụp đến từ môi trường khác. ⏳ cần biết môi trường (xem câu hỏi gửi user).
+
+## Đợt 11 — SEARCH / SETS / SETC
+
+**Kiểm tự động (backend)**: `search`, `perf-sql`, `account-settings`, `my-communities`, `auth-extra` → 74/74 pass sau khi sửa 2 test cũ (tìm khóa học giờ chỉ theo TIÊU ĐỀ — xem đợt 1; test cũ còn kỳ vọng khớp mô tả/tên giảng viên). Các case API chưa test của 3 sheet (SEARCH 001–018/026–027/033–034/044, SETS 051–086, SETC 031–043) được các test này phủ.
+
+| TC | Kết quả kiểm | Xử lý |
+|----|--------------|-------|
+| SEARCH-022, 023, 024, 025 | Gọi API đúng như mong đợi: newbie → counts.posts/members = 0; member2 tìm bài yt → 0, member1 → 1 bài; courseId=photo chỉ trả photo; courseId=yt bằng member2 → 403 'Bạn cần tham gia cộng đồng này trước'. Ghi chú tester "vẫn thấy cộng đồng chưa tham gia" là **khóa học công khai** (loại `course`) — đúng thiết kế (case chỉ yêu cầu bài viết/thành viên bị giới hạn) | Không phải bug. Test case 022/023 nên ghi rõ "kết quả loại khóa học công khai vẫn hiện" |
+| SEARCH-032 | Suggest trả 5 mục xen kẽ course, member, post, course, member — đúng. Ghi chú "trả kết quả title" chưa rõ | ⏳ cần tester mô tả |
+| SETS-007/008/009 | Code khớp mong đợi (tiêu đề, mô tả, placeholder `ten@email.com`, CTA, Esc/Hủy/bấm nền, 3 thông báo lỗi client, không gọi API). Không ghi chú lỗi. Nghi tester đang test bản **deploy cũ** (link vercel trong SETC-025) hoặc môi trường chưa cấu hình SMTP (007 cần thư) | ⏳ cần build mới + mô tả lỗi |
+| SETC-013, 014 | **Bug thật**: kéo một hàng XUỐNG 1 vị trí không đổi gì (chèn trước hàng đích). Sửa: kéo xuống → chèn sau hàng đích; kéo lên → chèn trước; tính trên toàn bộ danh sách khi đang lọc; ghim vẫn đứng đầu | ✅ |
+| SETC-025 | Test case mô tả đúng hiện trạng: lời mời là mã/link chung (không có người nhận) nên hộp thư lời mời theo user chưa tồn tại → cần bảng mời theo user/email | ⏳ cần quyết định có làm không |
+| SETS-042 | Test case lỗi thời: ngôn ngữ đã có i18n và đổi ngay; **giao diện Sáng/Tối chỉ lưu, chưa áp dụng** (chưa có dark mode) | Cập nhật test case; dark mode chưa làm |
+
+## Đợt 12 — Khóa module
+- Ổ khóa + lớp phủ tối chỉ còn ở module **premium** (lockReason `paid`); module khóa vì thứ tự/cấp độ/danh sách chọn hiện ảnh bình thường + nhãn chữ nhỏ ở góc (vd. "Cần đạt Cấp độ 3").
+- Module khóa không còn vào được từ thẻ (trước đây `hasPreview` cho lọt): premium/cộng đồng có phí → nút dẫn tới thanh toán; loại khác → nút mũi tên bị vô hiệu. Trang chi tiết module khóa (mở bằng URL) chỉ hiện lý do + nút mua, không liệt kê bài. Mod trở lên không bị ảnh hưởng.
+- Lưu ý: BE vẫn cho đọc **bài xem thử miễn phí** (isPreview) của module khóa nếu biết URL bài — đúng tính năng "xem thử"; muốn chặn hẳn cần quyết định riêng.
+
+## Đợt 13 — SETP (Hồ sơ)
+| TC | Kết quả kiểm | Xử lý |
+|----|--------------|-------|
+| SETP-005, 025 "chưa tải được ảnh" | Upload avatar chạy đúng ở local (presign → PUT → fileUrl 200). Lỗi nằm ở môi trường tester (server deploy: CORS_ORIGIN, ổ đĩa) hoặc bản deploy cũ. Đã sửa riêng lỗi ảnh vỡ ở đợt 10 | ⏳ kiểm môi trường |
+| SETP-012 | Code hiện KHÔNG còn thẻ quảng bá ở tab Thông báo → tester đang xem bản cũ | Không cần sửa |
+| SETP-017 | `/me/communities` → `/settings/cong-dong` (tab "Cộng đồng của tôi") đúng mong đợi; đây là tab trong Cài đặt, không phải "Cài đặt cộng đồng" | Không phải bug |
+| SETP-024 | Avatar mặc định (chip chữ cái) nền xanh khác header (cam) | Đổi sang nền gradient cam như header (ProfileTab + ProfilePreview) ✅ |
+| SETP-061 | Chưa có ảnh bìa hồ sơ | Thêm cột `User.coverUrl` (migration 20261012100000), PATCH /auth/me nhận `coverUrl` (URL http/https hoặc /api/files/…, chặn javascript:), nút "Đổi ảnh bìa / Xóa ảnh bìa" ở tab Hồ sơ, hiển thị ở thẻ xem trước và trang hồ sơ công khai ✅ |
+| SETP-067 | Rời tab Hồ sơ khi còn thay đổi chưa lưu | Hỏi xác nhận khi bấm menu bên Cài đặt + cảnh báo khi tải lại/đóng tab ✅ (test case cần đổi: nay CÓ cảnh báo) |
+| SETP-057 | Toast "Đường dẫn hồ sơ này đã có người dùng" khi lưu: BE chỉ trả lỗi này khi handle thật sự đã có người khác dùng; lưu lại handle của chính mình → 200. Cần tester cho biết handle nhập và thao tác | ⏳ cần chi tiết |
+| SETP-070, 074, 043 | API đúng: handle → chữ thường, instagram bỏ '@', handle trùng (khác hoa/thường) → 409 tiếng Việt, handle '' → xóa | Không lỗi |
+| SETP-003 | Chỉ có link ảnh chụp, không có mô tả | ⏳ cần mô tả |
+
+## Đợt 14 — SETR (Giới thiệu)
+Đã hoãn theo yêu cầu: SETP-003, SETP-005, SETP-025 → làm sau khi có server AWS/S3.
+
+| TC | Kết quả kiểm | Xử lý |
+|----|--------------|-------|
+| SETR-006, 007, 011, 012… (chuỗi UI/đăng ký bằng link) | Gốc: "link giới thiệu chưa vào được / chưa đúng" — link do BE dựng từ `FRONTEND_URL`; môi trường chưa đặt đúng biến này thì link trỏ `localhost:5173`. Route `/gioi-thieu/:code` và `vercel.json` (SPA fallback) đều đúng | Link hiển thị/sao chép giờ dựng từ `window.location.origin` + mã → luôn mở được ở mọi môi trường ✅. Các case phụ thuộc (011–028, 044–055…) cần test lại sau khi link đúng |
+| SETR-044…064 (API) | `backend/tests/referrals.test.ts`: 24/24 pass (gồm lỗi hook không làm hỏng thanh toán, reconcile, onHostingCharge idempotent, tỉ lệ chụp vào hoa hồng, idempotent webhook…). Nhiều case cần SQL/ép dữ liệu nên tester thủ công khó làm | Không lỗi code |
+| SETR-059 | Admin › Hệ thống › Cài đặt chung thiếu nhóm referral | Thêm thẻ "Chương trình giới thiệu" (4 ô: tỉ lệ creator/member bps, cửa sổ ghi nhận ngày, ngày chi trả) có kiểm khoảng giá trị + nút khôi phục mặc định ✅ |
+| SETR-031 | Mô tả tab thành viên nói có "công tắc chương trình giới thiệu theo cộng đồng" nhưng không có | Sửa câu chữ: "Áp dụng cho mọi thanh toán của người được bạn giới thiệu" ✅ |
+| SETR-029, 030, 032 | Tính năng CHƯA làm, chờ quyết định (OPEN_DECISIONS A16/A17): hoa hồng creator từ phí hosting (chưa có luồng trừ tiền hosting), job chi trả pending→paid + ngưỡng tối thiểu, quy tắc chống gian lận nhiều tài khoản | ⏳ cần PO chốt |

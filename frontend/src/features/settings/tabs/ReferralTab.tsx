@@ -125,7 +125,8 @@ export function ReferralTab() {
   const rows = users.data?.data ?? [];
   const total = users.data?.meta.total ?? 0;
   const rate = pct(o?.rates.rateBps ?? (kind === 'creator' ? 3000 : 1000));
-  const link = o?.link ?? '';
+  // Link dựng từ origin của trang đang mở: mở được ở mọi môi trường, không phụ thuộc biến FRONTEND_URL trên server.
+  const link = o?.code ? `${window.location.origin}/gioi-thieu/${o.code}` : '';
 
   const copy = async () => {
     if (!link) return;

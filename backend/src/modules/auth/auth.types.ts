@@ -9,6 +9,7 @@ export interface User {
   location?: string;
   website?: string;
   avatarUrl?: string;
+  coverUrl?: string;
   /** Đường dẫn hồ sơ sofinhub.com/@handle (chữ thường, duy nhất). */
   handle?: string;
   instagram?: string;

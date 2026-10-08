@@ -54,6 +54,7 @@ export const usersService = {
       instagram: user.instagram ?? null,
       youtube: user.youtube ?? null,
       avatarUrl: user.avatarUrl ?? null,
+      coverUrl: user.coverUrl ?? null,
       joinedAt: user.createdAt,
       communities,
       communityCount: isSelf ? memberships.length : communities.length,

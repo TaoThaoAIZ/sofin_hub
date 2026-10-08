@@ -29,7 +29,7 @@ export interface UserRepository {
 
 export type UserPatch = Partial<Omit<User, 'id' | 'email' | 'createdAt'>>;
 
-const NULLABLE_FIELDS = new Set(['bio', 'location', 'website', 'avatarUrl', 'handle', 'instagram', 'youtube', 'totpSecret', 'pendingEmail']);
+const NULLABLE_FIELDS = new Set(['bio', 'location', 'website', 'avatarUrl', 'coverUrl', 'handle', 'instagram', 'youtube', 'totpSecret', 'pendingEmail']);
 
 export function toUser(u: DbUser): User {
   return {
@@ -43,6 +43,7 @@ export function toUser(u: DbUser): User {
     location: u.location ?? undefined,
     website: u.website ?? undefined,
     avatarUrl: u.avatarUrl ?? undefined,
+    coverUrl: u.coverUrl ?? undefined,
     handle: u.handle ?? undefined,
     instagram: u.instagram ?? undefined,
     youtube: u.youtube ?? undefined,
@@ -122,6 +123,7 @@ export const userRepository: UserRepository = {
           website: null,
           location: null,
           avatarUrl: null,
+          coverUrl: null,
           handle: null,
           instagram: null,
           youtube: null,

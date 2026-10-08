@@ -29,6 +29,7 @@ export interface PublicProfile {
   instagram: string | null;
   youtube: string | null;
   avatarUrl: string | null;
+  coverUrl?: string | null;
   joinedAt: string;
   communities: { course: CourseBrief; role: MemberRole; joinedAt: string }[];
   /** Số cộng đồng (chính chủ xem: gồm cả cộng đồng riêng tư). */
@@ -70,6 +71,7 @@ export interface UpdateProfileInput {
   location?: string;
   website?: string;
   avatarUrl?: string;
+  coverUrl?: string;
   handle?: string;
   instagram?: string;
   youtube?: string;

@@ -77,10 +77,20 @@ export function ModuleDetailPage() {
         </div>
       </section>
 
-      <section className="glass overflow-hidden rounded-2xl">
-        <div className="px-4 py-3 text-[15px] font-bold">{t('classroom.lessonsOfModule')}</div>
-        <LessonList communityId={communityId} courseId={courseId} moduleId={m.id} payUrl={payUrl} canManage={staff} />
-      </section>
+      {m.locked && !staff ? (
+        <section className="glass flex flex-col items-center gap-3 rounded-2xl px-6 py-10 text-center">
+          <span className="grid size-12 place-items-center rounded-full bg-brand/10">
+            <MaterialIcon name="lock" size={26} filled color="#f26a1b" />
+          </span>
+          <p className="m-0 max-w-md text-sm text-stone-600">{lockText(m)}</p>
+          {payUrl && <Link to={payUrl} className={primaryBtn}>{t('classroom.unlockBuy')}</Link>}
+        </section>
+      ) : (
+        <section className="glass overflow-hidden rounded-2xl">
+          <div className="px-4 py-3 text-[15px] font-bold">{t('classroom.lessonsOfModule')}</div>
+          <LessonList communityId={communityId} courseId={courseId} moduleId={m.id} payUrl={payUrl} canManage={staff} />
+        </section>
+      )}
       {confirmDelete && (
         <ConfirmDialog
           title={t('editor.deleteModuleTitle')}

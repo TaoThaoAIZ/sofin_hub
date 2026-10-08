@@ -18,6 +18,7 @@ import {
   type ProfileForm,
 } from '../profile/form';
 import { ProfilePreview } from '../profile/ProfilePreview';
+import { useUnsavedGuard } from '../profile/unsaved';
 import { useDebounced, useHandleAvailability } from '../profile/queries';
 
 const SECTION = 'rounded-[20px] border border-[rgba(120,60,20,.07)] bg-white px-7 pt-6 pb-[26px]';
@@ -32,6 +33,7 @@ export function ProfileTab() {
   const { upload, uploading } = useUpload();
   const stats = usePublicProfile(user?.id ?? '');
   const fileRef = useRef<HTMLInputElement>(null);
+  const coverRef = useRef<HTMLInputElement>(null);
 
   // `saved` = bản đang lưu ở server; `form` = bản đang sửa. Đổi tài khoản/lưu xong thì form đồng bộ lại theo saved.
   const saved = useMemo(() => (user ? formFromUser(user) : null), [user]);
@@ -46,6 +48,9 @@ export function ProfileTab() {
   const changed = !!saved && handle !== saved.handle && handle !== '';
   const debounced = useDebounced(handle);
   const checking = useHandleAvailability(debounced, changed && !fmtErr && debounced === handle);
+
+  const dirtyEarly = !!saved && !!form && JSON.stringify(form) !== JSON.stringify(saved);
+  useUnsavedGuard(dirtyEarly);
 
   if (!user || !saved || !form) return <main className="min-w-0" />;
 
@@ -74,6 +79,21 @@ export function ProfileTab() {
     try {
       const up = await upload(file, { purpose: 'avatar' });
       await saveAvatar(up.url);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('profileTab.uploadFail'));
+    }
+  };
+  // Ảnh bìa lưu ngay như ảnh đại diện.
+  const saveCover = async (coverUrl: string) => {
+    const next = await update.mutateAsync({ coverUrl });
+    set('coverUrl', next.coverUrl ?? '');
+    toast.success(coverUrl ? t('profileTab.coverUpdated') : t('profileTab.coverRemoved'));
+  };
+  const pickCover = async (file: File | undefined) => {
+    if (!file) return;
+    try {
+      const up = await upload(file, { purpose: 'cover' });
+      await saveCover(up.url);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('profileTab.uploadFail'));
     }
@@ -131,7 +151,7 @@ export function ProfileTab() {
               onDrop={onDrop}
             >
               <div
-                className={`grid size-28 place-items-center overflow-hidden rounded-full bg-[#2f4fa8] text-[34px] font-extrabold text-white ${dragOver ? 'ring-4 ring-[#fdba74]' : ''}`}
+                className={`grid size-28 place-items-center overflow-hidden rounded-full bg-brand-gradient text-[34px] font-extrabold text-white ${dragOver ? 'ring-4 ring-[#fdba74]' : ''}`}
               >
                 {form.avatarUrl ? <img src={resolveApiPath(form.avatarUrl)} alt={t('profileTab.avatarAlt')} className="size-full object-cover" /> : initialsOf(form.first, form.last)}
               </div>
@@ -172,6 +192,22 @@ export function ProfileTab() {
               </div>
               <div className="mt-3 text-[13.5px] text-stone-500">
                 {form.avatarUrl ? t('profileTab.dragHint') : t('profileTab.realPhotoHint')}
+              </div>
+              <div className="mt-4 flex flex-wrap items-center gap-[18px]">
+                <input ref={coverRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden onChange={(e) => { void pickCover(e.target.files?.[0]); e.target.value = ''; }} />
+                <button type="button" onClick={() => coverRef.current?.click()} disabled={uploading} className={OUTLINE_BTN}>
+                  <MaterialIcon name="image" size={20} />
+                  {uploading ? t('profileTab.uploading') : t('profileTab.changeCover')}
+                </button>
+                <button
+                  type="button"
+                  disabled={!form.coverUrl}
+                  onClick={() => void saveCover('').catch((err) => toast.error(err instanceof ApiError ? err.message : t('profileTab.removeFail')))}
+                  className="flex items-center gap-1.5 border-0 bg-transparent p-0 text-sm font-semibold text-[#dc2626] disabled:opacity-40"
+                >
+                  <MaterialIcon name="delete" size={20} />
+                  {t('profileTab.removeCover')}
+                </button>
               </div>
             </div>
           </div>

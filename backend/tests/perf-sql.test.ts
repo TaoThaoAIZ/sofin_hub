@@ -336,7 +336,7 @@ describe('hiệu năng SQL (§6.4)', () => {
   });
 
   describe('GET /courses?q chạy trong SQL', () => {
-    it('không phân biệt dấu, theo từ/tiền tố, tên giảng viên; hidden bị loại; không q vẫn như cũ', async () => {
+    it('không phân biệt dấu/hoa thường, CHỈ theo tiêu đề (không mô tả/tên giảng viên); hidden bị loại; không q vẫn như cũ', async () => {
       const u = await c.registerUser('cq');
       const w = uniq('zorb');
       const a = await mkCourse({ title: `Nhiếp ảnh ${w}` });
@@ -347,11 +347,10 @@ describe('hiệu năng SQL (§6.4)', () => {
       assert.equal(r.status, 200);
       assert.deepEqual(r.body.data.map((x: any) => x.id), [a]);
       const all = await c.call('GET', `/courses?q=${w}&limit=50`, { token: u.token });
-      assert.deepEqual(all.body.data.map((x: any) => x.id).sort(), [a, b, d].sort());
-      assert.ok(!all.body.data.some((x: any) => x.id === hidden));
-      assert.equal(all.body.meta.total, 3);
-      const sorted = await c.call('GET', `/courses?q=${w}&sort=top&limit=2&page=2`, { token: u.token });
-      assert.equal(sorted.body.data.length, 1);
+      // Chỉ khớp tiêu đề: khóa chỉ có từ khóa ở mô tả (b) hoặc tên giảng viên (d) KHÔNG xuất hiện.
+      assert.deepEqual(all.body.data.map((x: any) => x.id), [a]);
+      assert.ok(!all.body.data.some((x: any) => x.id === hidden || x.id === b || x.id === d));
+      assert.equal(all.body.meta.total, 1);
       assert.equal((await c.call('GET', '/courses?limit=3', { token: u.token })).body.data.length, 3);
     });
   });

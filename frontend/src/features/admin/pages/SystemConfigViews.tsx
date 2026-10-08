@@ -484,7 +484,7 @@ export function NotificationsView() {
 
 /* ============================== Cài đặt chung ============================== */
 
-type GroupKey = 'platform' | 'payments' | 'security';
+type GroupKey = 'platform' | 'payments' | 'security' | 'referral';
 
 const OVERRIDE_KEYS: Record<string, string> = {
   commissionPct: 'payments.commissionPct',
@@ -494,6 +494,10 @@ const OVERRIDE_KEYS: Record<string, string> = {
   payoutMinUsd: 'payments.payoutMinUsd',
   trialDays: 'payments.trialDays',
   subscriptionPeriodDays: 'payments.subscriptionPeriodDays',
+  creatorRateBps: 'referral.creatorRateBps',
+  memberRateBps: 'referral.memberRateBps',
+  attributionDays: 'referral.attributionDays',
+  payoutDay: 'referral.payoutDay',
 };
 
 export function SettingsView() {
@@ -509,7 +513,7 @@ export function SettingsView() {
   }, [q.data]);
 
   const orig = q.data;
-  const dirty = !!draft && !!orig && (['platform', 'payments', 'security'] as GroupKey[]).some((g) => JSON.stringify(draft[g]) !== JSON.stringify(orig[g]));
+  const dirty = !!draft && !!orig && (['platform', 'payments', 'security', 'referral'] as GroupKey[]).some((g) => JSON.stringify(draft[g]) !== JSON.stringify(orig[g]));
 
   const setG = <G extends GroupKey>(g: G, patch: Partial<PlatformSettings[G]>) => draft && setDraft({ ...draft, [g]: { ...draft[g], ...patch } });
   const num = (v: string) => (v.trim() === '' ? NaN : Number(v.replace(',', '.')));
@@ -527,6 +531,16 @@ export function SettingsView() {
       [p.gatewayFeeFixedCents, 0, 100000, t('settings.checkFixedFee')],
     ];
     for (const [v, lo, hi, label] of checks) if (!Number.isFinite(v) || v < lo || v > hi) return t('settings.invalidField', { label });
+    const r = draft.referral;
+    if (r) {
+      const rc: [number, number, number, string][] = [
+        [r.creatorRateBps, 0, 10000, t('settings.refCreatorRate')],
+        [r.memberRateBps, 0, 10000, t('settings.refMemberRate')],
+        [r.attributionDays, 1, 3650, t('settings.refAttributionDays')],
+        [r.payoutDay, 1, 28, t('settings.refPayoutDay')],
+      ];
+      for (const [v, lo, hi, label] of rc) if (!Number.isInteger(v) || v < lo || v > hi) return t('settings.invalidField', { label });
+    }
     if (!draft.platform.name.trim()) return t('settings.nameRequired');
     if (!/^\S+@\S+\.\S+$/.test(draft.platform.supportEmail.trim())) return t('settings.emailInvalid');
     return null;
@@ -536,7 +550,8 @@ export function SettingsView() {
   const save = async () => {
     if (!draft || !orig) return;
     const patch: Record<string, unknown> = {};
-    (['platform', 'payments', 'security'] as GroupKey[]).forEach((g) => {
+    (['platform', 'payments', 'security', 'referral'] as GroupKey[]).forEach((g) => {
+      if (!draft[g] || !orig[g]) return;
       const changed = Object.fromEntries(Object.entries(draft[g]).filter(([k, v]) => v !== (orig[g] as unknown as Record<string, unknown>)[k]));
       if (Object.keys(changed).length > 0) patch[g] = changed;
     });
@@ -580,6 +595,15 @@ export function SettingsView() {
       </button>
     ) : null;
   };
+  const refRow = (field: keyof PlatformSettings['referral'], label: string, hint: string, suffix: string) => (
+    <SettingRow key={field} label={label} hint={hint}>
+      <div className="flex items-center gap-2">
+        <SettingInput label={label} width={110} value={String(draft!.referral[field] ?? '')} onChange={(v) => setG('referral', { [field]: num(v) } as Partial<PlatformSettings['referral']>)} />
+        <span className="text-xs text-stone-500">{suffix}</span>
+        {over(field as string)}
+      </div>
+    </SettingRow>
+  );
   const numRow = (g: 'payments', field: keyof PlatformSettings['payments'], label: string, hint: string, suffix: string) => (
     <SettingRow key={field} label={label} hint={hint}>
       <div className="flex items-center gap-2">
@@ -690,6 +714,14 @@ export function SettingsView() {
               <Toggle on={draft.payments.autoPayouts} label={t('settings.autoPayouts')} onChange={(v) => setG('payments', { autoPayouts: v })} />
             </SettingRow>
           </Card>
+          {draft.referral && (
+            <Card title={t('settings.referralTitle')} sub={t('settings.referralSub')}>
+              {refRow('creatorRateBps', t('settings.refCreatorRate'), t('settings.refCreatorRateHint'), 'bps')}
+              {refRow('memberRateBps', t('settings.refMemberRate'), t('settings.refMemberRateHint'), 'bps')}
+              {refRow('attributionDays', t('settings.refAttributionDays'), t('common.appliesImmediately'), t('common.days'))}
+              {refRow('payoutDay', t('settings.refPayoutDay'), t('settings.refPayoutDayHint'), t('settings.refDayOfMonth'))}
+            </Card>
+          )}
           {orig?.updatedAt && <p className="m-0 text-xs text-stone-400">{t('settings.lastUpdated', { date: formatDateTime(orig.updatedAt) })}</p>}
           <div className="flex">
             <AdminButton kind="danger" icon="restart_alt" onClick={() => resetKeys([], t('settings.allSettings'))}>

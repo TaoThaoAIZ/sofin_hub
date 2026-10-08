@@ -32,9 +32,9 @@ export function ProfilePreview({ form, stats }: { form: ProfileForm; stats: Prev
 
   return (
     <div className="overflow-hidden rounded-2xl border border-[#f0ebe6]">
-      <div className="h-32 bg-gradient-to-b from-[#ffe2cc] to-[#ffc7a0]" />
+      <div className="h-32 overflow-hidden bg-gradient-to-b from-[#ffe2cc] to-[#ffc7a0]">{form.coverUrl && <img src={resolveApiPath(form.coverUrl)} alt="" className="size-full object-cover" />}</div>
       <div className="px-[18px] pb-[18px]">
-        <div className="relative -mt-12 grid size-24 place-items-center overflow-hidden rounded-full border-4 border-white bg-[#2f4fa8] text-[28px] font-extrabold text-white shadow-[0_6px_16px_rgba(0,0,0,.12)]">
+        <div className="relative -mt-12 grid size-24 place-items-center overflow-hidden rounded-full border-4 border-white bg-brand-gradient text-[28px] font-extrabold text-white shadow-[0_6px_16px_rgba(0,0,0,.12)]">
           {form.avatarUrl ? <img src={resolveApiPath(form.avatarUrl)} alt="" className="size-full object-cover" /> : initialsOf(form.first, form.last)}
         </div>
         <div className="mt-2.5 text-[21px] font-extrabold tracking-[-.01em] break-words">{fullName}</div>

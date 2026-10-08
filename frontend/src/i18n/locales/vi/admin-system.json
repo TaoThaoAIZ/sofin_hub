@@ -142,7 +142,17 @@
     "checkPeriod": "Chu kỳ gói đăng ký (1–365 ngày)",
     "checkFixedFee": "Phí cố định cổng thanh toán",
     "nameRequired": "Tên nền tảng không được để trống.",
-    "emailInvalid": "Email hỗ trợ không hợp lệ."
+    "emailInvalid": "Email hỗ trợ không hợp lệ.",
+    "referralTitle": "Chương trình giới thiệu",
+    "referralSub": "Tỉ lệ hoa hồng, thời hạn ghi nhận và ngày chi trả (giá trị tạm, chờ chốt).",
+    "refCreatorRate": "Hoa hồng người tạo cộng đồng",
+    "refCreatorRateHint": "3000 bps = 30% phí gói hosting",
+    "refMemberRate": "Hoa hồng thành viên",
+    "refMemberRateHint": "1000 bps = 10% mỗi thanh toán",
+    "refAttributionDays": "Cửa sổ ghi nhận",
+    "refPayoutDay": "Ngày chi trả hằng tháng",
+    "refPayoutDayHint": "Từ 1 đến 28",
+    "refDayOfMonth": "ngày/tháng"
   },
   "notifications": {
     "rowHistory": "Thông báo",

@@ -14,6 +14,7 @@ export interface ProfileForm {
   city: string;
   showOnMap: boolean;
   avatarUrl: string;
+  coverUrl: string;
 }
 
 export const BIO_MAX = 150;
@@ -29,6 +30,7 @@ export const formFromUser = (u: AuthUser): ProfileForm => ({
   city: u.location ?? '',
   showOnMap: u.showOnMap,
   avatarUrl: u.avatarUrl ?? '',
+  coverUrl: u.coverUrl ?? '',
 });
 
 /** Ô handle: chữ thường, chỉ a-z 0-9 . _ (giống mockup). */
@@ -81,6 +83,7 @@ export function diffToPatch(saved: ProfileForm, f: ProfileForm): UpdateProfileIn
   if (f.city.trim() !== saved.city) patch.location = f.city.trim();
   if (f.showOnMap !== saved.showOnMap) patch.showOnMap = f.showOnMap;
   if (f.avatarUrl !== saved.avatarUrl) patch.avatarUrl = f.avatarUrl;
+  if (f.coverUrl !== saved.coverUrl) patch.coverUrl = f.coverUrl;
   return patch;
 }
 

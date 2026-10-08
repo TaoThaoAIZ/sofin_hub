@@ -8,6 +8,7 @@ export interface AuthUser {
   location?: string;
   website?: string;
   avatarUrl?: string;
+  coverUrl?: string;
   /** Đường dẫn hồ sơ sofinhub.com/@handle (chữ thường). */
   handle?: string;
   instagram?: string;

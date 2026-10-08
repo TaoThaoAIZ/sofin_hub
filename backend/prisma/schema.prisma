@@ -360,6 +360,8 @@ model User {
   location           String?
   website            String?
   avatarUrl          String?
+  /// Ảnh bìa hồ sơ công khai (URL http/https hoặc /api/files/...).
+  coverUrl           String?
   /// Đường dẫn hồ sơ sofinhub.com/@handle: [a-z0-9._]{3,24}, duy nhất, null = chưa đặt.
   handle             String?    @unique
   instagram          String?

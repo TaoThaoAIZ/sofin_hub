@@ -260,6 +260,8 @@ export interface PlatformSettings {
     autoPayouts: boolean;
   };
   security: { require2fa: boolean; sessionTimeoutMin: number; maintenanceMode: boolean };
+  /** Chương trình giới thiệu: tỉ lệ hoa hồng (bps, 100 bps = 1%), cửa sổ ghi nhận (ngày), ngày chi trả hằng tháng. */
+  referral: { creatorRateBps: number; memberRateBps: number; attributionDays: number; payoutDay: number };
   overrides: Record<string, { default: unknown; overridden: boolean }>;
   updatedAt: string | null;
 }

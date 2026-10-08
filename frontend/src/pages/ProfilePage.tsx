@@ -4,7 +4,7 @@ import { Footer } from '../components/layout/Footer';
 import { Header } from '../components/layout/Header';
 import { ButtonLink } from '../components/ui/Button';
 import { MaterialIcon } from '../components/ui/MaterialIcon';
-import { ApiError } from '../lib/api';
+import { ApiError, resolveApiPath } from '../lib/api';
 import { useAuth } from '../features/auth/AuthContext';
 import { RequireAuth } from '../features/auth/RequireAuth';
 import { Avatar } from '../features/account/components/Avatar';
@@ -52,6 +52,7 @@ function ProfileContent() {
 
         {profile && (
           <>
+            {profile.coverUrl && <img src={resolveApiPath(profile.coverUrl)} alt="" className="mb-3 h-40 w-full rounded-3xl object-cover sm:h-52" />}
             <section className="glass flex flex-wrap items-start gap-5 rounded-3xl p-5 sm:p-8">
               <Avatar url={profile.avatarUrl} name={profile.name} size={88} />
               <div className="min-w-0 flex-1 basis-[240px]">
