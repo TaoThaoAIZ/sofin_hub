@@ -134,8 +134,10 @@ describe('courses + enrollments (Prisma)', () => {
   });
 
   describe('GET /stats', () => {
-    it('tính từ DB: learners/courses/instructors thật, rating = TB review thật (null nếu chưa có)', async () => {
-      await prisma.review.deleteMany({});
+    it('tính từ DB: learners/courses/instructors thật, rating = TB có trọng số điểm các cộng đồng (null nếu chưa ai đánh giá)', async () => {
+      // Điểm nền (Community.rating × ratingCount) + đánh giá thật; test này kiểm 2 đầu: không ai đánh giá -> null, có -> trung bình có trọng số.
+      const listedWhere = { deletedAt: null, locked: false, moderationStatus: 'active', discoveryStatus: 'listed' } as const;
+      await prisma.community.updateMany({ where: listedWhere, data: { rating: 0, ratingCount: 0 } });
       let st = (await call('GET', '/stats')).body.data;
       assert.equal(st.rating, null);
       const listed = await prisma.community.count({ where: { deletedAt: null, locked: false, moderationStatus: 'active', discoveryStatus: 'listed' } });
@@ -146,9 +148,10 @@ describe('courses + enrollments (Prisma)', () => {
       const u = await registerUser('st-a');
       await call('POST', '/courses/photo/enroll', { token: u.token });
       assert.equal((await call('GET', '/stats')).body.data.learners, before + 1);
-      await prisma.review.create({ data: { communityId: 'photo', userId: u.id, rating: 3, text: 'x' } });
+      await prisma.community.update({ where: { id: 'photo' }, data: { rating: 3, ratingCount: 2 } });
+      await prisma.community.update({ where: { id: 'yt' }, data: { rating: 4, ratingCount: 2 } });
       st = (await call('GET', '/stats')).body.data;
-      assert.equal(st.rating, 3);
+      assert.equal(st.rating, 3.5); // (3×2 + 4×2) / 4
     });
   });
 
