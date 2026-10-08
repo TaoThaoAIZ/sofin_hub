@@ -43,7 +43,7 @@ export const txQuery = pageQuery.extend({
   communityId: z.string().max(100).optional(),
   userId: z.string().max(100).optional(),
   ownerId: z.string().max(100).optional(),
-  kind: z.enum(['initial', 'renewal']).optional(),
+  kind: z.enum(['initial', 'renewal', 'module']).optional(),
   ...dateRangeFields,
   sort: z.enum(['newest', 'oldest', 'amount']).default('newest'),
 });
@@ -101,6 +101,7 @@ export const payoutReasonBody = z.object({ reason: reasonField, note: noteField 
 const txInclude = {
   user: { select: personSelect },
   community: { select: { id: true, title: true, owner: { select: personSelect } } },
+  module: { select: { id: true, title: true } },
 } satisfies Prisma.PaymentInclude;
 type TxRow = Prisma.PaymentGetPayload<{ include: typeof txInclude }>;
 
@@ -110,7 +111,9 @@ const toTx = (p: TxRow) => ({
   invoiceNumber: p.invoiceNumber,
   customer: person(p.user),
   community: { id: p.community.id, name: p.community.title, ownerName: p.community.owner ? person(p.community.owner)!.name : null },
-  product: { type: 'membership' as const, label: p.kind === 'renewal' ? 'Membership · Renewal' : 'Membership · Monthly' },
+  product: p.kind === 'module'
+    ? { type: 'module' as const, label: `Module · ${p.module?.title ?? 'đã xóa'}` }
+    : { type: 'membership' as const, label: p.kind === 'renewal' ? 'Membership · Renewal' : 'Membership · Monthly' },
   kind: p.kind,
   method: p.method,
   paymentMethodLabel: METHOD_LABEL[p.method],

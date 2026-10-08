@@ -42,9 +42,11 @@ export interface PaymentIntent {
   // --- mới (chỉ thêm) ---
   amountCents: number;
   currency: 'usd';
-  /** initial = lần thanh toán đầu của 1 gói; renewal = gia hạn kỳ tiếp theo. */
-  kind: 'initial' | 'renewal';
+  /** initial = lần thanh toán đầu của 1 gói; renewal = gia hạn kỳ tiếp theo; module = mua lẻ một module (một lần, không có gói). */
+  kind: 'initial' | 'renewal' | 'module';
   subscriptionId?: string;
+  /** Chỉ có khi kind = module: module được mua lẻ. */
+  moduleId?: string;
   invoiceNumber?: string;
   gatewayChargeId?: string;
   refundedCents: number;

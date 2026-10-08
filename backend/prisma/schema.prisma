@@ -232,6 +232,8 @@ enum PaymentStatus {
 enum PaymentKind {
   initial
   renewal
+  /// Mua lẻ MỘT module trả phí (một lần, không phải gói thành viên). `Payment.moduleId` trỏ module được mua.
+  module
 }
 
 enum SubscriptionStatus {
@@ -986,6 +988,7 @@ model ClassroomModule {
   course    Course            @relation(fields: [learningCourseId], references: [id], onDelete: Cascade)
   lessons   ClassroomLesson[]
   access    ModuleAccess[]
+  payments  Payment[]
 
   @@index([communityId, index])
   @@index([learningCourseId, index])
@@ -1291,6 +1294,8 @@ model Payment {
   status          PaymentStatus   @default(pending)
   kind            PaymentKind     @default(initial)
   subscriptionId  String?
+  /// Chỉ có khi kind = module: module được mua lẻ (cấp ModuleAccess source 'purchase' khi thanh toán thành công, thu hồi khi hoàn tiền).
+  moduleId        String?
   /// INV-YYYY-NNNNNN (cấp từ InvoiceSequence khi thanh toán thành công).
   invoiceNumber   String?         @unique
   gatewayChargeId String?
@@ -1303,10 +1308,11 @@ model Payment {
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
-  community    Community     @relation(fields: [communityId], references: [id], onDelete: Restrict)
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
-  paymentCard  PaymentCard?  @relation(fields: [paymentCardId], references: [id], onDelete: SetNull)
+  community    Community        @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription Subscription?    @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  paymentCard  PaymentCard?     @relation(fields: [paymentCardId], references: [id], onDelete: SetNull)
+  module       ClassroomModule? @relation(fields: [moduleId], references: [id], onDelete: SetNull)
 
   refunds     RefundRequest[]
   chargebacks Chargeback[]
@@ -1315,6 +1321,7 @@ model Payment {
   @@index([communityId, createdAt])
   @@index([subscriptionId])
   @@index([paymentCardId])
+  @@index([moduleId])
   @@index([status])
 }
 

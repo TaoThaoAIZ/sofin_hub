@@ -379,6 +379,7 @@ export const adminAnalyticsService = {
       byPlan: [
         { key: 'new_subscription', label: 'New subscriptions', grossCents: kinds.get('initial') ?? 0 },
         { key: 'renewal', label: 'Renewals', grossCents: kinds.get('renewal') ?? 0 },
+        { key: 'module', label: 'Module purchases', grossCents: kinds.get('module') ?? 0 },
       ].map((p) => ({ ...p, pct: pctRound(p.grossCents, cur.gross) })),
     };
   },

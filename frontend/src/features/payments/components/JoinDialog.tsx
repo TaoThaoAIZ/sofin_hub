@@ -4,15 +4,13 @@ import { Button } from '../../../components/ui/Button';
 import { CardFields } from '../../../components/ui/CardFields';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { ApiError } from '../../../lib/api';
-import { toPaymentMethodInput, tokenizeCard, validateCard, type CardErrors, type CardForm } from '../../../lib/card';
 import { formatCompact, formatMoney } from '../../../lib/format';
 import type { CommunityDetail } from '../../courses/types';
 import type { BillingInterval } from '../api';
 import { useCategories } from '../../courses/queries';
+import { useCardInput } from '../useCardInput';
 import { useCheckout, useCheckoutQuote, useConfirmPayment, useStartTrial } from '../queries';
 import type { QuotePlan } from '../types';
-
-const emptyCard = (): CardForm => ({ number: '', expiry: '', cvc: '' });
 
 const dayMonth = (iso: string) => {
   const d = new Date(iso);
@@ -44,8 +42,7 @@ export function JoinCheckout({
   const quoteQuery = useCheckoutQuote(courseId, selected);
   const quote = quoteQuery.data;
   if (quote && !hasAnnual && quote.plans.some((p) => p.interval === 'annual')) setHasAnnual(true);
-  const [card, setCard] = useState<CardForm>(emptyCard);
-  const [cardErrors, setCardErrors] = useState<CardErrors>({});
+  const cardInput = useCardInput();
   const [error, setError] = useState<string | null>(null);
 
   const checkout = useCheckout(courseId);
@@ -62,12 +59,9 @@ export function JoinCheckout({
   const submit = async () => {
     if (!quote || !current || stale) return;
     setError(null);
-    const ce = validateCard(card);
-    setCardErrors(ce);
-    if (Object.keys(ce).length) return;
-    // Tokenise phía client; số thẻ/CVC thô bị bỏ khỏi state ngay sau đây.
-    const paymentMethod = toPaymentMethodInput(tokenizeCard(card));
-    setCard(emptyCard());
+    // Tokenise phía client; số thẻ/CVC thô bị bỏ khỏi state ngay sau đó (xem useCardInput).
+    const paymentMethod = cardInput.collect();
+    if (!paymentMethod) return;
     try {
       if (trialMode) {
         await trial.mutateAsync({ interval: selected, paymentMethod });
@@ -168,7 +162,7 @@ export function JoinCheckout({
               </span>
             </div>
             <div className="mt-3">
-              <CardFields value={card} onChange={(v) => { setCard(v); setCardErrors({}); setError(null); }} errors={cardErrors} disabled={busy} />
+              <CardFields value={cardInput.card} onChange={(v) => { cardInput.setCard(v); setError(null); }} errors={cardInput.errors} disabled={busy} />
             </div>
 
             {current && (

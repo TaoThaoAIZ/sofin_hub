@@ -98,6 +98,14 @@ export interface LedgerEntryInput {
   note?: string;
 }
 
+export interface ModuleForPurchase {
+  id: string;
+  communityId: string;
+  title: string;
+  accessMode: 'all' | 'level' | 'paid' | 'selected';
+  priceCents: number | null;
+}
+
 export interface CourseState {
   exists: boolean;
   deleted: boolean;
@@ -195,6 +203,18 @@ export interface PaymentsOps {
   transitionPayout(id: string, from: Payout['status'][], patch: PayoutPatch): Promise<Payout | undefined>;
   listPayouts(filter: { communityId?: string; status?: Payout['status'] }, page: number, limit: number): Promise<Page<Payout>>;
 
+  // --- mua lẻ module (cùng transaction với thanh toán/hoàn tiền)
+  /** Module trả phí hiển thị được (đã xuất bản, chưa gỡ, thuộc đúng cộng đồng) — undefined nếu không có. */
+  findModuleForPurchase(communityId: string, moduleId: string): Promise<ModuleForPurchase | undefined>;
+  moduleTitles(moduleIds: string[]): Promise<Map<string, string>>;
+  hasModuleAccess(userId: string, moduleId: string): Promise<boolean>;
+  /** Cấp quyền mở module (source 'purchase'); idempotent, không ghi đè dòng đã có. */
+  grantModuleAccess(userId: string, moduleId: string): Promise<void>;
+  /** Thu hồi quyền do MUA (source 'purchase'); quyền do owner chọn tay ('selected') giữ nguyên. */
+  revokeModuleAccess(userId: string, moduleId: string): Promise<void>;
+  /** Intent module `pending` còn mới, cùng user + module + số tiền — mua lại tái dùng thay vì tạo thêm. */
+  findReusablePendingModule(userId: string, moduleId: string, since: Date, amountCents: number): Promise<PaymentIntent | undefined>;
+
   // --- quyền truy cập (cùng transaction với thanh toán/hoàn tiền)
   /** Ghi danh (giữ vai trò cũ nếu đã có). 403 nếu đang bị cấm. */
   grantAccess(userId: string, communityId: string): Promise<void>;
@@ -252,6 +272,7 @@ function toPayment(r: PaymentRow): PaymentIntent {
     status: r.status,
     kind: r.kind,
     subscriptionId: r.subscriptionId ?? undefined,
+    moduleId: r.moduleId ?? undefined,
     invoiceNumber: r.invoiceNumber ?? undefined,
     gatewayChargeId: r.gatewayChargeId ?? undefined,
     refundedCents: r.refundedCents,
@@ -358,6 +379,7 @@ function makeOps(db: Db): PaymentsOps {
           status: data.status ?? 'pending',
           kind: data.kind ?? 'initial',
           subscriptionId: data.subscriptionId,
+          moduleId: data.moduleId,
           invoiceNumber: data.invoiceNumber,
           gatewayChargeId: data.gatewayChargeId,
           failureReason: data.failureReason,
@@ -378,7 +400,7 @@ function makeOps(db: Db): PaymentsOps {
       return ops.findById(id);
     },
     async findLatestForUser(communityId, userId) {
-      const row = await db.payment.findFirst({ where: { communityId, userId }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }] });
+      const row = await db.payment.findFirst({ where: { communityId, userId, kind: { not: 'module' } }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }] });
       return row ? toPayment(row) : undefined;
     },
     async listByUser(userId, page, limit) {
@@ -665,6 +687,35 @@ function makeOps(db: Db): PaymentsOps {
         db.payout.count({ where }),
       ]);
       return { items: rows.map(toPayout), total };
+    },
+
+    async findModuleForPurchase(communityId, moduleId) {
+      const m = await db.classroomModule.findFirst({
+        where: { id: moduleId, communityId, publishStatus: 'published', removedAt: null, course: { removedAt: null, publishStatus: 'published' } },
+        select: { id: true, communityId: true, title: true, accessMode: true, priceCents: true },
+      });
+      return m ?? undefined;
+    },
+    async moduleTitles(moduleIds) {
+      if (moduleIds.length === 0) return new Map();
+      const rows = await db.classroomModule.findMany({ where: { id: { in: moduleIds } }, select: { id: true, title: true } });
+      return new Map(rows.map((r) => [r.id, r.title]));
+    },
+    async hasModuleAccess(userId, moduleId) {
+      return (await db.moduleAccess.count({ where: { userId, moduleId } })) > 0;
+    },
+    async grantModuleAccess(userId, moduleId) {
+      await db.moduleAccess.upsert({ where: { moduleId_userId: { moduleId, userId } }, create: { moduleId, userId, source: 'purchase' }, update: {} });
+    },
+    async revokeModuleAccess(userId, moduleId) {
+      await db.moduleAccess.deleteMany({ where: { userId, moduleId, source: 'purchase' } });
+    },
+    async findReusablePendingModule(userId, moduleId, since, amountCents) {
+      const row = await db.payment.findFirst({
+        where: { userId, moduleId, kind: 'module', status: 'pending', amountCents, createdAt: { gte: since } },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      });
+      return row ? toPayment(row) : undefined;
     },
 
     async grantAccess(userId, communityId) {

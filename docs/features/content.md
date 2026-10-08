@@ -103,6 +103,8 @@ Kiểm tra phân quyền: đăng nhập Member B → menu KHÔNG có Sửa/Xóa/
 - Module khóa: lớp phủ ghi "Hoàn thành module trước" (khóa theo module trước) hoặc "Cần đạt Cấp độ N" (khóa theo cấp độ); nút mở bị khóa. Mod+ không bao giờ bị khóa.
 - Mở module (mũi tên) → danh sách bài: dấu tích tròn để đánh dấu hoàn thành/bỏ; bấm tên bài hoặc nút play để vào trang học.
 
+**Mua lẻ module trả phí (C2b)**: module khóa vì `lockReason='paid'` có nút "Mua để mở khóa" (thẻ module, biểu tượng khóa ở danh sách bài, trang module). Bấm → hộp thoại ngay trên trang (không điều hướng): tên module, giá, ô nhập thẻ dùng chung `CardFields`/`useCardInput` với hộp thoại tham gia, nút "Thanh toán $X". Thành công → "Đã mở khóa module" và lớp học tự làm mới. Chưa tham gia cộng đồng miễn phí → gợi ý/nút "Tham gia cộng đồng"; đã sở hữu → báo đã sở hữu. Cộng đồng có phí mà module khóa lý do khác vẫn đi tới `/communities/:id/checkout` (kèm `state.from`; đóng/hủy quay lại màn hình đang xem). API: `docs/api/payments.md`.
+
 ### C3. Trang học `/lop-hoc/:lessonId`
 - Video: iframe YouTube/Vimeo (chỉ host được BE cho phép, `sandbox` + `referrerpolicy`). Bài văn bản: hiện nội dung. Tệp đính kèm: danh sách link tải.
 - "Hoàn thành / Bỏ hoàn thành", "Bài trước / Bài sau" (có thể sang module khác), thanh tiến độ khóa, danh sách bài của module ở cột phải.

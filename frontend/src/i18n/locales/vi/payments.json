@@ -61,5 +61,21 @@
   "checkout": {
     "loading": "Đang tải…",
     "notFound": "Không tìm thấy cộng đồng."
+  },
+  "modulePurchase": {
+    "title": "Mua module để mở khóa",
+    "oneTime": "Thanh toán một lần cho riêng module này",
+    "unlocked": "Đã mở khóa module",
+    "unlockedBody": "Bạn đã mở khóa module \"{{title}}\". Chúc bạn học tốt!",
+    "startLearning": "Bắt đầu học",
+    "pay": "Thanh toán {{amount}}",
+    "note": "Đây không phải gói thành viên: bạn chỉ trả một lần và không bị tính phí định kỳ.",
+    "declined": "Thẻ bị từ chối. Vui lòng thử lại hoặc dùng thẻ khác.",
+    "failed": "Không thể mua module, vui lòng thử lại",
+    "joinFirst": "Bạn cần tham gia cộng đồng (miễn phí) trước khi mua module này.",
+    "joinCta": "Tham gia cộng đồng",
+    "alreadyOwned": "Bạn đã sở hữu module này rồi.",
+    "staffExempt": "Bạn là quản trị cộng đồng nên không cần mua module.",
+    "cannotBuy": "Hiện bạn chưa thể mua module này."
   }
 }

@@ -297,7 +297,7 @@ export const classroomRepository: ClassroomRepository = {
 
   async replaceAccess(moduleId, userIds) {
     await prisma.$transaction([
-      prisma.moduleAccess.deleteMany({ where: { moduleId, userId: { notIn: userIds } } }),
+      prisma.moduleAccess.deleteMany({ where: { moduleId, userId: { notIn: userIds }, source: 'selected' } }), // quyền do MUA ('purchase') không bị owner xóa tay
       prisma.moduleAccess.createMany({ data: userIds.map((userId) => ({ moduleId, userId, source: 'selected' as const })), skipDuplicates: true }),
     ]);
   },

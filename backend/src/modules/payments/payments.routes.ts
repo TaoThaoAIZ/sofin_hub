@@ -14,6 +14,7 @@ import {
   listRefundsQuery,
   paginationQuery,
   paymentMethodInput,
+  purchaseModuleBody,
   refundRequestBody,
   resolvePayoutBody,
   resolveRefundBody,
@@ -40,6 +41,17 @@ paymentsRouter.get('/courses/:id/subscription', requireAuth, async (req, res) =>
 paymentsRouter.get('/courses/:id/checkout-quote', optionalAuth, async (req, res) => {
   const q = quoteQuery.parse(req.query);
   res.json({ data: await paymentsService.quote(id(req.params.id), req.userId, q.interval) });
+});
+
+// ---- mua lẻ module trả phí (thanh toán một lần; không tạo gói thành viên)
+paymentsRouter.get('/courses/:id/modules/:moduleId/purchase-quote', requireAuth, async (req, res) => {
+  res.json({ data: await paymentsService.moduleQuote(id(req.params.id), id(req.params.moduleId), req.userId!) });
+});
+
+paymentsRouter.post('/courses/:id/modules/:moduleId/purchase', requireAuth, requireVerifiedEmail, async (req, res) => {
+  const body = purchaseModuleBody.parse(req.body ?? {});
+  const key = body.idempotencyKey ?? (req.header('idempotency-key')?.trim().slice(0, 200) || undefined);
+  res.status(201).json({ data: await paymentsService.purchaseModule(id(req.params.id), id(req.params.moduleId), req.userId!, { paymentMethod: body.paymentMethod, idempotencyKey: key }) });
 });
 
 paymentsRouter.get('/me/payment-methods', requireAuth, async (req, res) => {

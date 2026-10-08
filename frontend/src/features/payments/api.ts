@@ -31,6 +31,27 @@ export const checkout = (courseId: string, input: CheckoutInput, token: string, 
     { token, headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined },
   ).then((r) => r.data);
 
+export interface ModulePurchaseQuote {
+  communityId: string;
+  moduleId: string;
+  title: string;
+  currency: string;
+  priceCents: number;
+  priceUsd: number;
+  oneTime: boolean;
+  provider: string;
+  canPurchase: boolean;
+  /** Mã lý do không mua được (JOIN_REQUIRED | ALREADY_OWNED | STAFF_EXEMPT | FORBIDDEN...) hoặc null. */
+  blocked: string | null;
+  owned: boolean;
+}
+
+export const fetchModuleQuote = (communityId: string, moduleId: string, signal?: AbortSignal) =>
+  apiGet<{ data: ModulePurchaseQuote }>(`/communities/${communityId}/modules/${moduleId}/purchase-quote`, undefined, signal).then((r) => r.data);
+
+export const purchaseModule = (communityId: string, moduleId: string, input: { paymentMethod: PaymentMethodInput; idempotencyKey: string }) =>
+  apiPost<{ data: PaymentIntent }>(`/communities/${communityId}/modules/${moduleId}/purchase`, input).then((r) => r.data);
+
 export const confirmPayment = (paymentIntentId: string, token: string) =>
   apiPost<{ data: PaymentIntent }>(`/payments/${paymentIntentId}/confirm`, undefined, { token }).then((r) => r.data);
 

@@ -61,5 +61,21 @@
   "checkout": {
     "loading": "Loading…",
     "notFound": "Community not found."
+  },
+  "modulePurchase": {
+    "title": "Buy this module to unlock it",
+    "oneTime": "One-time payment for this module only",
+    "unlocked": "Module unlocked",
+    "unlockedBody": "You've unlocked \"{{title}}\". Happy learning!",
+    "startLearning": "Start learning",
+    "pay": "Pay {{amount}}",
+    "note": "This is not a membership: you pay once and are never billed again.",
+    "declined": "Your card was declined. Please try again or use another card.",
+    "failed": "Couldn't buy the module, please try again",
+    "joinFirst": "Join the community (it's free) before buying this module.",
+    "joinCta": "Join the community",
+    "alreadyOwned": "You already own this module.",
+    "staffExempt": "You manage this community, so you don't need to buy modules.",
+    "cannotBuy": "You can't buy this module right now."
   }
 }

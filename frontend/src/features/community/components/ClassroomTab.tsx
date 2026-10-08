@@ -1,20 +1,44 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../../i18n';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { communityCheckout, lessonPath, modulePath } from '../../../lib/paths';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { useCommunityDetail } from '../../courses/queries';
 import { formatCompact } from '../../../lib/format';
 import { useClaimCertificate, useCourseList, useDeleteLesson, useLessons, useModules, useProgress, useToggleLessonComplete } from '../queries';
 import type { Certificate, ClassroomModule } from '../types';
+import { ModulePurchaseDialog } from '../../payments/components/ModulePurchaseDialog';
 import { CertificateDialog } from './CertificateCard';
 import { ClassroomEditor } from './ClassroomEditor';
 import { ModuleWizard } from './ModuleWizard';
 import { CourseManager, publishBadgeCls, publishLabel } from './CourseManager';
 import { ConfirmDialog, errText, ErrorNote, ghostBtn, isAdminPlus, isModPlus, primaryBtn, safeUrl, toast, ToastHost } from './contentUi';
 
-export function LessonList({ communityId, courseId, moduleId, payUrl, canManage = false }: { communityId: string; courseId: string; moduleId: string; payUrl?: string; canManage?: boolean }) {
+/** Cách mở khóa một module đang khóa: mua lẻ ngay trên trang (hộp thoại) hoặc sang trang thanh toán gói thành viên của cộng đồng. */
+export type Unlock = { to: string } | { onBuy: () => void };
+
+/**
+ * Module bán riêng (accessMode = paid, lockReason 'paid') → hộp thoại mua lẻ; cộng đồng có phí mà module khóa vì lý do khác → trang thanh toán gói
+ * (kèm `from` để đóng/hủy quay lại đúng màn hình). Mod+ không bao giờ phải mua.
+ */
+export function unlockFor(m: ClassroomModule, opts: { staff: boolean; communityId: string; communityPriceUsd?: number; onBuy: (m: ClassroomModule) => void }): Unlock | undefined {
+  if (!m.locked || opts.staff) return undefined;
+  if (m.lockReason === 'paid') return { onBuy: () => opts.onBuy(m) };
+  if ((opts.communityPriceUsd ?? 0) > 0) return { to: communityCheckout(opts.communityId) };
+  return undefined;
+}
+
+/** Nút/link mở khóa: `to` → <Link> mang `state.from` là trang hiện tại; `onBuy` → <button>. */
+export function UnlockControl({ unlock, className, label, children }: { unlock: Unlock; className: string; label?: string; children: ReactNode }) {
+  const loc = useLocation();
+  if ('onBuy' in unlock) {
+    return <button type="button" onClick={unlock.onBuy} aria-label={label} title={label} className={className}>{children}</button>;
+  }
+  return <Link to={unlock.to} state={{ from: loc.pathname + loc.search }} aria-label={label} title={label} className={className}>{children}</Link>;
+}
+
+export function LessonList({ communityId, courseId, moduleId, unlock, canManage = false }: { communityId: string; courseId: string; moduleId: string; unlock?: Unlock; canManage?: boolean }) {
   const { t } = useTranslation('community');
   const lessons = useLessons(communityId, courseId, moduleId);
   const toggle = useToggleLessonComplete(communityId);
@@ -45,8 +69,8 @@ export function LessonList({ communityId, courseId, moduleId, payUrl, canManage 
             </div>
           </Link>
           {l.locked ? (
-            payUrl ? (
-              <Link to={payUrl} aria-label={t('classroom.unlockBuy')} title={t('classroom.unlockBuy')} className="grid size-8 flex-none place-items-center rounded-full bg-brand/10 hover:bg-brand/20"><MaterialIcon name="lock" size={16} filled color="#f26a1b" /></Link>
+            unlock ? (
+              <UnlockControl unlock={unlock} label={t('classroom.unlockBuy')} className="grid size-8 flex-none place-items-center rounded-full bg-brand/10 hover:bg-brand/20"><MaterialIcon name="lock" size={16} filled color="#f26a1b" /></UnlockControl>
             ) : (
               <span className="grid size-8 flex-none place-items-center rounded-full bg-stone-100"><MaterialIcon name="lock" size={16} filled color="#a8a29e" /></span>
             )
@@ -112,6 +136,7 @@ export function ClassroomTab() {
   const [editMode, setEditMode] = useState(false);
   const [cert, setCert] = useState<Certificate | null>(null);
   const [wizard, setWizard] = useState<ClassroomModule | 'new' | null>(null);
+  const [buying, setBuying] = useState<ClassroomModule | null>(null);
 
   const role = community?.viewerRole;
   const canEdit = isModPlus(role);
@@ -156,7 +181,7 @@ export function ClassroomTab() {
   const shown = list.slice(start, start + PAGE_SIZE);
   const totalLessons = list.reduce((n, m) => n + m.lessonsCount, 0);
   // Module đang khóa trong cộng đồng có phí (hoặc module bán riêng) → đưa người học sang trang thanh toán để mở khóa.
-  const payUrlOf = (m: ClassroomModule) => (m.locked && !canEdit && (m.lockReason === 'paid' || (community?.priceUsd ?? 0) > 0) ? communityCheckout(communityId) : undefined);
+  const unlockOf = (m: ClassroomModule) => unlockFor(m, { staff: canEdit, communityId, communityPriceUsd: community?.priceUsd, onBuy: setBuying });
   const prog = progress.data;
   const complete = !!prog && prog.totalLessons > 0 && prog.percent >= 100;
   const canClaim = complete && selected.certificatesEffective;
@@ -311,10 +336,10 @@ export function ClassroomTab() {
                       <MaterialIcon name="lock" size={24} filled color="#fff" />
                     </span>
                     {lockText(m)}
-                    {payUrlOf(m) && (
-                      <Link to={payUrlOf(m)!} className="mt-1 rounded-xl bg-brand px-4 py-1.5 text-[13px] font-bold text-white hover:opacity-90">
+                    {unlockOf(m) && (
+                      <UnlockControl unlock={unlockOf(m)!} className="mt-1 rounded-xl bg-brand px-4 py-1.5 text-[13px] font-bold text-white hover:opacity-90">
                         {t('classroom.unlockBuy')}
-                      </Link>
+                      </UnlockControl>
                     )}
                   </div>
                 )}
@@ -330,10 +355,10 @@ export function ClassroomTab() {
                   <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-[rgba(120,60,20,.08)]">
                     <div className="h-full rounded-full bg-brand" style={{ width: `${m.pct}%` }} />
                   </div>
-                  {payUrlOf(m) ? (
-                    <Link to={payUrlOf(m)!} aria-label={t('classroom.unlockBuy')} title={t('classroom.unlockBuy')} className="grid size-[42px] flex-none place-items-center rounded-[14px] bg-brand/10 hover:bg-brand/20">
+                  {unlockOf(m) ? (
+                    <UnlockControl unlock={unlockOf(m)!} label={t('classroom.unlockBuy')} className="grid size-[42px] flex-none place-items-center rounded-[14px] bg-brand/10 hover:bg-brand/20">
                       <MaterialIcon name="lock_open" size={22} color="#f26a1b" />
-                    </Link>
+                    </UnlockControl>
                   ) : (
                   m.locked ? (
                     <span title={lockText(m)} className="grid size-[42px] flex-none cursor-not-allowed place-items-center rounded-[14px] bg-brand/10 opacity-50">
@@ -367,6 +392,7 @@ export function ClassroomTab() {
 
       {wizard && <ModuleWizard communityId={communityId} courseId={courseId} module={wizard === 'new' ? null : wizard} onClose={() => setWizard(null)} />}
       {cert && <CertificateDialog cert={cert} onClose={() => setCert(null)} />}
+      {buying && <ModulePurchaseDialog communityId={communityId} module={buying} onClose={() => setBuying(null)} />}
     </div>
   );
 }

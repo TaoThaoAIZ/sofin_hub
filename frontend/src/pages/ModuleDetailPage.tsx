@@ -2,10 +2,11 @@ import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { MaterialIcon } from '../components/ui/MaterialIcon';
-import { classroomPath, communityCheckout } from '../lib/paths';
+import { classroomPath } from '../lib/paths';
+import { ModulePurchaseDialog } from '../features/payments/components/ModulePurchaseDialog';
 import { useCommunityDetail } from '../features/courses/queries';
 import { ConfirmDialog, errText, ErrorNote, ghostBtn, isModPlus, primaryBtn, safeUrl, toast, ToastHost } from '../features/community/components/contentUi';
-import { LessonList, lockText } from '../features/community/components/ClassroomTab';
+import { LessonList, lockText, unlockFor, UnlockControl } from '../features/community/components/ClassroomTab';
 import { useCourseList, useDeleteModule, useModules } from '../features/community/queries';
 
 /** Trang chi tiết một module: thông tin + danh sách bài học; bấm từng bài mới sang trang học. */
@@ -21,6 +22,7 @@ export function ModuleDetailPage() {
   const navigate = useNavigate();
   const removeModule = useDeleteModule(communityId, courseId ?? '');
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [buying, setBuying] = useState(false);
 
   if (courseList.isPending || (courseId && modules.isPending)) return <p className="py-10 text-center text-stone-400">{t('classroom.loading')}</p>;
   if (modules.isError) return <ErrorNote message={errText(modules.error, t('classroom.loadFailed'))} />;
@@ -36,7 +38,7 @@ export function ModuleDetailPage() {
   }
 
   const staff = isModPlus(community?.viewerRole);
-  const payUrl = m.locked && !staff && (m.lockReason === 'paid' || (community?.priceUsd ?? 0) > 0) ? communityCheckout(communityId) : undefined;
+  const unlock = unlockFor(m, { staff, communityId, communityPriceUsd: community?.priceUsd, onBuy: () => setBuying(true) });
   const thumb = safeUrl(m.thumbnail);
 
   return (
@@ -71,7 +73,7 @@ export function ModuleDetailPage() {
             <div className="mt-2 flex flex-wrap items-center gap-3 rounded-xl bg-amber-50 px-3 py-2 text-[13px] font-medium text-amber-800">
               <MaterialIcon name="lock" size={18} filled color="#b45309" />
               <span className="flex-1">{lockText(m)}</span>
-              {payUrl && <Link to={payUrl} className="rounded-xl bg-brand px-4 py-1.5 text-[13px] font-bold text-white">{t('classroom.unlockBuy')}</Link>}
+              {unlock && <UnlockControl unlock={unlock} className="rounded-xl bg-brand px-4 py-1.5 text-[13px] font-bold text-white">{t('classroom.unlockBuy')}</UnlockControl>}
             </div>
           )}
         </div>
@@ -83,14 +85,15 @@ export function ModuleDetailPage() {
             <MaterialIcon name="lock" size={26} filled color="#f26a1b" />
           </span>
           <p className="m-0 max-w-md text-sm text-stone-600">{lockText(m)}</p>
-          {payUrl && <Link to={payUrl} className={primaryBtn}>{t('classroom.unlockBuy')}</Link>}
+          {unlock && <UnlockControl unlock={unlock} className={primaryBtn}>{t('classroom.unlockBuy')}</UnlockControl>}
         </section>
       ) : (
         <section className="glass overflow-hidden rounded-2xl">
           <div className="px-4 py-3 text-[15px] font-bold">{t('classroom.lessonsOfModule')}</div>
-          <LessonList communityId={communityId} courseId={courseId} moduleId={m.id} payUrl={payUrl} canManage={staff} />
+          <LessonList communityId={communityId} courseId={courseId} moduleId={m.id} unlock={unlock} canManage={staff} />
         </section>
       )}
+      {buying && <ModulePurchaseDialog communityId={communityId} module={m} onClose={() => setBuying(false)} />}
       {confirmDelete && (
         <ConfirmDialog
           title={t('editor.deleteModuleTitle')}

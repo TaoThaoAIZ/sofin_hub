@@ -38,6 +38,12 @@ export const startTrialBody = z.object({
   paymentMethod: paymentMethodInput.optional(),
 });
 
+/** Mua lẻ module: giá luôn do server quyết định (không nhận số tiền). Idempotency-Key ở body hoặc header (body ưu tiên). */
+export const purchaseModuleBody = z.object({
+  paymentMethod: paymentMethodInput.optional(),
+  idempotencyKey: z.string().trim().min(1).max(200).optional(),
+});
+
 export const quoteQuery = z.object({ interval: intervalField.default('monthly') });
 
 export const cancelSubscriptionBody = z.object({

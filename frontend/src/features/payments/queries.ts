@@ -42,6 +42,24 @@ export const useCheckoutQuote = (courseId: string, interval: api.BillingInterval
     retry: false,
   });
 
+export const useModuleQuote = (communityId: string, moduleId: string, enabled = true) =>
+  useQuery({
+    queryKey: ['payments', communityId, 'module-quote', moduleId],
+    queryFn: ({ signal }) => api.fetchModuleQuote(communityId, moduleId, signal),
+    enabled: enabled && !!communityId && !!moduleId,
+    staleTime: 0,
+    retry: false,
+  });
+
+/** Mua lẻ module (một lần). Thành công → làm mới lớp học + thanh toán để module được mở khóa ngay. */
+export const usePurchaseModule = (communityId: string, moduleId: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { paymentMethod: PaymentMethodInput; idempotencyKey: string }) => api.purchaseModule(communityId, moduleId, input),
+    onSuccess: () => Promise.all([qc.invalidateQueries({ queryKey: ['community', communityId] }), qc.invalidateQueries({ queryKey: ['payments'] })]),
+  });
+};
+
 export const useSubscription = (courseId: string) => {
   const { accessToken, status } = useAuth();
   return useQuery({

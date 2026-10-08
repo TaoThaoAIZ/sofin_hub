@@ -159,6 +159,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
   async function settle(intent: PaymentIntent, chargeId: string): Promise<{ payment: PaymentIntent; voided: boolean }> {
     return inTx(async (ops, after) => {
       const at = new Date();
+      if (intent.moduleId) return settleModule(ops, after, intent, chargeId);
       await ops.advisoryLock(`sub:${intent.userId}:${intent.communityId}`);
       let sub = await ops.lockLiveSubscription(intent.userId, intent.communityId); // (1) Subscription trước
       const current = await ops.findById(intent.id);
@@ -221,6 +222,39 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
     });
   }
 
+  /**
+   * Chốt thanh toán MUA LẺ module trong transaction của `settle`: đánh dấu thành công → cấp ModuleAccess('purchase') → số hóa đơn (cuối cùng).
+   * Không đụng tới Subscription/Enrollment. Đã sở hữu module (đua với request khác / owner cấp tay) ⇒ void `duplicate_charge` để hoàn tiền.
+   * Bị cấm sau khi tạo giao dịch: vẫn ghi nhận thanh toán (hoàn tiền được) nhưng không cấp quyền — như gói thành viên.
+   */
+  async function settleModule(ops: PaymentsOps, after: After, intent: PaymentIntent, chargeId: string): Promise<{ payment: PaymentIntent; voided: boolean }> {
+    const moduleId = intent.moduleId!;
+    await ops.advisoryLock(`module:${intent.userId}:${moduleId}`);
+    const current = await ops.findById(intent.id);
+    if (!current || current.status !== 'pending') return { payment: current ?? intent, voided: false };
+    if (await ops.hasModuleAccess(intent.userId, moduleId)) {
+      const voided = await ops.transition(intent.id, ['pending'], { status: 'failed', gatewayChargeId: chargeId, failureReason: 'duplicate_charge' });
+      return { payment: voided ?? current, voided: true };
+    }
+    const at = new Date();
+    const done = await ops.transition(intent.id, ['pending'], { status: 'succeeded', confirmedAt: at.toISOString(), gatewayChargeId: chargeId });
+    if (!done) return { payment: (await ops.findById(intent.id))!, voided: false };
+    if (!(await ops.isBanned(intent.userId, intent.communityId))) await ops.grantModuleAccess(intent.userId, moduleId);
+    const invoiceNumber = await ops.nextInvoiceNumber(at.getUTCFullYear());
+    const final = await ops.transition(intent.id, ['succeeded'], { invoiceNumber });
+    const title = (await ops.moduleTitles([moduleId])).get(moduleId) ?? 'module';
+    after.push(() => referralsService.onPaymentSucceeded(final!));
+    later(after, {
+      userId: intent.userId,
+      type: 'payment_succeeded',
+      title: 'Bạn đã mở khóa module',
+      body: `Bạn đã mở khóa module "${title}" với ${(intent.amountCents / 100).toFixed(2)} USD. Hóa đơn ${invoiceNumber}.`,
+      link: `/communities/${intent.communityId}/community/lop-hoc/module/${moduleId}`,
+      communityId: intent.communityId,
+    });
+    return { payment: final!, voided: false };
+  }
+
   /** Hoàn khoản trừ trùng (đã void trong DB) qua cổng — NGOÀI transaction, idempotency key cố định theo giao dịch ⇒ gọi lại an toàn. */
   async function refundVoidedCharge(payment: PaymentIntent) {
     if (!payment.gatewayChargeId || payment.refundedCents > 0) return;
@@ -231,7 +265,9 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
       userId: payment.userId,
       type: 'system',
       title: 'Đã hoàn khoản thanh toán trùng',
-      body: `Bạn đã có gói thành viên nên khoản thanh toán ${(payment.amountCents / 100).toFixed(2)} USD bị trùng đã được hoàn lại.`,
+      body: payment.moduleId
+        ? `Bạn đã sở hữu module này nên khoản thanh toán ${(payment.amountCents / 100).toFixed(2)} USD bị trùng đã được hoàn lại.`
+        : `Bạn đã có gói thành viên nên khoản thanh toán ${(payment.amountCents / 100).toFixed(2)} USD bị trùng đã được hoàn lại.`,
       link: `/courses/${payment.communityId}`,
       communityId: payment.communityId,
     });
@@ -242,7 +278,10 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
     const r = await settle(intent, chargeId);
     if (r.voided) {
       await refundVoidedCharge(r.payment);
-      if (throwOnVoid) throw HttpError.conflict('Bạn đã có gói thành viên ở cộng đồng này; khoản thanh toán trùng đã được hoàn lại');
+      if (throwOnVoid) {
+        if (r.payment.moduleId) throw HttpError.coded(409, 'ALREADY_OWNED', 'Bạn đã sở hữu module này; khoản thanh toán trùng đã được hoàn lại');
+        throw HttpError.conflict('Bạn đã có gói thành viên ở cộng đồng này; khoản thanh toán trùng đã được hoàn lại');
+      }
     }
     return r.payment;
   }
@@ -388,6 +427,8 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
         await endSubscription(ops, after, sub, 'canceled', at);
       }
     }
+    // Mua lẻ module: hoàn toàn bộ thì thu hồi quyền mở module (chỉ dòng source 'purchase'); không đụng gói thành viên.
+    if (full && payment.moduleId) await ops.revokeModuleAccess(payment.userId, payment.moduleId);
     // Hoàn tiền SAU khi owner đã rút (số dư ròng < 0) ⇒ ghi sổ nợ.
     await recordDebt(ops, payment.communityId, balanceBefore, { kind: ledgerKind, paymentId: payment.id, refundId: refund.id, note: refund.reason });
     if (full) after.push(() => referralsService.voidForPayment(payment.id)); // hủy hoa hồng giới thiệu chưa chi trả (sau commit)
@@ -620,6 +661,25 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
         const course = await catalogService.getById(intent.communityId);
         if (course.locked) throw locked();
         if (await enrollmentService.isBanned(userId, intent.communityId)) throw HttpError.forbidden('Bạn đã bị cấm khỏi cộng đồng này');
+        if (intent.moduleId) {
+          if (await repo.hasModuleAccess(userId, intent.moduleId)) throw HttpError.coded(409, 'ALREADY_OWNED', 'Bạn đã sở hữu module này');
+          const card = intent.paymentCardId ? await repo.findCard(intent.paymentCardId) : undefined;
+          const title = (await repo.moduleTitles([intent.moduleId])).get(intent.moduleId) ?? intent.moduleId;
+          const charge = await gateway.createCharge({
+            amountCents: intent.amountCents,
+            currency: 'usd',
+            description: `Module ${title} — ${course.title}`,
+            customerId: userId,
+            idempotencyKey: intent.id,
+            paymentToken: card?.gatewayToken,
+          });
+          if (!charge.ok) {
+            await failPayment(intent, charge.failureReason ?? 'declined');
+            throw new HttpError(402, 'PAYMENT_FAILED', 'Thanh toán không thành công, vui lòng thử lại hoặc dùng phương thức khác');
+          }
+          await repo.transition(intent.id, ['pending'], { gatewayChargeId: charge.chargeId });
+          return settleAndVoid(intent, charge.chargeId);
+        }
         const live = await repo.lockLiveSubscription(userId, intent.communityId);
         if (live?.status === 'active' || ((await enrollmentService.isEnrolled(userId, intent.communityId)) && live?.status !== 'trialing')) {
           throw HttpError.conflict('Bạn đã tham gia khóa học này rồi');
@@ -650,6 +710,93 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
       const sub = await repo.findSubscriptionFor(userId, communityId);
       const card = sub?.paymentCardId ? await repo.findCard(sub.paymentCardId) : undefined;
       return { enrolled, latestPayment: latest, subscription: sub ? { ...subscriptionView(sub), paymentMethod: cardView(card) } : null };
+    },
+
+    // ----------------------------------------------------------------- mua lẻ module trả phí (một lần)
+    /**
+     * Kiểm tra điều kiện mua + trả về module. Thứ tự lỗi: cộng đồng khóa 403 → module không có/không thuộc cộng đồng 404 → không phải module trả phí 400
+     * MODULE_NOT_PAID → staff 409 STAFF_EXEMPT → bị cấm 403 → chưa tham gia 403 JOIN_REQUIRED → đã sở hữu 409 ALREADY_OWNED.
+     */
+    async assertModulePurchasable(communityId: string, moduleId: string, userId: string) {
+      const course = await catalogService.getById(communityId);
+      if (course.locked) throw locked();
+      const mod = await repo.findModuleForPurchase(communityId, moduleId);
+      if (!mod) throw HttpError.notFound('Không tìm thấy module');
+      if (mod.accessMode !== 'paid' || !mod.priceCents || mod.priceCents <= 0) throw HttpError.coded(400, 'MODULE_NOT_PAID', 'Module này không bán riêng');
+      if (atLeast(await getRole(userId, communityId), 'mod')) throw HttpError.coded(409, 'STAFF_EXEMPT', 'Bạn là quản trị cộng đồng nên không cần mua module');
+      if (await enrollmentService.isBanned(userId, communityId)) throw HttpError.forbidden('Bạn đã bị cấm khỏi cộng đồng này');
+      if (!(await enrollmentService.isEnrolled(userId, communityId))) {
+        throw HttpError.coded(403, 'JOIN_REQUIRED', 'Hãy tham gia cộng đồng trước khi mua module');
+      }
+      if (await repo.hasModuleAccess(userId, moduleId)) throw HttpError.coded(409, 'ALREADY_OWNED', 'Bạn đã sở hữu module này');
+      return { course, mod, priceCents: mod.priceCents };
+    },
+
+    /** Báo giá mua module: giá do server quyết định; lỗi điều kiện mua (đã sở hữu, chưa tham gia...) trả về dưới dạng `blocked` để UI hiển thị thay vì ném lỗi. */
+    async moduleQuote(communityId: string, moduleId: string, userId: string) {
+      const course = await catalogService.getById(communityId);
+      if (course.locked) throw locked();
+      const mod = await repo.findModuleForPurchase(communityId, moduleId);
+      if (!mod) throw HttpError.notFound('Không tìm thấy module');
+      if (mod.accessMode !== 'paid' || !mod.priceCents || mod.priceCents <= 0) throw HttpError.coded(400, 'MODULE_NOT_PAID', 'Module này không bán riêng');
+      let blocked: string | null = null;
+      try {
+        await service.assertModulePurchasable(communityId, moduleId, userId);
+      } catch (e) {
+        if (!(e instanceof HttpError) || !e.code) throw e;
+        blocked = e.code;
+      }
+      return {
+        communityId,
+        moduleId,
+        title: mod.title,
+        currency: 'USD',
+        priceCents: mod.priceCents,
+        priceUsd: mod.priceCents / 100,
+        oneTime: true,
+        provider: 'stripe',
+        canPurchase: blocked === null,
+        blocked,
+        owned: blocked === 'ALREADY_OWNED',
+      };
+    },
+
+    /** Mua module: tạo giao dịch (tái dùng intent pending / replay theo Idempotency-Key) rồi trừ tiền + cấp quyền bằng `confirm`. Trả giao dịch đã chốt. */
+    async purchaseModule(communityId: string, moduleId: string, userId: string, opts: { paymentMethod?: PaymentMethodInput; idempotencyKey?: string } = {}) {
+      await assertUserCan(userId, 'purchase');
+      const { idempotencyKey } = opts;
+      if (idempotencyKey) {
+        const replay = await idempotentReplay(userId, communityId, idempotencyKey);
+        if (replay) {
+          if (replay.moduleId !== moduleId) throw HttpError.conflict('Idempotency-Key này đã được dùng cho giao dịch khác');
+          if (replay.status === 'failed') throw new HttpError(402, 'PAYMENT_FAILED', 'Thanh toán không thành công, vui lòng thử lại hoặc dùng phương thức khác');
+          return service.confirm(replay.id, userId); // pending → chạy tiếp; succeeded/refunded → trả nguyên
+        }
+      }
+      const { priceCents } = await service.assertModulePurchasable(communityId, moduleId, userId);
+      const card = opts.paymentMethod ? await repo.upsertCard(userId, opts.paymentMethod) : undefined;
+      let intent: PaymentIntent;
+      try {
+        intent = await repo.transaction(async (ops) => {
+          await ops.advisoryLock(`module:${userId}:${moduleId}`);
+          const reusable = await ops.findReusablePendingModule(userId, moduleId, new Date(Date.now() - PENDING_INTENT_TTL_MS), priceCents);
+          const created =
+            reusable ??
+            (await ops.create({
+              communityId, userId, method: 'stripe', amountUsd: priceCents / 100, amountCents: priceCents, trialDays: 0,
+              kind: 'module', moduleId, paymentCardId: card?.id,
+            }));
+          if (idempotencyKey) await ops.saveIdempotent(userId, idempotencyKey, created.id);
+          return created;
+        });
+      } catch (e) {
+        if (idempotencyKey && isUniqueViolation(e)) {
+          const replay = await idempotentReplay(userId, communityId, idempotencyKey);
+          if (replay) return service.confirm(replay.id, userId);
+        }
+        throw e;
+      }
+      return service.confirm(intent.id, userId);
     },
 
     // ----------------------------------------------------------------- báo giá cho hộp thoại tham gia
@@ -1048,7 +1195,11 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
       const titles = new Map<string, string>();
       for (const id of new Set(items.map((p) => p.communityId))) titles.set(id, await courseTitle(id));
       const refunds = await refundStatuses(items.map((p) => p.id));
-      return { data: items.map((p) => ({ ...p, courseTitle: titles.get(p.communityId), refundStatus: refunds.get(p.id) ?? null })), meta: pageMeta(total, page, limit) };
+      const moduleTitles = await repo.moduleTitles([...new Set(items.flatMap((p) => (p.moduleId ? [p.moduleId] : [])))]);
+      return {
+        data: items.map((p) => ({ ...p, courseTitle: titles.get(p.communityId), ...(p.moduleId ? { moduleTitle: moduleTitles.get(p.moduleId) ?? null } : {}), refundStatus: refunds.get(p.id) ?? null })),
+        meta: pageMeta(total, page, limit),
+      };
     },
 
     async invoice(paymentId: string, userId: string) {
@@ -1066,7 +1217,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
         currency: p.currency,
         buyer: { id: p.userId, name: buyer ? `${buyer.firstName} ${buyer.lastName}` : 'Thành viên SofinHub', email: buyer?.email },
         community: { id: p.communityId, title },
-        items: [{ description: `Gói thành viên "${title}"${period}`, quantity: 1, unitCents: p.amountCents, amountCents: p.amountCents }],
+        items: [{ description: p.moduleId ? `Module "${(await repo.moduleTitles([p.moduleId])).get(p.moduleId) ?? p.moduleId}" — ${title}` : `Gói thành viên "${title}"${period}`, quantity: 1, unitCents: p.amountCents, amountCents: p.amountCents }],
         subtotalCents: p.amountCents,
         refundedCents: p.refundedCents,
         totalCents: p.amountCents,

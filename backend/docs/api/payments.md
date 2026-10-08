@@ -148,6 +148,23 @@ Chạy test: `npm test` dùng `--test-concurrency=16` vì Postgres local `max_co
 
 Chưa làm / cần quyết định: trừ tiền thật gói owner; đổi chu kỳ (tháng↔năm) của gói đang sống; nâng/hạ cấp có proration; thẻ hết hạn trước ngày gia hạn (chỉ biết khi cổng từ chối); xóa thẻ đã lưu.
 
+## Mua lẻ module trả phí (2026-10-13)
+Một cộng đồng có thể MIỄN PHÍ nhưng có module `accessMode='paid'` + `priceCents`. Mua module = thanh toán MỘT LẦN cho riêng module đó (không tạo `Subscription`, không đổi `Enrollment`). Tái dùng nguyên hạ tầng thanh toán: thẻ tokenise mock, `Payment`/idempotency, cổng, hóa đơn `INV-…`, hoàn tiền, doanh thu owner (hoa hồng + phí cổng + holding/reserve tính từ bảng `Payment` nên giao dịch module tự được tính). Test: `tests/module-purchase.test.ts`. Migration `20261013100000_module_purchase` (chỉ thêm: `PaymentKind.module`, `Payment.moduleId` + FK `SET NULL` + index).
+
+| Method · Path | Auth | Body / Query | Ghi chú |
+|---|---|---|---|
+| `GET /communities/:id/modules/:moduleId/purchase-quote` | login | — | `{communityId, moduleId, title, currency:'USD', priceCents, priceUsd, oneTime:true, provider, canPurchase, blocked, owned}`. Lỗi điều kiện mua KHÔNG ném mà trả `blocked` (`JOIN_REQUIRED` \| `ALREADY_OWNED` \| `STAFF_EXEMPT` \| `FORBIDDEN` = bị cấm). 400 `MODULE_NOT_PAID`, 403 `COMMUNITY_LOCKED`, 404 |
+| `POST /communities/:id/modules/:moduleId/purchase` | login + email đã xác thực | `{ paymentMethod?, idempotencyKey? }` (hoặc header `Idempotency-Key`; body ưu tiên) | Tạo intent `kind='module'` (giá do server lấy từ module) → trừ tiền → cấp `ModuleAccess(source='purchase')` + hóa đơn + thông báo "Bạn đã mở khóa module". 201 `Payment` (`status:'succeeded'`, `moduleId`, `invoiceNumber`) |
+
+Lỗi của `POST`: 400 `MODULE_NOT_PAID` (module không `paid`/giá ≤ 0); 402 `PAYMENT_FAILED` (thẻ bị từ chối — không cấp quyền, giao dịch `failed`); 403 `JOIN_REQUIRED` (chưa là thành viên: cộng đồng miễn phí cũng phải tham gia trước, không tự ghi danh), 403 (bị cấm), 403 `COMMUNITY_LOCKED`; 404 (module không có/không thuộc cộng đồng/chưa xuất bản); 409 `ALREADY_OWNED` (đã có quyền — kể cả owner cấp tay); 409 `STAFF_EXEMPT` (owner/admin/mod/platform admin không cần mua).
+
+Quyết định thiết kế:
+- Idempotency: cùng key ⇒ trả lại đúng giao dịch (không trừ lần 2; key đã fail ⇒ 402; key dùng cho module khác ⇒ 409). Không key: advisory lock `module:<user>:<module>` ⇒ 2 request song song dùng chung 1 intent pending; cổng nhận `idempotencyKey = payment.id`. `POST /payments/:id/confirm` cũng chốt được intent module (dùng chung nhánh).
+- `settle` rẽ nhánh `settleModule`: pending→succeeded → `ModuleAccess` (idempotent) → số hóa đơn (cuối cùng). Đã sở hữu lúc chốt (đua) ⇒ void `duplicate_charge` + hoàn tiền cổng + 409 `ALREADY_OWNED`. Bị cấm giữa chừng: ghi nhận thanh toán nhưng không cấp quyền (như gói thành viên).
+- Hoàn tiền (khách trong cửa sổ, admin duyệt/hoàn trực tiếp, chargeback thua): hoàn TOÀN BỘ ⇒ xóa `ModuleAccess` có `source='purchase'` (quyền owner cấp tay `selected` giữ nguyên); hoàn một phần giữ quyền. Không đụng `Subscription`/`Enrollment`. `PUT …/access` của owner không còn xóa dòng `purchase`.
+- Liệt kê: `GET /me/payments` thêm `moduleTitle` cho giao dịch module; hóa đơn có dòng `Module "<tên>" — <cộng đồng>`; `latestPayment` của `/subscription` bỏ qua giao dịch module; Admin payments: `kind` lọc thêm `module`, `product = {type:'module', label:'Module · <tên>'}`; analytics `byPlan` thêm `module`.
+- Chưa làm: email biên nhận (luồng hiện tại cũng không gửi email biên nhận khi thanh toán); thông báo riêng cho owner khi có người mua; chọn lại thẻ đã lưu (checkout hiện chỉ nhận thẻ mới tokenise).
+
 ## Quản lý thẻ & tổng quan thanh toán (Cài đặt > Thanh toán, 2026-10-08)
 Code: `src/modules/payments/payments.cards.ts`, route trong `payments.routes.ts`. Test: `tests/payment-cards.test.ts`. Body thẻ = `paymentMethodInput` (STRICT, token + brand/last4/hạn — không có số thẻ/CVC; **Luhn chỉ kiểm được ở client** vì server không bao giờ thấy PAN, server kiểm định dạng token/brand/last4 và hạn dùng).
 

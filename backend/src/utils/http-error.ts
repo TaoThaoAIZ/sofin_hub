@@ -17,6 +17,11 @@ export class HttpError extends Error {
     return new HttpError(400, 'BAD_REQUEST', message, details);
   }
 
+  /** Dữ liệu đầu vào không hợp lệ (400, mã VALIDATION_ERROR — cùng mã với lỗi zod trong error-handler). */
+  static validation(message: string, details?: unknown) {
+    return new HttpError(400, 'VALIDATION_ERROR', message, details);
+  }
+
   static unauthorized(message = 'Vui lòng đăng nhập để tiếp tục') {
     return new HttpError(401, 'UNAUTHORIZED', message);
   }
