@@ -412,7 +412,8 @@
       "urlAria": "URL tệp",
       "add": "Thêm",
       "uploadVideo": "Tải video từ máy lên (mp4)",
-      "videoUploaded": "Đã tải video lên"
+      "videoUploaded": "Đã tải video lên",
+      "bodyMin": "Nội dung bài viết cần tối thiểu {{min}} ký tự (hiện có {{n}})."
     },
     "row": {
       "collapse": "Thu gọn",
@@ -496,7 +497,10 @@
     "prev": "‹ Trước",
     "next": "Tiếp theo ›",
     "range": "{{from}}–{{to}} trên {{total}}",
-    "unlockBuy": "Mua để mở khóa"
+    "unlockBuy": "Mua để mở khóa",
+    "moduleNotFound": "Không tìm thấy module",
+    "backToClassroom": "Lớp học",
+    "lessonsOfModule": "Danh sách bài học"
   },
   "post": {
     "report": {

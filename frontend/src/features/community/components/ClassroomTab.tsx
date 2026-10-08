@@ -1,23 +1,25 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../../i18n';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { communityCheckout, lessonPath } from '../../../lib/paths';
+import { communityCheckout, lessonPath, modulePath } from '../../../lib/paths';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { useCommunityDetail } from '../../courses/queries';
 import { formatCompact } from '../../../lib/format';
-import { useClaimCertificate, useCourseList, useLessons, useModules, useProgress, useToggleLessonComplete } from '../queries';
+import { useClaimCertificate, useCourseList, useDeleteLesson, useLessons, useModules, useProgress, useToggleLessonComplete } from '../queries';
 import type { Certificate, ClassroomModule } from '../types';
 import { CertificateDialog } from './CertificateCard';
 import { ClassroomEditor } from './ClassroomEditor';
 import { ModuleWizard } from './ModuleWizard';
 import { CourseManager, publishBadgeCls, publishLabel } from './CourseManager';
-import { errText, ErrorNote, ghostBtn, isAdminPlus, isModPlus, primaryBtn, safeUrl, toast, ToastHost } from './contentUi';
+import { ConfirmDialog, errText, ErrorNote, ghostBtn, isAdminPlus, isModPlus, primaryBtn, safeUrl, toast, ToastHost } from './contentUi';
 
-function LessonList({ communityId, courseId, moduleId, payUrl }: { communityId: string; courseId: string; moduleId: string; payUrl?: string }) {
+export function LessonList({ communityId, courseId, moduleId, payUrl, canManage = false }: { communityId: string; courseId: string; moduleId: string; payUrl?: string; canManage?: boolean }) {
   const { t } = useTranslation('community');
   const lessons = useLessons(communityId, courseId, moduleId);
   const toggle = useToggleLessonComplete(communityId);
+  const removeLesson = useDeleteLesson(communityId);
+  const [deleting, setDeleting] = useState<{ id: string; title: string } | null>(null);
 
   if (lessons.isPending) return <p className="px-4 py-3 text-sm text-stone-400">{t('classroom.lessonList.loading')}</p>;
   if (lessons.isError) return <div className="p-3"><ErrorNote message={errText(lessons.error, t('classroom.lessonList.loadFailed'))} /></div>;
@@ -53,13 +55,29 @@ function LessonList({ communityId, courseId, moduleId, payUrl }: { communityId: 
               <MaterialIcon name="play_arrow" size={18} filled color="#f26a1b" />
             </Link>
           )}
+          {canManage && (
+            <button type="button" onClick={() => setDeleting({ id: l.id, title: l.title })} aria-label={t('editor.row.deleteLesson')} title={t('editor.row.deleteLesson')} className="grid size-8 flex-none place-items-center rounded-full bg-red-50 hover:bg-red-100">
+              <MaterialIcon name="delete" size={16} color="#dc2626" />
+            </button>
+          )}
         </div>
       ))}
+      {deleting && (
+        <ConfirmDialog
+          title={t('editor.row.deleteLessonTitle')}
+          message={t('editor.row.deleteLessonMsg', { title: deleting.title })}
+          confirmLabel={t('editor.row.deleteLessonConfirm')}
+          pending={removeLesson.isPending}
+          error={removeLesson.isError ? errText(removeLesson.error) : null}
+          onClose={() => setDeleting(null)}
+          onConfirm={() => removeLesson.mutate(deleting.id, { onSuccess: () => { setDeleting(null); toast(t('editor.row.lessonDeleted')); } })}
+        />
+      )}
     </div>
   );
 }
 
-function lockText(m: ClassroomModule) {
+export function lockText(m: ClassroomModule) {
   if (m.lockReason === 'level')
     return m.requiredLevel
       ? i18n.t('classroom.lock.levelReq', { ns: 'community', level: m.requiredLevel })
@@ -90,15 +108,7 @@ export function ClassroomTab() {
   const modules = useModules(communityId, courseId);
   const progress = useProgress(communityId, courseId);
   const claim = useClaimCertificate(communityId, courseId ?? '');
-  const [openId, setOpenId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const detailRef = useRef<HTMLDivElement>(null);
-  // Bấm nút mũi tên: mở danh sách bài và cuộn tới ngay để thấy chi tiết (không phải kéo xuống cuối trang).
-  const openModuleDetail = (id: string) => {
-    const next = openId === id ? null : id;
-    setOpenId(next);
-    if (next) setTimeout(() => detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
-  };
   const [editMode, setEditMode] = useState(false);
   const [cert, setCert] = useState<Certificate | null>(null);
   const [wizard, setWizard] = useState<ClassroomModule | 'new' | null>(null);
@@ -107,7 +117,6 @@ export function ClassroomTab() {
   const canEdit = isModPlus(role);
 
   const pickCourse = (id: string) => {
-    setOpenId(null);
     setPage(1);
     setSp(id ? { khoa: id } : {}, { replace: true });
   };
@@ -146,7 +155,6 @@ export function ClassroomTab() {
   const start = (page - 1) * PAGE_SIZE;
   const shown = list.slice(start, start + PAGE_SIZE);
   const totalLessons = list.reduce((n, m) => n + m.lessonsCount, 0);
-  const openModule = list.find((m) => m.id === openId);
   // Module đang khóa trong cộng đồng có phí (hoặc module bán riêng) → đưa người học sang trang thanh toán để mở khóa.
   const payUrlOf = (m: ClassroomModule) => (m.locked && !canEdit && (m.lockReason === 'paid' || (community?.priceUsd ?? 0) > 0) ? communityCheckout(communityId) : undefined);
   const prog = progress.data;
@@ -279,7 +287,7 @@ export function ClassroomTab() {
           return (
             <article
               key={m.id}
-              className={`glass flex flex-col overflow-hidden rounded-[20px] transition-transform hover:-translate-y-0.5 ${openId === m.id ? 'ring-2 ring-brand' : ''}`}
+              className={`glass flex flex-col overflow-hidden rounded-[20px] transition-transform hover:-translate-y-0.5`}
             >
               <div className="relative h-[156px] overflow-hidden bg-[#110d0b]">
                 <img src={thumb} alt={m.title} className="size-full object-cover" />
@@ -324,16 +332,15 @@ export function ClassroomTab() {
                       <MaterialIcon name="lock_open" size={22} color="#f26a1b" />
                     </Link>
                   ) : (
-                  <button
-                    type="button"
-                    disabled={m.locked && !(m.hasPreview && m.lockReason !== 'previous_module')}
-                    onClick={() => openModuleDetail(m.id)}
-                    aria-label={t('classroom.openAria', { title: m.title })}
-                    title={m.locked ? lockText(m) : undefined}
-                    className="grid size-[42px] flex-none place-items-center rounded-[14px] bg-brand/10 hover:bg-brand/20 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <MaterialIcon name="arrow_forward" size={22} color="#f26a1b" />
-                  </button>
+                  m.locked && !(m.hasPreview && m.lockReason !== 'previous_module') ? (
+                    <span title={lockText(m)} className="grid size-[42px] flex-none cursor-not-allowed place-items-center rounded-[14px] bg-brand/10 opacity-50">
+                      <MaterialIcon name="arrow_forward" size={22} color="#f26a1b" />
+                    </span>
+                  ) : (
+                    <Link to={modulePath(communityId, m.id, courseId)} aria-label={t('classroom.openAria', { title: m.title })} className="grid size-[42px] flex-none place-items-center rounded-[14px] bg-brand/10 hover:bg-brand/20">
+                      <MaterialIcon name="arrow_forward" size={22} color="#f26a1b" />
+                    </Link>
+                  )
                   )}
                 </div>
               </div>
@@ -341,13 +348,6 @@ export function ClassroomTab() {
           );
         })}
       </div>
-
-      {openModule && (
-        <div ref={detailRef} className="glass scroll-mt-24 overflow-hidden rounded-2xl">
-          <div className="px-4 py-3 text-[15px] font-bold">#{openModule.index}: {openModule.title}</div>
-          <LessonList communityId={communityId} courseId={courseId} moduleId={openModule.id} payUrl={payUrlOf(openModule)} />
-        </div>
-      )}
 
       <div className="flex items-center justify-between text-[13px] text-stone-600">
         <div className="flex items-center gap-1">

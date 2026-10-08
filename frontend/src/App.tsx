@@ -39,6 +39,7 @@ import { RegisterPage } from './pages/RegisterPage';
 import { TermsPage } from './pages/TermsPage';
 import { CertificateVerifyPage } from './pages/CertificateVerifyPage';
 import { LessonPage } from './pages/LessonPage';
+import { ModuleDetailPage } from './pages/ModuleDetailPage';
 import { VerifyOtpPage } from './pages/VerifyOtpPage';
 import { OAuthCallbackPage } from './pages/OAuthCallbackPage';
 import { ModerationPage } from './features/community/components/ModerationPanel';
@@ -76,6 +77,7 @@ export default function App() {
         <Route path="/communities/:id/community" element={<CommunityPage />}>
           <Route index element={<FeedTab />} />
           <Route path="lop-hoc" element={<ClassroomTab />} />
+          <Route path="lop-hoc/module/:moduleId" element={<ModuleDetailPage />} />
           <Route path="lop-hoc/:lessonId" element={<LessonPage />} />
           <Route path="kiem-duyet" element={<ModerationPage />} />
           <Route path="lich" element={<CalendarTab />} />

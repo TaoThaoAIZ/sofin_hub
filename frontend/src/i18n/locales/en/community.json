@@ -412,7 +412,8 @@
       "urlAria": "File URL",
       "add": "Add",
       "uploadVideo": "Upload video from device (mp4)",
-      "videoUploaded": "Video uploaded"
+      "videoUploaded": "Video uploaded",
+      "bodyMin": "Article content needs at least {{min}} characters (currently {{n}})."
     },
     "row": {
       "collapse": "Collapse",
@@ -496,7 +497,10 @@
     "prev": "‹ Previous",
     "next": "Next ›",
     "range": "{{from}}–{{to}} of {{total}}",
-    "unlockBuy": "Buy to unlock"
+    "unlockBuy": "Buy to unlock",
+    "moduleNotFound": "Module not found",
+    "backToClassroom": "Classroom",
+    "lessonsOfModule": "Lessons"
   },
   "post": {
     "report": {

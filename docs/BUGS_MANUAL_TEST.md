@@ -48,6 +48,20 @@ Lưu ý: #7 nếu tester gọi thẳng API mà vẫn thiếu thì gửi lại re
 |----|--------|-------|-----------|
 | COURSE-021, 066 | Module/bài đang khóa chỉ hiện ổ khóa | Cộng đồng có phí (hoặc module bán riêng): overlay + nút "Mua để mở khóa" và nút ở thẻ/ổ khóa bài học dẫn tới `/communities/:id/checkout`. Mod trở lên không bị ảnh hưởng | ✅ |
 | COURSE-030 | Phân trang 10 module/trang | 9 module/trang, lưới 3 cột (3 hàng) rồi phân trang. **Test case cũ ghi 10/trang → cần cập nhật** | ✅ |
-| COURSE-034 | Bấm nút mũi tên module, chi tiết hiện ở cuối trang | Mở danh sách bài và tự cuộn tới ngay | ✅ |
+| COURSE-034 | Bấm nút mũi tên module, chi tiết hiện ở cuối trang | Bấm nút mũi tên → sang trang chi tiết module `/communities/:id/community/lop-hoc/module/:moduleId` (thông tin, tiến độ, danh sách bài); bấm từng bài mới vào trang học. Module khóa không có quyền xem thử thì nút bị vô hiệu | ✅ |
 | COURSE-040, 041 | Chưa tải video từ máy | Soạn bài: nút "Tải video từ máy lên (mp4, ≤25MB)" (purpose lesson_attachment). BE nhận `/api/files/<key>.mp4` (không có embedUrl); trang học phát bằng `<video>` qua URL ký. Link YouTube/Vimeo giữ nguyên. Lưu ý: chưa hỗ trợ Range nên tua có thể bị hạn chế | ✅ |
 | COURSE-043 | Chưa có tải tệp đính kèm | Tải tệp đính kèm giờ có ở MỌI loại bài (trước chỉ loại "Tài liệu") | ✅ |
+
+## Đợt 6 — COURSE (tạo khóa/module/bài, xóa, rời cộng đồng)
+
+| TC | Nguyên nhân / xử lý | Trạng thái |
+|----|---------------------|-----------|
+| Bug chặn (ảnh 1+2): đã nhập nội dung vẫn "Chưa có nội dung", không xuất bản được | `lessonHasContent` bắt bài viết ≥ 30 ký tự (FE). Đổi thành có nội dung (khác rỗng); bỏ chữ "tối thiểu 30 ký tự" ở placeholder. Gỡ chặn tạo module/bài → mở được các case 071, 073, 079, 081, 082, 083, 102, 103, 104 (đây là các case tạo/sửa module-bài, đã có validate ở BE: requiredLevel 1–9, tối đa 20 tệp, chặn javascript:/data:, body ≤ 50000) — cần chạy lại | ✅ (chờ test lại) |
+| COURSE-094 | Trang chi tiết module (mod+): thêm nút xóa từng bài + nút "Xóa module", đều có hộp xác nhận nêu hậu quả và toast. (Trước đó chỉ có ở chế độ chỉnh sửa lớp học và dấu ✕ trong trình tạo) | ✅ |
+| COURSE-099 | Kiểm bằng API: member2 vào `/courses/yt/modules`, `/lessons/les-yt-1-1`, `/progress` đều 403 'Bạn cần tham gia cộng đồng này trước' (đúng mong đợi). Nếu tester vẫn xem được: kiểm member2 có đã tham gia yt chưa, gửi URL + response | ⏳ cần chi tiết |
+| COURSE-100 | Tester: case nên là "bài/module bắt buộc trả phí (premium) mới xem được" chứ không phải khóa cộng đồng. Hành vi này đã có: module bán riêng/cộng đồng có phí bị khóa, hiện nút "Mua để mở khóa" → checkout (đợt 5). **Cần viết lại test case** | ✅ (đổi test case) |
+| COURSE-109 | Nút "Rời khỏi cộng đồng" đã thêm ở đợt 4 (trang chi tiết cộng đồng, ẩn với owner) | ✅ |
+
+### Đợt 6b — chỉnh lại
+- Bài viết < 30 ký tự: KHÔNG cho lưu, hiện lỗi inline dưới ô nhập (viền đỏ, "cần tối thiểu 30 ký tự, hiện có N") + bộ đếm; điều kiện xuất bản vẫn ≥ 30 (khôi phục). Sửa ở `LessonEditor.tsx`.
+- COURSE-094: nút xóa chỉ hiện với mod trở lên; BE chốt quyền ở `manage()` (mod+) nên member gọi API xóa bài/module nhận 403.

@@ -11,7 +11,10 @@ type LessonType = 'video' | 'text' | 'file';
 
 /** Bài đã có nội dung? video: có link · tài liệu: có tệp · bài viết: ≥ 30 ký tự. */
 export const lessonHasContent = (l: Pick<ClassroomLesson, 'type' | 'videoUrl' | 'attachments' | 'body'>) =>
-  l.type === 'video' ? !!l.videoUrl : l.type === 'file' ? (l.attachments?.length ?? 0) > 0 : (l.body ?? '').trim().length >= 30;
+  l.type === 'video' ? !!l.videoUrl : l.type === 'file' ? (l.attachments?.length ?? 0) > 0 : (l.body ?? '').trim().length >= TEXT_MIN;
+
+/** Số ký tự tối thiểu của nội dung bài viết (khớp điều kiện xuất bản khóa học). */
+export const TEXT_MIN = 30;
 
 const isUploadedVideo = (u: string) => /\/api\/files\/[a-f0-9]{32}\.mp4$/i.test(u.trim());
 
@@ -54,6 +57,7 @@ export function LessonEditor({
   const [attachments, setAttachments] = useState<LessonAttachment[]>(lesson?.attachments ?? []);
   const [isPreview, setIsPreview] = useState(lesson?.isPreview ?? defaultPreview);
   const [localErr, setLocalErr] = useState<string | null>(null);
+  const [bodyErr, setBodyErr] = useState<string | null>(null);
   const pending = create.isPending || update.isPending;
   const err = localErr ?? (create.isError ? errText(create.error) : update.isError ? errText(update.error) : null);
 
@@ -62,6 +66,11 @@ export function LessonEditor({
     if (!title.trim()) return setLocalErr(t('modWizard.lesson.errName'));
     const dur = Number(duration);
     if (!Number.isInteger(dur) || dur < 0 || dur > 1000) return setLocalErr(t('editor.lesson.durationErr'));
+    if (type === 'text' && body.trim().length < TEXT_MIN) {
+      setBodyErr(t('editor.lesson.bodyMin', { min: TEXT_MIN, n: body.trim().length }));
+      return;
+    }
+    setBodyErr(null);
     const url = videoUrl.trim();
     const done = { onSuccess: () => onSaved() };
     if (lesson) {
@@ -179,13 +188,19 @@ export function LessonEditor({
           <div className="mb-1.5 text-[13px] font-bold">{type === 'text' ? t('modWizard.lesson.text') : t('modWizard.lesson.note')}</div>
           <textarea
             value={body}
-            onChange={(e) => setBody(e.target.value)}
+            onChange={(e) => {
+              setBody(e.target.value);
+              if (bodyErr) setBodyErr(null);
+            }}
+            aria-invalid={!!bodyErr}
             maxLength={50000}
             placeholder={type === 'text' ? t('modWizard.lesson.textPh') : t('modWizard.lesson.notePh')}
             aria-label={type === 'text' ? t('modWizard.lesson.text') : t('modWizard.lesson.note')}
             style={{ height: type === 'text' ? 170 : 80 }}
-            className="w-full resize-y rounded-[10px] border-[1.5px] border-[#e7e0da] px-3 py-2.5 text-[13.5px] leading-relaxed outline-0 focus:border-brand"
+            className={`w-full resize-y rounded-[10px] border-[1.5px] px-3 py-2.5 text-[13.5px] leading-relaxed outline-0 focus:border-brand ${bodyErr ? 'border-red-400' : 'border-[#e7e0da]'}`}
           />
+          {bodyErr && <p role="alert" className="m-0 mt-1.5 text-[12.5px] font-medium text-red-600">{bodyErr}</p>}
+          {type === 'text' && !bodyErr && <p className="m-0 mt-1 text-right text-[11.5px] text-stone-400">{body.trim().length}/{TEXT_MIN}+</p>}
         </div>
 
         <button type="button" onClick={() => setIsPreview((v) => !v)} aria-pressed={isPreview} className="flex items-center gap-3.5 rounded-xl bg-[#faf7f4] px-3.5 py-3 text-left">
