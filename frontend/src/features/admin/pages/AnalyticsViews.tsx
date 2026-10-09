@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { formatCents } from '../../../lib/datetime';
+import { formatCents, formatVndCompact } from '../../../lib/datetime';
 import { BarChartCard, CohortHeatmap, FunnelCard } from '../components/Batch3Parts';
 import { BreakdownCard, ChartCard, KpiGrid, Row, type Kpi } from '../components/Cards';
 import { DataTable, MainCell, NumCell } from '../components/DataTable';
@@ -32,10 +32,7 @@ const dayLabel = (iso: string) => {
   const [, m, d] = iso.split('-');
   return `${d}/${m}`;
 };
-const money = (cents: number) => {
-  const v = cents / 100;
-  return v >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : v >= 1e3 ? `$${(v / 1e3).toFixed(1).replace(/\.0$/, '')}K` : `$${Math.round(v)}`;
-};
+const money = (vnd: number) => formatVndCompact(vnd);
 /** Mức thay đổi so kỳ trước; số quá lớn (kỳ trước gần 0) rút gọn để không tràn thẻ. */
 const fmtDelta = (p: number) => {
   const a = Math.abs(p);
@@ -255,11 +252,11 @@ export function AnalyticsRevenueView() {
             <ChartCard
               title={t('analytics.revenue.title')}
               labels={d.series.map((p) => dayLabel(p.date))}
-              fmt={(v) => money(v * 100)}
+              fmt={(v) => money(v)}
               series={[
-                { name: t('analytics.revenue.gross'), values: d.series.map((p) => p.grossCents / 100) },
-                { name: t('analytics.revenue.net'), values: d.series.map((p) => p.netCents / 100), color: '#16a34a' },
-                { name: t('analytics.revenue.refunds'), values: d.series.map((p) => p.refundsCents / 100), color: '#dc2626' },
+                { name: t('analytics.revenue.gross'), values: d.series.map((p) => p.grossCents) },
+                { name: t('analytics.revenue.net'), values: d.series.map((p) => p.netCents), color: '#16a34a' },
+                { name: t('analytics.revenue.refunds'), values: d.series.map((p) => p.refundsCents), color: '#dc2626' },
               ]}
             />
             <BreakdownCard title={t('analytics.revenue.byPlan')} items={d.byPlan.map((p) => ({ label: PLAN_LABEL[p.key] ?? p.label, value: `${pct1(p.pct)} · ${formatCents(p.grossCents)}`, pct: p.pct }))} />

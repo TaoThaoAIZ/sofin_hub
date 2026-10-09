@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { formatCents, formatDate, formatDateTime } from '../../../lib/datetime';
+import { formatCents, formatDate, formatDateTime, formatVndCompact } from '../../../lib/datetime';
 import { ActionDialog, HistoryList, PreviewDialog, PreviewKv, PreviewSection, opts, useDialogSlot, useTableState } from '../components/Batch2Parts';
 import { ChartCard, DecisionPanel, KpiGrid, KvCard, Row, TimelineCard, type KvItem, type TimelineItem } from '../components/Cards';
 import { DataTable, MainCell, MonoCell, MutedCell, NumCell, TextCell, type Column, type RowAction } from '../components/DataTable';
@@ -49,13 +49,13 @@ const badge = (map: Record<string, { label: string; tone: Tone }>, k: string) =>
 const personCell = (p: { name: string; email: string; avatarUrl: string | null; id: string }) => <MainCell name={p.name} sub={p.email} avatarSrc={p.avatarUrl} seed={p.id} />;
 const money = (c: number) => <NumCell>{formatCents(c)}</NumCell>;
 
-/** "12.50" -> 1250 cent; sai định dạng -> null. */
+/** "175000" / "175.000" -> 175000 (VND nguyên đồng); sai định dạng -> null. */
 const parseUsd = (s: string): number | null => {
-  const t = s.trim().replace(',', '.');
-  if (!/^\d+(\.\d{1,2})?$/.test(t)) return null;
-  return Math.round(parseFloat(t) * 100);
+  const t = s.trim().replace(/[.,\s]/g, '');
+  if (!/^\d+$/.test(t)) return null;
+  return parseInt(t, 10);
 };
-const toUsdInput = (cents: number) => (cents / 100).toFixed(2);
+const toUsdInput = (vnd: number) => String(Math.round(vnd));
 
 /* ================================ Hoàn tiền từ giao dịch ================================ */
 
@@ -81,13 +81,34 @@ function RefundTxDialog({ tx, onClose }: { tx: Pick<AdminTransaction, 'id' | 'co
       run={(v) => act.mutateAsync({ path: `/payments/transactions/${tx.id}/refund`, body: { reason: v.reason, note: v.note || undefined, amountCents: cents === remaining ? undefined : (cents ?? undefined) } })}
       onClose={onClose}
     >
-      <InputField label={t('common.refundAmountUsd')} value={amount} onChange={setAmount} placeholder="0.00" />
+      <InputField label={t('common.refundAmountUsd')} value={amount} onChange={setAmount} placeholder="175000" />
       {bad && amount !== '' && <div className="-mt-2 text-xs text-[#b91c1c]">{t('common.amountRange', { max: formatCents(remaining) })}</div>}
     </ActionDialog>
   );
 }
 
 /* ================================== Giao dịch ================================== */
+
+/** Admin duyệt tay một giao dịch chuyển khoản chưa được hệ thống tự khớp (khách báo đã chuyển / tiền về muộn sau khi phiên hết hạn). */
+const canApprove = (x: Pick<AdminTransaction, 'method' | 'status' | 'refCode' | 'failureReason'>) =>
+  x.method === 'bank_transfer' && !!x.refCode && (x.status === 'pending' || (x.status === 'failed' && x.failureReason === 'expired'));
+
+function ApproveTxDialog({ tx, onClose }: { tx: Pick<AdminTransaction, 'code' | 'refCode' | 'amountCents'>; onClose: () => void }) {
+  const { t } = useTranslation('admin-payments');
+  const act = useAdminAction();
+  return (
+    <ActionDialog
+      icon="task_alt"
+      title={t('detail.approveTitle')}
+      body={t('detail.approveBody', { code: tx.code, ref: tx.refCode, amount: formatCents(tx.amountCents) })}
+      cta={t('detail.approveCta')}
+      noteLabel={t('common.noteOptional')}
+      successMessage={t('detail.approved')}
+      run={(v) => act.mutateAsync({ path: `/bank/payments/${encodeURIComponent(tx.refCode ?? '')}/approve`, body: { note: v.note || undefined } })}
+      onClose={onClose}
+    />
+  );
+}
 
 export function TransactionsView() {
   const { t } = useTranslation('admin-payments');
@@ -114,6 +135,7 @@ export function TransactionsView() {
   ];
   const actions = (x: AdminTransaction): RowAction[] => {
     const a: RowAction[] = [{ label: t('common.view'), onClick: () => navigate(`/admin/payments/tx/${x.id}`) }];
+    if (canApprove(x)) a.push({ label: t('common.approveManual'), icon: 'task_alt', onClick: () => slot.show((close) => <ApproveTxDialog tx={x} onClose={close} />) });
     if (x.status === 'succeeded') a.push({ label: t('common.refund'), icon: 'undo', danger: true, onClick: () => slot.show((close) => <RefundTxDialog tx={x} onClose={close} />) });
     return a;
   };
@@ -138,7 +160,7 @@ export function TransactionsView() {
         search={{ value: ts.q, onChange: ts.onQ, placeholder: t('tx.searchPlaceholder') }}
         filters={[
           { key: 'status', label: t('common.status'), value: ts.f.status, options: Object.entries(TX_STATUS).map(([value, m]) => ({ value, label: m.label })), onChange: ts.setFilter('status') },
-          { key: 'method', label: t('tx.paymentMethod'), value: ts.f.method, options: ['stripe', 'vnpay', 'momo'].map((value) => ({ value, label: methodLabel(value) })), onChange: ts.setFilter('method') },
+          { key: 'method', label: t('tx.paymentMethod'), value: ts.f.method, options: ['bank_transfer', 'stripe', 'vnpay', 'momo'].map((value) => ({ value, label: methodLabel(value) })), onChange: ts.setFilter('method') },
           { key: 'kind', label: t('tx.type'), value: ts.f.kind, options: [{ value: 'initial', label: t('tx.initial') }, { value: 'renewal', label: t('tx.renewal') }], onChange: ts.setFilter('kind') },
           { key: 'sort', label: t('common.sortBy'), value: ts.f.sort, options: [{ value: 'oldest', label: t('tx.oldest') }, { value: 'amount', label: t('tx.highestAmount') }], onChange: ts.setFilter('sort') },
         ]}
@@ -177,12 +199,14 @@ export function TransactionDetailView() {
   if (q.isPending) return <LoadingBlock />;
   if (q.isError || !d) return <ErrorBlock error={q.error} onRetry={() => void q.refetch()} />;
 
+  const expired = d.failureReason === 'expired';
   const retry = () =>
-    slot.show((close) => <ActionDialog icon="refresh" title={t('detail.retryTitle')} body={t('detail.retryBody', { code: d.code })} cta={t('common.retry')} noteLabel={t('common.noteOptional')} successMessage={t('detail.retrySent')} run={(v) => act.mutateAsync({ path: `/payments/transactions/${d.id}/retry`, body: { note: v.note || undefined } })} onClose={close} />);
+    slot.show((close) => <ActionDialog icon="refresh" title={expired ? t('detail.reopenTitle') : t('detail.retryTitle')} body={expired ? t('detail.reopenBody', { code: d.code }) : t('detail.retryBody', { code: d.code })} cta={expired ? t('detail.reopenSession') : t('common.retry')} noteLabel={t('common.noteOptional')} successMessage={expired ? t('detail.reopenSent') : t('detail.retrySent')} run={(v) => act.mutateAsync({ path: `/payments/transactions/${d.id}/retry`, body: { note: v.note || undefined } })} onClose={close} />);
 
   const timeline: TimelineItem[] = d.timeline.map((x) => ({ icon: TL_ICON[x.type]?.icon ?? 'history', tone: TL_ICON[x.type]?.tone ?? 'x', who: TL_TITLE[x.type] ? t(TL_TITLE[x.type]!) : x.title, text: x.detail ?? '', time: formatDateTime(x.at) }));
   const info: KvItem[] = [
     { k: t('common.txId'), v: d.code },
+    ...(d.refCode ? [{ k: t('detail.refCode'), v: d.refCode }] : []),
     { k: t('common.status'), v: TX_STATUS[d.status]?.label ?? d.status, badge: TX_STATUS[d.status]?.tone ?? 'x' },
     { k: t('common.date'), v: formatDateTime(d.createdAt) },
     { k: t('common.product'), v: d.product.label },
@@ -225,9 +249,14 @@ export function TransactionDetailView() {
                 {t('common.refund')}
               </AdminButton>
             )}
-            {d.status === 'failed' && d.kind === 'initial' && (
+            {canApprove(d) && (
+              <AdminButton kind="primary" icon="task_alt" onClick={() => slot.show((close) => <ApproveTxDialog tx={d} onClose={close} />)}>
+                {t('common.approveManual')}
+              </AdminButton>
+            )}
+            {d.status === 'failed' && (d.kind === 'initial' || expired) && (
               <AdminButton kind="primary" icon="refresh" onClick={retry}>
-                {t('common.retry')}
+                {expired ? t('detail.reopenSession') : t('common.retry')}
               </AdminButton>
             )}
           </>
@@ -403,7 +432,7 @@ function ApproveRefundDialog({ refund, partial, defaultNote, onClose }: { refund
       run={(v) => act.mutateAsync({ path: `/payments/refunds/${refund.id}/approve`, body: { note: v.note || undefined, amountCents: cents === refund.amountCents ? undefined : (cents ?? undefined) } })}
       onClose={onClose}
     >
-      <InputField label={t('common.refundAmountUsd')} value={amount} onChange={setAmount} placeholder="0.00" />
+      <InputField label={t('common.refundAmountUsd')} value={amount} onChange={setAmount} placeholder="175000" />
       {bad && <div className="-mt-2 text-xs text-[#b91c1c]">{t('common.amountRange', { max: formatCents(refund.amountCents) })}</div>}
     </ActionDialog>
   );
@@ -856,7 +885,7 @@ export function CreatorDetailView() {
           <ChartCard
             title={t('creators.chartTitle', { name: d.creator.name })}
             labels={d.series.map((x) => formatDate(x.date).slice(0, 5))}
-            fmt={(v) => `$${Math.round(v / 100).toLocaleString('en-US')}`}
+            fmt={(v) => formatVndCompact(v)}
             series={[
               { name: t('creators.seriesGross'), values: d.series.map((x) => x.grossCents) },
               { name: t('creators.seriesNet'), values: d.series.map((x) => x.netCents) },

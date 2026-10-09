@@ -26,8 +26,8 @@ export type PaymentMethodInput = z.infer<typeof paymentMethodInput>;
 export const intervalField = z.enum(BILLING_INTERVALS, { error: 'Chu kỳ thanh toán không hợp lệ (monthly | annual)' });
 
 export const createCheckoutBody = z.object({
-  /** Mặc định stripe (hộp thoại thẻ). */
-  method: z.enum(PAYMENT_METHODS).default('stripe'),
+  /** Luôn là chuyển khoản; giữ field để tương thích client cũ (giá trị khác bị bỏ qua). */
+  method: z.enum(PAYMENT_METHODS).default('bank_transfer'),
   interval: intervalField.default('monthly'),
   paymentMethod: paymentMethodInput.optional(),
 });
@@ -91,10 +91,14 @@ export const resolvePayoutBody = z.object({
   note: z.string().trim().max(500).optional(),
 });
 
-/** Sự kiện webhook chung; `data` được kiểm tra chi tiết theo từng loại trong service. */
-export const webhookEventBody = z.object({
-  id: z.string().min(1).max(200),
-  type: z.string().min(1).max(100),
-  data: z.record(z.string(), z.unknown()).default({}),
+export const listBankTransactionsQuery = paginationQuery.extend({
+  credited: z
+    .enum(['true', 'false'])
+    .transform((v) => v === 'true')
+    .optional(),
 });
-export type WebhookEventBody = z.infer<typeof webhookEventBody>;
+
+export const approveBankPaymentBody = z.object({
+  bankTransactionId: z.string().min(1).max(100).optional(),
+  note: z.string().trim().max(500).optional(),
+});

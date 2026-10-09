@@ -435,7 +435,8 @@
       "system_notifications": "Notifications",
       "system_email": "Email templates",
       "system_audit": "Audit log",
-      "system_settings": "General settings"
+      "system_settings": "General settings",
+      "payments_bank": "Bank inflows"
     }
   }
 }

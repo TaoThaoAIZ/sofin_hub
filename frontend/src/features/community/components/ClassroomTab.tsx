@@ -15,6 +15,7 @@ import { ModuleWizard } from './ModuleWizard';
 import { CourseManager, publishBadgeCls, publishLabel } from './CourseManager';
 import { ConfirmDialog, errText, ErrorNote, ghostBtn, isAdminPlus, isModPlus, primaryBtn, safeUrl, toast, ToastHost } from './contentUi';
 
+import { formatCents } from '../../../lib/datetime';
 /** Cách mở khóa một module đang khóa: mua lẻ ngay trên trang (hộp thoại) hoặc sang trang thanh toán gói thành viên của cộng đồng. */
 export type Unlock = { to: string } | { onBuy: () => void };
 
@@ -106,7 +107,7 @@ export function lockText(m: ClassroomModule) {
     return m.requiredLevel
       ? i18n.t('classroom.lock.levelReq', { ns: 'community', level: m.requiredLevel })
       : i18n.t('classroom.lock.levelHigher', { ns: 'community' });
-  if (m.lockReason === 'paid') return i18n.t('modWizard.lock.paid', { ns: 'community', price: Math.round((m.priceCents ?? 0) / 100) });
+  if (m.lockReason === 'paid') return i18n.t('modWizard.lock.paid', { ns: 'community', price: formatCents(m.priceCents ?? 0) });
   if (m.lockReason === 'selected') return i18n.t('modWizard.lock.selected', { ns: 'community' });
   return i18n.t('classroom.lock.prevModule', { ns: 'community' });
 }

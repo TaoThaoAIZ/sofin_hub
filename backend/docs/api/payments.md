@@ -1,5 +1,73 @@
 # API Thanh toán, gói thành viên, hoàn tiền, doanh thu (Phase 8)
 
+> **2026-10-14 — THAY LUỒNG THANH TOÁN: chuyển khoản VietQR + SePay, tiền VND.** Gói thành viên và mua lẻ module không còn trừ thẻ/gateway mock/USD.
+> Đọc mục **"Chuyển khoản VietQR + SePay"** ngay dưới trước; các mục phía dưới viết cho luồng thẻ cũ — phần nào nhắc `createCharge`, `MockGateway`, chữ ký HMAC `x-sofin-signature`,
+> `PAYMENT_WEBHOOK_SECRET`, `WebhookEvent`, `reapStaleWebhooks`, `reconcileUnsettledCharges`, `recordRenewal`, tự trừ thẻ khi hết thử/gia hạn, `$`/USD/cent đã **lỗi thời**
+> (số dư owner, hoàn tiền 2 pha, hóa đơn, idempotency, vòng đời kick/ban/rời, quyền Owner/Admin **vẫn đúng** vì dùng chung `settle`).
+
+## Chuyển khoản VietQR + SePay (2026-10-14)
+Port từ `payment-engine` (Python/FastAPI) và `sofin/apps/lms/src/payment` (NestJS) sang SofinHub. Code: `payments.bank.ts` (khớp tiền), `payments.service.ts` (`checkout`, `confirm`, `settle*`, gia hạn),
+`payments.gateway.ts` (chỉ còn `refund`). Test: **`tests/bank-transfer.test.ts`**. Migration `20261014100000_bank_transfer_vnd`.
+
+### Luồng tiền vào
+```
+POST /courses/:id/checkout            -> Payment pending: refCode (SFH + 8 ký tự), expiresAt = +15 phút, transfer{qrUrl, bankAccount, ...}
+Khách quét QR / chuyển khoản, nội dung CK = refCode
+   |- (A) webhook SePay   POST /payments/webhook          (realtime, Authorization: Apikey <SEPAY_WEBHOOK_KEY>)
+   |- (B) cron quét       job payments.bankScan, 60 giây  (kéo GET {SEPAY_API_BASE}/transactions/list, không cần webhook tới được server)
+   `- (C) admin duyệt tay POST /admin/bank/payments/:refCode/approve
+        => CÙNG MỘT hàm settleAndVoid() -> settle()/settleModule()/settleRenewal() (cấp quyền, hóa đơn INV-..., hoa hồng giới thiệu, thông báo)
+```
+Ba đường, một công thức cấp quyền; đường nào tới trước thì cấp, đường sau thấy Payment không còn `pending` nên lùi (compare-and-set `transition(['pending'])` + advisory lock). Webhook và quét chạy
+song song cho cùng một giao dịch vẫn chỉ cấp **một lần**. FE poll `GET /payments/:id` mỗi ~4 giây tới khi `succeeded`.
+
+### Endpoint
+| Method | Path | Auth | Ghi chú |
+|---|---|---|---|
+| POST | `/courses/:id/checkout` (= `/communities/:id/checkout`) | login | Body `{interval?}` (`method`/`paymentMethod` cũ bị bỏ qua). 201 Payment `pending` + `transfer`. **Tái dùng** phiên pending còn hạn cùng chu kỳ+số tiền (cùng QR). 503 `BANK_NOT_CONFIGURED` nếu thiếu `BANK_ACCOUNT` |
+| GET | `/payments/:id` | chủ phiên | Trạng thái + `transfer` (khi còn pending). Pending quá hạn ⇒ tự chuyển `failed/expired` |
+| POST | `/payments/:id/confirm` | chủ phiên | Giống GET, thêm quét SePay theo yêu cầu (giãn cách ≥ 10s toàn hệ thống). **Không cấp quyền** |
+| POST | `/communities/:id/modules/:moduleId/purchase` | login | 201 Payment `kind=module` **pending** + `transfer`; module mở khóa khi tiền về |
+| POST | `/communities/:id/trial` | login | Không còn thẻ. Hết thử không trả ⇒ `expired` |
+| POST | `/payments/webhook` | key tĩnh | `Authorization: Apikey <key>` hoặc `Bearer <key>`, so sánh timing-safe. **Chưa đặt `SEPAY_WEBHOOK_KEY` ⇒ 401 mọi request**. Nhận payload webhook (camelCase) lẫn dòng `transactions/list` (snake_case) |
+| GET | `/admin/bank/status` | Platform Admin | `{configured}` |
+| GET | `/admin/bank/transactions` | Platform Admin | `credited?, page, limit` — tiền vào chưa khớp (kèm `note` lý do) |
+| POST | `/admin/bank/payments/:refCode/approve` | Platform Admin | `{bankTransactionId?, note?}` — duyệt tay; gán giao dịch ngân hàng phải đủ tiền. Cho phép khi Payment `pending` hoặc `failed` lý do `expired`/`cancelled`. Ghi audit `payment.manual_approve` |
+| POST | `/admin/bank/scan` | Platform Admin | Quét ngay → `{scanned, credited, already, unmatched, underpaid, errors, skipped}` |
+
+`transfer` = `{refCode, amount, transferContent, qrUrl (img.vietqr.io/image/<BIN>-<TK>-compact2.png?amount&addInfo&accountName), bankAccount, bankBin, bankName, accountName, expiresAt}`.
+
+### Kết quả khớp một giao dịch tiền vào (`BankOutcome`)
+`credited` (cấp quyền) · `already` (cùng giao dịch đã xử lý) · `no_ref` (không thấy mã) · `unmatched` (mã lạ / vượt trần 50 triệu) · `underpaid` (thiếu tiền, không cấp) · `expired` (phiên hết hạn/đóng: ghi nhận, chờ duyệt tay) ·
+`duplicate` (phiên đã trả bằng giao dịch khác ⇒ chuyển trùng, admin hoàn tay) · `error` (đã nhận tiền nhưng chưa cấp được, vd. cộng đồng bị xóa: Payment giữ `pending`, admin duyệt tay).
+Mọi giao dịch đều lưu `BankTransaction` (`externalId` UNIQUE ⇒ quét lại không sinh dòng trùng). Chuyển **dư** vẫn cấp, phần dư ghi trong `note`. Mỗi tình huống cần người xử lý gọi `alert()` (hiện: `console.error('[ALERT][payments] …')`).
+
+### Gia hạn gói (không tự trừ)
+- `issueRenewalInvoices()` (job `payments.renewalInvoices`, 15 phút): gói `active` không hủy-cuối-kỳ còn ≤ `trialReminderDays` (3) ngày ⇒ **một** Payment `kind=renewal` pending (refCode, `periodStart = currentPeriodEnd`, `expiresAt = hết kỳ + 2 ngày ân hạn`) + thông báo.
+- Trả hóa đơn ⇒ `settleRenewal`: gói còn active nối kỳ từ `currentPeriodEnd` (gói đã `expired` thì tính từ bây giờ), `priceCents` cập nhật theo hóa đơn.
+- `processDueSubscriptions()` (5 phút) trả `{invoiced, renewalFailed, trialsExpired, ended}`: hết kỳ mà chưa có hóa đơn ⇒ phát hóa đơn ân hạn; còn trong ân hạn ⇒ giữ quyền; hết ân hạn ⇒ `expired` + thu hồi quyền.
+- `expireStaleSessions()` (trong `reconcileMoney`): mọi Payment `bank_transfer` pending quá `expiresAt` ⇒ `failed`/`expired`. Tiền về muộn vẫn được ghi (`BankTransaction`) và duyệt tay được (`adminRetryPayment` mở lại phiên với hạn mới, cùng mã).
+
+### Hoàn tiền
+`BankTransferGateway.refund` **ghi nhận** khoản phải trả lại (idempotent theo `RefundRequest.id`, `refundId = manual:<id>`); admin **chuyển khoản trả khách ngoài hệ thống**. Hệ thống thu hồi quyền và trừ doanh thu owner như cũ.
+Chưa có trạng thái "đã chuyển trả" để theo dõi — xem "Chưa làm".
+
+### Tiền VND
+Toàn hệ thống là VND nguyên, 1 đơn vị = 1đ. Tên field cũ (`priceUsd`, `amountUsd`, `*Cents`, `payoutMinUsd`) **giữ nguyên để không phá API** nhưng không còn nhân/chia 100 (`usdToCents`/`centsToUsd` là hàm đồng nhất). Migration nhân dữ liệu cũ ×250 (1 USD = 25.000đ = 100 cent).
+Giới hạn giá 50.000.000đ/lần (= `MAX_SINGLE_AMOUNT` của khớp tiền). Phí cổng mặc định 0 (`GATEWAY_FEE_PCT=0`, `GATEWAY_FEE_FIXED_CENTS=0`); rút tối thiểu mặc định 1.000.000đ (`PAYOUT_MIN_USD`).
+
+### Biến môi trường
+`BANK_ACCOUNT`, `BANK_ACCOUNT_NAME`, `BANK_BIN` (MB Bank = 970422), `BANK_NAME`, `SEPAY_WEBHOOK_KEY`, `SEPAY_API_TOKEN`, `SEPAY_API_BASE` (https://my.sepay.vn/userapi), `PAY_REF_PREFIX` (SFH). Thiếu mỗi biến ở production ⇒ cảnh báo khi khởi động (`productionEnvWarnings`).
+**Bỏ** `PAYMENT_WEBHOOK_SECRET`. Cấu hình webhook trên SePay: URL `https://<api>/api/payments/webhook`, kiểu xác thực API Key = `SEPAY_WEBHOOK_KEY`.
+
+### Chưa làm / cần quyết định (chuyển khoản)
+- Hoàn tiền: chưa có hàng đợi/trạng thái "admin đã chuyển trả"; chuyển dư/chuyển trùng cũng hoàn tay.
+- `alert()` mới chỉ log; chưa bắn Telegram/email cho admin.
+- Chưa đối chiếu `accountNumber` của webhook với `BANK_ACCOUNT` (chỉ dựa vào `SEPAY_WEBHOOK_KEY`).
+- Admin chưa chọn tài khoản nhận từ danh sách SePay ở runtime (cấu hình bằng env); chưa có `/bankaccounts/list`.
+- Tên field `*Usd`/`*Cents` gây hiểu nhầm (nay là đồng) — đổi tên là thay đổi phá API, để dành đợt riêng.
+- Gói hosting owner vẫn mô phỏng (không trừ tiền); referral member tính trên VND.
+
 Code: `src/modules/payments/*`. Test: `tests/payments.test.ts`, `tests/revenue.test.ts`, **`tests/money-lifecycle.test.ts`** (5 kịch bản tiền của audit §3 + P1 — xem mục "Vòng đời tiền" cuối file). Dữ liệu lưu **Postgres (Prisma)** qua
 `PaymentsRepository` (bảng Payment, Subscription, RefundRequest, Payout, InvoiceSequence, IdempotencyKey, WebhookEvent, OwnerBalanceLedger). Mọi số tiền là **số nguyên cent** (`*Cents`); `amountUsd` chỉ giữ để tương thích FE cũ.
 Response thành công `{ data }` (danh sách: `{ data, meta }`). Lỗi tiếng Việt `{ error... }` theo error-handler chung.
@@ -10,7 +78,7 @@ Response thành công `{ data }` (danh sách: `{ data, meta }`). Lỗi tiếng V
 |---|---|---|---|---|---|
 | POST | `/courses/:id/checkout` | đăng nhập | `{method}`; header tùy chọn `Idempotency-Key` | 201 `PaymentIntent` (cũ + `amountCents, kind, invoiceNumber?...`) | 400 miễn phí/body sai, 403 `COMMUNITY_LOCKED` (cộng đồng bị khóa) / `JOIN_REQUEST_REQUIRED` (riêng tư chưa được duyệt), 404, 409 đã tham gia / gói còn hiệu lực / key dùng cho khóa khác. **Tái dùng intent `pending` chưa quá 30 phút** của cùng (user, cộng đồng) |
 | GET | `/courses/:id/subscription` | đăng nhập | | `{enrolled, latestPayment, subscription}` (2 field đầu là cũ) | 404 |
-| POST | `/payments/:id/confirm` | chủ giao dịch | | `PaymentIntent` | 402 cổng từ chối, 403 (kể cả cộng đồng bị khóa), 404, 409 (đã có gói — khoản trừ trùng được hoàn tự động) |
+| POST | `/payments/:id/confirm` | chủ giao dịch | | `PaymentIntent` | 403, 404 (chỉ đọc trạng thái — không cấp quyền) |
 | POST | `/courses/:id/subscription/cancel` | thành viên có gói | `{atPeriodEnd=true}` | `Subscription` | 400, 404 chưa có gói |
 | POST | `/courses/:id/subscription/resume` | thành viên có gói | | `Subscription` | 404, 409 chưa hủy / đã hết kỳ |
 | GET | `/me/subscriptions` | đăng nhập | | `Subscription[]` (+ `courseTitle, accessUntil`) | |
@@ -20,7 +88,7 @@ Response thành công `{ data }` (danh sách: `{ data, meta }`). Lỗi tiếng V
 | POST | `/payments/:id/refund-request` | chủ giao dịch | `{reason}` | 201 `RefundRequest` (`approved` nếu trong cửa sổ, ngược lại `pending`) | 400, 403, 404, 409 |
 | GET | `/admin/refunds` | Platform Admin | `status?, page, limit` | `{data, meta}` | 401, 403 |
 | PATCH | `/admin/refunds/:id` | Platform Admin | `{action:'approve'\|'reject', note?}` | `RefundRequest` | 403, 404, 409 đã xử lý |
-| POST | `/payments/webhook` | không đăng nhập; chữ ký HMAC | JSON `{id, type, data}` + header `x-sofin-signature` | 200 `{received:true[, duplicate\|ignored]}` | 400 chữ ký sai/hết hạn/thiếu (không nêu chi tiết) |
+| POST | `/payments/webhook` | key tĩnh SePay (xem mục mới) | payload SePay | 200 `{success, message}` | 401 sai/thiếu key |
 | GET | `/courses/:id/revenue` | **Owner** hoặc Platform Admin (Admin/Mod cộng đồng: 403) | `from?, to?` (ISO hoặc `YYYY-MM-DD`) | xem dưới | 400, 403, 404 |
 | POST | `/courses/:id/payouts` | **Owner** (Platform Admin cũng 403) | `{amountCents, method:{type:'bank', bankName, accountNumber, accountHolder}}` | 201 `Payout` (số TK dạng `****1234`) | 400 dưới ngưỡng / vượt số dư **có thể rút** (`PAYOUT_EXCEEDS_AVAILABLE`) / còn nợ (`PAYOUT_BLOCKED`) / sai định dạng, 403 (kể cả cộng đồng bị khóa) |
 | GET | `/courses/:id/payouts` | Owner hoặc Platform Admin | `page, limit` | `{data, meta}` | 403 |

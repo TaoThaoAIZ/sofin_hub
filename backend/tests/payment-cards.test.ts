@@ -4,6 +4,9 @@ import { after, before, describe, it } from 'node:test';
 import { makeClient, startTestServer, useTestDb, type TestDb, type TestServer } from './helpers.js';
 
 const thisYear = new Date().getUTCFullYear();
+/** VND: 7 USD ≈ 175.000đ/tháng, 48 USD ≈ 1.200.000đ/năm (seedVnd). */
+const M = 175_000;
+const A = 1_200_000;
 const card = (over: Record<string, unknown> = {}) => ({
   type: 'card',
   token: `tok_mock_${randomBytes(6).toString('hex')}`,
@@ -29,16 +32,28 @@ describe('quản lý thẻ (Cài đặt > Thanh toán) + tổng quan thanh toán
   let n = 0;
   async function paidCommunity(over: Record<string, unknown> = {}) {
     const owner = await c.registerUser('own');
-    const r = await c.call('POST', '/communities', { token: owner.token, body: { title: `Thẻ ${Date.now().toString(36)}${n++}`, description: 'd', category: 'tech', priceUsd: 7, priceAnnualUsd: 48, visibility: 'public', ...over } });
+    const r = await c.call('POST', '/communities', { token: owner.token, body: { title: `Thẻ ${Date.now().toString(36)}${n++}`, description: 'd', category: 'tech', priceUsd: M, priceAnnualUsd: A, visibility: 'public', ...over } });
     assert.equal(r.status, 201, JSON.stringify(r.body));
     return r.body.data.id as string;
   }
   async function pay(user: { token: string }, id: string, body: Record<string, unknown> = {}) {
-    const co = await c.call('POST', `/communities/${id}/checkout`, { token: user.token, body: { method: 'stripe', ...body } });
+    const co = await c.call('POST', `/communities/${id}/checkout`, { token: user.token, body: { method: 'bank_transfer', ...body } });
     assert.equal(co.status, 201, JSON.stringify(co.body));
-    const cf = await c.call('POST', `/payments/${co.body.data.id}/confirm`, { token: user.token });
+    const cf = await c.payIntent(co.body.data.id, user.token);
     assert.equal(cf.status, 200, JSON.stringify(cf.body));
     return cf.body.data;
+  }
+  /**
+   * Member checkout giờ là chuyển khoản nên KHÔNG tự lưu/gắn thẻ. Để vẫn kiểm thử logic quản lý thẻ ↔ gói (đổi mặc định, CARD_IN_USE...),
+   * tạo thẻ qua /me/payment-methods, thanh toán bằng chuyển khoản, rồi gắn thẻ vào gói (như gói gắn thẻ có sẵn / gói gia hạn kiểu cũ).
+   */
+  async function payWithCard(user: { token: string; id: string }, communityId: string, over: Record<string, unknown> = {}) {
+    const created = await c.call('POST', '/me/payment-methods', { token: user.token, body: card(over) });
+    assert.equal(created.status, 201, JSON.stringify(created.body));
+    const payment = await pay(user, communityId);
+    const sub = await db.prisma.subscription.findFirstOrThrow({ where: { userId: user.id, communityId } });
+    await db.prisma.subscription.update({ where: { id: sub.id }, data: { paymentCardId: created.body.data.id } });
+    return { payment, cardId: created.body.data.id as string };
   }
   const list = async (u: { token: string }) => (await c.call('GET', '/me/payment-methods', { token: u.token })).body.data as { id: string; isDefault: boolean; last4: string; brand: string }[];
 
@@ -89,8 +104,7 @@ describe('quản lý thẻ (Cài đặt > Thanh toán) + tổng quan thanh toán
     it('PATCH default đổi thẻ mặc định, chuyển gói đang gia hạn sang thẻ mới', async () => {
       const u = await c.registerUser('def');
       const communityId = await paidCommunity();
-      const first = card({ last4: '4242' });
-      await pay(u, communityId, { paymentMethod: first }); // thẻ vừa dùng ở thanh toán là mặc định
+      await payWithCard(u, communityId, { last4: '4242' }); // thẻ đầu tiên của user là mặc định
       const second = (await c.call('POST', '/me/payment-methods', { token: u.token, body: card({ last4: '5555', brand: 'mastercard' }) })).body.data;
       assert.equal((await list(u))[0]!.last4, '4242');
       const r = await c.call('PATCH', `/me/payment-methods/${second.id}/default`, { token: u.token });
@@ -115,7 +129,7 @@ describe('quản lý thẻ (Cài đặt > Thanh toán) + tổng quan thanh toán
     it('PUT thay thông tin thẻ, giữ id + vị trí mặc định + gói đang gắn', async () => {
       const u = await c.registerUser('upd');
       const communityId = await paidCommunity();
-      await pay(u, communityId, { paymentMethod: card({ last4: '4242' }) });
+      await payWithCard(u, communityId, { last4: '4242' });
       const before = (await list(u))[0]!;
       const r = await c.call('PUT', `/me/payment-methods/${before.id}`, { token: u.token, body: card({ last4: '0005', brand: 'amex', expMonth: 3, expYear: thisYear + 4 }) });
       assert.equal(r.status, 200, JSON.stringify(r.body));
@@ -128,7 +142,7 @@ describe('quản lý thẻ (Cài đặt > Thanh toán) + tổng quan thanh toán
     it('xóa thẻ không dùng → ok; thẻ duy nhất đang dùng cho gói → 409 CARD_IN_USE', async () => {
       const u = await c.registerUser('del');
       const communityId = await paidCommunity();
-      await pay(u, communityId, { paymentMethod: card({ last4: '4242' }) });
+      await payWithCard(u, communityId, { last4: '4242' });
       const only = (await list(u))[0]!;
       const blocked = await c.call('DELETE', `/me/payment-methods/${only.id}`, { token: u.token });
       assert.equal(blocked.status, 409);
@@ -150,7 +164,7 @@ describe('quản lý thẻ (Cài đặt > Thanh toán) + tổng quan thanh toán
     it('thẻ của gói đã đặt hủy cuối kỳ thì xóa được dù là thẻ duy nhất', async () => {
       const u = await c.registerUser('delc');
       const communityId = await paidCommunity();
-      await pay(u, communityId, { paymentMethod: card({ last4: '4242' }) });
+      await payWithCard(u, communityId, { last4: '4242' });
       assert.equal((await c.call('POST', `/communities/${communityId}/subscription/cancel`, { token: u.token, body: { atPeriodEnd: true } })).status, 200);
       const only = (await list(u))[0]!;
       assert.equal((await c.call('DELETE', `/me/payment-methods/${only.id}`, { token: u.token })).status, 200);
@@ -158,17 +172,29 @@ describe('quản lý thẻ (Cài đặt > Thanh toán) + tổng quan thanh toán
     });
   });
 
+  describe('thanh toán chuyển khoản không tự lưu thẻ', () => {
+    it('checkout + thanh toán xong: không có thẻ nào được tạo, gói không gắn thẻ', async () => {
+      const u = await c.registerUser('nocard');
+      const communityId = await paidCommunity();
+      await pay(u, communityId);
+      assert.equal((await list(u)).length, 0);
+      const sub = await db.prisma.subscription.findFirstOrThrow({ where: { userId: u.id, communityId } });
+      assert.equal(sub.paymentCardId, null);
+      assert.equal((await c.call('GET', '/me/billing-summary', { token: u.token })).body.data.activeCount, 1);
+    });
+  });
+
   describe('GET /me/billing-summary', () => {
     it('chưa có gói: next = null, tổng = 0', async () => {
       const u = await c.registerUser('sum0');
       const r = await c.call('GET', '/me/billing-summary', { token: u.token });
-      assert.deepEqual(r.body.data, { currency: 'USD', next: null, monthlyTotalCents: 0, activeCount: 0 });
+      assert.deepEqual(r.body.data, { currency: 'VND', next: null, monthlyTotalCents: 0, activeCount: 0 });
     });
 
     it('gộp gói tháng + gói năm (/12), next = gói đến hạn sớm nhất, bỏ gói đã hủy cuối kỳ', async () => {
       const u = await c.registerUser('sum');
-      const monthly = await paidCommunity(); // $7/tháng
-      const annual = await paidCommunity(); // $48/năm
+      const monthly = await paidCommunity(); // 175.000đ/tháng
+      const annual = await paidCommunity(); // 1.200.000đ/năm
       const cancelled = await paidCommunity();
       await pay(u, monthly);
       await pay(u, annual, { interval: 'annual' });
@@ -176,9 +202,9 @@ describe('quản lý thẻ (Cài đặt > Thanh toán) + tổng quan thanh toán
       await c.call('POST', `/communities/${cancelled}/subscription/cancel`, { token: u.token, body: { atPeriodEnd: true } });
       const r = (await c.call('GET', '/me/billing-summary', { token: u.token })).body.data;
       assert.equal(r.activeCount, 2);
-      assert.equal(r.monthlyTotalCents, 700 + 400); // 7$ + 48$/12
+      assert.equal(r.monthlyTotalCents, M + A / 12); // tháng + năm/12
       assert.equal(r.next.communityId, monthly); // kỳ tháng hết sớm hơn kỳ năm
-      assert.equal(r.next.amountCents, 700);
+      assert.equal(r.next.amountCents, M);
       assert.equal(r.next.trialing, false);
     });
   });

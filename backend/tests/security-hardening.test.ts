@@ -30,7 +30,6 @@ const PROD_OK: Record<string, string> = {
   DATABASE_URL: 'postgresql://u:p@db.example.com:5432/sofinhub',
   JWT_ACCESS_SECRET: 'a'.repeat(48),
   JWT_REFRESH_SECRET: 'b'.repeat(48),
-  PAYMENT_WEBHOOK_SECRET: 'c'.repeat(48),
   UPLOAD_SIGNING_SECRET: 'd'.repeat(48),
   OTP_PEPPER: 'e'.repeat(48),
 };
@@ -100,7 +99,7 @@ describe('4.2 guard secret production', () => {
     const { productionEnvProblems } = await import('../src/config/env-guard.js');
     assert.deepEqual(productionEnvProblems(PROD_OK), []);
     assert.deepEqual(productionEnvProblems({ NODE_ENV: 'development', JWT_ACCESS_SECRET: 'dev-x' }), []);
-    for (const key of ['JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET', 'PAYMENT_WEBHOOK_SECRET', 'UPLOAD_SIGNING_SECRET']) {
+    for (const key of ['JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET', 'UPLOAD_SIGNING_SECRET']) {
       const p = productionEnvProblems({ ...PROD_OK, [key]: 'dev-default-change-me' });
       assert.equal(p.length, 1, key);
       assert.match(p[0]!, new RegExp(key));
@@ -108,7 +107,7 @@ describe('4.2 guard secret production', () => {
     assert.match(productionEnvProblems({ ...PROD_OK, DATABASE_URL: '' }).join(), /DATABASE_URL/);
   });
 
-  for (const key of ['JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET', 'PAYMENT_WEBHOOK_SECRET', 'UPLOAD_SIGNING_SECRET']) {
+  for (const key of ['JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET', 'UPLOAD_SIGNING_SECRET']) {
     it(`production + ${key}=dev-... -> thoát mã != 0`, () => {
       const r = loadEnv({ ...PROD_OK, [key]: 'dev-whatever-change-me' });
       assert.notEqual(r.code, 0);
@@ -119,7 +118,7 @@ describe('4.2 guard secret production', () => {
   it('production không đặt secret nào (rơi về default dev-*) -> từ chối', () => {
     const r = loadEnv({ NODE_ENV: 'production', DATABASE_URL: PROD_OK.DATABASE_URL! });
     assert.notEqual(r.code, 0);
-    assert.match(r.err, /PAYMENT_WEBHOOK_SECRET/);
+    assert.match(r.err, /JWT_ACCESS_SECRET/);
     assert.match(r.err, /UPLOAD_SIGNING_SECRET/);
   });
 

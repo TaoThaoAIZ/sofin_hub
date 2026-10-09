@@ -26,8 +26,8 @@ export function nextPayoutDate(now: Date): Date {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, cfg().referral.payoutDay));
 }
 
-/** Tiền của từng loại: hoa hồng người tạo tính trên gói hosting (owner.currency, VND không có phần thập phân); hoa hồng thành viên tính trên giao dịch USD (cent). */
-const currencyOf = (kind: ReferralKindName) => (kind === 'creator' ? cfg().owner.currency : 'USD');
+/** Tiền của từng loại: hoa hồng người tạo tính trên gói hosting (owner.currency, VND không có phần thập phân); hoa hồng thành viên tính trên giao dịch VND (đồng). */
+const currencyOf = (kind: ReferralKindName) => (kind === 'creator' ? cfg().owner.currency : 'VND');
 const rateOf = (kind: ReferralKindName) => (kind === 'creator' ? cfg().referral.creatorRateBps : cfg().referral.memberRateBps);
 
 /** Lỗi trong chương trình giới thiệu không bao giờ được làm hỏng luồng tiền/đăng ký đang chạy. */

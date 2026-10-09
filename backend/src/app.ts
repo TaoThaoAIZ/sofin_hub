@@ -19,16 +19,7 @@ export function createApp() {
   app.use(helmet());
   app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
   app.use(compression());
-  // `verify` giữ nguyên bytes gốc (rawBody) CHỈ cho webhook thanh toán: chữ ký HMAC phải tính trên raw body, không phải JSON đã parse.
-  app.use(
-    express.json({
-      limit: '1mb',
-      verify: (req, _res, buf) => {
-        const r = req as typeof req & { originalUrl?: string; rawBody?: Buffer };
-        if (r.originalUrl?.startsWith('/api/payments/webhook')) r.rawBody = Buffer.from(buf);
-      },
-    }),
-  );
+  app.use(express.json({ limit: '1mb' }));
   app.use(cookieParser());
   if (env.NODE_ENV !== 'test') app.use(requestLogger(isProd)); // URL/Referer đã được che token/ticket/sig
 

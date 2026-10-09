@@ -46,7 +46,8 @@ export type StepKey = (typeof STEP_KEYS)[number];
 
 export const BRAND_SWATCHES = ['#f26a1b', '#16a34a', '#2563eb', '#7c3aed', '#ec4899', '#111111'] as const;
 
-export const MAX_PRICE_USD = 10000;
+/** Giá thành viên tối đa (VND, nguyên đồng). */
+export const MAX_PRICE_USD = 50_000_000;
 export const MAX_QUESTIONS = 3;
 
 export const defaultForm = (): WizardForm => ({
@@ -142,7 +143,7 @@ export function validateStep(step: number, f: WizardForm, ctx: ValidateCtx): Fie
     if (f.billing !== 'free') {
       const m = parseMoney(f.priceMonthly);
       if (!(m > 0)) e.priceMonthly = tw('validation.priceMonthlyRequired');
-      else if (m > MAX_PRICE_USD) e.priceMonthly = tw('validation.priceMax', { max: MAX_PRICE_USD.toLocaleString('en-US') });
+      else if (m > MAX_PRICE_USD) e.priceMonthly = tw('validation.priceMax', { max: MAX_PRICE_USD.toLocaleString('vi-VN') });
       if (f.billing === 'year') {
         const a = parseMoney(f.priceAnnual);
         if (!(a > 0)) e.priceAnnual = tw('validation.priceAnnualRequired');

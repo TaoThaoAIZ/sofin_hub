@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import type { Prisma } from '../../src/generated/prisma/client.js';
 import type { CommunityModeration, ReportAction, ReportReason, ReportRisk, ReportStatus, UserStatus } from '../../src/generated/prisma/enums.js';
+import { seedVnd } from '../../src/db/enums.js';
 import { TEST_PASSWORD } from '../seed-accounts.js';
 import type { SeedContext } from './context.js';
 
@@ -97,7 +98,7 @@ export async function seedAdmin(ctx: SeedContext): Promise<void> {
     const o = PEOPLE.find((p) => p.key === c.owner)!;
     const data: Prisma.CommunityUncheckedCreateInput = {
       id: c.id, title: c.title, description: `Cộng đồng ${c.title} dành cho những ai muốn học hỏi, chia sẻ và cùng nhau phát triển.`,
-      category: c.category, tag: 'new', ...common, instructorName: `${o.first} ${o.last}`, priceCents: c.priceUsd * 100,
+      category: c.category, tag: 'new', ...common, instructorName: `${o.first} ${o.last}`, priceCents: seedVnd(c.priceUsd),
       pricing: c.priceUsd > 0 ? 'paid' : 'free', visibility: 'public', ownerId: uid(c.owner), createdAt: ago(c.hoursAgo ?? 100),
       moderationStatus: c.mod, moderationReason: c.reason ?? null, moderationNote: c.note ?? null, moderationUpdatedAt: c.mod === 'pending_review' ? null : daysAgo(1),
       moderatedById: c.mod === 'pending_review' ? null : adminId, locked: c.locked ?? false, lockReason: c.locked ? c.reason ?? null : null,

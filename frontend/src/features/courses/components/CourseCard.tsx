@@ -6,6 +6,7 @@ import { TAG_UI } from '../constants';
 import type { Course } from '../types';
 import type { ViewMode } from './FilterBar';
 
+import { formatCents } from '../../../lib/datetime';
 export function CourseCard({ course, view }: { course: Course; view: ViewMode }) {
   const { t } = useTranslation('course');
   const list = view === 'list';
@@ -46,7 +47,7 @@ export function CourseCard({ course, view }: { course: Course; view: ViewMode })
                 t('list.free')
               ) : (
                 <>
-                  ${course.priceUsd}
+                  {formatCents(course.priceUsd)}
                   <span className="text-[13px] font-medium">{t('list.perMonth')}</span>
                 </>
               )}

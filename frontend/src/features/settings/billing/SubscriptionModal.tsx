@@ -82,7 +82,7 @@ export function SubscriptionModal({ sub, onClose, onRefund }: { sub: Subscriptio
       )}
       {(latest || lastState) && (
         <div className="flex items-center justify-between gap-3 rounded-xl bg-[#faf7f4] px-3.5 py-3 text-[13.5px]">
-          <span className="text-stone-600">{refundText(lastState) ?? t('subscription.latestPayment', { amount: formatCents(latest!.amountCents ?? Math.round(latest!.amountUsd * 100)) })}</span>
+          <span className="text-stone-600">{refundText(lastState) ?? t('subscription.latestPayment', { amount: formatCents(latest!.amountCents ?? latest!.amountUsd) })}</span>
           {latest && !lastState && (
             <button type="button" onClick={() => onRefund(latest)} className="border-0 bg-transparent p-0 font-bold text-[#15803d] underline">
               {t('subscription.requestRefund')}

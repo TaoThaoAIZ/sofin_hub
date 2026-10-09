@@ -90,14 +90,23 @@ const schema = z.object({
   MESSAGE_RATE_LIMIT_PER_MIN: z.coerce.number().int().min(0).default(20),
 
   // --- Thanh toán (Phase 8). Các giá trị chính sách bên dưới là TẠM, chờ chốt (PLAN.md câu hỏi #2, #6, #8, #9) ---
-  PAYMENT_WEBHOOK_SECRET: z.string().min(1).default('dev-webhook-secret-change-me'),
   TRIAL_DAYS: z.coerce.number().int().min(1).default(7),
   SUBSCRIPTION_PERIOD_DAYS: z.coerce.number().int().min(1).default(30),
   REFUND_WINDOW_DAYS: z.coerce.number().int().min(0).default(7),
   PLATFORM_COMMISSION_PCT: z.coerce.number().min(0).max(100).default(10),
-  GATEWAY_FEE_PCT: z.coerce.number().min(0).max(100).default(2.9),
-  GATEWAY_FEE_FIXED_CENTS: z.coerce.number().int().min(0).default(30),
-  PAYOUT_MIN_USD: z.coerce.number().min(0).default(50),
+  GATEWAY_FEE_PCT: z.coerce.number().min(0).max(100).default(0),
+  GATEWAY_FEE_FIXED_CENTS: z.coerce.number().int().min(0).default(0),
+  PAYOUT_MIN_USD: z.coerce.number().min(0).default(1_000_000), // VND (tên biến giữ nguyên)
+
+  // --- Chuyển khoản VietQR + SePay. Thiếu SEPAY_WEBHOOK_KEY ⇒ TỪ CHỐI mọi webhook; thiếu SEPAY_API_TOKEN ⇒ không quét đối soát. ---
+  SEPAY_WEBHOOK_KEY: z.string().default(''),
+  SEPAY_API_TOKEN: z.string().default(''),
+  SEPAY_API_BASE: z.string().default('https://my.sepay.vn/userapi'),
+  BANK_ACCOUNT: z.string().default(''),
+  BANK_ACCOUNT_NAME: z.string().default(''),
+  BANK_BIN: z.string().default('970422'),
+  BANK_NAME: z.string().default('MB Bank'),
+  PAY_REF_PREFIX: z.string().regex(/^[A-Za-z]{2,5}$/, 'PAY_REF_PREFIX: 2-5 chữ cái').default('SFH'),
 });
 
 const parsed = schema.safeParse(process.env);

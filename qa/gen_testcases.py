@@ -546,7 +546,7 @@ add(M, MN, "Thanh toán", "Chặn truy cập nội dung cộng đồng trước 
     "Bảo mật", "Cao", DONE, 'Đã đăng nhập, CHƯA tham gia cộng đồng có phí (vd. paid-demo $19/tháng); đã checkout nhưng CHƯA confirm',
     ['POST /api/courses/:id/checkout (tạo intent pending)', 'Trước khi POST /api/payments/:id/confirm, gọi GET /api/communities/:id/posts (hoặc /api/courses/:id/posts) và mở /communities/:id/community'],
     "-",
-    'API 403 (requireMembership), FE chuyển về /communities/:id; intent pending KHÔNG cấp quyền - chỉ sau confirm thành công (hoặc bắt đầu dùng thử) mới vào được (xem TC-PAY-043)')
+    'API 403 (requireMembership), FE chuyển về /communities/:id; intent pending KHÔNG cấp quyền - chỉ sau khi tiền về (webhook SePay / quét / admin duyệt tay) hoặc bắt đầu dùng thử mới vào được (xem TC-BANK-011, TC-BANK-014)')
 add(M, MN, "Thanh toán", "Xác nhận thanh toán cấp quyền truy cập thật ngay lập tức",
     "Chức năng", "Cao", DONE, "Có PaymentIntent đang pending",
     ["Gọi POST /api/payments/:id/confirm"], "-",
@@ -1285,7 +1285,7 @@ STILL_PLAN_OLD_COUNT = sum(1 for _r in rows if _r[6] == PLAN)
 # Nạp testcase mới từ qa/cases_*.py (mỗi file có hàm load(add)).
 CASE_MODULES = ["cases_auth", "cases_community", "cases_content", "cases_classroom",
                 "cases_payments", "cases_comms", "cases_platform", "cases_admin", "cases_admin2", "cases_admin3",
-                "cases_audit_secx", "cases_audit_money", "cases_audit_game", "cases_audit_infra", "cases_audit_perf", "cases_audit_split", "cases_wizard", "cases_settings"]
+                "cases_audit_secx", "cases_audit_money", "cases_audit_game", "cases_audit_infra", "cases_audit_perf", "cases_audit_split", "cases_wizard", "cases_settings", "cases_bank_transfer"]
 for _m in CASE_MODULES:
     try:
         _mod = importlib.import_module(_m)

@@ -499,7 +499,7 @@
         "admin": "Admin",
         "mod": "Moderator"
       },
-      "paidPrice": "Paid · ${{price}}/month",
+      "paidPrice": "Paid · {{price}}/month",
       "empty": "This user has not joined any communities.",
       "open": "Open community"
     },

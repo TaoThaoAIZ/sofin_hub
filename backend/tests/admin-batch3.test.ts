@@ -820,13 +820,14 @@ describe('admin đợt 3', () => {
       const g = (await GET('/system/settings')).body.data;
       assert.equal(g.payments.commissionPct, 10);
       assert.equal(g.payments.refundWindowDays, 7);
-      assert.equal(g.payments.payoutMinUsd, 50);
+      assert.equal(g.payments.payoutMinUsd, 1_000_000)
+      assert.equal(g.payments.currency, 'VND');
       assert.equal(g.payments.trialDays, 7);
       assert.equal(g.platform.defaultLanguage, 'vi');
       assert.equal(g.security.maintenanceMode, false);
       assert.deepEqual(g.overrides, {});
 
-      const p = await A('PATCH', '/system/settings', { payments: { commissionPct: 12.5, refundWindowDays: 14, payoutMinUsd: 75 }, platform: { name: 'SofinHub QA' } });
+      const p = await A('PATCH', '/system/settings', { payments: { commissionPct: 12.5, refundWindowDays: 14, payoutMinUsd: 750_000 }, platform: { name: 'SofinHub QA' } });
       assert.equal(p.status, 200, JSON.stringify(p.body));
       assert.equal(p.body.data.payments.commissionPct, 12.5);
       assert.equal(p.body.data.platform.name, 'SofinHub QA');
@@ -837,7 +838,7 @@ describe('admin đợt 3', () => {
       assert.equal((await c.call('GET', '/feature-flags')).body.data.platform.name, 'SofinHub QA');
       const { cfg } = await import('../src/modules/settings/settings.service.js');
       assert.equal(cfg().payments.refundWindowDays, 14);
-      assert.equal(cfg().payments.payoutMinUsd, 75);
+      assert.equal(cfg().payments.payoutMinUsd, 750_000);
 
       const r = await A('POST', '/system/settings/reset', { keys: ['payments.commissionPct'] });
       assert.equal(r.body.data.payments.commissionPct, 10);

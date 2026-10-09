@@ -28,11 +28,11 @@ export async function seedCommunityScenarios(ctx: SeedContext, phase: 'courses' 
     };
     const defs = [
       { id: 'private-demo', title: 'Cộng đồng riêng tư (demo)', description: 'Cộng đồng kín để thử luồng yêu cầu tham gia và lời mời.', visibility: 'private' as const, pricing: 'free' as const, priceCents: 0 },
-      { id: 'paid-demo', title: 'Cộng đồng có phí (demo)', description: 'Cộng đồng công khai có phí để thử luồng thanh toán.', visibility: 'public' as const, pricing: 'paid' as const, priceCents: 1900 },
+      { id: 'paid-demo', title: 'Cộng đồng có phí (demo)', description: 'Cộng đồng công khai có phí để thử luồng thanh toán.', visibility: 'public' as const, pricing: 'paid' as const, priceCents: 475_000 },
       // Gói tháng $7 + gói năm $48 (tiết kiệm 43%) + nhận diện/nội quy — để thử hộp thoại "Chọn gói thành viên".
       {
         id: 'annual-demo', title: 'Cộng đồng gói năm (demo)', description: 'Cộng đồng có phí có cả gói tháng và gói năm, dùng thử 7 ngày.', visibility: 'public' as const, pricing: 'paid' as const,
-        priceCents: 700, priceAnnualCents: 4800, promise: 'Học đều mỗi tuần, tiết kiệm 43% khi trả theo năm', brandColor: '#2563eb', benefits: ['Buổi học trực tiếp mỗi tuần', 'Thư viện video đầy đủ'],
+        priceCents: 175_000, priceAnnualCents: 1_200_000, promise: 'Học đều mỗi tuần, tiết kiệm 43% khi trả theo năm', brandColor: '#2563eb', benefits: ['Buổi học trực tiếp mỗi tuần', 'Thư viện video đầy đủ'],
         rules: [{ title: 'Tôn trọng lẫn nhau', body: 'Góp ý văn minh.' }],
       },
     ];

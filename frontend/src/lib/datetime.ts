@@ -21,10 +21,21 @@ export function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString(currentLocale(), { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-/** Số cent -> "$12.34". */
-export function formatCents(cents: number): string {
-  const sign = cents < 0 ? '-' : '';
-  return `${sign}$${(Math.abs(cents) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+/** Số tiền VND (số nguyên đồng; tên "cents" là di sản) -> "175.000 ₫". */
+export function formatCents(vnd: number): string {
+  const sign = vnd < 0 ? '-' : '';
+  return `${sign}${Math.abs(Math.round(vnd)).toLocaleString('vi-VN')} ₫`;
+}
+
+/** VND gọn: 1.200.000 -> "1,2tr", 350.000 -> "350k", 2.500.000.000 -> "2,5 tỷ". */
+export function formatVndCompact(vnd: number): string {
+  const a = Math.abs(vnd);
+  const sign = vnd < 0 ? '-' : '';
+  const n = (v: number) => v.toFixed(1).replace(/\.0$/, '').replace('.', ',');
+  if (a >= 1e9) return `${sign}${n(a / 1e9)} tỷ`;
+  if (a >= 1e6) return `${sign}${n(a / 1e6)}tr`;
+  if (a >= 1e3) return `${sign}${Math.round(a / 1e3)}k`;
+  return `${sign}${Math.round(a)}`;
 }
 
 /** Chỉ cho phép đường dẫn nội bộ của FE (bắt đầu bằng "/" nhưng không phải "//") — chặn link ngoài/độc hại. */

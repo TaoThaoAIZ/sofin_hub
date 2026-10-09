@@ -46,7 +46,7 @@ function Overview({ c, categoryLabel }: { c: CommunityDetail; categoryLabel: (id
             { k: t('communityDetail.category'), v: categoryLabel(c.category) },
             { k: t('communityDetail.visibility'), v: c.visibility === 'public' ? t('communityDetail.public') : t('communityDetail.private') },
             { k: t('communityDetail.memberType'), v: c.pricing === 'free' ? t('communityDetail.free') : PRICING_LABEL[c.pricing] },
-            { k: t('communityDetail.planPrice'), v: c.pricing === 'free' ? '—' : t('communityDetail.perMonth', { price: c.priceUsd }) },
+            { k: t('communityDetail.planPrice'), v: c.pricing === 'free' ? '—' : t('communityDetail.perMonth', { price: formatCents(c.priceUsd) }) },
             { k: t('communityDetail.discovery'), v: DISCOVERY[c.discovery].label, badge: DISCOVERY[c.discovery].tone },
             ...(c.statusReason ? [{ k: t('communityDetail.statusReason'), v: c.statusReason }] : []),
             ...(c.statusUntil ? [{ k: t('communityDetail.statusUntil'), v: formatDate(c.statusUntil) }] : []),
@@ -269,7 +269,7 @@ export function CommunityDetailView() {
               { k: t('communityDetail.description'), v: c.description || '—' },
               { k: t('communityDetail.language'), v: c.language === 'vi' ? t('communityDetail.langVi') : c.language === 'en' ? t('communityDetail.langEn') : c.language },
               { k: t('communityDetail.access'), v: c.visibility === 'public' ? t('communityDetail.public') : t('communityDetail.private') },
-              { k: t('communityDetail.memberPrice'), v: c.pricing === 'free' ? PRICING_LABEL.free : t('communityDetail.perMonth', { price: c.priceUsd }) },
+              { k: t('communityDetail.memberPrice'), v: c.pricing === 'free' ? PRICING_LABEL.free : t('communityDetail.perMonth', { price: formatCents(c.priceUsd) }) },
               { k: t('communityDetail.owner'), v: `${(c.owner?.name ?? '—')} · ${c.owner.email}` },
             ]}
             link={t('communityDetail.openSettings')}

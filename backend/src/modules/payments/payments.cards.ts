@@ -57,7 +57,7 @@ async function moveDependants(from: string, to: string) {
 
 /**
  * Khối "Lần trừ tiền tiếp theo" + "Tổng mỗi tháng": chỉ tính gói đang sống VÀ chưa đặt hủy cuối kỳ (gói đã hủy sẽ không bị trừ nữa).
- * Gói năm quy về /12 (990.000 -> 82.500 trong mockup). Tiền gói thành viên là USD cent (xem A16).
+ * Gói năm quy về /12 (990.000 -> 82.500 trong mockup). Tiền gói thành viên là VND (chuyển khoản; xem A16).
  */
 export async function billingSummary(userId: string) {
   const subs = await prisma.subscription.findMany({
@@ -67,8 +67,8 @@ export async function billingSummary(userId: string) {
   });
   const first = subs[0];
   return {
-    currency: 'USD',
-    // Gói dùng thử: lần trừ đầu là lúc hết dùng thử (= currentPeriodEnd của kỳ thử).
+    currency: 'VND',
+    // Gói dùng thử: hạn thanh toán đầu là lúc hết dùng thử (= currentPeriodEnd của kỳ thử).
     next: first ? { amountCents: first.priceCents, date: first.currentPeriodEnd.toISOString(), communityId: first.communityId, communityTitle: first.community.title, trialing: first.status === 'trialing' } : null,
     monthlyTotalCents: subs.reduce((s, x) => s + (x.interval === 'annual' ? Math.round(x.priceCents / 12) : x.priceCents), 0),
     activeCount: subs.length,

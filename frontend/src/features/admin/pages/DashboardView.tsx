@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../../i18n';
-import { formatCents, formatRelative } from '../../../lib/datetime';
+import { formatCents, formatRelative, formatVndCompact } from '../../../lib/datetime';
 import { AttentionCard, ChartCard, KpiGrid, QuickCard, Row, TimelineCard, type Kpi } from '../components/Cards';
 import { DateRangeChips, PageHeader, type RangeDays } from '../components/PageHeader';
 import { ErrorBlock, LoadingBlock, fmtNum, type Tone } from '../components/ui';
@@ -13,10 +13,7 @@ const dayLabel = (iso: string) => {
   const [, m, d] = iso.split('-');
   return `${d}/${m}`;
 };
-const money = (cents: number) => {
-  const v = cents / 100;
-  return v >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : v >= 1e3 ? `$${(v / 1e3).toFixed(1).replace(/\.0$/, '')}K` : `$${Math.round(v)}`;
-};
+const money = (vnd: number) => formatVndCompact(vnd);
 const pct = (k: KpiValue) => (k.deltaPct == null ? null : `${k.deltaPct >= 0 ? '+' : ''}${k.deltaPct.toFixed(1)}%`);
 /** Backend trả câu mô tả hoạt động bằng tiếng Anh -> dịch các câu đã biết, câu lạ giữ nguyên. */
 const ACTIVITY_KEY: Record<string, string> = {
@@ -71,11 +68,11 @@ function Charts({ data }: { data: DashboardData }) {
         <ChartCard
           title={t('dashboard.revenue')}
           labels={s.revenue.map((p) => dayLabel(p.date))}
-          fmt={(v) => money(v * 100)}
+          fmt={(v) => money(v)}
           series={[
-            { name: t('dashboard.mrrSeries'), values: s.revenue.map((p) => p.mrrCents / 100) },
-            { name: t('dashboard.subRevenue'), values: s.revenue.map((p) => p.revenueCents / 100) },
-            { name: t('dashboard.refunds'), values: s.revenue.map((p) => p.refundsCents / 100), color: '#dc2626' },
+            { name: t('dashboard.mrrSeries'), values: s.revenue.map((p) => p.mrrCents) },
+            { name: t('dashboard.subRevenue'), values: s.revenue.map((p) => p.revenueCents) },
+            { name: t('dashboard.refunds'), values: s.revenue.map((p) => p.refundsCents), color: '#dc2626' },
           ]}
         />
         <ChartCard

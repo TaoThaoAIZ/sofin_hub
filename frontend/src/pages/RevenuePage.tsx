@@ -44,7 +44,7 @@ function PayoutForm({ courseId, available, blocked }: { courseId: string; availa
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
 
-  const cents = Math.round(Number(amount) * 100);
+  const cents = Math.round(Number(amount)); // VND nguyên đồng
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -73,7 +73,7 @@ function PayoutForm({ courseId, available, blocked }: { courseId: string; availa
       <h2 className="text-lg font-extrabold sm:col-span-2">{t('form.title')}</h2>
       <label className="text-[12.5px] font-semibold sm:col-span-2">
         {t('form.amount', { amount: formatCents(available) })}
-        <input type="number" min="0" step="0.01" max={available / 100} disabled={blocked} value={amount} onChange={(e) => setAmount(e.target.value)} className={`${input} mt-1`} required />
+        <input type="number" min="0" step="1" max={available} disabled={blocked} value={amount} onChange={(e) => setAmount(e.target.value)} className={`${input} mt-1`} required />
       </label>
       <label className="text-[12.5px] font-semibold">
         {t('form.bank')}

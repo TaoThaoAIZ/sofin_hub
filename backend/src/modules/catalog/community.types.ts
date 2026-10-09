@@ -59,9 +59,9 @@ export interface Community {
   students: number;
   rating: number;
   ratingCount: number;
-  /** Giá theo tháng (USD). 0 = miễn phí. */
+  /** Giá theo tháng (VND). 0 = miễn phí. */
   priceUsd: number;
-  /** Giá theo năm (USD) — null = không bán gói năm. Luôn <= 12 x priceUsd. */
+  /** Giá theo năm (VND) — null = không bán gói năm. Luôn <= 12 x priceUsd. */
   priceAnnualUsd: number | null;
   /** % tiết kiệm của gói năm (server tính), 0 nếu không có. */
   annualSavingsPct: number;

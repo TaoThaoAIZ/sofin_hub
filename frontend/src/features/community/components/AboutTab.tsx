@@ -5,6 +5,7 @@ import { formatCompact } from '../../../lib/format';
 import { useCommunityDetail } from '../../courses/queries';
 import { CommunityInfoCard, initials } from './shared';
 
+import { formatCents } from '../../../lib/datetime';
 // Tên icon lấy đúng từ aboutLearn trong file thiết kế gốc (Material Symbols).
 const GAIN_ICONS = ['smart_display', 'edit', 'auto_awesome', 'handshake', 'grid_view', 'forum'];
 
@@ -20,7 +21,7 @@ export function AboutTab() {
   const chips = [
     { icon: course.visibility === 'private' ? 'lock' : 'public', t: course.visibility === 'private' ? t('about.private') : t('about.public'), s: course.visibility === 'private' ? t('about.membersOnly') : t('about.openCommunity') },
     { icon: 'group', t: t('about.membersChip', { n: formatCompact(course.stats.members) }), s: t('about.active') },
-    { icon: 'sell', t: course.priceUsd === 0 ? t('about.free') : t('about.perMonth', { price: course.priceUsd }), s: course.priceUsd === 0 ? t('about.joinNow') : t('about.membership') },
+    { icon: 'sell', t: course.priceUsd === 0 ? t('about.free') : t('about.perMonth', { price: formatCents(course.priceUsd) }), s: course.priceUsd === 0 ? t('about.joinNow') : t('about.membership') },
     { face: initials(course.instructor.name), t: t('about.byInstructor', { name: course.instructor.name }), s: t('about.roleAdmin', { role: course.instructor.role }) },
   ];
   const lessons = Number(course.facts.find((f) => f.label === 'Bài học')?.value ?? 0);
@@ -106,7 +107,7 @@ export function AboutTab() {
               <div className="mb-3 flex items-center gap-3 text-[17px] font-extrabold">
                 <MaterialIcon name="crown" size={28} filled color="#f59e0b" />
                 <span className="text-[#c2410c]">
-                  {t('about.upgradeVip')} {course.priceUsd > 0 && <span className="text-brand">{t('about.upgradePrice', { price: course.priceUsd })}</span>}
+                  {t('about.upgradeVip')} {course.priceUsd > 0 && <span className="text-brand">{t('about.upgradePrice', { price: formatCents(course.priceUsd) })}</span>}
                 </span>
               </div>
               {course.priceUsd === 0 && <div className="py-1 text-[14.5px] text-stone-500">{t('about.communityFree')}</div>}

@@ -48,12 +48,12 @@ def load(add):
     F = "Double-charge (audit 3.1)"
     A(F, "Checkout lần 2 khi còn intent pending tái dùng đúng intent cũ (không tạo intent mới)", "Chức năng", "Cao", BASE + " " + USER + " " + SQLH,
       ["Người dùng mới U: POST /api/courses/ai/checkout {\"method\":\"stripe\"} -> 201, ghi payment.id = P1", "Gọi lại đúng yêu cầu đó lần 2 -> ghi id = P2", "SQL: SELECT count(*) FROM \"Payment\" WHERE \"userId\"='<U.id>'"], "ai $7",
-      "Cả hai 201; P1 = P2; đếm Payment = 1 (checkout tái dùng intent pending chưa quá 30 phút của cùng user+cộng đồng).", pw="Có")
+      "Cả hai 201; P1 = P2; đếm Payment = 1 (checkout tái dùng phiên chuyển khoản pending còn hạn (15 phút, SESSION_TTL_MS) của cùng user+cộng đồng).", pw="Có")
     A(F, "Hai checkout song song (double-click / 2 tab) cùng trả về MỘT intent", "Chức năng", "Cao", BASE + " " + USER,
       ["Bắn 2 POST /api/courses/data/checkout cùng lúc (2 cửa sổ curl hoặc Promise.all)", "So sánh id hai phản hồi", "Đếm Payment của user"], "data $5",
       "Cả hai 201 cùng id; chỉ 1 dòng Payment (khóa cố vấn checkout:<user>:<course> tuần tự hóa).", pw="Có")
-    A(F, "Intent pending quá 30 phút không được tái dùng: checkout tạo intent mới", "Chức năng", "Trung bình", BASE + " " + USER + " " + SQLH,
-      ["checkout -> P1", "SQL: UPDATE \"Payment\" SET \"createdAt\" = now() - interval '31 minutes' WHERE id='<P1>'", "checkout lại"], "PENDING_INTENT_TTL_MS = 30 phút",
+    A(F, "Intent pending quá 15 phút không được tái dùng: checkout tạo intent mới", "Chức năng", "Trung bình", BASE + " " + USER + " " + SQLH,
+      ["checkout -> P1", "SQL: UPDATE \"Payment\" SET \"createdAt\" = now() - interval '16 minutes' WHERE id='<P1>'", "checkout lại"], "PENDING_INTENT_TTL_MS = SESSION_TTL_MS = 15 phút",
       "Lần 2 trả id KHÁC P1 (intent mới, 201). Intent cũ vẫn pending (không bị xóa).", pw="Không")
     A(F, "Confirm 2 lần song song trên cùng intent: cả hai 200 nhưng chỉ 1 lần trừ tiền, 1 hóa đơn, 1 gói", "Chức năng", "Cao", BASE + " " + USER + " " + SQLH,
       ["checkout 'ai' -> P", "Bắn 2 POST /api/payments/<P>/confirm cùng lúc", "SQL: đếm Payment succeeded, Subscription, invoiceNumber của user"], "ai $7",
@@ -201,8 +201,8 @@ def load(add):
       "Test pass: spy gateway chỉ hoàn đúng 700¢ dù user bấm lại + reconcileStuckRefunds; Payment 'refunded' refundedCents 700; RefundRequest = 1.", pw="Không")
     A(F, "Cổng từ chối hoàn: yêu cầu tự tạo biến mất, giao dịch giữ 'succeeded', quyền còn (502) (unit test)", "Tích hợp", "Trung bình", "Cài backend; Postgres local.",
       ["Chạy test 'cổng từ chối hoàn' trong tests/money-lifecycle.test.ts"], "gateway.refund ok=false", "Test pass: requestRefund ném HttpError 502; Payment succeeded; user vẫn là thành viên.", pw="Không")
-    A(F, "MockGateway dedupe theo idempotency key: cùng key = cùng khoản hoàn; key khác cộng dồn (unit test)", "Tích hợp", "Trung bình", "Cài backend.",
-      ["Chạy test 'MockGateway dedupe theo idempotency key'"], "refund(ch_dedupe,700,'key-1') x2 + 100/'key-2'", "refundId hai lần giống nhau, refundedTotal = 700; thêm key-2 100¢ -> 800.", pw="Không")
+    A(F, "bankGateway (BankTransferGateway) dedupe theo idempotency key: cùng key = cùng khoản hoàn; key khác cộng dồn (unit test)", "Tích hợp", "Trung bình", "Cài backend.",
+      ["Chạy test 'bankGateway (BankTransferGateway) dedupe theo idempotency key'"], "refund(ch_dedupe,700,'key-1') x2 + 100/'key-2'", "refundId hai lần giống nhau, refundedTotal = 700; thêm key-2 100¢ -> 800.", pw="Không")
     A(F, "Hoàn tiền ngoài cửa sổ 7 ngày: yêu cầu 'pending' chờ Platform Admin duyệt/từ chối", "Chức năng", "Cao", BASE + " " + USER + " " + SQLH + " " + ADMIN + " " + PENDING,
       ["U mua 'ai', SQL: UPDATE \"Payment\" SET \"confirmedAt\"=now()-interval '10 days', \"createdAt\"=now()-interval '10 days' WHERE id='<P>' (và Subscription.currentPeriodStart nếu cần)", "U POST /api/payments/<P>/refund-request", "admin@ GET /api/admin/refunds?status=pending", "admin@ PATCH /api/admin/refunds/<id> {\"action\":\"approve\"}"], "ngoài cửa sổ",
       "Yêu cầu 201 status 'pending' (không tự duyệt); admin thấy trong hàng chờ; approve -> 200 RefundRequest 'approved' kèm gatewayRefundId, Payment 'refunded'. Reject -> 'rejected', Payment giữ 'succeeded'.", pw="Một phần")

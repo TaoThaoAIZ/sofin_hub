@@ -52,7 +52,7 @@ export const identityBody = z
   .refine((v) => Object.keys(v).length > 0, { message: 'Không có trường nào để cập nhật' });
 export type IdentityBody = z.infer<typeof identityBody>;
 
-const priceUsd = z.number({ error: 'Giá không hợp lệ' }).min(0, 'Giá không được âm').max(10000, 'Giá tối đa 10000');
+const priceUsd = z.number({ error: 'Giá không hợp lệ' }).min(0, 'Giá không được âm').max(50_000_000, 'Giá tối đa 50.000.000đ');
 export const ruleItem = z.strictObject({
   title: z.string().trim().min(1, 'Nội quy cần có tiêu đề').max(80, 'Tiêu đề nội quy tối đa 80 ký tự'),
   body: z.string().trim().max(500, 'Nội dung nội quy tối đa 500 ký tự').default(''),
@@ -85,7 +85,7 @@ export const stepParam = z.enum(WIZARD_STEPS, { error: 'Bước không hợp l�
 export const slugQuery = z.object({ slug: z.string().max(100).default('') });
 
 export const estimateQuery = z.object({
-  price: z.coerce.number({ error: 'Giá không hợp lệ' }).min(0).max(100_000),
+  price: z.coerce.number({ error: 'Giá không hợp lệ' }).min(0).max(50_000_000),
   interval: intervalField.default('monthly'),
   members: z.coerce.number().int().min(1).max(1_000_000).default(1),
 });

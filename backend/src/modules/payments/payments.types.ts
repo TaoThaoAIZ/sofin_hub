@@ -1,7 +1,6 @@
 /**
- * Thanh toán & gói thành viên. Mọi số tiền lưu bằng SỐ NGUYÊN theo cent (`*Cents`) để tránh lỗi làm tròn;
- * `amountUsd` chỉ giữ để tương thích FE cũ. Cổng thanh toán thật chưa chốt (PLAN.md câu hỏi #2) nên đi qua
- * abstraction `PaymentGateway` (payments.gateway.ts).
+ * Thanh toán & gói thành viên bằng CHUYỂN KHOẢN VietQR + SePay. Mọi số tiền là SỐ NGUYÊN VND (đồng); tên `*Cents`/`amountUsd`
+ * là tên cũ giữ cho tương thích (nay = đồng, không nhân/chia 100). Tiền vào xử lý ở payments.bank.ts; hoàn tiền qua `PaymentGateway`.
  */
 /** Chu kỳ thanh toán gói thành viên. `periodDays` lấy từ Global Settings (monthly = subscriptionPeriodDays, annual = annualPeriodDays). */
 export const BILLING_INTERVALS = ['monthly', 'annual'] as const;
@@ -17,7 +16,7 @@ export interface PaymentCardView {
   createdAt?: string;
 }
 
-export const PAYMENT_METHODS = ['stripe', 'vnpay', 'momo'] as const;
+export const PAYMENT_METHODS = ['stripe', 'vnpay', 'momo', 'bank_transfer'] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 // 'pending' | 'succeeded' là 2 giá trị cũ FE đang biết; thêm failed/refunded.
@@ -41,7 +40,7 @@ export interface PaymentIntent {
   confirmedAt?: string;
   // --- mới (chỉ thêm) ---
   amountCents: number;
-  currency: 'usd';
+  currency: 'vnd';
   /** initial = lần thanh toán đầu của 1 gói; renewal = gia hạn kỳ tiếp theo; module = mua lẻ một module (một lần, không có gói). */
   kind: 'initial' | 'renewal' | 'module';
   subscriptionId?: string;
@@ -49,6 +48,10 @@ export interface PaymentIntent {
   moduleId?: string;
   invoiceNumber?: string;
   gatewayChargeId?: string;
+  /** Mã khách ghi vào nội dung chuyển khoản. */
+  refCode?: string;
+  /** Hết hạn phiên chuyển khoản. */
+  expiresAt?: string;
   refundedCents: number;
   /** Lý do thất bại (nếu status=failed). */
   failureReason?: string;

@@ -1,6 +1,19 @@
-export type PaymentMethod = 'stripe' | 'vnpay' | 'momo';
+export type PaymentMethod = 'stripe' | 'vnpay' | 'momo' | 'bank_transfer';
 
 export type PaymentStatus = 'pending' | 'succeeded' | 'failed' | 'refunded';
+
+/** Thông tin chuyển khoản VietQR/SePay — chỉ có khi payment còn `pending`. Số tiền là VND (đồng). */
+export interface PaymentTransfer {
+  refCode: string;
+  amount: number;
+  transferContent: string;
+  qrUrl: string;
+  bankAccount: string;
+  bankBin: string;
+  bankName: string;
+  accountName: string;
+  expiresAt: string;
+}
 
 export interface PaymentIntent {
   id: string;
@@ -20,6 +33,12 @@ export interface PaymentIntent {
   periodStart?: string;
   periodEnd?: string;
   interval?: 'monthly' | 'annual';
+  refCode?: string;
+  /** Hạn phiên chuyển khoản (ISO, 15 phút). */
+  expiresAt?: string;
+  /** Khi status='failed': 'expired' = phiên hết hạn. */
+  failureReason?: string | null;
+  transfer?: PaymentTransfer | null;
 }
 
 export interface SubscriptionStatus {

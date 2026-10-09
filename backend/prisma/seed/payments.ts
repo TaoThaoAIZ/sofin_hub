@@ -159,7 +159,7 @@ export async function seedPayments(ctx: SeedContext): Promise<void> {
         id: p.id,
         communityId: communityId,
         userId: p.userId,
-        method: 'stripe',
+        method: 'bank_transfer',
         amountCents: price,
         trialDays: 0,
         status: p.status ?? 'succeeded',
@@ -217,12 +217,12 @@ export async function seedPayments(ctx: SeedContext): Promise<void> {
   const bank = { bankName: 'Vietcombank', accountHolder: 'OLIVIA OWNER', accountLast4: '6789' };
   await db.payout.upsert({
     where: { id: 'seed-payout-paid' },
-    create: { id: 'seed-payout-paid', communityId: communityId, ownerId: userIds.owner, amountCents: 5000, ...bank, status: 'paid', note: 'Đã chuyển khoản (seed)', createdAt: ago(20), updatedAt: ago(15) },
+    create: { id: 'seed-payout-paid', communityId: communityId, ownerId: userIds.owner, amountCents: 1_250_000, ...bank, status: 'paid', note: 'Đã chuyển khoản (seed)', createdAt: ago(20), updatedAt: ago(15) },
     update: {},
   });
   await db.payout.upsert({
     where: { id: 'seed-payout-pending' },
-    create: { id: 'seed-payout-pending', communityId: communityId, ownerId: userIds.owner, amountCents: 5000, ...bank, status: 'requested', createdAt: ago(1), updatedAt: ago(1) },
+    create: { id: 'seed-payout-pending', communityId: communityId, ownerId: userIds.owner, amountCents: 1_250_000, ...bank, status: 'requested', createdAt: ago(1), updatedAt: ago(1) },
     update: {},
   });
 }

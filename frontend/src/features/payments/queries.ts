@@ -1,10 +1,9 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import i18n from '../../i18n';
 import { useAuth } from '../auth/AuthContext';
 import * as api from './api';
-import type { PaymentMethodInput } from '../../lib/card';
-import type { PayoutInput } from './types';
+import type { PaymentIntent, PayoutInput } from './types';
 
 export const paymentKeys = {
   subscriptions: ['payments', 'my-subscriptions'] as const,
@@ -32,6 +31,9 @@ const dropKeys = (courseId: string) => {
   for (const id of [...checkoutKeys.keys()]) if (id.startsWith(`${courseId}:`)) checkoutKeys.delete(id);
 };
 
+/** Xin Idempotency-Key mới cho lần tạo phiên chuyển khoản kế tiếp (sau khi phiên cũ hết hạn). */
+export const resetCheckoutKeys = (courseId: string) => dropKeys(courseId);
+
 export const useCheckoutQuote = (courseId: string, interval: api.BillingInterval, enabled = true) =>
   useQuery({
     queryKey: ['payments', courseId, 'checkout-quote', interval],
@@ -51,13 +53,40 @@ export const useModuleQuote = (communityId: string, moduleId: string, enabled = 
     retry: false,
   });
 
-/** Mua lẻ module (một lần). Thành công → làm mới lớp học + thanh toán để module được mở khóa ngay. */
+/** Mua lẻ module (một lần): tạo phiên chuyển khoản `pending`; module mở khóa khi usePaymentStatus báo `succeeded`. */
 export const usePurchaseModule = (communityId: string, moduleId: string) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { paymentMethod: PaymentMethodInput; idempotencyKey: string }) => api.purchaseModule(communityId, moduleId, input),
-    onSuccess: () => Promise.all([qc.invalidateQueries({ queryKey: ['community', communityId] }), qc.invalidateQueries({ queryKey: ['payments'] })]),
+    mutationFn: (input: { idempotencyKey: string }) => api.purchaseModule(communityId, moduleId, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['payments'] }),
   });
+};
+
+/**
+ * Theo dõi một phiên chuyển khoản: poll GET /payments/:id mỗi 4s khi còn `pending`, dừng ở trạng thái cuối.
+ * Khi chuyển sang `succeeded` (quyền truy cập đã được cấp) → làm mới mọi cache, đúng một lần.
+ */
+export const usePaymentStatus = (paymentId: string | null, initial?: PaymentIntent) => {
+  const qc = useQueryClient();
+  const q = useQuery({
+    queryKey: ['payments', 'payment', paymentId ?? ''] as const,
+    queryFn: ({ signal }) => api.fetchPayment(paymentId!, signal),
+    enabled: !!paymentId,
+    initialData: initial,
+    initialDataUpdatedAt: initial ? Date.now() : undefined,
+    refetchInterval: (query) => (query.state.data?.status === 'pending' || !query.state.data ? 4000 : false),
+    refetchIntervalInBackground: true,
+    staleTime: 0,
+  });
+  const fired = useRef<string | null>(null);
+  const status = q.data?.status;
+  useEffect(() => {
+    if (status === 'succeeded' && paymentId && fired.current !== paymentId) {
+      fired.current = paymentId;
+      void qc.invalidateQueries();
+    }
+  }, [status, paymentId, qc]);
+  return q;
 };
 
 export const useSubscription = (courseId: string) => {
@@ -92,7 +121,7 @@ export const useConfirmPayment = () => {
       return api.confirmPayment(paymentIntentId, accessToken);
     },
     onSuccess: (p) => {
-      dropKeys(p.courseId);
+      qc.setQueryData(['payments', 'payment', p.id], p);
       void qc.invalidateQueries({ queryKey: ['payments'] });
     },
     onError: () => checkoutKeys.clear(),
@@ -102,7 +131,7 @@ export const useConfirmPayment = () => {
 export const useStartTrial = (courseId: string) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input?: { interval?: api.BillingInterval; paymentMethod?: PaymentMethodInput }) => api.startTrial(courseId, input),
+    mutationFn: (input?: { interval?: api.BillingInterval }) => api.startTrial(courseId, input),
     // Dùng thử cấp quyền vào cộng đồng ngay -> làm mới mọi cache phụ thuộc quyền truy cập.
     onSuccess: () => qc.invalidateQueries(),
   });

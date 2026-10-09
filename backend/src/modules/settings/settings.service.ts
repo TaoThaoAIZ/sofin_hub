@@ -29,14 +29,15 @@ export const SETTING_DEFS = {
   'payments.disputeWindowDays': { schema: z.number().int().min(0).max(365), default: () => envNum('PAYOUT_DISPUTE_WINDOW_DAYS', 7) },
   /** Rolling reserve: % doanh thu ròng đã đủ điều kiện luôn bị giữ lại làm bảo hiểm cho hoàn tiền/chargeback muộn. GIÁ TRỊ TẠM (mặc định 10%). */
   'payments.payoutReservePct': { schema: z.number().min(0).max(100), default: () => envNum('PAYOUT_RESERVE_PCT', 10) },
-  'payments.payoutMinUsd': { schema: z.number().min(0).max(1_000_000), default: () => env.PAYOUT_MIN_USD },
+  /** Tên khóa giữ nguyên cho tương thích; đơn vị là VND (đồng). */
+  'payments.payoutMinUsd': { schema: z.number().min(0).max(1_000_000_000), default: () => env.PAYOUT_MIN_USD },
   'payments.trialDays': { schema: z.number().int().min(1).max(365), default: () => env.TRIAL_DAYS },
   'payments.subscriptionPeriodDays': { schema: z.number().int().min(1).max(366), default: () => env.SUBSCRIPTION_PERIOD_DAYS },
   /** Chu kỳ gói thành viên theo năm (ngày). Gói tháng dùng `subscriptionPeriodDays`. */
   'payments.annualPeriodDays': { schema: z.number().int().min(1).max(732), default: () => envNum('ANNUAL_PERIOD_DAYS', 365) },
-  /** Gửi email nhắc trước ngày trừ tiền đầu tiên (hết dùng thử có thẻ) bấy nhiêu ngày. */
+  /** Nhắc thanh toán (hết dùng thử / hóa đơn gia hạn) trước bấy nhiêu ngày. */
   'payments.trialReminderDays': { schema: z.number().int().min(0).max(30), default: () => 3 },
-  'payments.currency': { schema: z.enum(['USD', 'VND', 'EUR']), default: () => 'USD' as 'USD' | 'VND' | 'EUR' },
+  'payments.currency': { schema: z.enum(['USD', 'VND', 'EUR']), default: () => 'VND' as 'USD' | 'VND' | 'EUR' },
   'payments.autoPayouts': { schema: z.boolean(), default: () => true },
   /** Gói hosting của owner (A16 CHƯA CHỐT, giá trị lấy từ mockup, MÔ PHỎNG — chưa trừ tiền thật). */
   'owner.requirePlan': { schema: z.boolean(), default: () => false },

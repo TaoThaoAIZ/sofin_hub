@@ -220,6 +220,8 @@ enum PaymentMethod {
   stripe
   vnpay
   momo
+  /// Chuyển khoản ngân hàng qua VietQR + SePay (luồng thanh toán duy nhất của thành viên/mua module).
+  bank_transfer
 }
 
 enum PaymentStatus {
@@ -252,14 +254,6 @@ enum RefundStatus {
   refunding
   approved
   rejected
-}
-
-/// Trạng thái xử lý webhook: received (mới nhận) -> processing -> done | failed. Chỉ `done` (hoặc đang processing còn mới) mới coi là trùng.
-enum WebhookStatus {
-  received
-  processing
-  done
-  failed
 }
 
 /// Sổ nợ/điều chỉnh số dư Owner (append-only). amountCents < 0 = nợ phát sinh (vd. hoàn tiền sau khi đã chi payout).
@@ -1286,7 +1280,7 @@ model Payment {
   userId          String
   method          PaymentMethod
   amountCents     Int
-  currency        String          @default("usd")
+  currency        String          @default("vnd")
   trialDays       Int             @default(0)
   interval        BillingInterval @default(monthly)
   /// Thẻ (chỉ brand/last4/hạn + token cổng) dùng cho giao dịch này.
@@ -1299,6 +1293,10 @@ model Payment {
   /// INV-YYYY-NNNNNN (cấp từ InvoiceSequence khi thanh toán thành công).
   invoiceNumber   String?         @unique
   gatewayChargeId String?
+  /// Mã tham chiếu khách ghi vào nội dung chuyển khoản (VD SFH7K2P9Q4). Unique; khớp tiền vào ⇄ giao dịch.
+  refCode         String?         @unique
+  /// Hết hạn phiên chuyển khoản (pending quá hạn ⇒ failed/expired). Gia hạn: tới hết kỳ ân hạn.
+  expiresAt       DateTime?
   refundedCents   Int             @default(0)
   /// Lý do thất bại (cổng trả về / seed).
   failureReason   String?
@@ -1467,21 +1465,26 @@ model IdempotencyKey {
   @@id([userId, key])
 }
 
-/// Webhook của cổng thanh toán: lưu cả type + payload để điều tra/replay. claim = INSERT (trùng khóa -> xem status);
-/// `done` hoặc đang `processing` còn mới = trùng; `failed`/`received`/`processing` quá hạn được xử lý lại (reaper).
-model WebhookEvent {
-  eventId      String        @id
-  type         String?
-  payload      Json?
-  status       WebhookStatus @default(received)
-  attempts     Int           @default(0)
-  lastError    String?
-  receivedAt   DateTime      @default(now())
-  processingAt DateTime?
-  processedAt  DateTime?
-  updatedAt    DateTime      @default(now()) @updatedAt
+/// Giao dịch tiền VÀO từ ngân hàng (SePay webhook hoặc cron quét), ghi lại DÙ khớp hay không để admin soi tiền lạ.
+/// `externalId` UNIQUE ⇒ webhook + quét thấy cùng 1 giao dịch chỉ tạo 1 dòng. Chỉ INSERT/đánh dấu credited — không xóa.
+model BankTransaction {
+  id              String    @id @default(uuid())
+  externalId      String    @unique
+  gateway         String?
+  accountNumber   String?
+  amount          Int
+  description     String
+  referenceCode   String?
+  transactionDate DateTime
+  matchedPaymentId String?
+  credited        Boolean   @default(false)
+  /// Lý do không khớp / ghi chú (thiếu tiền, phiên hết hạn, chuyển dư...).
+  note            String?
+  rawPayload      Json
+  createdAt       DateTime  @default(now())
 
-  @@index([status, updatedAt])
+  @@index([credited, createdAt])
+  @@index([matchedPaymentId])
 }
 
 /// Sổ cái nợ của Owner (append-only): ghi khi hoàn tiền/chargeback xảy ra SAU khi tiền đã được rút → số dư ròng âm. amountCents < 0 = nợ.

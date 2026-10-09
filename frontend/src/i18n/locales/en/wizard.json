@@ -20,7 +20,7 @@
     "promiseMax": "Promise must be at most 100 characters",
     "videoUrl": "Invalid video URL (paste a YouTube or Vimeo link)",
     "priceMonthlyRequired": "Enter a monthly membership price greater than 0",
-    "priceMax": "Maximum price is {{max}} USD",
+    "priceMax": "Maximum price is {{max}} ₫",
     "priceAnnualRequired": "Enter an annual membership price greater than 0",
     "priceAnnualTooHigh": "The annual price can't be higher than 12 months combined",
     "questionMin": "A question must be at least 3 characters (or remove it)",

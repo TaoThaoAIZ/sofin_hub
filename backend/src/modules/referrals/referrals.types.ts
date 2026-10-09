@@ -19,7 +19,7 @@ export interface ReferralOverview {
   kind: ReferralKindName;
   code: string;
   link: string;
-  /** Tiền của `kind` này: member = USD (cent), creator = tiền gói hosting (VND, không có phần thập phân). */
+  /** Tiền của `kind` này: member = VND (đồng), creator = tiền gói hosting (VND, không có phần thập phân). */
   currency: string;
   rates: { creatorRateBps: number; memberRateBps: number; rateBps: number; attributionDays: number; payoutDay: number };
   kpis: {

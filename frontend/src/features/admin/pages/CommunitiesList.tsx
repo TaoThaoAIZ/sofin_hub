@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../../i18n';
-import { formatDate } from '../../../lib/datetime';
+import { formatCents, formatDate } from '../../../lib/datetime';
 import { KpiGrid } from '../components/Cards';
 import { DataTable, MainCell, MonoCell, MutedCell, NumCell, TextCell, type Column, type TableFilter } from '../components/DataTable';
 import { PageHeader } from '../components/PageHeader';
@@ -29,8 +29,8 @@ export function communityColumns(categoryLabel: (id: string) => string): Column<
     { key: 'owner', label: t('communities.colOwner'), render: (c) => <TextCell>{(c.owner?.name ?? '—')}</TextCell> },
     { key: 'cat', label: t('communities.colCategory'), render: (c) => <TextCell>{categoryLabel(c.category)}</TextCell> },
     { key: 'members', label: t('communities.colMembers'), w: 0.8, render: (c) => <NumCell>{fmtNum(c.members)}</NumCell> },
-    { key: 'price', label: t('communities.colPrice'), render: (c) => <NumCell>{c.pricing === 'free' ? PRICING_LABEL.free : `$${c.priceUsd}`}</NumCell> },
-    { key: 'mrr', label: t('communities.colMrr'), render: (c) => <NumCell>${(c.mrrCents / 100).toLocaleString('en-US', { maximumFractionDigits: 0 })}</NumCell> },
+    { key: 'price', label: t('communities.colPrice'), render: (c) => <NumCell>{c.pricing === 'free' ? PRICING_LABEL.free : formatCents(c.priceUsd)}</NumCell> },
+    { key: 'mrr', label: t('communities.colMrr'), render: (c) => <NumCell>{formatCents(c.mrrCents)}</NumCell> },
     { key: 'status', label: t('communities.colStatus'), render: (c) => <StatusBadge tone={COMMUNITY_STATUS[c.status].tone}>{COMMUNITY_STATUS[c.status].label}</StatusBadge> },
     { key: 'created', label: t('communities.colCreated'), render: (c) => <MutedCell>{formatDate(c.createdAt)}</MutedCell> },
   ];

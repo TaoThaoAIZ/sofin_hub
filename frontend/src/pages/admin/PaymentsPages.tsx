@@ -1,3 +1,4 @@
+export { BankInflowView as AdminBankInflowPage } from '../../features/admin/pages/BankViews';
 export {
   ChargebacksView as AdminChargebacksPage,
   CreatorDetailView as AdminCreatorDetailPage,

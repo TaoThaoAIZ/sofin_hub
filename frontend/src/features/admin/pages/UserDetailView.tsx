@@ -92,7 +92,7 @@ function CommunitiesTab({ id }: { id: string }) {
       columns={[
         { key: 'name', label: t('userDetail.communities.col.community'), w: 2, render: (c) => <MainCell name={c.name} sub={c.id} shape="square" seed={c.id} /> },
         { key: 'role', label: t('userDetail.profile.role'), render: (c) => <TextCell>{({ owner: t('userDetail.communities.role.owner'), admin: t('userDetail.communities.role.admin'), mod: t('userDetail.communities.role.mod'), member: t('userDetail.profile.member') } as Record<string, string>)[c.role] ?? c.role}</TextCell> },
-        { key: 'mem', label: t('userDetail.communities.col.membership'), render: (c) => <TextCell>{c.membership === 'paid' ? t('userDetail.communities.paidPrice', { price: c.priceUsd }) : t('userDetail.free')}</TextCell> },
+        { key: 'mem', label: t('userDetail.communities.col.membership'), render: (c) => <TextCell>{c.membership === 'paid' ? t('userDetail.communities.paidPrice', { price: formatCents(c.priceUsd) }) : t('userDetail.free')}</TextCell> },
         { key: 'joined', label: t('userDetail.profile.joined'), render: (c) => <MutedCell>{formatDate(c.joinedAt)}</MutedCell> },
         { key: 'last', label: t('userDetail.lastActive'), render: (c) => <MutedCell>{c.lastActiveAt ? formatRelative(c.lastActiveAt) : '—'}</MutedCell> },
         {

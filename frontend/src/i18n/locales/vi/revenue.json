@@ -3,7 +3,7 @@
     "PAYOUT_BLOCKED": "Số dư ròng đang âm do hoàn tiền sau khi đã rút — chưa thể rút thêm cho đến khi nợ được bù trừ.",
     "COMMUNITY_LOCKED": "Cộng đồng đang bị khóa nên không thể rút tiền.",
     "generic": "Đã có lỗi xảy ra, vui lòng thử lại",
-    "invalidAmount": "Nhập số tiền hợp lệ (USD).",
+    "invalidAmount": "Nhập số tiền hợp lệ (VND).",
     "overBalance": "Số tiền vượt quá số dư có thể rút ({{amount}}).",
     "invalidAccount": "Số tài khoản phải gồm 6–20 chữ số."
   },
@@ -17,7 +17,7 @@
   },
   "form": {
     "title": "Yêu cầu rút tiền",
-    "amount": "Số tiền (USD) — có thể rút {{amount}}",
+    "amount": "Số tiền (VND) — có thể rút {{amount}}",
     "bank": "Ngân hàng",
     "account": "Số tài khoản",
     "holder": "Chủ tài khoản",

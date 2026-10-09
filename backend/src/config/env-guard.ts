@@ -5,7 +5,7 @@
 export function productionEnvProblems(cfg: Record<string, unknown>): string[] {
   if (cfg.NODE_ENV !== 'production') return [];
   const problems: string[] = [];
-  // Mọi giá trị chuỗi bắt đầu bằng `dev-` (default công khai trong repo) đều bị chặn: JWT_*, PAYMENT_WEBHOOK_SECRET, UPLOAD_SIGNING_SECRET, ...
+  // Mọi giá trị chuỗi bắt đầu bằng `dev-` (default công khai trong repo) đều bị chặn: JWT_*, UPLOAD_SIGNING_SECRET, ...
   for (const [key, value] of Object.entries(cfg)) {
     if (typeof value === 'string' && value.startsWith('dev-')) {
       problems.push(`${key} đang là giá trị mặc định dev-* — phải đặt giá trị bí mật riêng`);
@@ -36,5 +36,8 @@ export function productionEnvWarnings(cfg: Record<string, unknown>, hints: Recor
       'RUN_SCHEDULERS=0 (web-only) mà chưa có REDIS_URL: thông báo do worker tạo vẫn được lưu DB nhưng KHÔNG đẩy realtime (SSE) tới web — cần Redis để worker và web chia sẻ pub/sub.',
     );
   }
+  if (!cfg.BANK_ACCOUNT) warnings.push('BANK_ACCOUNT chưa đặt: checkout thành viên/mua module sẽ trả 503 (không có tài khoản nhận tiền).');
+  if (!cfg.SEPAY_WEBHOOK_KEY) warnings.push('SEPAY_WEBHOOK_KEY chưa đặt: MỌI webhook SePay bị từ chối; chỉ cron quét (cần SEPAY_API_TOKEN) mới cộng tiền.');
+  if (!cfg.SEPAY_API_TOKEN) warnings.push('SEPAY_API_TOKEN chưa đặt: không có cron quét đối soát — nếu webhook hỏng thì tiền về sẽ không tự cộng (chỉ admin duyệt tay).');
   return warnings;
 }

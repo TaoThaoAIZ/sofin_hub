@@ -1,3 +1,4 @@
+import { seedVnd } from '../../db/enums.js';
 import type { Category, CategoryId, NewCommunity, CourseStatus, CourseTag, Language, Pricing, Visibility } from './community.types.js';
 
 export const categories: Category[] = [
@@ -73,7 +74,7 @@ export const seedCommunities: NewCommunity[] = rows.map((r, i) => ({
   students: r.students,
   rating: r.rating[0],
   ratingCount: r.rating[1],
-  priceUsd: r.price,
+  priceUsd: seedVnd(r.price),
   pricing: r.pricing ?? 'paid',
   visibility: r.visibility ?? 'public',
   status: r.status ?? 'open',

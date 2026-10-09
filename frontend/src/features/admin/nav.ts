@@ -90,6 +90,7 @@ export const ADMIN_NAV: NavGroup[] = [
       kid('payments', 'chargebacks'),
       kid('payments', 'creator'),
       kid('payments', 'payouts'),
+      kid('payments', 'bank'),
     ],
   },
   {

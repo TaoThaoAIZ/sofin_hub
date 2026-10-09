@@ -525,7 +525,7 @@ export function SettingsView() {
       [p.commissionPct, 0, 100, t('settings.checkCommission')],
       [p.gatewayFeePct, 0, 100, t('settings.checkGatewayFee')],
       [p.refundWindowDays, 0, 365, t('settings.checkRefundWindow')],
-      [p.payoutMinUsd, 0, 100000, t('settings.payoutMin')],
+      [p.payoutMinUsd, 0, 1_000_000_000, t('settings.payoutMin')],
       [p.trialDays, 0, 365, t('settings.checkTrial')],
       [p.subscriptionPeriodDays, 1, 365, t('settings.checkPeriod')],
       [p.gatewayFeeFixedCents, 0, 100000, t('settings.checkFixedFee')],
@@ -695,7 +695,7 @@ export function SettingsView() {
             {numRow('payments', 'gatewayFeePct', t('settings.gatewayFeePct'), t('common.appliesImmediately'), '%')}
             {numRow('payments', 'gatewayFeeFixedCents', t('settings.gatewayFeeFixed'), t('settings.gatewayFeeFixedHint'), t('settings.cents'))}
             {numRow('payments', 'refundWindowDays', t('settings.refundWindow'), t('common.appliesImmediately'), t('common.days'))}
-            {numRow('payments', 'payoutMinUsd', t('settings.payoutMin'), t('common.appliesImmediately'), 'USD')}
+            {numRow('payments', 'payoutMinUsd', t('settings.payoutMin'), t('common.appliesImmediately'), 'VND')}
             {numRow('payments', 'trialDays', t('settings.trialDays'), t('common.appliesImmediately'), t('common.days'))}
             {numRow('payments', 'subscriptionPeriodDays', t('settings.subscriptionPeriod'), t('common.appliesImmediately'), t('common.days'))}
             <SettingRow label={t('common.currency')} hint={t('common.storedOnly')}>

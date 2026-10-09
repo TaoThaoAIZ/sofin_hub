@@ -72,7 +72,7 @@ export function ModuleWizard({ communityId, courseId, module: initial, onClose }
   const [thumb, setThumb] = useState(initial?.thumbnail ?? '');
   const [mode, setMode] = useState<ModuleAccessMode>(initial?.accessMode ?? 'all');
   const [level, setLevel] = useState(String(initial?.requiredLevel ?? 3));
-  const [price, setPrice] = useState(initial?.priceCents ? String(Math.round(initial.priceCents / 100)) : '');
+  const [price, setPrice] = useState(initial?.priceCents ? String(Math.round(initial.priceCents)) : '');
   const [sequential, setSequential] = useState(initial?.sequential ?? !isEdit);
   const [picked, setPicked] = useState<Record<string, string>>({});
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -120,7 +120,7 @@ export function ModuleWizard({ communityId, courseId, module: initial, onClose }
       accessMode: mode,
       sequential,
       ...(mode === 'level' ? { requiredLevel: Number(level) } : {}),
-      ...(mode === 'paid' ? { priceCents: Math.round(priceNum * 100) } : {}),
+      ...(mode === 'paid' ? { priceCents: Math.round(priceNum) } : {}),
     };
     try {
       let id = moduleId;
@@ -131,7 +131,7 @@ export function ModuleWizard({ communityId, courseId, module: initial, onClose }
       } else {
         await update.mutateAsync({
           moduleId: id,
-          body: { ...common, thumbnail: thumb.trim() || null, requiredLevel: mode === 'level' ? Number(level) : null, priceCents: mode === 'paid' ? Math.round(priceNum * 100) : null },
+          body: { ...common, thumbnail: thumb.trim() || null, requiredLevel: mode === 'level' ? Number(level) : null, priceCents: mode === 'paid' ? Math.round(priceNum) : null },
         });
       }
       if (mode === 'selected') await setAccess.mutateAsync({ moduleId: id, userIds: Object.keys(picked) });
@@ -231,18 +231,19 @@ export function ModuleWizard({ communityId, courseId, module: initial, onClose }
             </div>
           )}
           {k === 'paid' && (
-            <div onClick={(e) => e.stopPropagation()} className="mt-2 flex h-[34px] w-[110px] items-center gap-1.5 rounded-lg border-[1.5px] border-[#e7e0da] bg-white px-2.5">
-              <span className="text-[13px] text-stone-500">$</span>
+            <div onClick={(e) => e.stopPropagation()} className="mt-2 flex h-[34px] w-[150px] items-center gap-1.5 rounded-lg border-[1.5px] border-[#e7e0da] bg-white px-2.5">
               <input
                 value={price}
                 inputMode="numeric"
                 onChange={(e) => {
-                  setPrice(e.target.value.replace(/\D/g, '').slice(0, 6));
+                  setPrice(e.target.value.replace(/\D/g, '').slice(0, 8));
                   setMode('paid');
                 }}
                 aria-label={t('modWizard.info.paid.t')}
+                placeholder="199000"
                 className="min-w-0 flex-1 border-0 text-[13px] font-semibold outline-0"
               />
+              <span className="text-[13px] text-stone-500">₫</span>
             </div>
           )}
           {k === 'selected' && on && (

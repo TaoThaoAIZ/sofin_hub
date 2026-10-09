@@ -80,7 +80,7 @@ Nhóm bảng (38 bảng):
 - **Lớp học**: Prisma `Course` (bảng `"LearningCourse"` = khóa học), `ClassroomModule`, `ClassroomLesson`, `LessonProgress`, `ClassroomSettings`, `Certificate`.
 - **Thông báo / nhắn tin**: `Notification`, `NotificationPreference`, `Conversation`, `Message`, `UserBlock`.
 - **Kiểm duyệt**: `Report`.
-- **Thanh toán**: `Payment` (= `PaymentIntent`), `Subscription`, `RefundRequest`, `Payout`, `InvoiceSequence`, `IdempotencyKey`, `WebhookEvent`.
+- **Thanh toán**: `Payment` (= `PaymentIntent`), `Subscription`, `RefundRequest`, `Payout`, `InvoiceSequence`, `IdempotencyKey`, `BankTransaction` (tiền vào ngân hàng, thay `WebhookEvent` từ migration `20261014100000_bank_transfer_vnd`; tiền tệ VND nguyên).
 - **Khác**: `Upload`, `NewsletterSubscriber`.
 
 ```mermaid
@@ -340,7 +340,7 @@ Chi tiết nghiệp vụ: [api/admin-batch3.md](./api/admin-batch3.md). Thay đ�
 ## Vòng đời tiền + điểm (migration `20261004100000_money_lifecycle_points`)
 - **Subscription**: partial unique index `Subscription_one_live_per_user_course` = `UNIQUE(userId, courseId) WHERE status IN ('trialing','active')` (Prisma không khai báo được — chỉ có trong SQL migration; `prisma migrate diff` sẽ báo lệch, bỏ qua). Migration tự dọn gói trùng (giữ gói `active`/mới nhất, còn lại `canceled`).
 - **RefundRequest**: enum `RefundStatus` + `refunding`; cột `gatewayRefundId`, `refundingAt` (khóa idempotency gửi cổng = `id`).
-- **WebhookEvent**: enum `WebhookStatus` (`received|processing|done|failed`); cột `type`, `payload` (Json), `status`, `attempts`, `lastError`, `processingAt`, `processedAt`, `updatedAt`; index `(status, updatedAt)`. Dòng cũ backfill `done`.
+- **WebhookEvent** (ĐÃ BỎ ở migration `20261014100000`; thay bằng `BankTransaction`: `externalId` UNIQUE, `amount`, `description`, `referenceCode`, `matchedPaymentId`, `credited`, `note`, `rawPayload`; `Payment` thêm `refCode` UNIQUE + `expiresAt`): enum `WebhookStatus` (`received|processing|done|failed`); cột `type`, `payload` (Json), `status`, `attempts`, `lastError`, `processingAt`, `processedAt`, `updatedAt`; index `(status, updatedAt)`. Dòng cũ backfill `done`.
 - **OwnerBalanceLedger** (mới): `courseId, ownerId?, kind (refund_after_payout|chargeback_after_payout|adjustment), amountCents (<0 = nợ), paymentId?, refundId?, note?` — append-only, ghi khi hoàn tiền/chargeback làm số dư ròng của owner âm.
 - **PointEvent**: enum `PointReason` + `revoked`; cột `sourceType`, `sourceId`; `UNIQUE(userId, reason, sourceType, sourceId)` (NULL không đụng nhau nên dòng cũ vẫn hợp lệ), index `(sourceType, sourceId)`.
 - Thứ tự khóa trong các transaction tiền: advisory `sub:<user>:<course>` → hàng Subscription (`FOR UPDATE`) → Payment → … → `InvoiceSequence` (cuối cùng). Cổng thanh toán KHÔNG được gọi trong transaction (hoàn tiền 2 pha, xem `docs/api/payments.md`).

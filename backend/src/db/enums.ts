@@ -22,6 +22,11 @@ export const postCategoryFromDomain = (c: PostCategory): DbPostCategory => POST_
 export const oneTimePurposeToDomain = (p: OneTimeTokenPurpose): OneTimePurpose => (p === 'reset_password' ? 'reset-password' : 'verify-email');
 export const oneTimePurposeFromDomain = (p: OneTimePurpose): OneTimeTokenPurpose => (p === 'reset-password' ? 'reset_password' : 'verify_email');
 
-/** Tiền: domain cũ dùng USD (`priceUsd`, `amountUsd`), DB lưu cent nguyên. */
-export const usdToCents = (usd: number): number => Math.round(usd * 100);
-export const centsToUsd = (cents: number): number => cents / 100;
+/**
+ * Tiền: toàn hệ thống là VND, số nguyên, 1 đơn vị = 1đ (VND không có đơn vị nhỏ hơn).
+ * Tên cũ (`priceUsd`, `amountUsd`, `*Cents`) được GIỮ để không phá API/FE — nay chúng đều là ĐỒNG, không còn nhân/chia 100.
+ */
+export const usdToCents = (vnd: number): number => Math.round(vnd);
+export const centsToUsd = (vnd: number): number => vnd;
+/** Chỉ cho dữ liệu mẫu (seed): quy giá USD trong mockup/seed cũ sang VND, làm tròn nghìn đồng (1 USD ≈ 25.000đ). */
+export const seedVnd = (usd: number): number => Math.round((usd * 25_000) / 1000) * 1000;

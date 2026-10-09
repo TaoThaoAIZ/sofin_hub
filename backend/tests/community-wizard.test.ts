@@ -186,25 +186,25 @@ describe('wizard tạo cộng đồng: nháp, slug, publish, câu hỏi gia nh�
       const u = await c.registerUser('mem');
       const d = await newDraft(u);
       const ok = await step(u, d.id, 'members', {
-        visibility: 'private', priceUsd: 7, priceAnnualUsd: 48, memberTrialEnabled: true,
+        visibility: 'private', priceUsd: 175_000, priceAnnualUsd: 1_200_000, memberTrialEnabled: true,
         joinQuestions: ['Bạn đã từng làm gốm chưa?', 'Bạn biết đến lớp từ đâu?'],
         rules: [{ title: 'Tôn trọng nhau', body: 'Góp ý văn minh' }, { title: 'Không spam' }],
         requireRulesAgreement: true, autoApprovePaid: false,
       });
       assert.equal(ok.status, 200, JSON.stringify(ok.body));
       const m = ok.body.data.members;
-      assert.equal(m.priceUsd, 7);
-      assert.equal(m.priceAnnualUsd, 48);
+      assert.equal(m.priceUsd, 175_000);
+      assert.equal(m.priceAnnualUsd, 1_200_000);
       assert.equal(m.annualSavingsPct, 43);
       assert.equal(m.trialDays, 7);
       assert.equal(m.rules.length, 2);
       assert.equal(m.rules[1].body, '');
       assert.deepEqual(ok.body.data.completedSteps, ['basics', 'members']);
 
-      const over = await step(u, d.id, 'members', { priceAnnualUsd: 85 });
+      const over = await step(u, d.id, 'members', { priceAnnualUsd: 2_125_000 });
       assert.equal(over.status, 400);
       assert.ok(over.body.error.details.fieldErrors.priceAnnualUsd[0].includes('12 lần'));
-      assert.equal((await step(u, d.id, 'members', { priceUsd: 3 })).status, 400, 'hạ giá tháng khiến giá năm 48 > 36');
+      assert.equal((await step(u, d.id, 'members', { priceUsd: 75_000 })).status, 400, 'hạ giá tháng khiến giá năm 1.200.000 > 12 × 75.000');
       assert.equal((await step(u, d.id, 'members', { priceAnnualUsd: 0 })).status, 400);
       assert.equal((await step(u, d.id, 'members', { priceUsd: -1 })).status, 400);
       assert.equal((await step(u, d.id, 'members', { joinQuestions: ['a?', 'b?', 'c?', 'd?'].map((x) => x.repeat(3)) })).status, 400);
@@ -213,17 +213,17 @@ describe('wizard tạo cộng đồng: nháp, slug, publish, câu hỏi gia nh�
       assert.equal((await step(u, d.id, 'members', { memberTrialEnabled: false })).body.data.members.trialDays, 0);
       const free = await step(u, d.id, 'members', { priceUsd: 0 });
       assert.equal(free.body.data.members.priceAnnualUsd, null);
-      assert.equal((await step(u, d.id, 'members', { priceUsd: 0, priceAnnualUsd: 10 })).status, 400);
+      assert.equal((await step(u, d.id, 'members', { priceUsd: 0, priceAnnualUsd: 250_000 })).status, 400);
     });
 
     it('rules-template và revenue-estimate (net sau hoa hồng + phí cổng từ Global Settings)', async () => {
       const t = await c.call('GET', '/communities/rules-template');
       assert.equal(t.status, 200);
       assert.ok(t.body.data.rules.length >= 3);
-      const e = await c.call('GET', '/communities/revenue-estimate?price=100&members=10');
+      const e = await c.call('GET', '/communities/revenue-estimate?price=250000&members=10');
       assert.equal(e.status, 200);
       const x = e.body.data;
-      assert.equal(x.grossCents, 100_000);
+      assert.equal(x.grossCents, 2_500_000);
       assert.equal(x.platformFeeCents + x.gatewayFeeCents + x.netCents, x.grossCents);
       assert.equal(x.netPerMemberCents * 10, x.netCents);
       assert.ok(x.netCents > 0 && x.netCents < x.grossCents);
@@ -236,13 +236,13 @@ describe('wizard tạo cộng đồng: nháp, slug, publish, câu hỏi gia nh�
   describe('publish', () => {
     it('đủ điều kiện: chuyển active, owner + khóa học mặc định, hiện công khai; publish lần 2 → 409', async () => {
       const u = await c.registerUser('pub');
-      const id = await readyDraft(u, { priceUsd: 5, priceAnnualUsd: 50 });
+      const id = await readyDraft(u, { priceUsd: 125_000, priceAnnualUsd: 1_250_000 });
       const r = await c.call('POST', `/communities/${id}/publish`, { token: u.token, body: { acceptTerms: true } });
       assert.equal(r.status, 201, JSON.stringify(r.body));
       assert.equal(r.body.data.id, id);
       assert.equal(r.body.data.viewerRole, 'owner');
       assert.ok(r.body.data.defaultCourseId);
-      assert.equal(r.body.data.priceAnnualUsd, 50);
+      assert.equal(r.body.data.priceAnnualUsd, 1_250_000);
       assert.equal(r.body.data.annualSavingsPct, 17);
       assert.equal(r.body.data.pricing, 'paid');
 
@@ -370,12 +370,12 @@ describe('wizard tạo cộng đồng: nháp, slug, publish, câu hỏi gia nh�
       const pub = await c.call('POST', `/communities/${id}/publish`, { token: u.token, body: { acceptTerms: true } });
       assert.equal(pub.status, 201, 'skipped vẫn publish được');
 
-      const payoutBody = { amountCents: 5000 };
+      const payoutBody = { amountCents: 2_000_000 };
       const blocked = await c.call('POST', `/communities/${id}/payouts`, { token: u.token, body: payoutBody });
       assert.equal(blocked.status, 400);
       assert.equal(blocked.body.error.code, 'PAYOUT_ACCOUNT_REQUIRED');
       // cả khi gửi method trong body vẫn bị chặn khi chưa kết nối
-      const blocked2 = await c.call('POST', `/communities/${id}/payouts`, { token: u.token, body: { amountCents: 5000, method: { type: 'bank', bankName: 'VCB', accountNumber: '123456789', accountHolder: 'A' } } });
+      const blocked2 = await c.call('POST', `/communities/${id}/payouts`, { token: u.token, body: { amountCents: 2_000_000, method: { type: 'bank', bankName: 'VCB', accountNumber: '123456789', accountHolder: 'A' } } });
       assert.equal(blocked2.body.error.code, 'PAYOUT_ACCOUNT_REQUIRED');
 
       const conn = await c.call('PUT', `/communities/${id}/payout-account`, { token: u.token, body: { bankName: 'Vietcombank', accountHolder: 'NGUYEN VAN A', accountNumber: '0123456788812' } });
@@ -396,12 +396,12 @@ describe('wizard tạo cộng đồng: nháp, slug, publish, câu hỏi gia nh�
       await c.call('POST', `/communities/${id}/publish`, { token: u.token, body: { acceptTerms: true } });
       assert.equal((await c.call('GET', `/communities/${id}/payout-account`, { token: u.token })).body.data.status, 'skipped');
 
-      const legacy = await c.call('POST', '/communities', { token: u.token, body: { title: 'Cũ Một Phát', description: 'd', category: 'tech', priceUsd: 5, visibility: 'public' } });
+      const legacy = await c.call('POST', '/communities', { token: u.token, body: { title: 'Cũ Một Phát', description: 'd', category: 'tech', priceUsd: 125_000, visibility: 'public' } });
       assert.equal(legacy.status, 201);
       assert.equal((await c.call('GET', `/communities/${legacy.body.data.id}/payout-account`, { token: u.token })).body.data, null);
-      const r = await c.call('POST', `/communities/${legacy.body.data.id}/payouts`, { token: u.token, body: { amountCents: 5000, method: { type: 'bank', bankName: 'VCB', accountNumber: '123456789', accountHolder: 'A' } } });
+      const r = await c.call('POST', `/communities/${legacy.body.data.id}/payouts`, { token: u.token, body: { amountCents: 2_000_000, method: { type: 'bank', bankName: 'VCB', accountNumber: '123456789', accountHolder: 'A' } } });
       assert.equal(r.body.error.code, 'PAYOUT_EXCEEDS_AVAILABLE');
-      assert.equal((await c.call('POST', `/communities/${legacy.body.data.id}/payouts`, { token: u.token, body: { amountCents: 5000 } })).body.error.code, 'PAYOUT_ACCOUNT_REQUIRED');
+      assert.equal((await c.call('POST', `/communities/${legacy.body.data.id}/payouts`, { token: u.token, body: { amountCents: 2_000_000 } })).body.error.code, 'PAYOUT_ACCOUNT_REQUIRED');
     });
   });
 
@@ -413,16 +413,16 @@ describe('wizard tạo cộng đồng: nháp, slug, publish, câu hỏi gia nh�
       assert.equal(a.body.data.priceAnnualUsd, null);
       assert.equal(a.body.data.memberTrialEnabled, true);
       assert.deepEqual(a.body.data.joinQuestions, []);
-      const b = await c.call('POST', '/communities', { token: u.token, body: { title: 'Có Năm', description: 'd', category: 'tech', priceUsd: 7, priceAnnualUsd: 48, visibility: 'public' } });
+      const b = await c.call('POST', '/communities', { token: u.token, body: { title: 'Có Năm', description: 'd', category: 'tech', priceUsd: 175_000, priceAnnualUsd: 1_200_000, visibility: 'public' } });
       assert.equal(b.status, 201);
       assert.equal(b.body.data.annualSavingsPct, 43);
-      assert.equal((await c.call('POST', '/communities', { token: u.token, body: { title: 'Sai Năm', description: 'd', category: 'tech', priceUsd: 7, priceAnnualUsd: 99, visibility: 'public' } })).status, 400);
+      assert.equal((await c.call('POST', '/communities', { token: u.token, body: { title: 'Sai Năm', description: 'd', category: 'tech', priceUsd: 175_000, priceAnnualUsd: 2_475_000, visibility: 'public' } })).status, 400);
 
-      const p = await c.call('PATCH', `/communities/${b.body.data.id}`, { token: u.token, body: { priceAnnualUsd: 60, promise: 'Lời hứa', brandColor: '#112233', joinQuestions: ['Bạn là ai vậy?'] } });
+      const p = await c.call('PATCH', `/communities/${b.body.data.id}`, { token: u.token, body: { priceAnnualUsd: 1_500_000, promise: 'Lời hứa', brandColor: '#112233', joinQuestions: ['Bạn là ai vậy?'] } });
       assert.equal(p.status, 200, JSON.stringify(p.body));
-      assert.equal(p.body.data.priceAnnualUsd, 60);
+      assert.equal(p.body.data.priceAnnualUsd, 1_500_000);
       assert.equal(p.body.data.promise, 'Lời hứa');
-      assert.equal((await c.call('PATCH', `/communities/${b.body.data.id}`, { token: u.token, body: { priceAnnualUsd: 100 } })).status, 400);
+      assert.equal((await c.call('PATCH', `/communities/${b.body.data.id}`, { token: u.token, body: { priceAnnualUsd: 2_500_000 } })).status, 400);
       assert.equal((await c.call('PATCH', `/communities/${b.body.data.id}`, { token: u.token, body: { priceUsd: 0 } })).body.data.priceAnnualUsd, null);
     });
   });

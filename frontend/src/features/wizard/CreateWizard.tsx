@@ -157,7 +157,7 @@ export function CreateWizard() {
   const priceForEstimate = parseMoney(form.billing === 'year' ? form.priceAnnual : form.priceMonthly);
   const debouncedPrice = useDebounced(Number.isFinite(priceForEstimate) ? priceForEstimate : 0, 400);
   const estimate = useRevenueEstimate(debouncedPrice, form.billing === 'year' ? 'annual' : 'monthly', step === 3 && form.billing !== 'free');
-  const netUsd = estimate.data ? estimate.data.netPerMemberCents / 100 : undefined;
+  const netUsd = estimate.data ? estimate.data.netPerMemberCents : undefined;
   const annualDiscountPct = useMemo(() => {
     const m = parseMoney(form.priceMonthly);
     const a = parseMoney(form.priceAnnual);
@@ -356,8 +356,8 @@ export function CreateWizard() {
       : form.billing === 'free'
         ? t('wizard.free')
         : form.billing === 'month'
-          ? t('wizard.perMonth', { amount: formatMoney(parseMoney(form.priceMonthly) || 0) })
-          : t('wizard.perYear', { amount: formatMoney(parseMoney(form.priceAnnual) || 0) });
+          ? t('wizard.perMonth', { amount: formatMoney(parseMoney(form.priceMonthly) || 0, 'VND') })
+          : t('wizard.perYear', { amount: formatMoney(parseMoney(form.priceAnnual) || 0, 'VND') });
 
   const trialDaysMember = draft?.members.trialDays ?? 0;
   const summary: SummaryRow[] = [
@@ -380,7 +380,7 @@ export function CreateWizard() {
       value:
         form.billing === 'free'
           ? t('wizard.free')
-          : `${t('wizard.perMonth', { amount: formatMoney(parseMoney(form.priceMonthly) || 0) })}${form.billing === 'year' ? t('summary.priceYear', { amount: formatMoney(parseMoney(form.priceAnnual) || 0) }) : ''}${form.trialEnabled && trialDaysMember ? t('summary.trialDays', { days: trialDaysMember }) : ''}`,
+          : `${t('wizard.perMonth', { amount: formatMoney(parseMoney(form.priceMonthly) || 0, 'VND') })}${form.billing === 'year' ? t('summary.priceYear', { amount: formatMoney(parseMoney(form.priceAnnual) || 0, 'VND') }) : ''}${form.trialEnabled && trialDaysMember ? t('summary.trialDays', { days: trialDaysMember }) : ''}`,
       step: 3,
     },
   ];
@@ -533,7 +533,7 @@ export function CreateWizard() {
                       form={form}
                       set={set}
                       errors={errors}
-                      currency="USD"
+                      currency="VND"
                       annualDiscountPct={annualDiscountPct}
                       net={netUsd !== undefined ? { monthly: netUsd, annual: netUsd } : undefined}
                       feeNote={estimate.data ? t('wizard.feeNote', { commission: estimate.data.commissionPct, gateway: estimate.data.gatewayFeePct }) : undefined}

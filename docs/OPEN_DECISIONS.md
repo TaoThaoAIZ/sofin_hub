@@ -8,8 +8,8 @@ Danh sách này gom từ cả ba đợt Admin và các đợt trước. Mỗi m�
 |---|---|---|---|
 | A1 | % hoa hồng nền tảng | 10% | Admin → Hệ thống → Cài đặt chung (mặc định `PLATFORM_COMMISSION_PCT`) |
 | A2 | Thời hạn hoàn tiền 100% | 7 ngày | Cài đặt chung (`REFUND_WINDOW_DAYS`) |
-| A3 | Mức rút tiền tối thiểu | $50 | Cài đặt chung (`PAYOUT_MIN_USD`) |
-| A4 | Cổng thanh toán: Stripe hay PayOS/VNPay/MoMo | `MockGateway` (giả lập) | code, `payments.gateway.ts` |
+| A3 | Mức rút tiền tối thiểu | 1.000.000đ (trước là $50; tiền nay là VND) | Cài đặt chung (`PAYOUT_MIN_USD`) |
+| A4 | ~~Cổng thanh toán~~ **ĐÃ CHỌN (2026-10-14): chuyển khoản VietQR + SePay**, tiền VND (theo `sofin`/`payment-engine`). Còn mở: hoàn tiền thủ công (chưa có trạng thái 'đã chuyển trả'), alert chỉ log, có lọc theo số TK nhận không, ân hạn gia hạn 2 ngày/phiên 15 phút | `payments.bank.ts`, `backend/docs/api/payments.md` |
 | A5 | Kick/ban thành viên đã trả tiền có hoàn tiền không | chưa quy định | code |
 | A6 | Xác thực realtime (SSE): vé một lần ngắn hạn hay cookie | đã bỏ `?access_token=`; còn Bearer + vé một lần | code |
 | A7 | Cộng đồng user mới tạo có phải qua admin duyệt trước khi hiển thị không | tạo xong là `active` ngay (hàng chờ duyệt chỉ có dữ liệu seed) | code, PLAN câu #7 |

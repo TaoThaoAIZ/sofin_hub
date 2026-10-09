@@ -94,9 +94,9 @@ def load(add):
         A(F, f"production + {key}=dev-... -> thoát mã != 0 và nêu đúng tên biến", "Bảo mật", "Cao", NOENV + " " + PROD_OK,
           [f"Đặt bộ production hợp lệ rồi ghi đè {key}=dev-whatever-change-me", "Nạp env.ts", "Đọc stderr"], f"{key}=dev-whatever-change-me",
           f"Thoát mã != 0; stderr 'Cấu hình production không an toàn:' có dòng '- {key} đang là giá trị mặc định dev-* — phải đặt giá trị bí mật riêng'. Chỉ 1 vấn đề được liệt kê (các biến khác hợp lệ).", pw="Không")
-    A(F, "production không đặt secret nào (rơi về default dev-*) -> liệt kê đủ cả 4 secret", "Bảo mật", "Cao", NOENV,
+    A(F, "production không đặt secret nào (rơi về default dev-*) -> liệt kê đủ các secret dev-* (JWT x2, UPLOAD_SIGNING_SECRET, OTP_PEPPER; PAYMENT_WEBHOOK_SECRET đã bỏ - webhook SePay dùng SEPAY_WEBHOOK_KEY)", "Bảo mật", "Cao", NOENV,
       ["Đặt chỉ NODE_ENV=production và DATABASE_URL=postgresql://u:p@db.example.com:5432/sofinhub", "Nạp env.ts"], "chỉ NODE_ENV + DATABASE_URL",
-      "Thoát mã != 0; stderr liệt kê JWT_ACCESS_SECRET, JWT_REFRESH_SECRET, PAYMENT_WEBHOOK_SECRET, UPLOAD_SIGNING_SECRET (đặc biệt 2 khóa mà trước đây guard bỏ lọt: webhook + upload).", pw="Không")
+      "Thoát mã != 0; stderr liệt kê JWT_ACCESS_SECRET, JWT_REFRESH_SECRET, UPLOAD_SIGNING_SECRET, OTP_PEPPER (khóa upload là khóa mà trước đây guard bỏ lọt). KHÔNG còn PAYMENT_WEBHOOK_SECRET (đã bỏ khi chuyển sang SePay; thiếu SEPAY_WEBHOOK_KEY/BANK_ACCOUNT/SEPAY_API_TOKEN chỉ là CẢNH BÁO khi khởi động, không chặn).", pw="Không")
     A(F, "production thiếu DATABASE_URL -> từ chối (không rơi về localhost:5435)", "Bảo mật", "Cao", NOENV + " " + PROD_OK,
       ["Đặt bộ production hợp lệ nhưng xóa DATABASE_URL", "Nạp env.ts"], "DATABASE_URL=(không đặt)",
       "Thoát mã != 0; stderr '- DATABASE_URL bắt buộc khi production (không có giá trị mặc định)'. Ngoài production vẫn rơi về postgresql://sofinhub:sofinhub@localhost:5435/sofinhub.", pw="Không")

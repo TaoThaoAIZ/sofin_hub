@@ -228,7 +228,7 @@ describe('vé SSE: mint ở instance này, redeem ở instance khác', () => {
 describe('guard production: Redis', () => {
   it('cảnh báo (không thoát) khi nhiều instance mà thiếu REDIS_URL; 1 instance không Redis thì im lặng', async () => {
     const { productionEnvWarnings, productionEnvProblems } = await import('../src/config/env-guard.js');
-    const base = { NODE_ENV: 'production', DATABASE_URL: 'postgres://x', RUN_SCHEDULERS: true };
+    const base = { NODE_ENV: 'production', DATABASE_URL: 'postgres://x', RUN_SCHEDULERS: true, BANK_ACCOUNT: '0123456789', SEPAY_WEBHOOK_KEY: 'k', SEPAY_API_TOKEN: 't' };
     assert.deepEqual(productionEnvWarnings(base, {}), []);
     assert.equal(productionEnvWarnings(base, { INSTANCE_COUNT: '3' }).length, 1);
     assert.equal(productionEnvWarnings(base, { WEB_CONCURRENCY: '2' }).length, 1);
@@ -236,6 +236,13 @@ describe('guard production: Redis', () => {
     assert.equal(productionEnvWarnings({ ...base, RUN_SCHEDULERS: false }, {}).length, 1, 'web-only không Redis: worker không đẩy được realtime');
     assert.deepEqual(productionEnvWarnings({ ...base, NODE_ENV: 'development' }, { INSTANCE_COUNT: '3' }), []);
     assert.deepEqual(productionEnvProblems(base), [], 'thiếu Redis KHÔNG phải lỗi chặn khởi động');
+    // Thiếu cấu hình chuyển khoản: cảnh báo từng biến (không chặn khởi động).
+    for (const key of ['BANK_ACCOUNT', 'SEPAY_WEBHOOK_KEY', 'SEPAY_API_TOKEN']) {
+      const w = productionEnvWarnings({ ...base, [key]: undefined }, {});
+      assert.equal(w.length, 1, key);
+      assert.match(w[0]!, new RegExp(key));
+    }
+    assert.equal(productionEnvWarnings({ NODE_ENV: 'production', DATABASE_URL: 'postgres://x', RUN_SCHEDULERS: true }, {}).length, 3);
   });
 });
 

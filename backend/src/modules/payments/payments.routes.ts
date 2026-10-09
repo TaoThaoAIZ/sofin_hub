@@ -3,10 +3,11 @@ import { optionalAuth, requireAuth, requireVerifiedEmail } from '../../middlewar
 import { HttpError } from '../../utils/http-error.js';
 import { auditService } from '../admin/admin-audit.service.js';
 import { adminOnly } from '../admin/admin.common.js';
-import { WEBHOOK_SIGNATURE_HEADER } from './payments.gateway.js';
 import {
   cancelSubscriptionBody,
+  approveBankPaymentBody,
   createCheckoutBody,
+  listBankTransactionsQuery,
   quoteQuery,
   startTrialBody,
   createPayoutBody,
@@ -30,7 +31,7 @@ const id = (v: unknown) => v as string;
 paymentsRouter.post('/courses/:id/checkout', requireAuth, requireVerifiedEmail, async (req, res) => {
   const body = createCheckoutBody.parse(req.body);
   const key = req.header('idempotency-key')?.trim().slice(0, 200) || undefined;
-  res.status(201).json({ data: await paymentsService.checkout(id(req.params.id), req.userId!, body.method, key, { interval: body.interval, paymentMethod: body.paymentMethod }) });
+  res.status(201).json({ data: await paymentsService.checkout(id(req.params.id), req.userId!, body.method, key, { interval: body.interval }) });
 });
 
 paymentsRouter.get('/courses/:id/subscription', requireAuth, async (req, res) => {
@@ -77,6 +78,11 @@ paymentsRouter.delete('/me/payment-methods/:cardId', requireAuth, async (req, re
 
 paymentsRouter.get('/me/billing-summary', requireAuth, async (req, res) => {
   res.json({ data: await billingSummary(req.userId!) });
+});
+
+// FE poll trạng thái phiên chuyển khoản (kèm QR khi còn pending). Không cấp quyền ở đây — xem payments.bank.ts.
+paymentsRouter.get('/payments/:paymentIntentId', requireAuth, async (req, res) => {
+  res.json({ data: await paymentsService.confirm(id(req.params.paymentIntentId), req.userId!) });
 });
 
 paymentsRouter.post('/payments/:paymentIntentId/confirm', requireAuth, async (req, res) => {
@@ -134,11 +140,33 @@ paymentsRouter.patch('/admin/refunds/:refundId', ...adminOnly, async (req, res) 
   res.json({ data });
 });
 
-// ---- webhook: không đăng nhập, xác thực bằng chữ ký HMAC trên raw body (app.ts giữ rawBody cho đúng path này)
+// ---- webhook SePay: không đăng nhập, xác thực bằng key tĩnh (Authorization: Apikey|Bearer <SEPAY_WEBHOOK_KEY>). Chưa cấu hình key ⇒ 401 cho mọi request.
 paymentsRouter.post('/payments/webhook', async (req, res) => {
-  const raw = (req as typeof req & { rawBody?: Buffer }).rawBody;
-  if (!raw) throw HttpError.badRequest('Yêu cầu không hợp lệ');
-  res.json(await paymentsService.handleWebhook(raw, req.header(WEBHOOK_SIGNATURE_HEADER)));
+  res.json(await paymentsService.handleBankWebhook(req.header('authorization'), (req.body ?? {}) as Record<string, unknown>));
+});
+
+// ---- admin: tiền vào ngân hàng, duyệt tay, quét ngay
+paymentsRouter.get('/admin/bank/status', ...adminOnly, async (_req, res) => {
+  res.json({ data: paymentsService.bankStatus() });
+});
+
+paymentsRouter.get('/admin/bank/transactions', ...adminOnly, async (req, res) => {
+  const q = listBankTransactionsQuery.parse(req.query);
+  res.json(await paymentsService.listBankTransactions({ credited: q.credited }, q.page, q.limit).then((r) => ({ data: r.items, total: r.total, page: q.page, limit: q.limit })));
+});
+
+paymentsRouter.post('/admin/bank/payments/:refCode/approve', ...adminOnly, async (req, res) => {
+  const body = approveBankPaymentBody.parse(req.body ?? {});
+  const data = await paymentsService.approveManually(id(req.params.refCode), req.userId!, { bankTransactionId: body.bankTransactionId });
+  await auditService.record(req.userId!, {
+    action: 'payment.manual_approve', targetType: 'payment', targetId: data.id, targetLabel: `Payment ${id(req.params.refCode)}`,
+    note: body.note, metadata: { bankTransactionId: body.bankTransactionId ?? null },
+  });
+  res.json({ data });
+});
+
+paymentsRouter.post('/admin/bank/scan', ...adminOnly, async (_req, res) => {
+  res.json({ data: await paymentsService.scanBankTransactions() });
 });
 
 // ---- doanh thu & payout

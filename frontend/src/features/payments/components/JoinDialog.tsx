@@ -1,16 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../../components/ui/Button';
-import { CardFields } from '../../../components/ui/CardFields';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { ApiError } from '../../../lib/api';
 import { formatCompact, formatMoney } from '../../../lib/format';
 import type { CommunityDetail } from '../../courses/types';
 import type { BillingInterval } from '../api';
 import { useCategories } from '../../courses/queries';
-import { useCardInput } from '../useCardInput';
-import { useCheckout, useCheckoutQuote, useConfirmPayment, useStartTrial } from '../queries';
-import type { QuotePlan } from '../types';
+import { resetCheckoutKeys, useCheckout, useCheckoutQuote, useStartTrial } from '../queries';
+import type { PaymentIntent, QuotePlan } from '../types';
+import { BankTransferPanel } from './BankTransferPanel';
 
 const dayMonth = (iso: string) => {
   const d = new Date(iso);
@@ -19,7 +18,7 @@ const dayMonth = (iso: string) => {
 
 /**
  * Nội dung hộp thoại "Chọn gói thành viên": gói/giá/%tiết kiệm/ngày dùng thử/ngày trừ tiền đầu/số tiền đều lấy từ
- * GET /communities/:id/checkout-quote. Thẻ được tokenise mock ở client — chỉ token + brand/last4/hạn được gửi đi.
+ * GET /communities/:id/checkout-quote. Thanh toán bằng chuyển khoản VietQR (SePay): tạo phiên → hiện QR (BankTransferPanel) → quyền truy cập được cấp khi tiền về.
  */
 export function JoinCheckout({
   course,
@@ -42,13 +41,13 @@ export function JoinCheckout({
   const quoteQuery = useCheckoutQuote(courseId, selected);
   const quote = quoteQuery.data;
   if (quote && !hasAnnual && quote.plans.some((p) => p.interval === 'annual')) setHasAnnual(true);
-  const cardInput = useCardInput();
+  const [payment, setPayment] = useState<PaymentIntent | null>(null);
+  const [showPanel, setShowPanel] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const checkout = useCheckout(courseId);
-  const confirm = useConfirmPayment();
   const trial = useStartTrial(courseId);
-  const busy = checkout.isPending || confirm.isPending || trial.isPending;
+  const busy = checkout.isPending || trial.isPending;
 
   const plans = quote?.plans ?? [];
   const maxSavings = plans.reduce((m, p) => Math.max(m, p.savingsPct), 0);
@@ -59,18 +58,16 @@ export function JoinCheckout({
   const submit = async () => {
     if (!quote || !current || stale) return;
     setError(null);
-    // Tokenise phía client; số thẻ/CVC thô bị bỏ khỏi state ngay sau đó (xem useCardInput).
-    const paymentMethod = cardInput.collect();
-    if (!paymentMethod) return;
     try {
       if (trialMode) {
-        await trial.mutateAsync({ interval: selected, paymentMethod });
+        await trial.mutateAsync({ interval: selected });
+        onDone();
+      } else if (payment?.status === 'pending' && payment.interval === selected) {
+        setShowPanel(true); // đã có phiên chuyển khoản còn hạn cho kỳ hạn này
       } else {
-        const intent = await checkout.mutateAsync({ method: 'stripe', interval: selected, paymentMethod });
-        await new Promise((r) => setTimeout(r, 600)); // mô phỏng thời gian xử lý ở cổng thanh toán
-        await confirm.mutateAsync(intent.id);
+        setPayment(await checkout.mutateAsync({ interval: selected }));
+        setShowPanel(true);
       }
-      onDone();
     } catch (err) {
       const code = err instanceof ApiError ? err.code : undefined;
       if (code === 'JOIN_REQUEST_REQUIRED' && onNeedRequest) {
@@ -78,6 +75,7 @@ export function JoinCheckout({
         return;
       }
       if (code === 'COMMUNITY_LOCKED') setError(t('join.locked'));
+      else if (code === 'BANK_NOT_CONFIGURED') setError(t('join.bankNotConfigured'));
       else setError(err instanceof Error && err.message ? err.message : t('join.failed'));
     }
   };
@@ -92,7 +90,19 @@ export function JoinCheckout({
     ...(course.ratingCount > 0 ? [{ icon: 'star', v: String(course.rating), l: t('join.chipReviews', { count: course.ratingCount }) }] : [{ icon: 'wifi_tethering', v: String(course.stats.online), l: t('join.chipOnline') }]),
   ];
 
-  const cta = trialMode ? t('join.ctaTrial') : quote?.paid === false ? t('join.ctaJoin') : t('join.ctaPay');
+  const hasPending = payment?.status === 'pending' && payment.interval === selected;
+  const cta = trialMode ? t('join.ctaTrial') : quote?.paid === false ? t('join.ctaJoin') : hasPending ? t('join.ctaContinue') : t('join.ctaPay');
+
+  const newSession = async () => {
+    setError(null);
+    resetCheckoutKeys(courseId);
+    try {
+      setPayment(await checkout.mutateAsync({ interval: selected }));
+    } catch (err) {
+      setError(err instanceof Error && err.message ? err.message : t('join.failed'));
+      setShowPanel(false);
+    }
+  };
 
   return (
     <div className="relative overflow-hidden rounded-[28px] bg-white shadow-2xl">
@@ -102,13 +112,8 @@ export function JoinCheckout({
             <MaterialIcon name="close" size={20} />
           </button>
         )}
-        <div className="mx-auto grid size-[76px] place-items-center overflow-hidden rounded-[20px] bg-[#1e2a8a] text-lg font-extrabold text-white shadow-[0_12px_24px_rgba(30,42,138,.3)]">
-          {course.logoUrl ? <img src={course.logoUrl} alt="" className="size-full object-cover" /> : (
-            <span className="flex flex-col items-center gap-0.5 text-[11px]">
-              <MaterialIcon name="image" size={26} color="#fff" />
-              {course.title.slice(0, 2).toUpperCase()}
-            </span>
-          )}
+        <div className="mx-auto grid size-[76px] place-items-center overflow-hidden rounded-[20px] bg-white p-2 shadow-[0_12px_24px_rgba(120,60,20,.15)] ring-1 ring-[rgba(120,60,20,.08)]">
+          <img src={course.logoUrl || '/images/logo.png'} alt="SofinHub" className={course.logoUrl ? 'size-full rounded-[12px] object-cover' : 'size-full object-contain'} />
         </div>
         <h2 className="mt-4 mb-0 text-2xl font-extrabold tracking-[-0.3px]">{course.title}</h2>
         <p className="mt-1 mb-0 text-sm text-stone-600">
@@ -136,7 +141,16 @@ export function JoinCheckout({
             {quoteQuery.error instanceof Error ? quoteQuery.error.message : t('join.quoteError')}
           </p>
         )}
-        {quote && (
+        {quote && payment && showPanel && (
+          <>
+            <button type="button" onClick={() => setShowPanel(false)} className="mb-3 inline-flex items-center gap-1 border-0 bg-transparent p-0 text-[13px] font-semibold text-stone-600 hover:text-stone-900">
+              <MaterialIcon name="arrow_back" size={16} />
+              {t('bank.back')}
+            </button>
+            <BankTransferPanel payment={payment} onDone={onDone} onNewSession={() => void newSession()} newSessionBusy={checkout.isPending} />
+          </>
+        )}
+        {quote && !(payment && showPanel) && (
           <>
             <div className="flex items-center justify-between gap-3">
               <h3 className="m-0 text-[17px] font-extrabold">{t('join.choosePlan')}</h3>
@@ -158,11 +172,17 @@ export function JoinCheckout({
               <h3 className="m-0 text-[17px] font-extrabold">{t('join.paymentMethod')}</h3>
               <span className="flex items-center gap-1.5 text-xs text-stone-500">
                 <MaterialIcon name="lock" size={15} filled color="#78716c" />
-                {t('join.securePayment', { provider: quote.provider === 'stripe' ? 'Stripe' : quote.provider })}
+                {t('join.securePayment')}
               </span>
             </div>
-            <div className="mt-3">
-              <CardFields value={cardInput.card} onChange={(v) => { cardInput.setCard(v); setError(null); }} errors={cardInput.errors} disabled={busy} />
+            <div className="mt-3 flex items-start gap-3 rounded-2xl border border-[#f0ebe6] bg-[#fdfbf9] p-3.5">
+              <span className="grid size-10 flex-none place-items-center rounded-xl bg-[#fff1e6]">
+                <MaterialIcon name="qr_code_2" size={24} filled color="#f26a1b" />
+              </span>
+              <div className="text-[13px] leading-relaxed text-stone-600">
+                <div className="text-sm font-bold text-stone-900">{t('join.bankMethod')}</div>
+                {t('join.bankMethodNote')}
+              </div>
             </div>
 
             {current && (
@@ -186,7 +206,7 @@ export function JoinCheckout({
             <Button onClick={() => void submit()} disabled={busy || stale || !current} className="mt-4 h-[52px] w-full gap-2.5 rounded-2xl text-base font-bold">
               {busy ? t('join.processing') : (
                 <>
-                  <MaterialIcon name={trialMode ? 'workspace_premium' : 'lock'} size={20} filled color="#fff" />
+                  <MaterialIcon name={trialMode ? 'workspace_premium' : 'qr_code_2'} size={20} filled color="#fff" />
                   {cta}
                   <MaterialIcon name="arrow_forward" size={20} color="#fff" />
                 </>

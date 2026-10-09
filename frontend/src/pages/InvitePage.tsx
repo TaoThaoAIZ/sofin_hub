@@ -11,6 +11,7 @@ import { useAcceptInvite, useInvitePreview } from '../features/communities/queri
 import { formatCompact } from '../lib/format';
 import { ApiError } from '../lib/api';
 
+import { formatCents } from '../lib/datetime';
 const GONE_TITLE_KEY: Record<string, string> = {
   INVITE_REVOKED: 'invitePage.revoked',
   INVITE_EXPIRED: 'invitePage.expired',
@@ -142,7 +143,7 @@ export function InvitePage() {
             </span>
             <span className="glass-chip flex items-center gap-1.5 rounded-full px-3 py-1.5">
               <MaterialIcon name="sell" size={16} color="#f26a1b" />
-              {paid ? t('invitePage.perMonth', { price: course.priceUsd }) : t('invitePage.free')}
+              {paid ? t('invitePage.perMonth', { price: formatCents(course.priceUsd) }) : t('invitePage.free')}
             </span>
           </div>
           {(remainingUses !== null || expiresAt) && (

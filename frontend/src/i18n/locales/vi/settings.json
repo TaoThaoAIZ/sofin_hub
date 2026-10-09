@@ -16,18 +16,6 @@
     "title": "Cài đặt",
     "unsavedConfirm": "Bạn có thay đổi chưa lưu ở tab Hồ sơ. Rời đi sẽ mất các thay đổi này. Vẫn rời đi?"
   },
-  "card": {
-    "addedToast": "Đã thêm thẻ •••• {{last4}}",
-    "updatedToast": "Đã cập nhật thẻ",
-    "titleAdd": "Thêm thẻ mới",
-    "titleUpdateDefault": "Cập nhật thẻ mặc định",
-    "titleUpdate": "Cập nhật thẻ •••• {{last4}}",
-    "body": "Thông tin thẻ được mã hóa và lưu an toàn.",
-    "number": "Số thẻ",
-    "expiry": "Hết hạn",
-    "addBtn": "Thêm thẻ",
-    "updateBtn": "Cập nhật"
-  },
   "refund": {
     "title": "Yêu cầu hoàn tiền",
     "approved": "Yêu cầu đã được duyệt tự động (trong thời hạn hoàn tiền). Khoản tiền sẽ được hoàn lại.",
@@ -69,8 +57,8 @@
     "annualPlan": " · gói năm",
     "colDate": "Ngày",
     "colDesc": "Mô tả",
-    "colAmount": "Số tiền (USD)",
-    "colRefunded": "Đã hoàn (USD)",
+    "colAmount": "Số tiền (VND)",
+    "colRefunded": "Đã hoàn (VND)",
     "colStatus": "Trạng thái",
     "colInvoice": "Số hóa đơn"
   },
@@ -248,25 +236,11 @@
   },
   "billing": {
     "loading": "Đang tải…",
-    "cards": {
-      "title": "Phương thức thanh toán",
-      "sub": "Quản lý thẻ thanh toán của bạn.",
-      "empty": "Bạn chưa lưu thẻ nào. Thêm thẻ để gia hạn gói thành viên tự động.",
-      "expired": "Đã hết hạn {{exp}}",
-      "expires": "Hết hạn {{exp}}",
-      "default": "Mặc định",
-      "options": "Tùy chọn thẻ {{last4}}",
-      "setDefault": "Đặt làm mặc định",
-      "defaultToast": "Đã đặt thẻ •••• {{last4}} làm mặc định",
-      "update": "Cập nhật thẻ",
-      "delete": "Xóa thẻ",
-      "add": "Thêm thẻ"
-    },
     "next": {
-      "title": "Lần trừ tiền tiếp theo",
+      "title": "Hóa đơn tiếp theo",
       "line": "Ngày {{date}} · {{community}}{{trial}}",
       "trialEnds": " (hết dùng thử)",
-      "none": "Không có gói nào đang hoạt động",
+      "none": "Không có hóa đơn nào sắp tới",
       "monthly": "Tổng mỗi tháng"
     },
     "sub": {
@@ -279,8 +253,8 @@
       "perYear": "năm",
       "perMonth": "tháng",
       "lineCanceling": "{{price}} / {{per}} · Hết hạn {{date}}",
-      "lineTrial": "Dùng thử · trừ {{price}} ngày {{date}}",
-      "lineActive": "{{price}} / {{per}} · Gia hạn {{date}}",
+      "lineTrial": "Dùng thử · thanh toán {{price}} trước {{date}}",
+      "lineActive": "{{price}} / {{per}} · Kỳ tiếp theo {{date}}",
       "lineEnded": "{{price}} / {{per}} · Kết thúc {{date}}",
       "title": "Gói thành viên của tôi",
       "sub": "Danh sách các cộng đồng bạn đang tham gia.",
@@ -307,10 +281,12 @@
       "refundPending": "Hoàn tiền: chờ duyệt",
       "invoice": "Hóa đơn"
     },
-    "del": {
-      "title": "Xóa thẻ •••• {{last4}}?",
-      "body": "Thẻ sẽ bị gỡ khỏi tài khoản. Gói đang dùng thẻ này (nếu có) sẽ chuyển sang thẻ mặc định còn lại; nếu đây là thẻ duy nhất của một gói đang chạy, bạn cần thêm thẻ khác trước.",
-      "toast": "Đã xóa thẻ •••• {{last4}}"
+    "pending": {
+      "title": "Khoản chờ thanh toán",
+      "sub": "Gói thành viên không tự động trừ tiền — bạn thanh toán bằng chuyển khoản QR.",
+      "empty": "Hiện không có khoản nào cần thanh toán.",
+      "until": "hạn {{date}}",
+      "payNow": "Thanh toán ngay"
     }
   },
   "communitiesTab": {

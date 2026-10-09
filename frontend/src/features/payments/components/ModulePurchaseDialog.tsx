@@ -2,13 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Button } from '../../../components/ui/Button';
-import { CardFields } from '../../../components/ui/CardFields';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { ApiError } from '../../../lib/api';
-import { formatMoney } from '../../../lib/format';
+import { formatCents } from '../../../lib/datetime';
 import { communityDetail } from '../../../lib/paths';
 import { useModuleQuote, usePurchaseModule } from '../queries';
-import { useCardInput } from '../useCardInput';
+import type { PaymentIntent } from '../types';
+import { BankTransferPanel } from './BankTransferPanel';
 
 export interface PurchasableModule {
   id: string;
@@ -18,14 +18,14 @@ export interface PurchasableModule {
 
 /**
  * Hộp thoại mua lẻ MỘT module trả phí (thanh toán một lần, không phải gói thành viên) — mở ngay trên trang đang xem, không điều hướng.
- * Giá lấy từ GET /communities/:id/modules/:moduleId/purchase-quote; thẻ tokenise mock ở client (cùng CardFields/useCardInput với JoinCheckout).
+ * Giá lấy từ GET /communities/:id/modules/:moduleId/purchase-quote; thanh toán bằng chuyển khoản VietQR (BankTransferPanel); module mở khóa khi giao dịch `succeeded`.
  */
 export function ModulePurchaseDialog({ communityId, module: mod, onClose }: { communityId: string; module: PurchasableModule; onClose: () => void }) {
   const { t } = useTranslation('payments');
   const quoteQuery = useModuleQuote(communityId, mod.id);
   const quote = quoteQuery.data;
   const purchase = usePurchaseModule(communityId, mod.id);
-  const cardInput = useCardInput();
+  const [payment, setPayment] = useState<PaymentIntent | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   // Một Idempotency-Key cho mỗi lần mở hộp thoại: bấm đúp không trừ tiền hai lần. Lỗi thanh toán → xin khóa mới cho lần thử lại.
@@ -38,17 +38,21 @@ export function ModulePurchaseDialog({ communityId, module: mod, onClose }: { co
   }, [onClose, purchase.isPending]);
 
   const priceCents = quote?.priceCents ?? mod.priceCents ?? 0;
-  const price = formatMoney(priceCents / 100, quote?.currency ?? 'USD');
+  const price = formatCents(priceCents);
   const blocked = quote?.blocked ?? null;
+
+  // Phiên hết hạn → khóa idempotency mới để tạo phiên chuyển khoản mới.
+  const newSession = () => {
+    key.current = crypto.randomUUID();
+    setPayment(null);
+    void submit();
+  };
 
   const submit = async () => {
     if (!quote?.canPurchase || purchase.isPending) return;
     setError(null);
-    const paymentMethod = cardInput.collect();
-    if (!paymentMethod) return;
     try {
-      await purchase.mutateAsync({ paymentMethod, idempotencyKey: key.current });
-      setDone(true);
+      setPayment(await purchase.mutateAsync({ idempotencyKey: key.current }));
     } catch (err) {
       key.current = crypto.randomUUID();
       const code = err instanceof ApiError ? err.code : undefined;
@@ -56,6 +60,7 @@ export function ModulePurchaseDialog({ communityId, module: mod, onClose }: { co
         setDone(true);
         void quoteQuery.refetch();
       } else if (code === 'PAYMENT_FAILED') setError(t('modulePurchase.declined'));
+      else if (code === 'BANK_NOT_CONFIGURED') setError(t('join.bankNotConfigured'));
       else if (code === 'COMMUNITY_LOCKED') setError(t('join.locked'));
       else if (code === 'JOIN_REQUIRED') void quoteQuery.refetch();
       else setError(err instanceof Error && err.message ? err.message : t('modulePurchase.failed'));
@@ -80,7 +85,17 @@ export function ModulePurchaseDialog({ communityId, module: mod, onClose }: { co
           </div>
 
           <div className="border-t border-[rgba(120,60,20,.08)] px-6 pt-5 pb-6">
-            {done ? (
+            {payment && !done ? (
+              <BankTransferPanel
+                payment={payment}
+                onDone={() => setDone(true)}
+                onNewSession={newSession}
+                newSessionBusy={purchase.isPending}
+                successTitle={t('modulePurchase.unlocked')}
+                successBody={t('modulePurchase.unlockedBody', { title: quote?.title ?? mod.title })}
+                doneLabel={t('modulePurchase.startLearning')}
+              />
+            ) : done ? (
               <div className="flex flex-col items-center gap-4 py-2 text-center">
                 <p role="status" className="m-0 text-sm text-stone-600">{t('modulePurchase.unlockedBody', { title: quote?.title ?? mod.title })}</p>
                 <Button onClick={onClose} className="h-[48px] w-full rounded-2xl text-base font-bold">{t('modulePurchase.startLearning')}</Button>
@@ -113,11 +128,17 @@ export function ModulePurchaseDialog({ communityId, module: mod, onClose }: { co
                   <h3 className="m-0 text-[17px] font-extrabold">{t('join.paymentMethod')}</h3>
                   <span className="flex items-center gap-1.5 text-xs text-stone-500">
                     <MaterialIcon name="lock" size={15} filled color="#78716c" />
-                    {t('join.securePayment', { provider: quote?.provider === 'stripe' ? 'Stripe' : quote?.provider })}
+                    {t('join.securePayment')}
                   </span>
                 </div>
-                <div className="mt-3">
-                  <CardFields value={cardInput.card} onChange={(v) => { cardInput.setCard(v); setError(null); }} errors={cardInput.errors} disabled={purchase.isPending} />
+                <div className="mt-3 flex items-start gap-3 rounded-2xl border border-[#f0ebe6] bg-[#fdfbf9] p-3.5">
+                  <span className="grid size-10 flex-none place-items-center rounded-xl bg-[#fff1e6]">
+                    <MaterialIcon name="qr_code_2" size={24} filled color="#f26a1b" />
+                  </span>
+                  <div className="text-[13px] leading-relaxed text-stone-600">
+                    <div className="text-sm font-bold text-stone-900">{t('join.bankMethod')}</div>
+                    {t('join.bankMethodNote')}
+                  </div>
                 </div>
                 {error && (
                   <p role="alert" className="mt-3 mb-0 rounded-xl bg-red-50 px-3.5 py-2.5 text-sm font-medium text-red-600">{error}</p>
@@ -125,7 +146,7 @@ export function ModulePurchaseDialog({ communityId, module: mod, onClose }: { co
                 <Button onClick={() => void submit()} disabled={purchase.isPending || !quote?.canPurchase} className="mt-4 h-[52px] w-full gap-2.5 rounded-2xl text-base font-bold">
                   {purchase.isPending ? t('join.processing') : (
                     <>
-                      <MaterialIcon name="lock_open" size={20} filled color="#fff" />
+                      <MaterialIcon name="qr_code_2" size={20} filled color="#fff" />
                       {t('modulePurchase.pay', { amount: price })}
                     </>
                   )}

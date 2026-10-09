@@ -12,7 +12,7 @@
     "done": "Transaction refunded"
   },
   "common": {
-    "amountRange": "Enter an amount from $0.01 to {{max}}.",
+    "amountRange": "Enter an amount from 1 ₫ to {{max}}.",
     "refundsTitle": "Refunds",
     "transactionsTitle": "Transactions",
     "pauseTab": "Paused",
@@ -71,9 +71,10 @@
     "deadline": "Deadline",
     "submitted": "Submitted",
     "missing": "Missing",
-    "refundAmountUsd": "Refund amount (USD)",
+    "refundAmountUsd": "Refund amount (VND)",
     "refundedAmount": "Refunded",
-    "nameAZ": "Name A–Z"
+    "nameAZ": "Name A–Z",
+    "approveManual": "Approve manually"
   },
   "transactions": {
     "failedNote": "{{n}} transactions"
@@ -100,7 +101,16 @@
     "timeline": "Payment timeline",
     "noEvents": "No events yet.",
     "paymentDetails": "Payment details",
-    "refundsAndDisputes": "Refunds & disputes"
+    "refundsAndDisputes": "Refunds & disputes",
+    "reopenSession": "Reopen transfer session",
+    "reopenTitle": "Reopen the transfer session?",
+    "reopenBody": "The transfer session for {{code}} has expired. Reopening creates a fresh QR for the customer to pay.",
+    "reopenSent": "Transfer session reopened",
+    "approveTitle": "Approve payment manually",
+    "approveBody": "Confirm you received {{amount}} for transaction {{code}} (transfer code {{ref}}) and grant access now? Only approve after you see the money in the bank account.",
+    "approveCta": "Confirm received & grant access",
+    "approved": "Approved manually, access granted",
+    "refCode": "Transfer code"
   },
   "subs": {
     "pauseBody": "{{code}}. The member loses access and the plan won't renew until resumed.",
@@ -278,5 +288,35 @@
     "renewal": "Renewal",
     "oldest": "Oldest",
     "highestAmount": "Highest amount"
+  },
+  "bank": {
+    "pageTitle": "Bank inflows",
+    "pageSubtitle": "All incoming bank transfers (SePay). Uncredited ones need manual approval.",
+    "scanNow": "Scan now",
+    "scanning": "Scanning…",
+    "scanDone": "Scanned {{scanned}}: credited {{credited}}, already handled {{already}}, unmatched {{unmatched}}, underpaid {{underpaid}}, skipped {{skipped}}, errors {{errors}}.",
+    "scanFailed": "Could not scan bank transactions",
+    "notConfiguredTitle": "Bank not configured.",
+    "notConfiguredBody": "Account/SePay settings are missing on the server, so customers cannot pay by bank transfer yet.",
+    "tableTitle": "Incoming transfers",
+    "tableSub": "{{count}} transfers",
+    "empty": "No incoming transfers yet. Bank transfers (including auto-matched ones) will appear here.",
+    "colDate": "Time",
+    "colDesc": "Description",
+    "colRef": "Reference",
+    "colBank": "Bank",
+    "colNote": "Note",
+    "approveBtn": "Approve manually",
+    "approveTitle": "Approve bank transaction manually",
+    "approveBody": "Assign {{amount}} (\"{{desc}}\") to a pending payment. Access is granted immediately.",
+    "approveCta": "Approve and credit",
+    "refCodeLabel": "Payment code (refCode)",
+    "refCodePlaceholder": "e.g. SFH1234ABCD",
+    "approved": "Payment approved and credited",
+    "colStatus": "Status",
+    "statusCredited": "Credited",
+    "statusPending": "Not credited",
+    "tabPending": "Not credited",
+    "tabCredited": "Credited"
   }
 }

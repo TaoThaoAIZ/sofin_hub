@@ -23,7 +23,7 @@ import type { PaymentIntent, PaymentStatus, Payout, RefundRequest, Subscription 
 export type NewPayment = Omit<PaymentIntent, 'id' | 'status' | 'createdAt' | 'confirmedAt' | 'refundedCents' | 'currency' | 'kind' | 'interval' | 'paymentCardId'> &
   Partial<Pick<PaymentIntent, 'kind' | 'status' | 'confirmedAt' | 'interval' | 'paymentCardId'>>;
 
-export type PaymentPatch = Partial<Omit<PaymentIntent, 'id'>>;
+export type PaymentPatch = Partial<Omit<PaymentIntent, 'id' | 'failureReason'>> & { failureReason?: string | null };
 export type SubscriptionPatch = Partial<Omit<Subscription, 'id' | 'canceledAt' | 'paymentCardId'>> & { canceledAt?: string | null; paymentCardId?: string | null };
 export type NewSubscription = Omit<Subscription, 'id' | 'createdAt' | 'interval' | 'paymentCardId' | 'trialReminderSentAt'> & Partial<Pick<Subscription, 'interval' | 'paymentCardId'>>;
 
@@ -78,14 +78,29 @@ export interface BalancePolicy {
   eligibleBefore: Date;
 }
 
-export type WebhookClaim = { claimed: true; attempts: number } | { claimed: false; status: 'done' | 'processing' | 'received' | 'failed' };
-
-export interface StoredWebhook {
-  eventId: string;
-  type: string | null;
-  payload: unknown;
-  status: 'received' | 'processing' | 'done' | 'failed';
-  attempts: number;
+export interface NewBankTransaction {
+  externalId: string;
+  gateway?: string;
+  accountNumber?: string;
+  amount: number;
+  description: string;
+  referenceCode?: string;
+  transactionDate: Date;
+  note?: string;
+  rawPayload: unknown;
+}
+export interface StoredBankTransaction {
+  id: string;
+  externalId: string;
+  gateway?: string;
+  amount: number;
+  description: string;
+  referenceCode?: string;
+  transactionDate: string;
+  matchedPaymentId?: string;
+  credited: boolean;
+  note?: string;
+  createdAt: string;
 }
 
 export interface LedgerEntryInput {
@@ -134,19 +149,24 @@ export interface PaymentsOps {
   /** Cấp số hóa đơn kế tiếp `INV-<năm>-<6 số>` (InvoiceSequence increment atomic; giữ khóa hàng tới hết transaction). */
   nextInvoiceNumber(year: number): Promise<string>;
 
-  // --- idempotency / webhook
+  // --- chuyển khoản ngân hàng
+  findByRefCode(refCode: string): Promise<PaymentIntent | undefined>;
+  /** Ghi giao dịch tiền vào (INSERT ... ON CONFLICT externalId DO NOTHING). created=false ⇒ đã thấy trước đó (webhook + quét trùng). */
+  recordBankTransaction(tx: NewBankTransaction): Promise<{ row: StoredBankTransaction; created: boolean }>;
+  markBankTransaction(externalId: string, patch: { credited?: boolean; matchedPaymentId?: string | null; note?: string | null }): Promise<void>;
+  listBankTransactions(filter: { credited?: boolean }, page: number, limit: number): Promise<Page<StoredBankTransaction>>;
+  /** Phiên chuyển khoản còn `pending` nhưng đã quá `expiresAt` (job dọn). */
+  listExpiredPending(now: Date, limit: number): Promise<PaymentIntent[]>;
+  /** Gói active (không hủy cuối kỳ) sắp hết kỳ trong `windowDays` ngày mà CHƯA có hóa đơn gia hạn pending/succeeded cho kỳ kế tiếp. */
+  listRenewalCandidates(now: Date, windowDays: number, limit: number): Promise<Subscription[]>;
+  /** Hóa đơn gia hạn MỚI NHẤT (mọi trạng thái) của gói cho kỳ bắt đầu tại `periodStart`. */
+  findRenewalForPeriod(subscriptionId: string, periodStart: Date): Promise<PaymentIntent | undefined>;
+  findBankTransactionById(id: string): Promise<StoredBankTransaction | undefined>;
+
+  // --- idempotency
   findIdempotent(userId: string, key: string): Promise<string | undefined>;
   /** Ghi (userId,key)→paymentId. Key đã tồn tại ⇒ ném lỗi P2002 (kiểm bằng `isUniqueViolation`); trong transaction lỗi này rollback cả transaction — bắt ở NGOÀI `transaction()`. */
   saveIdempotent(userId: string, key: string, paymentId: string): Promise<void>;
-  /**
-   * Nhận xử lý 1 webhook (atomic). Chưa có → INSERT status=processing. Đã có → chỉ nhận lại nếu `failed`/`received` hoặc `processing` quá `staleBefore`;
-   * `done` hoặc đang `processing` còn mới → claimed=false (trùng).
-   */
-  claimWebhookEvent(event: { id: string; type?: string; payload?: unknown }, staleBefore: Date): Promise<WebhookClaim>;
-  /** Chốt xử lý xong (done) hoặc lỗi (failed + lastError) — giữ lại để điều tra/replay, KHÔNG xóa. */
-  finishWebhookEvent(eventId: string, outcome: { ok: true } | { ok: false; error: string }): Promise<void>;
-  /** Webhook cần xử lý lại: failed, hoặc processing/received quá `staleBefore` và còn payload, attempts < maxAttempts. */
-  listReclaimableWebhooks(staleBefore: Date, maxAttempts: number, limit: number): Promise<StoredWebhook[]>;
 
   // --- subscriptions
   createSubscription(data: NewSubscription): Promise<Subscription>;
@@ -177,12 +197,10 @@ export interface PaymentsOps {
   findCard(id: string): Promise<StoredCard | undefined>;
   listCards(userId: string): Promise<StoredCard[]>;
   /**
-   * Nhắc dùng thử: gói trialing có thẻ, chưa hủy, chưa nhắc, còn trong cửa sổ `remindBefore` ngày trước khi trừ tiền. Claim nguyên tử
+   * Nhắc dùng thử: gói trialing, chưa hủy, chưa nhắc, còn trong cửa sổ `remindBefore` ngày trước khi trừ tiền. Claim nguyên tử
    * (UPDATE ... trialReminderSentAt IS NULL) nên chạy song song/lặp lại vẫn mỗi gói chỉ được trả về ĐÚNG MỘT lần.
    */
   claimTrialReminders(now: Date, remindBeforeDays: number, limit: number): Promise<Subscription[]>;
-  /** Giao dịch pending đã có gatewayChargeId (cổng đã trừ tiền nhưng chưa settle) quá `olderThan`. */
-  listUnsettledCharges(olderThan: Date, limit: number): Promise<PaymentIntent[]>;
   /** Khoản trừ trùng đã bị void nhưng chưa hoàn tiền xong (failed + failureReason duplicate_charge + refundedCents=0). */
   listUnrefundedVoids(olderThan: Date, limit: number): Promise<PaymentIntent[]>;
 
@@ -265,7 +283,7 @@ function toPayment(r: PaymentRow): PaymentIntent {
     method: r.method,
     amountUsd: centsToUsd(r.amountCents),
     amountCents: r.amountCents,
-    currency: 'usd',
+    currency: 'vnd',
     trialDays: r.trialDays,
     interval: r.interval,
     paymentCardId: r.paymentCardId ?? undefined,
@@ -275,6 +293,8 @@ function toPayment(r: PaymentRow): PaymentIntent {
     moduleId: r.moduleId ?? undefined,
     invoiceNumber: r.invoiceNumber ?? undefined,
     gatewayChargeId: r.gatewayChargeId ?? undefined,
+    refCode: r.refCode ?? undefined,
+    expiresAt: iso(r.expiresAt),
     refundedCents: r.refundedCents,
     failureReason: r.failureReason ?? undefined,
     periodStart: iso(r.periodStart),
@@ -306,6 +326,22 @@ function toSubscription(r: SubscriptionRow): Subscription {
 
 function toCard(r: { id: string; userId: string; gatewayToken: string; brand: string; last4: string; expMonth: number; expYear: number; createdAt: Date }): StoredCard {
   return { id: r.id, userId: r.userId, gatewayToken: r.gatewayToken, brand: r.brand, last4: r.last4, expMonth: r.expMonth, expYear: r.expYear, createdAt: r.createdAt.toISOString() };
+}
+
+function toBankTx(r: { id: string; externalId: string; gateway: string | null; amount: number; description: string; referenceCode: string | null; transactionDate: Date; matchedPaymentId: string | null; credited: boolean; note: string | null; createdAt: Date }): StoredBankTransaction {
+  return {
+    id: r.id,
+    externalId: r.externalId,
+    gateway: r.gateway ?? undefined,
+    amount: r.amount,
+    description: r.description,
+    referenceCode: r.referenceCode ?? undefined,
+    transactionDate: r.transactionDate.toISOString(),
+    matchedPaymentId: r.matchedPaymentId ?? undefined,
+    credited: r.credited,
+    note: r.note ?? undefined,
+    createdAt: r.createdAt.toISOString(),
+  };
 }
 
 function toRefund(r: RefundRow): RefundRequest {
@@ -354,6 +390,7 @@ function paymentData(p: PaymentPatch): Prisma.PaymentUncheckedUpdateManyInput {
     periodEnd: dateOrUndef(p.periodEnd),
     refundedCents: p.refundedCents,
     failureReason: p.failureReason,
+    expiresAt: dateOrUndef(p.expiresAt),
   };
 }
 
@@ -382,6 +419,8 @@ function makeOps(db: Db): PaymentsOps {
           moduleId: data.moduleId,
           invoiceNumber: data.invoiceNumber,
           gatewayChargeId: data.gatewayChargeId,
+          refCode: data.refCode,
+          expiresAt: data.expiresAt ? new Date(data.expiresAt) : undefined,
           failureReason: data.failureReason,
           periodStart: data.periodStart ? new Date(data.periodStart) : undefined,
           periodEnd: data.periodEnd ? new Date(data.periodEnd) : undefined,
@@ -429,46 +468,67 @@ function makeOps(db: Db): PaymentsOps {
     async saveIdempotent(userId, key, paymentId) {
       await db.idempotencyKey.create({ data: { userId, key, paymentId } });
     },
-    async claimWebhookEvent(event, staleBefore) {
-      const now = new Date();
-      try {
-        await db.webhookEvent.create({
-          data: { eventId: event.id, type: event.type ?? null, payload: (event.payload ?? undefined) as Prisma.InputJsonValue | undefined, status: 'processing', attempts: 1, processingAt: now },
-        });
-        return { claimed: true, attempts: 1 };
-      } catch (e) {
-        if (!isUniqueViolation(e)) throw e;
+    async findByRefCode(refCode) {
+      const row = await db.payment.findUnique({ where: { refCode } });
+      return row ? toPayment(row) : undefined;
+    },
+    async recordBankTransaction(t) {
+      const data = {
+        externalId: t.externalId,
+        gateway: t.gateway ?? null,
+        accountNumber: t.accountNumber ?? null,
+        amount: t.amount,
+        description: t.description,
+        referenceCode: t.referenceCode ?? null,
+        transactionDate: t.transactionDate,
+        note: t.note ?? null,
+        rawPayload: t.rawPayload as Prisma.InputJsonValue,
+      };
+      const created = await db.bankTransaction.createMany({ data: [data], skipDuplicates: true });
+      const row = await db.bankTransaction.findUniqueOrThrow({ where: { externalId: t.externalId } });
+      return { row: toBankTx(row), created: created.count === 1 };
+    },
+    async markBankTransaction(externalId, patch) {
+      await db.bankTransaction.updateMany({ where: { externalId }, data: { credited: patch.credited, matchedPaymentId: patch.matchedPaymentId, note: patch.note } });
+    },
+    async listBankTransactions(filter, page, limit) {
+      const where = filter.credited === undefined ? {} : { credited: filter.credited };
+      const [rows, total] = await Promise.all([
+        db.bankTransaction.findMany({ where, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], skip: (page - 1) * limit, take: limit }),
+        db.bankTransaction.count({ where }),
+      ]);
+      return { items: rows.map(toBankTx), total };
+    },
+    async listExpiredPending(now, limit) {
+      const rows = await db.payment.findMany({ where: { status: 'pending', method: 'bank_transfer', expiresAt: { lt: now } }, orderBy: { expiresAt: 'asc' }, take: limit });
+      return rows.map(toPayment);
+    },
+    async listRenewalCandidates(now, windowDays, limit) {
+      const rows = await db.$queryRaw<{ id: string }[]>`
+        SELECT s."id" FROM "Subscription" s
+        JOIN "Course" c ON c."id" = s."courseId"
+        WHERE s."status" = 'active' AND NOT s."cancelAtPeriodEnd"
+          AND s."currentPeriodEnd" > ${ts(now)}
+          AND s."currentPeriodEnd" <= ${ts(new Date(now.getTime() + windowDays * 86_400_000))}
+          AND c."deletedAt" IS NULL AND NOT c."locked" AND c."moderationStatus" <> 'suspended'
+          AND NOT EXISTS (
+            SELECT 1 FROM "Payment" p WHERE p."subscriptionId" = s."id" AND p."kind" = 'renewal'
+              AND p."status" IN ('pending', 'succeeded') AND p."periodStart" = s."currentPeriodEnd")
+        ORDER BY s."currentPeriodEnd" LIMIT ${limit}`;
+      const out: Subscription[] = [];
+      for (const r of rows) {
+        const sub = await ops.findSubscription(r.id);
+        if (sub) out.push(sub);
       }
-      // Đã có: chỉ nhận lại khi chưa xong và không có ai đang xử lý (failed / received / processing đã quá hạn). Atomic bằng updateMany có điều kiện.
-      const { count } = await db.webhookEvent.updateMany({
-        where: {
-          eventId: event.id,
-          OR: [{ status: { in: ['failed', 'received'] } }, { status: 'processing', OR: [{ processingAt: null }, { processingAt: { lt: staleBefore } }] }],
-        },
-        data: { status: 'processing', attempts: { increment: 1 }, processingAt: now, updatedAt: now },
-      });
-      const row = await db.webhookEvent.findUnique({ where: { eventId: event.id } });
-      if (count === 1 && row) return { claimed: true, attempts: row.attempts };
-      return { claimed: false, status: row?.status ?? 'done' };
+      return out;
     },
-    async finishWebhookEvent(eventId, outcome) {
-      const now = new Date();
-      await db.webhookEvent.updateMany({
-        where: { eventId },
-        data: outcome.ok ? { status: 'done', processedAt: now, lastError: null, updatedAt: now } : { status: 'failed', lastError: outcome.error.slice(0, 500), updatedAt: now },
-      });
+    async findRenewalForPeriod(subscriptionId, periodStart) {
+      const row = await db.payment.findFirst({ where: { subscriptionId, kind: 'renewal', periodStart }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }] });
+      return row ? toPayment(row) : undefined;
     },
-    async listReclaimableWebhooks(staleBefore, maxAttempts, limit) {
-      const rows = await db.webhookEvent.findMany({
-        where: {
-          attempts: { lt: maxAttempts },
-          payload: { not: Prisma.DbNull },
-          OR: [{ status: 'failed' }, { status: { in: ['processing', 'received'] }, updatedAt: { lt: staleBefore } }],
-        },
-        orderBy: { receivedAt: 'asc' },
-        take: limit,
-      });
-      return rows.map((r) => ({ eventId: r.eventId, type: r.type, payload: r.payload, status: r.status, attempts: r.attempts }));
+    async findBankTransactionById(id) {
+      const row = await db.bankTransaction.findUnique({ where: { id } });
+      return row ? toBankTx(row) : undefined;
     },
 
     async createSubscription(data) {
@@ -569,7 +629,7 @@ function makeOps(db: Db): PaymentsOps {
         UPDATE "Subscription" SET "trialReminderSentAt" = ${ts(now)}
         WHERE "id" IN (
           SELECT s."id" FROM "Subscription" s
-          WHERE s."status" = 'trialing' AND s."paymentCardId" IS NOT NULL AND NOT s."cancelAtPeriodEnd" AND s."trialReminderSentAt" IS NULL
+          WHERE s."status" = 'trialing' AND NOT s."cancelAtPeriodEnd" AND s."trialReminderSentAt" IS NULL
             AND s."currentPeriodEnd" > ${ts(now)}
             AND s."currentPeriodEnd" <= ${ts(new Date(now.getTime() + remindBeforeDays * 86_400_000))}
           ORDER BY s."currentPeriodEnd" LIMIT ${limit} FOR UPDATE SKIP LOCKED)
@@ -583,14 +643,10 @@ function makeOps(db: Db): PaymentsOps {
     },
     async findReusablePending(userId, communityId, since, match) {
       const row = await db.payment.findFirst({
-        where: { userId, communityId, status: 'pending', kind: 'initial', createdAt: { gte: since }, ...(match ? { interval: match.interval, amountCents: match.amountCents } : {}) },
+        where: { userId, communityId, status: 'pending', kind: 'initial', createdAt: { gte: since }, expiresAt: { gt: new Date() }, ...(match ? { interval: match.interval, amountCents: match.amountCents } : {}) },
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       });
       return row ? toPayment(row) : undefined;
-    },
-    async listUnsettledCharges(olderThan, limit) {
-      const rows = await db.payment.findMany({ where: { status: 'pending', gatewayChargeId: { not: null }, updatedAt: { lt: olderThan } }, orderBy: { createdAt: 'asc' }, take: limit });
-      return rows.map(toPayment);
     },
     async listUnrefundedVoids(olderThan, limit) {
       const rows = await db.payment.findMany({
@@ -712,7 +768,7 @@ function makeOps(db: Db): PaymentsOps {
     },
     async findReusablePendingModule(userId, moduleId, since, amountCents) {
       const row = await db.payment.findFirst({
-        where: { userId, moduleId, kind: 'module', status: 'pending', amountCents, createdAt: { gte: since } },
+        where: { userId, moduleId, kind: 'module', status: 'pending', amountCents, createdAt: { gte: since }, expiresAt: { gt: new Date() } },
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       });
       return row ? toPayment(row) : undefined;

@@ -20,7 +20,7 @@
     "promiseMax": "Lời hứa tối đa 100 ký tự",
     "videoUrl": "Đường dẫn video không hợp lệ (dán link YouTube hoặc Vimeo)",
     "priceMonthlyRequired": "Nhập giá thành viên hàng tháng lớn hơn 0",
-    "priceMax": "Giá tối đa {{max}} USD",
+    "priceMax": "Giá tối đa {{max}} ₫",
     "priceAnnualRequired": "Nhập giá thành viên hàng năm lớn hơn 0",
     "priceAnnualTooHigh": "Giá năm không được cao hơn 12 tháng cộng lại",
     "questionMin": "Câu hỏi tối thiểu 3 ký tự (hoặc xóa câu hỏi này)",

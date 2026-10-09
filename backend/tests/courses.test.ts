@@ -256,9 +256,9 @@ describe('courses + enrollments (Prisma)', () => {
       const created = await catalogService.create({
         id: 'cong-dong-moi', title: 'Cộng đồng mới', description: 'Mô tả', category: 'hobby', tag: 'new', thumbnail: '/t.webp',
         instructor: { name: 'Chủ', role: 'Chủ cộng đồng' }, lessons: 0, durationMinutes: 0, students: 0, rating: 0, ratingCount: 0,
-        priceUsd: 9.99, pricing: 'paid', visibility: 'public', status: 'open', language: 'vi', createdAt: new Date().toISOString(), ownerId: owner.id,
+        priceUsd: 250_000, pricing: 'paid', visibility: 'public', status: 'open', language: 'vi', createdAt: new Date().toISOString(), ownerId: owner.id,
       });
-      assert.equal(created.priceUsd, 9.99);
+      assert.equal(created.priceUsd, 250_000);
       assert.equal(created.students, 0);
       assert.equal(created.ownerId, owner.id);
       assert.equal(await catalogService.idExists('cong-dong-moi'), true);

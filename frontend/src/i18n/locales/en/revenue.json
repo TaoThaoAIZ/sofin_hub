@@ -3,7 +3,7 @@
     "PAYOUT_BLOCKED": "Your net balance is negative due to refunds after withdrawal — you cannot withdraw more until the debt is offset.",
     "COMMUNITY_LOCKED": "The community is locked, so withdrawals are unavailable.",
     "generic": "Something went wrong, please try again",
-    "invalidAmount": "Enter a valid amount (USD).",
+    "invalidAmount": "Enter a valid amount (VND).",
     "overBalance": "The amount exceeds your withdrawable balance ({{amount}}).",
     "invalidAccount": "Account number must be 6–20 digits."
   },
@@ -17,7 +17,7 @@
   },
   "form": {
     "title": "Request a payout",
-    "amount": "Amount (USD) — {{amount}} available",
+    "amount": "Amount (VND) — you can withdraw {{amount}}",
     "bank": "Bank",
     "account": "Account number",
     "holder": "Account holder",

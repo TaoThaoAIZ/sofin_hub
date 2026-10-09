@@ -16,18 +16,6 @@
     "title": "Settings",
     "unsavedConfirm": "You have unsaved changes on the Profile tab. Leaving will discard them. Leave anyway?"
   },
-  "card": {
-    "addedToast": "Card •••• {{last4}} added",
-    "updatedToast": "Card updated",
-    "titleAdd": "Add new card",
-    "titleUpdateDefault": "Update default card",
-    "titleUpdate": "Update card •••• {{last4}}",
-    "body": "Your card details are encrypted and stored securely.",
-    "number": "Card number",
-    "expiry": "Expiry",
-    "addBtn": "Add card",
-    "updateBtn": "Update"
-  },
   "refund": {
     "title": "Request a refund",
     "approved": "Your request was approved automatically (within the refund window). The amount will be refunded.",
@@ -69,8 +57,8 @@
     "annualPlan": " · annual plan",
     "colDate": "Date",
     "colDesc": "Description",
-    "colAmount": "Amount (USD)",
-    "colRefunded": "Refunded (USD)",
+    "colAmount": "Amount (VND)",
+    "colRefunded": "Refunded (VND)",
     "colStatus": "Status",
     "colInvoice": "Invoice no."
   },
@@ -248,25 +236,11 @@
   },
   "billing": {
     "loading": "Loading…",
-    "cards": {
-      "title": "Payment methods",
-      "sub": "Manage your payment cards.",
-      "empty": "You haven’t saved any cards. Add a card to renew your membership automatically.",
-      "expired": "Expired {{exp}}",
-      "expires": "Expires {{exp}}",
-      "default": "Default",
-      "options": "Options for card {{last4}}",
-      "setDefault": "Set as default",
-      "defaultToast": "Card •••• {{last4}} set as default",
-      "update": "Update card",
-      "delete": "Delete card",
-      "add": "Add card"
-    },
     "next": {
-      "title": "Next charge",
+      "title": "Next invoice",
       "line": "{{date}} · {{community}}{{trial}}",
       "trialEnds": " (trial ends)",
-      "none": "No active plans",
+      "none": "No upcoming invoice",
       "monthly": "Monthly total"
     },
     "sub": {
@@ -279,8 +253,8 @@
       "perYear": "year",
       "perMonth": "month",
       "lineCanceling": "{{price}} / {{per}} · Expires {{date}}",
-      "lineTrial": "Trial · {{price}} will be charged on {{date}}",
-      "lineActive": "{{price}} / {{per}} · Renews {{date}}",
+      "lineTrial": "Trial · pay {{price}} by {{date}}",
+      "lineActive": "{{price}} / {{per}} · Next period {{date}}",
       "lineEnded": "{{price}} / {{per}} · Ended {{date}}",
       "title": "My memberships",
       "sub": "The communities you’ve joined.",
@@ -307,10 +281,12 @@
       "refundPending": "Refund: pending",
       "invoice": "Invoice"
     },
-    "del": {
-      "title": "Delete card •••• {{last4}}?",
-      "body": "The card will be removed from your account. Any plan using this card will switch to your remaining default card; if this is the only card for an active plan, you need to add another card first.",
-      "toast": "Card •••• {{last4}} deleted"
+    "pending": {
+      "title": "Awaiting payment",
+      "sub": "Memberships are not charged automatically — you pay by QR bank transfer.",
+      "empty": "Nothing needs payment right now.",
+      "until": "due {{date}}",
+      "payNow": "Pay now"
     }
   },
   "communitiesTab": {

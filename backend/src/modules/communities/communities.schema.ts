@@ -7,7 +7,7 @@ import { memberFields, priceError } from '../community-wizard/wizard.schema.js';
 const title = z.string().trim().min(3, 'Tên cộng đồng tối thiểu 3 ký tự').max(80, 'Tên cộng đồng tối đa 80 ký tự');
 const description = z.string().trim().min(1, 'Vui lòng nhập mô tả').max(2000, 'Mô tả tối đa 2000 ký tự');
 const thumbnail = z.string().trim().min(1).max(500);
-const priceUsd = z.number({ error: 'Giá không hợp lệ' }).min(0, 'Giá không được âm').max(10000);
+const priceUsd = z.number({ error: 'Giá không hợp lệ' }).min(0, 'Giá không được âm').max(50_000_000, 'Giá tối đa 50.000.000đ');
 
 export const createCommunityBody = z.object({
   title,

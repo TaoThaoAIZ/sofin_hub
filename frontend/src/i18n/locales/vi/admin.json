@@ -435,7 +435,8 @@
       "system_notifications": "Thông báo",
       "system_email": "Mẫu email",
       "system_audit": "Nhật ký hoạt động",
-      "system_settings": "Cài đặt chung"
+      "system_settings": "Cài đặt chung",
+      "payments_bank": "Tiền vào ngân hàng"
     }
   }
 }

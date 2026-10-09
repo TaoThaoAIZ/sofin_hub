@@ -14,7 +14,7 @@ export function RefundModal({ payment, onClose }: { payment: PaymentRecord; onCl
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<RefundStatus | null>(null);
   const tooShort = reason.trim().length < 3;
-  const amount = formatCents(payment.amountCents ?? Math.round(payment.amountUsd * 100));
+  const amount = formatCents(payment.amountCents ?? payment.amountUsd);
 
   const submit = () => {
     setError(null);

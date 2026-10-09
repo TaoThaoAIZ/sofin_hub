@@ -12,7 +12,7 @@
     "done": "Đã hoàn tiền giao dịch"
   },
   "common": {
-    "amountRange": "Nhập số tiền từ $0.01 đến {{max}}.",
+    "amountRange": "Nhập số tiền từ 1 ₫ đến {{max}}.",
     "refundsTitle": "Hoàn tiền",
     "transactionsTitle": "Giao dịch",
     "pauseTab": "Tạm dừng",
@@ -71,9 +71,10 @@
     "deadline": "Hạn chót",
     "submitted": "Đã nộp",
     "missing": "Còn thiếu",
-    "refundAmountUsd": "Số tiền hoàn (USD)",
+    "refundAmountUsd": "Số tiền hoàn (VND)",
     "refundedAmount": "Đã hoàn",
-    "nameAZ": "Tên A–Z"
+    "nameAZ": "Tên A–Z",
+    "approveManual": "Duyệt tay"
   },
   "transactions": {
     "failedNote": "{{n}} giao dịch"
@@ -100,7 +101,16 @@
     "timeline": "Dòng thời gian thanh toán",
     "noEvents": "Chưa có sự kiện nào.",
     "paymentDetails": "Chi tiết thanh toán",
-    "refundsAndDisputes": "Hoàn tiền & tranh chấp"
+    "refundsAndDisputes": "Hoàn tiền & tranh chấp",
+    "reopenSession": "Mở lại phiên chuyển khoản",
+    "reopenTitle": "Mở lại phiên chuyển khoản?",
+    "reopenBody": "Phiên chuyển khoản của {{code}} đã hết hạn. Mở lại sẽ tạo mã QR mới cho khách thanh toán.",
+    "reopenSent": "Đã mở lại phiên chuyển khoản",
+    "approveTitle": "Duyệt tay thanh toán",
+    "approveBody": "Xác nhận đã nhận {{amount}} cho giao dịch {{code}} (mã chuyển khoản {{ref}}) và cấp quyền cho khách ngay? Chỉ duyệt khi bạn đã thấy tiền trong tài khoản ngân hàng.",
+    "approveCta": "Xác nhận đã nhận tiền & cấp quyền",
+    "approved": "Đã duyệt tay, khách đã được cấp quyền",
+    "refCode": "Mã chuyển khoản"
   },
   "subs": {
     "pauseBody": "{{code}}. Thành viên mất quyền truy cập và gói không gia hạn cho đến khi tiếp tục.",
@@ -277,5 +287,35 @@
     "renewal": "Gia hạn",
     "oldest": "Cũ nhất",
     "highestAmount": "Số tiền cao nhất"
+  },
+  "bank": {
+    "pageTitle": "Tiền vào ngân hàng",
+    "pageSubtitle": "Mọi giao dịch tiền vào từ ngân hàng (SePay). Khoản chưa ghi có cần duyệt tay.",
+    "scanNow": "Quét ngay",
+    "scanning": "Đang quét…",
+    "scanDone": "Đã quét {{scanned}} giao dịch: ghi có {{credited}}, đã xử lý {{already}}, chưa khớp {{unmatched}}, thiếu tiền {{underpaid}}, bỏ qua {{skipped}}, lỗi {{errors}}.",
+    "scanFailed": "Không quét được giao dịch ngân hàng",
+    "notConfiguredTitle": "Chưa cấu hình ngân hàng.",
+    "notConfiguredBody": "Thiếu thông tin tài khoản/SePay trên máy chủ nên khách chưa thể thanh toán bằng chuyển khoản.",
+    "tableTitle": "Giao dịch tiền vào",
+    "tableSub": "{{count}} giao dịch",
+    "empty": "Chưa có giao dịch tiền vào nào. Tiền chuyển khoản về sẽ hiện ở đây (kể cả khoản đã tự khớp).",
+    "colDate": "Thời gian",
+    "colDesc": "Nội dung",
+    "colRef": "Mã tham chiếu",
+    "colBank": "Ngân hàng",
+    "colNote": "Ghi chú",
+    "approveBtn": "Duyệt tay",
+    "approveTitle": "Duyệt tay giao dịch ngân hàng",
+    "approveBody": "Gán khoản {{amount}} (\"{{desc}}\") cho một thanh toán đang chờ. Quyền truy cập sẽ được cấp ngay.",
+    "approveCta": "Duyệt và ghi có",
+    "refCodeLabel": "Mã thanh toán (refCode)",
+    "refCodePlaceholder": "VD: SFH1234ABCD",
+    "approved": "Đã duyệt và ghi có thanh toán",
+    "colStatus": "Trạng thái",
+    "statusCredited": "Đã ghi có",
+    "statusPending": "Chưa ghi có",
+    "tabPending": "Chưa ghi có",
+    "tabCredited": "Đã ghi có"
   }
 }

@@ -19,12 +19,12 @@ const userMatch = (q: string): Prisma.UserWhereInput => ({ OR: [{ firstName: lik
 
 const bp = (pct: number) => Math.round(pct * 100);
 const rates = () => ({ commissionBp: bp(cfg().payments.commissionPct), gatewayFeeBp: bp(cfg().payments.gatewayFeePct), gatewayFeeFixedCents: cfg().payments.gatewayFeeFixedCents });
-const METHOD_LABEL = { stripe: 'Stripe', vnpay: 'VNPay', momo: 'MoMo' } as const;
+const METHOD_LABEL = { stripe: 'Stripe', vnpay: 'VNPay', momo: 'MoMo', bank_transfer: 'Chuyển khoản' } as const;
 
 const tell = (userId: string | null | undefined, title: string, body: string, communityId?: string) => {
   if (userId) notify({ userId, type: 'system', title, body, ...(communityId ? { communityId } : {}) });
 };
-const usd = (cents: number) => `${(cents / 100).toFixed(2)} USD`;
+const usd = (vnd: number) => `${Math.round(vnd).toLocaleString('vi-VN')}đ`; // tên cũ; tiền nay là VND
 
 /** Phí theo công thức của `/courses/:id/revenue` (số nguyên, làm tròn như SQL). Giao dịch chưa thành công = 0. */
 function fees(p: { status: string; amountCents: number; refundedCents: number }) {
@@ -39,7 +39,7 @@ function fees(p: { status: string; amountCents: number; refundedCents: number })
 export const txQuery = pageQuery.extend({
   q: z.string().trim().max(100).optional(),
   status: z.string().optional(),
-  method: z.enum(['stripe', 'vnpay', 'momo']).optional(),
+  method: z.enum(['stripe', 'vnpay', 'momo', 'bank_transfer']).optional(),
   communityId: z.string().max(100).optional(),
   userId: z.string().max(100).optional(),
   ownerId: z.string().max(100).optional(),
@@ -123,6 +123,9 @@ const toTx = (p: TxRow) => ({
   ...fees(p),
   status: p.status,
   failureReason: p.failureReason,
+  /** Mã chuyển khoản khách ghi vào nội dung CK; có mã + status pending/expired ⇒ admin duyệt tay được. */
+  refCode: p.refCode,
+  expiresAt: iso(p.expiresAt),
   subscriptionId: p.subscriptionId,
   createdAt: p.createdAt.toISOString(),
   confirmedAt: iso(p.confirmedAt),
@@ -135,7 +138,7 @@ function txWhere(q: z.infer<typeof txQuery>): Prisma.PaymentWhereInput {
   const and: Prisma.PaymentWhereInput[] = [];
   if (q.q) {
     const t = codePrefix(q.q, 'TXN');
-    and.push({ OR: [{ invoiceNumber: likeAny(q.q) }, { gatewayChargeId: likeAny(q.q) }, { user: userMatch(q.q) }, { community: { title: likeAny(q.q) } }, ...(t ? [{ id: { startsWith: t } }] : [])] });
+    and.push({ OR: [{ invoiceNumber: likeAny(q.q) }, { gatewayChargeId: likeAny(q.q) }, { refCode: likeAny(q.q) }, { user: userMatch(q.q) }, { community: { title: likeAny(q.q) } }, ...(t ? [{ id: { startsWith: t } }] : [])] });
   }
   return {
     ...(statuses.length ? { status: { in: statuses } } : {}),
@@ -325,7 +328,7 @@ export const adminPaymentsService = {
     return {
       ...tx,
       gatewayChargeId: p.gatewayChargeId,
-      gateway: `${METHOD_LABEL[p.method]} (mock)`,
+      gateway: p.method === 'bank_transfer' ? 'Chuyển khoản VietQR (SePay)' : `${METHOD_LABEL[p.method]} (cũ)`,
       customerInfo: { ...person(p.user)!, joinedAt: u.createdAt.toISOString(), status: u.status },
       creator: person(p.community.owner),
       subscription: sub ? { id: sub.id, status: sub.status, currentPeriodEnd: sub.currentPeriodEnd.toISOString() } : null,

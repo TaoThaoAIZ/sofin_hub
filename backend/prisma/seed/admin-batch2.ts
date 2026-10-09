@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import type { Prisma } from '../../src/generated/prisma/client.js';
 import type { PaymentMethod, PayoutStatus, SubscriptionStatus } from '../../src/generated/prisma/enums.js';
+import { seedVnd } from '../../src/db/enums.js';
 import { adminSeedUserId as uid } from './admin.js';
 import type { SeedContext } from './context.js';
 import { ensureDefaultCourse } from './courses.js';
@@ -50,7 +51,7 @@ export async function seedAdminBatch2(ctx: SeedContext): Promise<void> {
       where: { id: c.id },
       create: {
         id: c.id, title: c.title, description: c.desc ?? c.title, category: c.cat, tag: 'new', thumbnail: c.id === 'spam-hub' ? '' : '/images/courses/biz.webp',
-        instructorName: c.owner, instructorRole: 'Chủ cộng đồng', priceCents: c.price * 100, pricing: c.price ? 'paid' : 'free', visibility: 'public', status: 'open',
+        instructorName: c.owner, instructorRole: 'Chủ cộng đồng', priceCents: seedVnd(c.price), pricing: c.price ? 'paid' : 'free', visibility: 'public', status: 'open',
         language: 'vi', ownerId: uid(c.owner), createdAt: ago(c.ago), discoveryStatus: c.discovery ?? 'listed', searchVisibility: c.search ?? 'searchable',
         discoveryReason: c.discovery && c.discovery !== 'listed' ? 'Low quality / spam signals' : null, discoveryUpdatedAt: c.discovery ? ago(2) : null, discoveryUpdatedById: c.discovery ? adminId : null,
       },
@@ -68,7 +69,7 @@ export async function seedAdminBatch2(ctx: SeedContext): Promise<void> {
 
   // ------------------------------------------------------------------ gói thành viên + giao dịch
   const STATUS_CYCLE: SubscriptionStatus[] = ['active', 'active', 'active', 'past_due', 'paused', 'canceled', 'expired', 'trialing', 'active'];
-  const METHODS: PaymentMethod[] = ['stripe', 'stripe', 'momo', 'vnpay', 'stripe'];
+  const METHODS: PaymentMethod[] = ['bank_transfer'];
   interface Pay { id: string; userKey: Key; comId: string; status: string; amount: number; sub?: string }
   const pays: Pay[] = [];
   let payN = 0;
@@ -78,7 +79,7 @@ export async function seedAdminBatch2(ctx: SeedContext): Promise<void> {
     const id = sid(`pay-${n}`);
     const at = ago(p.daysAgo);
     const ok = p.status === 'succeeded' || p.status === 'refunded';
-    const amount = p.com.price * 100;
+    const amount = seedVnd(p.com.price);
     await db.payment.upsert({
       where: { id },
       create: {
@@ -107,7 +108,7 @@ export async function seedAdminBatch2(ctx: SeedContext): Promise<void> {
       await db.subscription.upsert({
         where: { id: subId },
         create: {
-          id: subId, userId: uid(key), communityId: com.id, status, priceCents: com.price * 100, cancelAtPeriodEnd: cancelEnd,
+          id: subId, userId: uid(key), communityId: com.id, status, priceCents: seedVnd(com.price), cancelAtPeriodEnd: cancelEnd,
           currentPeriodStart: ago(status === 'active' ? lastPaid : 31), currentPeriodEnd: status === 'active' ? ahead(30 - lastPaid) : status === 'trialing' ? ahead(4) : ago(status === 'past_due' ? 2 : 10),
           trialEndsAt: status === 'trialing' ? ahead(4) : null, canceledAt: status === 'canceled' || cancelEnd ? ago(6) : null, createdAt: ago(startDaysAgo),
         },
@@ -134,7 +135,7 @@ export async function seedAdminBatch2(ctx: SeedContext): Promise<void> {
     { userKey: 'ava', com: comOf('growth-lab'), status: 'pending', daysAgo: 0.1, method: 'momo' },
     { userKey: 'lucas', com: comOf('mindful-money'), status: 'pending', daysAgo: 0.3, method: 'vnpay' },
     { userKey: 'olivia', com: comOf('pixel-pro'), status: 'refunded', daysAgo: 9 },
-    { userKey: 'daniel', com: comOf('fit-forever'), status: 'refunded', daysAgo: 14, refunded: 3950 },
+    { userKey: 'daniel', com: comOf('fit-forever'), status: 'refunded', daysAgo: 14, refunded: 987_500 },
     { userKey: 'noah', com: comOf('growth-lab'), status: 'refunded', daysAgo: 20 },
     { userKey: 'ava', com: comOf('pixel-pro'), status: 'succeeded', daysAgo: 4 },
     { userKey: 'emma', com: comOf('code-camp'), status: 'succeeded', daysAgo: 6 },
@@ -165,7 +166,7 @@ export async function seedAdminBatch2(ctx: SeedContext): Promise<void> {
     });
   };
   await addRefund(refundedPays[0]!, 'approved', 9, { note: 'Approved: billing error' });
-  await addRefund(refundedPays[1]!, 'approved', 14, { amount: 3950, note: 'Partial refund (50%) as goodwill' });
+  await addRefund(refundedPays[1]!, 'approved', 14, { amount: 987_500, note: 'Partial refund (50%) as goodwill' });
   await addRefund(refundedPays[2]!, 'approved', 20, { auto: true });
   const pendingTargets = okPays.slice(0, 4);
   for (let k = 0; k < pendingTargets.length; k++) await addRefund(pendingTargets[k]!, 'pending', 1 + k * 2);
@@ -222,7 +223,7 @@ export async function seedAdminBatch2(ctx: SeedContext): Promise<void> {
     await db.payout.upsert({
       where: { id: sid(`payout-${k + 1}`) },
       create: {
-        id: sid(`payout-${k + 1}`), communityId: com.id, ownerId: uid(com.owner), amountCents: p.amount * 100, bankName: p.bank, accountHolder: `${com.owner} account`, accountLast4: p.last4,
+        id: sid(`payout-${k + 1}`), communityId: com.id, ownerId: uid(com.owner), amountCents: seedVnd(p.amount), bankName: p.bank, accountHolder: `${com.owner} account`, accountLast4: p.last4,
         status: p.status, note: p.note ?? null, failureReason: p.fail ?? null, heldFromStatus: p.heldFrom ?? null, createdAt: ago(p.days), updatedAt: ago(Math.max(0, p.days - 1)),
       },
       update: {},
@@ -442,7 +443,7 @@ export async function seedAdminBatch2(ctx: SeedContext): Promise<void> {
     { n: 4, hours: 30, action: 'media.remove', type: 'media', target: `${hex(sid('media-10'))}.zip`, label: 'signals-pack.zip', reason: 'Malware risk' },
     { n: 5, hours: 24, action: 'event.remove', type: 'event', target: sid('event-8'), label: 'Secret wealth webinar', reason: 'Misleading promotion' },
     { n: 6, hours: 22, action: 'event.cancel', type: 'event', target: sid('event-7'), label: 'Hack night', reason: 'Host unavailable' },
-    { n: 7, hours: 120, action: 'refund.approve', type: 'refund', target: sid('refund-1'), label: 'RF-REFUND1', meta: { requestedCents: 4900 } },
+    { n: 7, hours: 120, action: 'refund.approve', type: 'refund', target: sid('refund-1'), label: 'RF-REFUND1', meta: { requestedCents: 1_225_000 } },
     { n: 8, hours: 72, action: 'payout.hold', type: 'payout', target: sid('payout-9'), label: 'PO · Noah', reason: 'Identity re-verification' },
     { n: 9, hours: 60, action: 'payout.mark_failed', type: 'payout', target: sid('payout-8'), label: 'PO · Emma', reason: 'Bank account closed' },
     { n: 10, hours: 48, action: 'discovery.status', type: 'community', target: 'spam-hub', label: 'Spam Hub', reason: 'Low quality / spam signals', meta: { from: 'listed', to: 'unlisted' } },

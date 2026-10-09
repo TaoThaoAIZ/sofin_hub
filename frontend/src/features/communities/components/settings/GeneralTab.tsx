@@ -8,6 +8,7 @@ import { useUpdateCommunity } from '../../queries';
 import { ROLE_RANK, type UpdateCommunityInput, type ViewerRole } from '../../types';
 import { ErrorLine, errorText, INPUT_CLASS } from '../Modal';
 
+import { formatCents } from '../../../../lib/datetime';
 function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
     <label className="block">
@@ -41,7 +42,7 @@ export function GeneralTab({ course, viewerRole }: { course: CommunityDetail; vi
     const price = Number(priceText);
     if (title.trim().length < 3 || title.trim().length > 80) return setLocalError(t('general.errTitle'));
     if (!description.trim()) return setLocalError(t('general.errDesc'));
-    if (isOwner && (priceText.trim() === '' || !Number.isFinite(price) || price < 0 || price > 10000)) {
+    if (isOwner && (priceText.trim() === '' || !Number.isFinite(price) || price < 0 || price > 50_000_000)) {
       return setLocalError(t('general.errPrice'));
     }
     setLocalError(null);
@@ -100,7 +101,7 @@ export function GeneralTab({ course, viewerRole }: { course: CommunityDetail; vi
               </select>
             </Field>
             <Field label={t('general.price')} hint={t('general.priceHint')}>
-              <input value={priceText} onChange={(e) => setPriceText(e.target.value)} inputMode="decimal" className={INPUT_CLASS} />
+              <input value={priceText} onChange={(e) => setPriceText(e.target.value)} inputMode="numeric" className={INPUT_CLASS} />
             </Field>
           </div>
         ) : (
@@ -110,7 +111,7 @@ export function GeneralTab({ course, viewerRole }: { course: CommunityDetail; vi
               i18nKey="general.current"
               values={{
                 visibility: course.visibility === 'private' ? t('general.private') : t('general.public'),
-                price: course.priceUsd === 0 ? t('general.free') : t('general.perMonth', { price: course.priceUsd }),
+                price: course.priceUsd === 0 ? t('general.free') : t('general.perMonth', { price: formatCents(course.priceUsd) }),
               }}
               components={{ b: <b /> }}
             />

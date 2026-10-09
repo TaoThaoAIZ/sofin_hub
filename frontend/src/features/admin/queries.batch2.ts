@@ -48,3 +48,44 @@ export function useAdminAction() {
 
 /** Tiện ích: thoát khỏi `undefined` trong body trước khi gửi (JSON.stringify đã bỏ, nhưng giữ cho rõ). */
 export const clean = <T extends object>(o: T) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined && v !== '')) as Partial<T>;
+
+/* ---- Tiền vào ngân hàng (SePay) ---- */
+
+export interface BankTransaction {
+  id: string;
+  externalId: string;
+  gateway: string;
+  amount: number;
+  description: string;
+  referenceCode: string | null;
+  transactionDate: string;
+  matchedPaymentId: string | null;
+  credited: boolean;
+  note: string | null;
+  createdAt: string;
+}
+
+export interface BankScanResult {
+  scanned: number;
+  credited: number;
+  already: number;
+  unmatched: number;
+  underpaid: number;
+  errors: number;
+  skipped: number;
+}
+
+export const useBankStatus = () =>
+  useQuery({
+    queryKey: ['admin', 'bank', 'status'],
+    queryFn: ({ signal }) => apiGet<{ data: { configured: boolean } }>('/admin/bank/status', undefined, signal).then((r) => r.data),
+  });
+
+/** Giao dịch ngân hàng chưa được ghi có (credited=false) — cần admin xử lý tay. */
+/** `credited`: 'false' = chưa ghi có, 'true' = đã ghi có, '' = tất cả. */
+export const useBankTransactions = (page: number, limit: number, credited: '' | 'true' | 'false' = '') =>
+  useQuery({
+    queryKey: ['admin', 'bank', 'transactions', page, limit, credited],
+    queryFn: ({ signal }) => apiGet<{ data: BankTransaction[]; total: number; page: number; limit: number }>('/admin/bank/transactions', { ...(credited ? { credited } : {}), page, limit }, signal),
+    placeholderData: keepPreviousData,
+  });

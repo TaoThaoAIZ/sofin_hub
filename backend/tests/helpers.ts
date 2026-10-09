@@ -13,6 +13,12 @@ import type { PrismaClient } from '../src/generated/prisma/client.js';
 process.env.NODE_ENV = 'test';
 // Hộp thư dev (GET /api/dev/outbox) chỉ mount khi bật tường minh; test cần nó để lấy token reset/verify.
 process.env.ENABLE_DEV_OUTBOX = '1';
+// Thanh toán = chuyển khoản: test cần tài khoản nhận tiền + key webhook SePay (đặt TRƯỚC khi nạp env.ts).
+export const TEST_WEBHOOK_KEY = 'test-sepay-key';
+process.env.BANK_ACCOUNT ||= '0123456789';
+process.env.BANK_ACCOUNT_NAME ||= 'SOFINHUB TEST';
+process.env.SEPAY_WEBHOOK_KEY ||= TEST_WEBHOOK_KEY;
+process.env.SEPAY_API_TOKEN = ''; // test không gọi SePay thật; test quét tự dựng fetch giả
 
 /* ------------------------------------------------------------------------------------------------
  * DB thật (Postgres) cho test. Xem backend/docs/DATABASE.md, mục "Viết test với DB thật".
@@ -210,6 +216,42 @@ export function makeClient(baseUrl: string) {
     return verified;
   }
 
+  /** Gọi webhook SePay như ngân hàng đẩy sang. `key` sai/undefined để test từ chối. */
+  async function bankWebhook(body: Record<string, unknown>, opts: { key?: string | null; scheme?: string } = {}): Promise<ApiResult> {
+    const key = opts.key === undefined ? process.env.SEPAY_WEBHOOK_KEY : opts.key;
+    return call('POST', '/payments/webhook', { body, headers: key ? { Authorization: `${opts.scheme ?? 'Apikey'} ${key}` } : {} });
+  }
+
+  /** Dựng payload webhook SePay (tiền vào) cho 1 mã tham chiếu. */
+  function sepayTx(o: { id: string; refCode: string; amount: number; content?: string }) {
+    return {
+      id: o.id,
+      gateway: 'MBBank',
+      transactionDate: '2026-10-09 10:30:00',
+      accountNumber: process.env.BANK_ACCOUNT,
+      code: null,
+      content: o.content ?? `${o.refCode} chuyen tien`,
+      transferType: 'in',
+      transferAmount: o.amount,
+      referenceCode: `FT${o.id}`,
+    };
+  }
+
+  /**
+   * Mô phỏng khách chuyển ĐÚNG số tiền cho phiên thanh toán `id` rồi trả kết quả đọc lại phiên (hình dạng cũ của `/confirm`).
+   * externalId cố định theo phiên ⇒ gọi song song/lặp = webhook gửi trùng (phải idempotent). Đọc phiên lỗi (403/404) thì trả luôn lỗi đó.
+   */
+  async function payIntent(id: string, token: string, o: { amount?: number } = {}): Promise<ApiResult> {
+    const cur = await call('GET', `/payments/${id}`, { token });
+    if (cur.status !== 200) return cur;
+    const p = cur.body.data;
+    if (p.status === 'pending') {
+      const w = await bankWebhook(sepayTx({ id: `T${id.replaceAll('-', '')}`, refCode: p.refCode, amount: o.amount ?? p.amountCents }));
+      if (w.status !== 200) return w;
+    }
+    return call('GET', `/payments/${id}`, { token });
+  }
+
   let counter = 0;
   /** Đăng ký user mới (mật khẩu đạt quy tắc: >= 8 ký tự, có chữ hoa và ký tự đặc biệt) và trả về token + id. */
   async function registerUser(prefix = 'user') {
@@ -221,7 +263,7 @@ export function makeClient(baseUrl: string) {
     return { email, password, token: data.accessToken as string, id: data.user.id as string };
   }
 
-  return { call, registerUser, registerVerified, otpFor };
+  return { call, registerUser, registerVerified, otpFor, bankWebhook, sepayTx, payIntent };
 }
 
 /** Id khóa học mặc định của cộng đồng nền (xem seedBase) — dùng khi test tạo module bằng Prisma trực tiếp. */

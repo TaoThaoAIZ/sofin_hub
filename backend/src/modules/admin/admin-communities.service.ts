@@ -88,7 +88,7 @@ const toItem = (r: CommunityRow) => ({
   slug: r.id,
   category: r.category,
   pricing: r.pricing,
-  priceUsd: r.priceCents / 100,
+  priceUsd: r.priceCents,
   visibility: r.visibility,
   status: r.status,
   statusReason: r.statusReason,

@@ -73,7 +73,7 @@
     "membersChip": "{{n}} thành viên",
     "active": "Đang hoạt động",
     "free": "Miễn phí",
-    "perMonth": "${{price}}/tháng",
+    "perMonth": "{{price}}/tháng",
     "joinNow": "Tham gia ngay",
     "membership": "Gói thành viên",
     "byInstructor": "Bởi {{name}}",
@@ -84,7 +84,7 @@
     "highlights": "Nội dung nổi bật",
     "whatsFree": "CÓ GÌ MIỄN PHÍ?",
     "upgradeVip": "NÂNG CẤP VIP",
-    "upgradePrice": "(${{price}}/tháng)",
+    "upgradePrice": "({{price}}/tháng)",
     "communityFree": "Cộng đồng này miễn phí.",
     "founder": "Founder: {{name}}"
   },
@@ -780,7 +780,7 @@
       "backToEdit": "← Quay lại chỉnh sửa"
     },
     "lock": {
-      "paid": "Mua riêng ${{price}}",
+      "paid": "Mua riêng {{price}}",
       "selected": "Chỉ người được chọn",
       "draft": "Bản nháp"
     },

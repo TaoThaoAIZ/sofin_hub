@@ -77,7 +77,7 @@ const priceCents = z
   .number()
   .int('Giá phải là số nguyên (cent)')
   .min(1, 'Giá phải lớn hơn 0')
-  .max(100000 * 100, 'Giá tối đa 100.000');
+  .max(50_000_000, 'Giá tối đa 50.000.000đ');
 
 export const createModuleSchema = z.object({
   /** Chỉ route cũ (/courses/:id/modules) dùng: khóa học đích; bỏ trống = khóa mặc định. Route mới lấy :courseId từ URL. */

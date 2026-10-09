@@ -223,6 +223,9 @@ export interface AdminTransaction {
   creatorEarningsCents: number;
   status: TxStatus;
   failureReason: string | null;
+  /** Mã chuyển khoản (SFH…); có khi method = bank_transfer. */
+  refCode: string | null;
+  expiresAt: string | null;
   subscriptionId: string | null;
   createdAt: string;
   confirmedAt: string | null;
@@ -625,5 +628,5 @@ export const CATEGORY_DEFAULT_NAME: Record<string, string> = {
   get design() { return tl('labels.categoryDefaultName.design'); },
 };
 
-export const methodLabel = (m: string) => ({ stripe: 'Stripe', vnpay: 'VNPay', momo: 'MoMo' })[m] ?? m;
+export const methodLabel = (m: string) => ({ stripe: 'Stripe', vnpay: 'VNPay', momo: 'MoMo', bank_transfer: 'Chuyển khoản' })[m] ?? m;
 export const fmtBytes = (n: number) => (n >= 1e9 ? `${(n / 1e9).toFixed(1)} GB` : n >= 1e6 ? `${(n / 1e6).toFixed(1)} MB` : n >= 1e3 ? `${Math.round(n / 1e3)} KB` : `${n} B`);

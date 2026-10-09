@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { formatDateTime } from '../../../lib/datetime';
+import { formatCents, formatDateTime } from '../../../lib/datetime';
 import { AUDIT_ACTION, type AuditItem } from '../types';
 import { auditLabel } from '../types.batch3';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
@@ -436,7 +436,8 @@ export function useDialogSlot() {
 }
 
 /** Tiền cent -> "$1,234" (làm tròn đô) cho thẻ KPI lớn. */
-export const usd0 = (cents: number) => `$${(cents / 100).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+/** Tiền VND nguyên đồng (tên cũ `usd0` giữ lại để không đổi nơi gọi). */
+export const usd0 = (vnd: number) => formatCents(vnd);
 
 /** Chuyển ngày yyyy-mm-dd <-> ISO an toàn. */
 export const toDateInput = (iso: string | null | undefined) => (iso ? iso.slice(0, 10) : '');

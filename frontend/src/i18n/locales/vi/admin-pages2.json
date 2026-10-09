@@ -499,7 +499,7 @@
         "admin": "Quản trị viên",
         "mod": "Kiểm duyệt viên"
       },
-      "paidPrice": "Trả phí · ${{price}}/tháng",
+      "paidPrice": "Trả phí · {{price}}/tháng",
       "empty": "Người dùng này chưa tham gia cộng đồng nào.",
       "open": "Mở cộng đồng"
     },

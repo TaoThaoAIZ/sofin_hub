@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { formatDate, formatRelative } from '../../../lib/datetime';
+import { formatCents, formatDate, formatRelative } from '../../../lib/datetime';
 import { RejectCommunityModal, RequestChangesModal, UndeleteCommunityModal, trashInfo } from '../components/ActionModals';
 import { ChecklistCard, DecisionPanel, KvCard, Row, type ChecklistItem } from '../components/Cards';
 import { DataTable, MainCell, MonoCell, MutedCell, TextCell } from '../components/DataTable';
@@ -102,7 +102,7 @@ export function CommunityReview() {
               { k: t('queues.review.kvOwner'), v: (sel.owner?.name ?? '—') },
               { k: t('queues.review.kvDesc'), v: sel.description || '—' },
               { k: t('queues.review.kvCategory'), v: categoryLabel(sel.category) },
-              { k: t('queues.review.kvPrice'), v: sel.pricing === 'free' ? PRICING_LABEL.free : t('queues.review.perMonth', { price: sel.priceUsd }) },
+              { k: t('queues.review.kvPrice'), v: sel.pricing === 'free' ? PRICING_LABEL.free : t('queues.review.perMonth', { price: formatCents(sel.priceUsd) }) },
               { k: t('queues.review.kvMembers'), v: fmtNum(sel.members) },
               { k: t('queues.review.kvCreated'), v: formatDate(sel.createdAt) },
               { k: t('queues.review.kvStatus'), v: COMMUNITY_STATUS[sel.status].label, badge: COMMUNITY_STATUS[sel.status].tone },

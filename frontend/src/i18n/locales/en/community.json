@@ -73,7 +73,7 @@
     "membersChip": "{{n}} members",
     "active": "Active",
     "free": "Free",
-    "perMonth": "${{price}}/month",
+    "perMonth": "{{price}}/month",
     "joinNow": "Join now",
     "membership": "Membership plan",
     "byInstructor": "By {{name}}",
@@ -84,7 +84,7 @@
     "highlights": "Highlights",
     "whatsFree": "WHAT'S FREE?",
     "upgradeVip": "UPGRADE TO VIP",
-    "upgradePrice": "(${{price}}/month)",
+    "upgradePrice": "({{price}}/month)",
     "communityFree": "This community is free.",
     "founder": "Founder: {{name}}"
   },
@@ -780,7 +780,7 @@
       "backToEdit": "← Back to editing"
     },
     "lock": {
-      "paid": "Separate purchase ${{price}}",
+      "paid": "Buy separately {{price}}",
       "selected": "Selected people only",
       "draft": "Draft"
     },

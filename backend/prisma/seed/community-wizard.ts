@@ -21,7 +21,7 @@ export async function seedCommunityWizard(ctx: SeedContext): Promise<void> {
     },
     {
       id: 'draft-viet-content', title: 'Viết Content Ra Đơn', description: 'Công thức viết bài bán hàng cho người làm tự do.', category: 'content' as const,
-      draftSteps: ['basics', 'plan', 'identity', 'members'], priceCents: 700, priceAnnualCents: 4800, pricing: 'paid' as const, visibility: 'private' as const,
+      draftSteps: ['basics', 'plan', 'identity', 'members'], priceCents: 175_000, priceAnnualCents: 1_200_000, pricing: 'paid' as const, visibility: 'private' as const,
       promise: 'Viết bài đầu tiên chốt được đơn trong 14 ngày', benefits: ['Thư viện mẫu bài viết', 'Chấm bài 1-1 hàng tuần'],
       joinQuestions: ['Bạn đang bán sản phẩm gì?', 'Bạn biết đến lớp từ đâu?'],
       rules: [{ title: 'Tôn trọng lẫn nhau', body: 'Góp ý văn minh.' }, { title: 'Không spam', body: '' }], requireRulesAgreement: true,

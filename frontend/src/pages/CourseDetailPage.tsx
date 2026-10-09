@@ -24,6 +24,7 @@ import { toast, ToastHost } from '../features/community/components/contentUi';
 import { isAtLeast } from '../features/communities/types';
 import { usePopup } from '../components/ui/usePopup';
 
+import { formatCents } from '../lib/datetime';
 type TabKey = 'overview' | 'content' | 'faq';
 const TABS: { key: TabKey | 'reviews' }[] = [{ key: 'overview' }, { key: 'content' }, { key: 'reviews' }, { key: 'faq' }];
 
@@ -108,7 +109,7 @@ export function CourseDetailPage() {
 
   const tag = course.tag ? TAG_UI[course.tag] : null;
   const categoryName = categories.find((c) => c.id === course.category)?.name ?? course.category;
-  const priceLabel = course.priceUsd === 0 ? t('detail.free') : `$${course.priceUsd}`;
+  const priceLabel = course.priceUsd === 0 ? t('detail.free') : formatCents(course.priceUsd);
 
   const scrollToReviews = () =>
     reviewsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });

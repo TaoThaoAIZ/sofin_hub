@@ -10,12 +10,16 @@ import { referralsService } from './modules/referrals/referrals.service.js';
  */
 export function allJobs(): Job[] {
   return [
-    // Gia hạn / hết dùng thử / hết kỳ đã hủy.
+    // Hết dùng thử / hết kỳ đã hủy / hết ân hạn gia hạn (chuyển khoản không tự trừ được).
     { name: 'payments.subscriptions', intervalMs: 5 * 60_000, run: () => paymentsService.processDueSubscriptions(new Date()) },
-    // Email + thông báo nhắc 3 ngày trước ngày trừ tiền đầu tiên của gói dùng thử có thẻ (claim idempotent trong DB).
+    // Nhắc thanh toán trước khi hết dùng thử (claim idempotent trong DB).
     { name: 'payments.trialReminders', intervalMs: 15 * 60_000, run: () => paymentsService.sendTrialReminders(new Date()) },
-    // Đối soát tiền: hoàn tiền kẹt `refunding`, charge đã trừ nhưng chưa settle, khoản trừ trùng chưa hoàn, webhook kẹt/failed (reapStaleWebhooks).
+    // Đối soát tiền: hoàn tiền kẹt `refunding`, khoản chuyển trùng chưa ghi nhận hoàn, phiên chuyển khoản quá hạn.
     { name: 'payments.reconcile', intervalMs: 5 * 60_000, run: () => paymentsService.reconcileMoney() },
+    // (B) Đường đối soát "đảm bảo" của chuyển khoản: kéo giao dịch vào từ SePay mỗi phút — chạy được cả khi webhook không tới được server.
+    { name: 'payments.bankScan', intervalMs: 60_000, run: () => paymentsService.scanBankTransactions() },
+    // Phát hóa đơn gia hạn (phiên QR kỳ kế tiếp) cho gói active sắp hết kỳ.
+    { name: 'payments.renewalInvoices', intervalMs: 15 * 60_000, run: () => paymentsService.issueRenewalInvoices(new Date()) },
     // Hoa hồng giới thiệu còn thiếu (hook sau commit bị mất do process chết). Idempotent theo sourceRef.
     { name: 'referrals.reconcile', intervalMs: 10 * 60_000, run: () => referralsService.reconcileCommissions(new Date()) },
     // Nhắc lịch sự kiện cho người đã RSVP (còn <= 1 giờ).

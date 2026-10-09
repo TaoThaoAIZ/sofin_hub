@@ -238,7 +238,7 @@ describe('điểm thưởng không farm được + chính sách quyền ở ranh
       // Giờ mới thanh toán được.
       const co = await c.call('POST', '/courses/lead/checkout', { token: u.token, body: { method: 'stripe' } });
       assert.equal(co.status, 201);
-      assert.equal((await c.call('POST', `/payments/${co.body.data.id}/confirm`, { token: u.token })).status, 200);
+      assert.equal((await c.payIntent(co.body.data.id, u.token)).status, 200);
       assert.equal(await enrollmentService.isEnrolled(u.id, 'lead'), true);
 
       // Lời mời vào cộng đồng riêng tư có phí: 402 (phải trả tiền) nhưng được phép thanh toán.

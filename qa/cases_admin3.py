@@ -1160,8 +1160,8 @@ def load(add):
       "KỲ VỌNG SAU KHI LÀM: nhân viên chưa bật 2FA bị buộc thiết lập hoặc bị chặn. HIỆN TẠI: không có tác dụng (giao diện ghi 'Chỉ lưu cấu hình').", **P)
     A(F, "'Tự đăng xuất sau' (sessionTimeoutMin 15/30/120) chỉ lưu, chưa có cơ chế hết phiên admin", "Bảo mật", "Trung bình", "Chỉ lưu cấu hình; access token vẫn theo TTL JWT cố định (15 phút) và refresh.",
       ["Đặt 15 phút > Lưu", "Để admin không thao tác 20 phút rồi gọi API"], "sessionTimeoutMin=15", "KỲ VỌNG SAU KHI LÀM: phiên admin tự hết hạn theo cấu hình. HIỆN TẠI: không thay đổi hành vi phiên.", **P)
-    A(F, "Tiền tệ (currency USD/VND/EUR) chỉ lưu: giao dịch/biên lai vẫn USD", "Chức năng", "Trung bình", "payments.currency lưu ở PlatformSetting; mọi số tiền là cent USD.",
-      ["Đặt Tiền tệ = VND > Lưu", "Mua gói ở paid-demo và xem biên lai/Giao dịch admin"], "VND", "KỲ VỌNG SAU KHI LÀM: giá/biên lai theo tiền tệ đã chọn + tỷ giá. HIỆN TẠI: không đổi, vẫn '$'.", **P)
+    A(F, "Tiền tệ (currency USD/VND/EUR) chỉ lưu: giao dịch/biên lai vẫn VND (đồng)", "Chức năng", "Trung bình", "payments.currency lưu ở PlatformSetting; mọi số tiền là VND nguyên (đồng).",
+      ["Đặt Tiền tệ = VND > Lưu", "Mua gói ở paid-demo và xem biên lai/Giao dịch admin"], "VND", "KỲ VỌNG SAU KHI LÀM: giá/biên lai theo tiền tệ đã chọn + tỷ giá. HIỆN TẠI: không đổi, vẫn hiển thị đồng (VND, không còn '$').", **P)
     A(F, "Chi trả tự động (autoPayouts, ngày 1 và 16) chỉ lưu: chưa có job chi trả", "Chức năng", "Trung bình", "Không có scheduler chi trả tự động.",
       ["Bật 'Chi trả tự động' > Lưu", "Chờ tới ngày 1/16 (hoặc đổi giờ máy chủ) và xem Chi trả"], "autoPayouts", "KỲ VỌNG SAU KHI LÀM: tự tạo/duyệt chi trả theo lịch. HIỆN TẠI: không có job; vẫn do creator yêu cầu và admin duyệt thủ công.", **P)
     A(F, "Múi giờ nền tảng (timezone) chỉ lưu: thời gian giao diện/Phân tích vẫn theo múi giờ trình duyệt/UTC", "Chức năng", "Thấp", "platform.timezone là chuỗi tự do.",

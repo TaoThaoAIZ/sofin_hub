@@ -38,15 +38,15 @@ describe('lớp học: truy cập module', () => {
   it('validate accessMode: paid cần giá, level cần cấp độ', async () => {
     assert.equal((await call('POST', '/modules', mod.token, { title: 'x', description: '', accessMode: 'paid' })).status, 400);
     assert.equal((await call('POST', '/modules', mod.token, { title: 'x', description: '', accessMode: 'paid', priceCents: 0 })).status, 400);
-    assert.equal((await call('POST', '/modules', mod.token, { title: 'x', description: '', accessMode: 'paid', priceCents: 100000 * 100 + 1 })).status, 400);
+    assert.equal((await call('POST', '/modules', mod.token, { title: 'x', description: '', accessMode: 'paid', priceCents: 50_000_000 + 1 })).status, 400);
     assert.equal((await call('POST', '/modules', mod.token, { title: 'x', description: '', accessMode: 'level' })).status, 400);
     assert.equal((await call('POST', '/modules', mod.token, { title: 'x', description: '', accessMode: 'bogus' })).status, 400);
     const id = await newModule({ accessMode: 'all' });
     assert.equal((await call('PATCH', `/modules/${id}`, mod.token, { accessMode: 'paid' })).status, 400);
     assert.equal((await call('PATCH', `/modules/${id}`, mod.token, { accessMode: 'level' })).status, 400);
-    const ok = await call('PATCH', `/modules/${id}`, mod.token, { accessMode: 'paid', priceCents: 4900 });
+    const ok = await call('PATCH', `/modules/${id}`, mod.token, { accessMode: 'paid', priceCents: 125_000 });
     assert.equal(ok.status, 200);
-    assert.equal(ok.body.data.priceCents, 4900);
+    assert.equal(ok.body.data.priceCents, 125_000);
     // đổi sang level: giá bị xóa, requiredLevel được lưu; đổi về all: requiredLevel bị xóa
     const lv = await call('PATCH', `/modules/${id}`, mod.token, { accessMode: 'level', requiredLevel: 3 });
     assert.equal(lv.body.data.accessMode, 'level');
@@ -131,9 +131,9 @@ describe('lớp học: truy cập module', () => {
     assert.equal((await view(a.token, id)).locked, true);
     await call('DELETE', `/modules/${id}`, mod.token);
 
-    const paid = await newModule({ accessMode: 'paid', priceCents: 1500 });
+    const paid = await newModule({ accessMode: 'paid', priceCents: 37_500 });
     const pv = await view(b.token, paid);
-    assert.deepEqual([pv.locked, pv.lockReason, pv.priceCents], [true, 'paid', 1500]);
+    assert.deepEqual([pv.locked, pv.lockReason, pv.priceCents], [true, 'paid', 37_500]);
     await call('PUT', `/modules/${paid}/access`, mod.token, { userIds: [b.id] });
     assert.equal((await view(b.token, paid)).locked, false);
     await call('DELETE', `/modules/${paid}`, mod.token);

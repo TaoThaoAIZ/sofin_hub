@@ -48,7 +48,7 @@ export function StepMembers({
     const next = Math.max(0, (parseMoney(form[key]) || 0) + d);
     set({ [key]: String(next) } as Partial<typeof form>, [key]);
   };
-  const unit = currency === 'VND' ? 10000 : 1;
+  const unit = currency === 'VND' ? 1000 : 1;
   const m = parseMoney(form.priceMonthly);
   const a = parseMoney(form.priceAnnual);
   const savings = m > 0 && a > 0 && a < m * 12 ? Math.round((1 - a / (m * 12)) * 100) : 0;
@@ -324,7 +324,7 @@ function PriceBox({ label, unit, value, error, currency, onChange, onStep }: { l
     <div>
       <div className={`flex h-[58px] items-center rounded-[14px] border-[1.5px] pr-2.5 pl-4 focus-within:border-brand ${error ? 'border-red-400' : 'border-[#e7e0da]'}`}>
         {currency === 'USD' && <span className="mr-1 text-lg font-bold text-stone-500">$</span>}
-        <input aria-label={label} inputMode="decimal" value={value} onChange={(e) => onChange(e.target.value.replace(/[^\d.,]/g, ''))} placeholder="0" aria-invalid={!!error} className="w-0 min-w-0 flex-1 border-0 text-[26px] font-extrabold tracking-[-0.5px] outline-0" />
+        <input aria-label={label} inputMode={currency === 'VND' ? 'numeric' : 'decimal'} value={value} onChange={(e) => onChange(e.target.value.replace(currency === 'VND' ? /[^\d]/g : /[^\d.,]/g, ''))} placeholder={currency === 'VND' ? '199000' : '0'} aria-invalid={!!error} className="w-0 min-w-0 flex-1 border-0 text-[26px] font-extrabold tracking-[-0.5px] outline-0" />
         <span className="mr-2 text-sm whitespace-nowrap text-stone-500">{currency === 'USD' ? unit : `${currency} ${unit}`}</span>
         <div className="flex flex-col">
           <button type="button" aria-label={t('members.increase')} onClick={() => onStep(1)} className="border-0 bg-transparent p-0 leading-none text-stone-500">

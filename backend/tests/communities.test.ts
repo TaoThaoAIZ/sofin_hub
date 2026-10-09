@@ -93,7 +93,7 @@ describe('cộng đồng: tạo, tham gia, vai trò, lời mời', () => {
     const co = await c.call('POST', `/courses/${paid}/checkout`, { token: u.token, body: { method: 'stripe' } });
     if (co.status < 300) {
       const intentId = co.body.data.id ?? co.body.data.paymentIntentId;
-      await c.call('POST', `/payments/${intentId}/confirm`, { token: u.token });
+      await c.payIntent(intentId, u.token);
       const d = await c.call('GET', `/courses/${paid}`, { token: u.token });
       if (d.body.data.viewerEnrolled) {
         const leave = await c.call('POST', `/courses/${paid}/enroll`, { token: u.token });

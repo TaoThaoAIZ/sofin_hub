@@ -1,11 +1,9 @@
 import { apiGet, apiPost } from '../../lib/api';
-import type { PaymentMethodInput } from '../../lib/card';
 import type {
   CheckoutQuote,
   Invoice,
   PageMeta,
   PaymentIntent,
-  PaymentMethod,
   PaymentRecord,
   Payout,
   PayoutInput,
@@ -18,16 +16,13 @@ import type {
 export type BillingInterval = 'monthly' | 'annual';
 
 export interface CheckoutInput {
-  method?: PaymentMethod;
   interval?: BillingInterval;
-  /** Chỉ token + brand/last4/hạn (PaymentMethodInput) — không bao giờ có số thẻ/CVC. */
-  paymentMethod?: PaymentMethodInput;
 }
 
 export const checkout = (courseId: string, input: CheckoutInput, token: string, idempotencyKey?: string) =>
   apiPost<{ data: PaymentIntent }>(
     `/communities/${courseId}/checkout`,
-    { method: input.method ?? 'stripe', interval: input.interval, paymentMethod: input.paymentMethod },
+    { interval: input.interval },
     { token, headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined },
   ).then((r) => r.data);
 
@@ -49,8 +44,11 @@ export interface ModulePurchaseQuote {
 export const fetchModuleQuote = (communityId: string, moduleId: string, signal?: AbortSignal) =>
   apiGet<{ data: ModulePurchaseQuote }>(`/communities/${communityId}/modules/${moduleId}/purchase-quote`, undefined, signal).then((r) => r.data);
 
-export const purchaseModule = (communityId: string, moduleId: string, input: { paymentMethod: PaymentMethodInput; idempotencyKey: string }) =>
+export const purchaseModule = (communityId: string, moduleId: string, input: { idempotencyKey: string }) =>
   apiPost<{ data: PaymentIntent }>(`/communities/${communityId}/modules/${moduleId}/purchase`, input).then((r) => r.data);
+
+export const fetchPayment = (paymentId: string, signal?: AbortSignal) =>
+  apiGet<{ data: PaymentIntent }>(`/payments/${paymentId}`, undefined, signal).then((r) => r.data);
 
 export const confirmPayment = (paymentIntentId: string, token: string) =>
   apiPost<{ data: PaymentIntent }>(`/payments/${paymentIntentId}/confirm`, undefined, { token }).then((r) => r.data);
@@ -58,7 +56,7 @@ export const confirmPayment = (paymentIntentId: string, token: string) =>
 export const fetchSubscription = (courseId: string, token: string, signal?: AbortSignal) =>
   apiGet<{ data: SubscriptionStatus }>(`/communities/${courseId}/subscription`, undefined, signal, { token }).then((r) => r.data);
 
-export const startTrial = (courseId: string, input?: { interval?: BillingInterval; paymentMethod?: PaymentMethodInput }) =>
+export const startTrial = (courseId: string, input?: { interval?: BillingInterval }) =>
   apiPost<{ data: Subscription }>(`/communities/${courseId}/trial`, input).then((r) => r.data);
 
 export const fetchCheckoutQuote = (courseId: string, interval: BillingInterval, signal?: AbortSignal) =>

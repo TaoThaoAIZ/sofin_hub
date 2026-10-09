@@ -5,17 +5,18 @@ import { makeClient, startTestServer, type TestServer } from './helpers.js';
 // Phải đặt trước khi nạp app/env (dynamic import bên dưới).
 const ADMIN_EMAIL = 'padmin-payments@test.local';
 process.env.PLATFORM_ADMIN_EMAILS = ADMIN_EMAIL;
-process.env.PAYMENT_WEBHOOK_SECRET = 'test-webhook-secret';
 
 const DAY = 86_400_000;
 
-describe('thanh toán, gói thành viên, hoàn tiền, webhook', () => {
+describe('thanh toán chuyển khoản, gói thành viên, hoàn tiền, webhook SePay', () => {
   let server: TestServer;
   let c: ReturnType<typeof makeClient>;
   let enrollmentService: typeof import('../src/modules/enrollments/enrollments.service.js').enrollmentService;
   let paymentsService: typeof import('../src/modules/payments/payments.service.js').paymentsService;
-  let mockGateway: typeof import('../src/modules/payments/payments.gateway.js').mockGateway;
-  let signWebhookPayload: typeof import('../src/modules/payments/payments.gateway.js').signWebhookPayload;
+  let bankGateway: typeof import('../src/modules/payments/payments.gateway.js').bankGateway;
+  let prisma: typeof import('../src/db/prisma.js').prisma;
+  let repo: typeof import('../src/modules/payments/payments.repository.js').paymentsRepository;
+  let createPaymentsService: typeof import('../src/modules/payments/payments.service.js').createPaymentsService;
   let admin: { token: string; id: string };
 
   before(async () => {
@@ -23,7 +24,10 @@ describe('thanh toán, gói thành viên, hoàn tiền, webhook', () => {
     c = makeClient(server.baseUrl);
     ({ enrollmentService } = await import('../src/modules/enrollments/enrollments.service.js'));
     ({ paymentsService } = await import('../src/modules/payments/payments.service.js'));
-    ({ mockGateway, signWebhookPayload } = await import('../src/modules/payments/payments.gateway.js'));
+    ({ bankGateway } = await import('../src/modules/payments/payments.gateway.js'));
+    ({ prisma } = await import('../src/db/prisma.js'));
+    ({ paymentsRepository: repo } = await import('../src/modules/payments/payments.repository.js'));
+    ({ createPaymentsService } = await import('../src/modules/payments/payments.service.js'));
     const r = await c.registerVerified({ email: ADMIN_EMAIL, password: 'Passw0rd!x', firstName: 'Plat', lastName: 'Admin' });
     admin = { token: r.body.data.accessToken, id: r.body.data.user.id };
   });
@@ -33,16 +37,19 @@ describe('thanh toán, gói thành viên, hoàn tiền, webhook', () => {
   async function pay(user: { token: string }, courseId: string, headers?: Record<string, string>) {
     const co = await c.call('POST', `/courses/${courseId}/checkout`, { token: user.token, body: { method: 'stripe' }, headers });
     assert.equal(co.status, 201, JSON.stringify(co.body));
-    const cf = await c.call('POST', `/payments/${co.body.data.id}/confirm`, { token: user.token });
+    const cf = await c.payIntent(co.body.data.id, user.token);
     assert.equal(cf.status, 200, JSON.stringify(cf.body));
     return cf.body.data;
   }
 
-  async function sendWebhook(event: unknown, opts: { secret?: string; ts?: number; signature?: string } = {}) {
-    const raw = JSON.stringify(event);
-    const sig = opts.signature ?? signWebhookPayload(raw, opts.secret ?? 'test-webhook-secret', opts.ts);
-    const res = await fetch(`${server.baseUrl}/payments/webhook`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-sofin-signature': sig }, body: raw });
-    return { status: res.status, body: await res.json() };
+  let txN = 0;
+  const txId = (p = 'PT') => `${p}${Date.now()}${++txN}`;
+  /** Header xác thực webhook SePay (cho test gọi thẳng service, không qua HTTP). */
+  const authHeader = () => `Apikey ${process.env.SEPAY_WEBHOOK_KEY}`;
+  /** Cổng "quan sát" hoàn tiền: ghi lại mọi lần gọi (cùng idempotency key = cùng 1 khoản hoàn ở bankGateway). */
+  function spyRefunds() {
+    const calls: number[] = [];
+    return { calls, gw: { refund: async (ch: string, amt: number, key: string) => { calls.push(amt); return bankGateway.refund(ch, amt, key); } } };
   }
 
   describe('checkout / confirm', () => {
@@ -59,12 +66,14 @@ describe('thanh toán, gói thành viên, hoàn tiền, webhook', () => {
       const co = await c.call('POST', '/courses/ai/checkout', { token: u.token, body: { method: 'stripe', amountUsd: 0.01, amountCents: 1 } });
       assert.equal(co.status, 201);
       assert.equal(co.body.data.status, 'pending');
-      assert.equal(co.body.data.amountUsd, 7);
-      assert.equal(co.body.data.amountCents, 700);
+      assert.equal(co.body.data.amountUsd, 175_000);
+      assert.equal(co.body.data.amountCents, 175_000);
+      assert.equal(co.body.data.method, 'bank_transfer');
+      assert.ok(co.body.data.refCode && co.body.data.transfer);
       assert.equal((await enrollmentService.isEnrolled(u.id, 'ai')), false);
 
-      const cf1 = await c.call('POST', `/payments/${co.body.data.id}/confirm`, { token: u.token });
-      const cf2 = await c.call('POST', `/payments/${co.body.data.id}/confirm`, { token: u.token });
+      const cf1 = await c.payIntent(co.body.data.id, u.token);
+      const cf2 = await c.payIntent(co.body.data.id, u.token);
       assert.equal(cf1.status, 200);
       assert.equal(cf1.body.data.status, 'succeeded');
       assert.match(cf1.body.data.invoiceNumber, /^INV-\d{4}-\d{6}$/);
@@ -82,14 +91,14 @@ describe('thanh toán, gói thành viên, hoàn tiền, webhook', () => {
       const u = await c.registerUser('race');
       const co = await c.call('POST', '/courses/yt/checkout', { token: u.token, body: { method: 'stripe' } });
       const [a, b] = await Promise.all([
-        c.call('POST', `/payments/${co.body.data.id}/confirm`, { token: u.token }),
-        c.call('POST', `/payments/${co.body.data.id}/confirm`, { token: u.token }),
+        c.payIntent(co.body.data.id, u.token),
+        c.payIntent(co.body.data.id, u.token),
       ]);
       assert.equal(a.status, 200);
       assert.equal(b.status, 200);
       assert.equal(a.body.data.invoiceNumber, b.body.data.invoiceNumber);
       const other = await c.registerUser('other');
-      assert.equal((await c.call('POST', `/payments/${co.body.data.id}/confirm`, { token: other.token })).status, 403);
+      assert.equal((await c.payIntent(co.body.data.id, other.token)).status, 403);
       assert.equal((await c.call('POST', `/payments/khong-co/confirm`, { token: u.token })).status, 404);
     });
 
@@ -107,16 +116,15 @@ describe('thanh toán, gói thành viên, hoàn tiền, webhook', () => {
       assert.equal(e.status, 409);
     });
 
-    it('cổng từ chối thẻ → 402, giao dịch failed, không cấp quyền', async () => {
-      const u = await c.registerUser('declined');
-      mockGateway.failFor(u.id);
+    it('chuyển thiếu tiền → giao dịch vẫn pending, không cấp quyền (thay cho thẻ bị từ chối)', async () => {
+      const u = await c.registerUser('underpaid');
       const co = await c.call('POST', '/courses/des/checkout', { token: u.token, body: { method: 'stripe' } });
-      const cf = await c.call('POST', `/payments/${co.body.data.id}/confirm`, { token: u.token });
-      mockGateway.failFor(u.id, false);
-      assert.equal(cf.status, 402);
+      const cf = await c.payIntent(co.body.data.id, u.token, { amount: co.body.data.amountCents - 1000 });
+      assert.equal(cf.status, 200);
+      assert.equal(cf.body.data.status, 'pending');
       assert.equal(await enrollmentService.isEnrolled(u.id, 'des'), false);
       const hist = await c.call('GET', '/me/payments', { token: u.token });
-      assert.equal(hist.body.data[0].status, 'failed');
+      assert.equal(hist.body.data[0].status, 'pending');
     });
   });
 
@@ -184,24 +192,36 @@ describe('thanh toán, gói thành viên, hoàn tiền, webhook', () => {
       assert.equal(await enrollmentService.isEnrolled(u.id, 'cook'), true);
     });
 
-    it('gia hạn tạo giao dịch mới mỗi kỳ; thẻ bị từ chối khi gia hạn → hết hạn + thu hồi', async () => {
+    it('gia hạn = hóa đơn QR mỗi kỳ (trả tiền mới nối kỳ); không trả → hết hạn + thu hồi quyền', async () => {
       const u = await c.registerUser('renew');
       await pay(u, 'data');
-      const r = await paymentsService.processDueSubscriptions(new Date(Date.now() + 31 * DAY));
-      assert.ok(r.renewed >= 1);
+      const sub0 = (await prisma.subscription.findFirst({ where: { userId: u.id } }))!;
+      const nearEnd = new Date(sub0.currentPeriodEnd.getTime() - DAY);
+      const r = await paymentsService.issueRenewalInvoices(nearEnd);
+      assert.ok(r.issued >= 1);
+      const inv = await prisma.payment.findFirstOrThrow({ where: { userId: u.id, kind: 'renewal' } });
+      assert.equal(inv.status, 'pending');
+      // Chưa trả tiền thì chưa có giao dịch gia hạn thành công.
+      assert.equal(await prisma.payment.count({ where: { userId: u.id, kind: 'renewal', status: 'succeeded' } }), 0);
+      const w = await c.bankWebhook(c.sepayTx({ id: txId(), refCode: inv.refCode!, amount: inv.amountCents }));
+      assert.equal(w.status, 200);
       const hist = await c.call('GET', '/me/payments', { token: u.token });
       assert.equal(hist.body.meta.total, 2);
       assert.deepEqual(hist.body.data.map((p: any) => p.kind).sort(), ['initial', 'renewal']);
       assert.notEqual(hist.body.data[0].invoiceNumber, hist.body.data[1].invoiceNumber);
       assert.equal(await enrollmentService.isEnrolled(u.id, 'data'), true);
+      const sub1 = (await prisma.subscription.findFirst({ where: { userId: u.id } }))!;
+      assert.equal(sub1.currentPeriodEnd.getTime() - sub0.currentPeriodEnd.getTime(), 30 * DAY);
 
+      // Không trả hóa đơn gia hạn (quá hết kỳ + ân hạn) → hết hạn, thu hồi quyền.
       const f = await c.registerUser('renewfail');
       await pay(f, 'write');
-      mockGateway.failFor(f.id);
-      const r2 = await paymentsService.processDueSubscriptions(new Date(Date.now() + 31 * DAY));
-      mockGateway.failFor(f.id, false);
+      const fsub = (await prisma.subscription.findFirst({ where: { userId: f.id } }))!;
+      await paymentsService.issueRenewalInvoices(new Date(fsub.currentPeriodEnd.getTime() - DAY));
+      const r2 = await paymentsService.processDueSubscriptions(new Date(fsub.currentPeriodEnd.getTime() + 3 * DAY));
       assert.ok(r2.renewalFailed >= 1);
       assert.equal(await enrollmentService.isEnrolled(f.id, 'write'), false);
+      assert.equal((await prisma.subscription.findFirst({ where: { userId: f.id } }))!.status, 'expired');
     });
   });
 
@@ -230,7 +250,7 @@ describe('thanh toán, gói thành viên, hoàn tiền, webhook', () => {
       const mine = await c.call('GET', `/payments/${payment.id}/invoice`, { token: buyer.token });
       assert.equal(mine.status, 200);
       assert.equal(mine.body.data.invoiceNumber, payment.invoiceNumber);
-      assert.equal(mine.body.data.totalCents, 1000);
+      assert.equal(mine.body.data.totalCents, 250_000);
       assert.equal(mine.body.data.buyer.id, buyer.id);
       assert.equal(mine.body.data.community.id, 'des');
       assert.equal(mine.body.data.items.length, 1);
@@ -264,11 +284,11 @@ describe('thanh toán, gói thành viên, hoàn tiền, webhook', () => {
       assert.equal(r.status, 201);
       assert.equal(r.body.data.status, 'approved');
       assert.equal(r.body.data.auto, true);
-      assert.equal(r.body.data.amountCents, 700);
+      assert.equal(r.body.data.amountCents, 175_000);
       assert.equal(await enrollmentService.isEnrolled(u.id, 'ai'), false);
       const hist = await c.call('GET', '/me/payments', { token: u.token });
       assert.equal(hist.body.data[0].status, 'refunded');
-      assert.equal(hist.body.data[0].refundedCents, 700);
+      assert.equal(hist.body.data[0].refundedCents, 175_000);
       assert.equal((await c.call('POST', `/payments/${payment.id}/refund-request`, { token: u.token, body: { reason: 'lần nữa' } })).status, 409);
     });
 
@@ -307,91 +327,75 @@ describe('thanh toán, gói thành viên, hoàn tiền, webhook', () => {
     });
   });
 
-  describe('webhook', () => {
-    it('chữ ký đúng: payment.succeeded cấp quyền; gửi lại cùng event id → 200 không tác dụng phụ', async () => {
+  describe('webhook SePay', () => {
+    it('key đúng: tiền về cấp quyền; gửi lại cùng giao dịch → 200 không tác dụng phụ (không cấp / không hóa đơn lần 2)', async () => {
       const u = await c.registerUser('wh');
       const co = await c.call('POST', '/courses/ux/checkout', { token: u.token, body: { method: 'stripe' } });
       const before = await c.call('GET', '/me/payments', { token: u.token });
       assert.equal(before.body.data[0].status, 'pending');
-      const event = { id: 'evt_ok_1', type: 'payment.succeeded', data: { paymentId: co.body.data.id, chargeId: 'ch_real_1' } };
-      const a = await sendWebhook(event);
+      const tx = c.sepayTx({ id: txId(), refCode: co.body.data.refCode, amount: co.body.data.amountCents });
+      const a = await c.bankWebhook(tx);
       assert.equal(a.status, 200);
+      assert.equal(a.body.message, 'credited');
       assert.equal(await enrollmentService.isEnrolled(u.id, 'ux'), true);
       const inv1 = (await c.call('GET', '/me/payments', { token: u.token })).body.data[0].invoiceNumber;
 
-      const b = await sendWebhook(event);
+      const b = await c.bankWebhook(tx);
       assert.equal(b.status, 200);
-      assert.equal(b.body.duplicate, true);
+      assert.equal(b.body.message, 'already');
       const inv2 = (await c.call('GET', '/me/payments', { token: u.token })).body.data[0].invoiceNumber;
       assert.equal(inv1, inv2);
+      assert.equal(await prisma.payment.count({ where: { userId: u.id, status: 'succeeded' } }), 1);
     });
 
-    it('chữ ký sai / thiếu / secret khác → 400 chung chung, không đổi dữ liệu', async () => {
+    it('key sai / thiếu → 401 chung chung, không đổi dữ liệu', async () => {
       const u = await c.registerUser('wh-bad');
       const co = await c.call('POST', '/courses/ux/checkout', { token: u.token, body: { method: 'stripe' } });
-      const event = { id: 'evt_bad_1', type: 'payment.succeeded', data: { paymentId: co.body.data.id } };
-      const wrong = await sendWebhook(event, { secret: 'sai-secret' });
-      assert.equal(wrong.status, 400);
-      assert.doesNotMatch(JSON.stringify(wrong.body), /signature|secret|hmac/i);
-      assert.equal((await sendWebhook(event, { signature: 'rác' })).status, 400);
-      const noHeader = await fetch(`${server.baseUrl}/payments/webhook`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(event) });
-      assert.equal(noHeader.status, 400);
+      const tx = c.sepayTx({ id: txId(), refCode: co.body.data.refCode, amount: co.body.data.amountCents });
+      const wrong = await c.bankWebhook(tx, { key: 'sai-key' });
+      assert.equal(wrong.status, 401);
+      assert.doesNotMatch(JSON.stringify(wrong.body), /apikey|secret|hmac|SEPAY/i);
+      assert.equal((await c.bankWebhook(tx, { key: null })).status, 401);
+      const noHeader = await fetch(`${server.baseUrl}/payments/webhook`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(tx) });
+      assert.equal(noHeader.status, 401);
       assert.equal(await enrollmentService.isEnrolled(u.id, 'ux'), false);
+      assert.equal(await prisma.bankTransaction.count({ where: { externalId: tx.id } }), 0, 'request bị từ chối không được ghi gì');
     });
 
-    it('chống replay: timestamp cũ hơn 5 phút bị từ chối; sửa body sau khi ký cũng bị từ chối', async () => {
-      const u = await c.registerUser('wh-replay');
-      const co = await c.call('POST', '/courses/ux/checkout', { token: u.token, body: { method: 'stripe' } });
-      const event = { id: 'evt_replay_1', type: 'payment.succeeded', data: { paymentId: co.body.data.id } };
-      const old = Math.floor(Date.now() / 1000) - 10 * 60;
-      assert.equal((await sendWebhook(event, { ts: old })).status, 400);
-      const future = Math.floor(Date.now() / 1000) + 10 * 60;
-      assert.equal((await sendWebhook(event, { ts: future })).status, 400);
-      // Ký body A rồi gửi body B.
-      const sig = signWebhookPayload(JSON.stringify(event), 'test-webhook-secret');
-      const tampered = { ...event, data: { paymentId: co.body.data.id, extra: 1 } };
-      assert.equal((await sendWebhook(tampered, { signature: sig })).status, 400);
-      assert.equal(await enrollmentService.isEnrolled(u.id, 'ux'), false);
-      // Timestamp trong dung sai vẫn được (lệch 2 phút).
-      assert.equal((await sendWebhook(event, { ts: Math.floor(Date.now() / 1000) - 120 })).status, 200);
-    });
-
-    it('payment.failed, payment.refunded, subscription.canceled, subscription.renewed, loại lạ', async () => {
+    it('phiên hết hạn → failed; tiền RA / body thiếu id bị bỏ qua (200); mã lạ chỉ được lưu để admin soi', async () => {
       const u = await c.registerUser('wh-types');
       const f = await c.call('POST', '/courses/ux/checkout', { token: u.token, body: { method: 'stripe' } });
-      assert.equal((await sendWebhook({ id: 'evt_t1', type: 'payment.failed', data: { paymentId: f.body.data.id, reason: 'expired_card' } })).status, 200);
-      assert.equal((await c.call('GET', '/me/payments', { token: u.token })).body.data[0].status, 'failed');
-
-      const p = await pay(u, 'ux');
-      assert.equal((await sendWebhook({ id: 'evt_t2', type: 'payment.refunded', data: { paymentId: p.id } })).status, 200);
-      assert.equal((await c.call('GET', '/me/payments', { token: u.token })).body.data[0].status, 'refunded');
+      await prisma.payment.update({ where: { id: f.body.data.id }, data: { expiresAt: new Date(Date.now() - 1000) } });
+      assert.equal((await paymentsService.expireStaleSessions()).expired >= 1, true);
+      const row = (await c.call('GET', '/me/payments', { token: u.token })).body.data[0];
+      assert.equal(row.status, 'failed');
+      assert.equal(row.failureReason, 'expired');
       assert.equal(await enrollmentService.isEnrolled(u.id, 'ux'), false);
 
-      const v = await c.registerUser('wh-sub');
-      await pay(v, 'ux');
-      const subId = (await c.call('GET', '/me/subscriptions', { token: v.token })).body.data[0].id;
-      assert.equal((await sendWebhook({ id: 'evt_t3', type: 'subscription.renewed', data: { subscriptionId: subId, chargeId: 'ch_r' } })).status, 200);
-      assert.equal((await c.call('GET', '/me/payments', { token: v.token })).body.meta.total, 2);
-      assert.equal((await sendWebhook({ id: 'evt_t4', type: 'subscription.canceled', data: { subscriptionId: subId } })).status, 200);
-      assert.equal(await enrollmentService.isEnrolled(v.id, 'ux'), false);
+      const out = await c.bankWebhook({ ...c.sepayTx({ id: txId('O'), refCode: f.body.data.refCode, amount: 1000 }), transferType: 'out' });
+      assert.equal(out.status, 200);
+      assert.equal(out.body.message, 'bỏ qua (không phải tiền vào)');
+      const noId = await c.bankWebhook({ transferType: 'in', transferAmount: 1000, content: 'x' });
+      assert.equal(noId.status, 200);
+      assert.equal(noId.body.message, 'bỏ qua (không phải tiền vào)');
+      const unknown = await c.bankWebhook(c.sepayTx({ id: txId(), refCode: 'SFHZZZZZZZZ', amount: 1000 }));
+      assert.equal(unknown.status, 200);
+      assert.equal(unknown.body.message, 'unmatched');
+    });
 
-      assert.equal((await sendWebhook({ id: 'evt_t5', type: 'something.else', data: {} })).status, 200);
-      assert.equal((await sendWebhook({ id: 'evt_t6', type: 'payment.succeeded', data: { paymentId: 'khong-ton-tai' } })).status, 200);
-      // Body không hợp lệ (thiếu id) dù chữ ký đúng → 400.
-      assert.equal((await sendWebhook({ type: 'payment.succeeded' })).status, 400);
+    it('đã hoàn tiền (refunded) rồi nhận thêm giao dịch cùng mã: ghi nhận chuyển trùng, KHÔNG cấp lại quyền', async () => {
+      const u = await c.registerUser('wh-refunded');
+      const p = await pay(u, 'ux');
+      await c.call('POST', `/payments/${p.id}/refund-request`, { token: u.token, body: { reason: 'không cần' } });
+      assert.equal(await enrollmentService.isEnrolled(u.id, 'ux'), false);
+      const dup = c.sepayTx({ id: txId(), refCode: p.refCode, amount: p.amountCents });
+      assert.equal((await c.bankWebhook(dup)).body.message, 'duplicate');
+      assert.equal(await enrollmentService.isEnrolled(u.id, 'ux'), false);
+      assert.equal((await prisma.payment.findUniqueOrThrow({ where: { id: p.id } })).status, 'refunded');
     });
   });
 
   describe('đồng thời (DB thật): idempotency, confirm, hóa đơn, webhook, hoàn tiền, gia hạn', () => {
-    let prisma: typeof import('../src/db/prisma.js').prisma;
-    let repo: typeof import('../src/modules/payments/payments.repository.js').paymentsRepository;
-    let createPaymentsService: typeof import('../src/modules/payments/payments.service.js').createPaymentsService;
-    before(async () => {
-      ({ prisma } = await import('../src/db/prisma.js'));
-      ({ paymentsRepository: repo } = await import('../src/modules/payments/payments.repository.js'));
-      ({ createPaymentsService } = await import('../src/modules/payments/payments.service.js'));
-    });
-
     it('2 checkout song song cùng Idempotency-Key: cùng giao dịch, DB chỉ 1 Payment + 1 IdempotencyKey; key dùng cho khóa khác → 409', async () => {
       const u = await c.registerUser('idem-race');
       const h = { 'Idempotency-Key': 'race-key-1' };
@@ -408,17 +412,23 @@ describe('thanh toán, gói thành viên, hoàn tiền, webhook', () => {
       assert.equal(r2.status, 201);
     });
 
-    it('2 confirm song song (2 instance service, không chung promise) chỉ ghi nhận 1 lần: 1 hóa đơn, 1 gói, số hóa đơn tăng đúng 1', async () => {
+    it('2 webhook song song (2 instance service, không chung promise) chỉ ghi nhận 1 lần: 1 hóa đơn, 1 gói, số hóa đơn tăng đúng 1', async () => {
       const u = await c.registerUser('confirm-race');
       const co = await c.call('POST', '/courses/des/checkout', { token: u.token, body: { method: 'stripe' } });
-      const s1 = createPaymentsService(repo, mockGateway);
-      const s2 = createPaymentsService(repo, mockGateway);
+      const s1 = createPaymentsService(repo, bankGateway);
+      const s2 = createPaymentsService(repo, bankGateway);
       const year = new Date().getUTCFullYear();
       const before = (await prisma.invoiceSequence.findUnique({ where: { year } }))?.lastNumber ?? 0;
-      const [a, b] = await Promise.all([s1.confirm(co.body.data.id, u.id), s2.confirm(co.body.data.id, u.id)]);
-      assert.equal(a.status, 'succeeded');
-      assert.equal(b.status, 'succeeded');
-      assert.equal(a.invoiceNumber, b.invoiceNumber);
+      const ref = co.body.data.refCode;
+      const amt = co.body.data.amountCents;
+      // Hai giao dịch ngân hàng KHÁC nhau cùng trỏ vào 1 phiên (khách chuyển 2 lần sát nhau) + hai instance: vẫn chỉ cấp 1 lần.
+      await Promise.all([
+        s1.handleBankWebhook(authHeader(), c.sepayTx({ id: txId(), refCode: ref, amount: amt })),
+        s2.handleBankWebhook(authHeader(), c.sepayTx({ id: txId(), refCode: ref, amount: amt })),
+      ]);
+      const p = await prisma.payment.findUniqueOrThrow({ where: { id: co.body.data.id } });
+      assert.equal(p.status, 'succeeded');
+      assert.match(p.invoiceNumber ?? '', /^INV-/);
       const after = (await prisma.invoiceSequence.findUnique({ where: { year } }))!.lastNumber;
       assert.equal(after, before + 1);
       assert.equal(await prisma.subscription.count({ where: { userId: u.id, communityId: 'des' } }), 1);
@@ -429,7 +439,7 @@ describe('thanh toán, gói thành viên, hoàn tiền, webhook', () => {
     it('số hóa đơn tuần tự, không trùng, không hở dưới đồng thời; reset theo năm', async () => {
       const users = await Promise.all(Array.from({ length: 8 }, (_, i) => c.registerUser(`inv-seq${i}`)));
       const cos = await Promise.all(users.map((u) => c.call('POST', '/courses/write/checkout', { token: u.token, body: { method: 'stripe' } })));
-      const rs = await Promise.all(users.map((u, i) => c.call('POST', `/payments/${cos[i]!.body.data.id}/confirm`, { token: u.token })));
+      const rs = await Promise.all(users.map((u, i) => c.payIntent(cos[i]!.body.data.id, u.token)));
       const nums = rs.map((r) => r.body.data.invoiceNumber as string);
       assert.equal(new Set(nums).size, 8);
       const n = nums.map((x) => Number(x.split('-')[2])).sort((x, y) => x - y);
@@ -440,19 +450,18 @@ describe('thanh toán, gói thành viên, hoàn tiền, webhook', () => {
       assert.equal(await repo.nextInvoiceNumber(2099), 'INV-2099-000001');
     });
 
-    it('webhook gửi trùng song song cùng event id: đúng 1 bên xử lý, còn lại duplicate; chỉ 1 hóa đơn', async () => {
+    it('webhook gửi trùng song song cùng giao dịch: chỉ 1 BankTransaction, 1 lần cấp, 1 hóa đơn', async () => {
       const u = await c.registerUser('wh-race');
       const co = await c.call('POST', '/courses/ux/checkout', { token: u.token, body: { method: 'stripe' } });
-      const event = { id: 'evt_race_1', type: 'payment.succeeded', data: { paymentId: co.body.data.id, chargeId: 'ch_race' } };
-      const rs = await Promise.all(Array.from({ length: 6 }, () => sendWebhook(event)));
+      const tx = c.sepayTx({ id: txId('WR'), refCode: co.body.data.refCode, amount: co.body.data.amountCents });
+      const rs = await Promise.all(Array.from({ length: 6 }, () => c.bankWebhook(tx)));
       for (const r of rs) assert.equal(r.status, 200);
-      assert.equal(rs.filter((r) => r.body.duplicate === true).length, 5);
-      assert.equal(await prisma.webhookEvent.count({ where: { eventId: 'evt_race_1' } }), 1);
+      assert.equal(await prisma.bankTransaction.count({ where: { externalId: tx.id } }), 1);
       assert.equal(await prisma.payment.count({ where: { userId: u.id, status: 'succeeded', invoiceNumber: { not: null } } }), 1);
       assert.equal(await prisma.subscription.count({ where: { userId: u.id } }), 1);
     });
 
-    it('2 yêu cầu hoàn tiền song song chỉ tạo 1; 2 admin duyệt song song chỉ 1 thắng (cổng hoàn 1 lần); cổng từ chối hoàn ⇒ rollback nguyên vẹn', async () => {
+    it('2 yêu cầu hoàn tiền song song chỉ tạo 1; 2 admin duyệt song song chỉ 1 thắng (ghi nhận hoàn 1 lần); ghi nhận hoàn thất bại ⇒ rollback nguyên vẹn', async () => {
       const u = await c.registerUser('refund-race');
       const p = await pay(u, 'ai');
       const [r1, r2] = await Promise.all([
@@ -467,8 +476,7 @@ describe('thanh toán, gói thành viên, hoàn tiền, webhook', () => {
       const v = await c.registerUser('refund-race2');
       const pv = await pay(v, 'ai');
       const pending = await paymentsService.requestRefund(pv.id, v.id, 'Muộn', new Date(Date.now() + 10 * DAY));
-      const calls: number[] = [];
-      const spy = { createCharge: (x: any) => mockGateway.createCharge(x), verifyWebhookSignature: () => false, refund: async (ch: string, amt: number) => { calls.push(amt); return mockGateway.refund(ch, amt); } };
+      const { calls, gw: spy } = spyRefunds();
       const svc = createPaymentsService(repo, spy);
       const res = await Promise.allSettled([svc.resolveRefund(admin.id, pending.id, 'approve'), svc.resolveRefund(admin.id, pending.id, 'approve')]);
       assert.equal(res.filter((x) => x.status === 'fulfilled').length, 1);
@@ -486,18 +494,24 @@ describe('thanh toán, gói thành viên, hoàn tiền, webhook', () => {
       assert.equal(await enrollmentService.isEnrolled(w.id, 'ai'), true);
     });
 
-    it('2 processDueSubscriptions song song không gia hạn kép (SKIP LOCKED): mỗi gói đúng 1 giao dịch gia hạn', async () => {
+    it('2 processDueSubscriptions song song không phát hóa đơn gia hạn kép (SKIP LOCKED): mỗi gói đúng 1 hóa đơn, trả xong nối kỳ', async () => {
       const users = await Promise.all(Array.from({ length: 4 }, (_, i) => c.registerUser(`due-race${i}`)));
       for (const u of users) await pay(u, 'data');
       const now = new Date(Date.now() + 31 * DAY);
-      const due = await prisma.subscription.count({ where: { status: { in: ['active', 'trialing'] }, currentPeriodEnd: { lte: now } } });
-      const [a, b] = await Promise.all([createPaymentsService(repo, mockGateway).processDueSubscriptions(now), createPaymentsService(repo, mockGateway).processDueSubscriptions(now)]);
-      const handled = (r: typeof a) => r.renewed + r.renewalFailed + r.trialsExpired + r.ended;
-      assert.equal(handled(a) + handled(b), due);
+      const renewalsBefore = await prisma.payment.count({ where: { kind: 'renewal' } });
+      const [a, b] = await Promise.all([createPaymentsService(repo, bankGateway).processDueSubscriptions(now), createPaymentsService(repo, bankGateway).processDueSubscriptions(now)]);
+      const created = (await prisma.payment.count({ where: { kind: 'renewal' } })) - renewalsBefore;
+      assert.equal(a.invoiced + b.invoiced, created, 'số hóa đơn báo cáo = số hóa đơn thật sự tạo ra');
       for (const u of users) {
-        assert.equal(await prisma.payment.count({ where: { userId: u.id, kind: 'renewal', status: 'succeeded' } }), 1);
+        assert.equal(await prisma.payment.count({ where: { userId: u.id, kind: 'renewal' } }), 1);
+        const inv = await prisma.payment.findFirstOrThrow({ where: { userId: u.id, kind: 'renewal' } });
+        assert.equal(inv.status, 'pending');
+        const sub0 = (await prisma.subscription.findFirst({ where: { userId: u.id } }))!;
+        assert.equal(inv.periodStart?.getTime(), sub0.currentPeriodEnd.getTime());
+        await c.bankWebhook(c.sepayTx({ id: txId(), refCode: inv.refCode!, amount: inv.amountCents }));
         const sub = (await prisma.subscription.findFirst({ where: { userId: u.id } }))!;
         assert.ok(sub.currentPeriodEnd.getTime() > now.getTime());
+        assert.equal(await prisma.payment.count({ where: { userId: u.id, kind: 'renewal', status: 'succeeded' } }), 1);
       }
       const invs = await prisma.payment.findMany({ where: { userId: { in: users.map((u) => u.id) }, invoiceNumber: { not: null } }, select: { invoiceNumber: true } });
       assert.equal(new Set(invs.map((x) => x.invoiceNumber)).size, invs.length);

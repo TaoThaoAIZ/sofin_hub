@@ -8,6 +8,10 @@ import { ensureMainCourse, makeClient, startTestServer, useTestDb, type TestDb, 
 // env.ts parse lúc import app, nên phải đặt TRƯỚC startTestServer().
 const ADMIN_EMAIL = 'platform-admin-batch2@test.local';
 process.env.PLATFORM_ADMIN_EMAILS = ADMIN_EMAIL;
+// Phí cổng mặc định nay = 0 (chuyển khoản); test này kiểm công thức phí nên đặt tường minh (2.9% + 30đ).
+process.env.PLATFORM_COMMISSION_PCT = '10';
+process.env.GATEWAY_FEE_PCT = '2.9';
+process.env.GATEWAY_FEE_FIXED_CENTS = '30';
 process.env.UPLOAD_DIR = mkdtempSync(join(tmpdir(), 'sofinhub-admin2-uploads-'));
 
 const PNG = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(32, 1)]);
@@ -21,7 +25,7 @@ describe('admin đợt 2', () => {
   let flush: () => Promise<void>;
   let notifs: () => Array<{ userId: string; type: string; title: string; body: string }>;
   let enrollmentService: typeof import('../src/modules/enrollments/enrollments.service.js').enrollmentService;
-  let mockGateway: typeof import('../src/modules/payments/payments.gateway.js').mockGateway;
+  let paymentsService: typeof import('../src/modules/payments/payments.service.js').paymentsService;
   let origin: string;
   const PW = 'Passw0rd!x';
   const A = (method: string, path: string, body?: unknown) => c.call(method, `/admin${path}`, { token: admin.token, body });
@@ -38,7 +42,7 @@ describe('admin đợt 2', () => {
     flush = svc.flushNotifications;
     notifs = () => svc.notificationStore.all() as never;
     ({ enrollmentService } = await import('../src/modules/enrollments/enrollments.service.js'));
-    ({ mockGateway } = await import('../src/modules/payments/payments.gateway.js'));
+    ({ paymentsService } = await import('../src/modules/payments/payments.service.js'));
     const r = await c.registerVerified({ email: ADMIN_EMAIL, password: PW, firstName: 'Plat', lastName: 'Admin' });
     assert.ok(r.status < 300, JSON.stringify(r.body));
     admin = { token: r.body.data.accessToken, id: r.body.data.user.id };
@@ -66,14 +70,14 @@ describe('admin đợt 2', () => {
     await flush();
     return notifs().filter((n) => n.userId === userId);
   };
-  /** Tạo cộng đồng có phí + thành viên đã thanh toán thành công qua luồng thật (checkout + confirm). */
+  /** Tạo cộng đồng có phí + thành viên đã thanh toán thành công qua luồng thật (checkout + chuyển khoản qua webhook SePay). */
   async function payFlow(price = 20) {
     const owner = await c.registerUser('own');
     const buyer = await c.registerUser('buy');
     const courseId = await com({ owner, price });
     const co = await c.call('POST', `/courses/${courseId}/checkout`, { token: buyer.token, body: { method: 'stripe' } });
     assert.equal(co.status, 201, JSON.stringify(co.body));
-    const cf = await c.call('POST', `/payments/${co.body.data.id}/confirm`, { token: buyer.token });
+    const cf = await c.payIntent(co.body.data.id, buyer.token);
     assert.equal(cf.status, 200, JSON.stringify(cf.body));
     return { owner, buyer, courseId, paymentId: co.body.data.id as string };
   }
@@ -393,7 +397,7 @@ describe('admin đợt 2', () => {
       assert.equal(t.status, 'succeeded');
       assert.equal(t.amountCents, 2000);
       assert.equal(t.platformFeeCents, 200, '10% hoa hồng mặc định');
-      assert.equal(t.gatewayFeeCents, 88, '2.9% + 30 cent');
+      assert.equal(t.gatewayFeeCents, 88, '2.9% + 30đ (đặt ở đầu file)');
       assert.equal(t.creatorEarningsCents, 2000 - 200 - 88);
       assert.equal(t.customer.id, buyer.id);
       assert.equal(t.community.ownerName.length > 0, true);
@@ -404,11 +408,11 @@ describe('admin đợt 2', () => {
       assert.equal(d.creator.id, owner.id);
       assert.equal(d.subscription.status, 'active');
       assert.ok(d.timeline.some((e: any) => e.type === 'payment_captured'));
-      assert.equal(d.gateway, 'Stripe (mock)');
+      assert.equal(d.gateway, 'Chuyển khoản VietQR (SePay)');
       assert.equal((await GET(`/payments/transactions?q=${t.invoiceNumber}`)).body.data[0].id, paymentId);
       assert.equal((await GET(`/payments/transactions?q=${t.code}`)).body.data[0].id, paymentId);
       assert.equal((await GET(`/payments/transactions?ownerId=${owner.id}&status=failed`)).body.meta.total, 0);
-      assert.equal((await GET(`/payments/transactions?userId=${buyer.id}&method=stripe&kind=initial`)).body.meta.total, 1);
+      assert.equal((await GET(`/payments/transactions?userId=${buyer.id}&method=bank_transfer&kind=initial`)).body.meta.total, 1);
       assert.equal((await GET('/payments/transactions?status=bogus')).status, 400);
       assert.equal((await GET('/payments/transactions?from=not-a-date')).status, 400);
       assert.equal((await GET('/payments/transactions/nope')).status, 404);
@@ -441,24 +445,28 @@ describe('admin đợt 2', () => {
       assert.equal((await A('POST', '/payments/transactions/nope/refund', { reason: 'x' })).status, 404);
     });
 
-    it('failed + retry: thất bại ghi failureReason; retry thành công kích hoạt gói; 409 cho giao dịch không phải failed', async () => {
+    it('failed + retry: phiên hết hạn ghi failureReason; admin mở lại (cùng mã) rồi khách chuyển tiền thì kích hoạt gói; 409 cho giao dịch không phải failed', async () => {
       const owner = await c.registerUser('o');
       const buyer = await c.registerUser('buy');
       const courseId = await com({ owner, price: 15 });
-      mockGateway.failFor(buyer.id, true);
-      const co = await c.call('POST', `/courses/${courseId}/checkout`, { token: buyer.token, body: { method: 'momo' } });
-      const cf = await c.call('POST', `/payments/${co.body.data.id}/confirm`, { token: buyer.token });
-      assert.equal(cf.status, 402);
+      const co = await c.call('POST', `/courses/${courseId}/checkout`, { token: buyer.token, body: {} });
       const id = co.body.data.id as string;
+      await db.prisma.payment.update({ where: { id }, data: { expiresAt: new Date(Date.now() - 1000) } });
+      await paymentsService.expireStaleSessions();
       const t = (await GET(`/payments/transactions/${id}`)).body.data;
       assert.equal(t.status, 'failed');
-      assert.equal(t.failureReason, 'card_declined');
+      assert.equal(t.failureReason, 'expired');
       assert.equal(t.creatorEarningsCents, 0);
       assert.ok(t.timeline.some((e: any) => e.type === 'payment_failed'));
-      // cổng vẫn từ chối -> vẫn failed
-      assert.equal((await A('POST', `/payments/transactions/${id}/retry`, {})).body.data.status, 'failed');
-      mockGateway.failFor(buyer.id, false);
-      const ok = await A('POST', `/payments/transactions/${id}/retry`, { note: 'Khách đã đổi thẻ' });
+      // Phiên đã hết hạn: tiền về muộn không tự cấp (webhook trả 'expired').
+      const late = c.sepayTx({ id: `LATE${id}`, refCode: co.body.data.refCode, amount: co.body.data.amountCents });
+      assert.equal((await c.bankWebhook(late)).body.message, 'expired');
+      assert.equal(await enrollmentService.isEnrolled(buyer.id, courseId), false);
+      // Admin mở lại phiên: về pending, cùng mã tham chiếu.
+      const re = await A('POST', `/payments/transactions/${id}/retry`, { note: 'Khách báo đã chuyển khoản' });
+      assert.equal(re.body.data.status, 'pending');
+      assert.equal((await db.prisma.payment.findUniqueOrThrow({ where: { id } })).refCode, co.body.data.refCode, 'giữ nguyên mã chuyển khoản');
+      const ok = await c.payIntent(id, buyer.token);
       assert.equal(ok.body.data.status, 'succeeded');
       assert.equal(await enrollmentService.isEnrolled(buyer.id, courseId), true);
       assert.equal((await A('POST', `/payments/transactions/${id}/retry`, {})).status, 409);
@@ -621,7 +629,7 @@ describe('admin đợt 2', () => {
       const f1 = await payFlow(100);
       const buyer2 = await c.registerUser('buy2');
       const co = await c.call('POST', `/courses/${f1.courseId}/checkout`, { token: buyer2.token, body: { method: 'stripe' } });
-      await c.call('POST', `/payments/${co.body.data.id}/confirm`, { token: buyer2.token });
+      await c.payIntent(co.body.data.id, buyer2.token);
       await A('POST', `/payments/transactions/${co.body.data.id}/refund`, { reason: 'x', amountCents: 2500 });
 
       const l = await GET(`/payments/creators?q=${encodeURIComponent(f1.owner.id)}`);

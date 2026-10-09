@@ -5,127 +5,60 @@ import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { Pager } from '../../../components/ui/Pager';
 import { ApiError } from '../../../lib/api';
 import i18n from '../../../i18n';
-import { formatCents, formatDate } from '../../../lib/datetime';
-import { useToast, useMenu } from '../../admin/components/overlay';
+import { formatCents, formatDate, formatDateTime } from '../../../lib/datetime';
+import { useToast } from '../../admin/components/overlay';
 import { InvoiceDialog } from '../../payments/components/InvoiceDialog';
+import { PayNowDialog } from '../../payments/components/PayNowDialog';
 import { useMyPayments, useMySubscriptions } from '../../payments/queries';
 import type { PaymentRecord, Subscription } from '../../payments/types';
-import { fetchAllPayments, type SavedCard } from '../billing/api';
-import { CardModal } from '../billing/CardModal';
+import { fetchAllPayments } from '../billing/api';
 import { buildPaymentsCsv, downloadTextFile, PAY_STATUS, paymentDescription } from '../billing/csv';
-import { ModalActions, SettingsModal } from '../billing/Modal';
-import { useBillingSummary, useCards, useDeleteCard, useSetDefaultCard } from '../billing/queries';
+import { useBillingSummary } from '../billing/queries';
 import { RefundModal } from '../billing/RefundModal';
 import { SubscriptionModal } from '../billing/SubscriptionModal';
 import { CommunityLogo, OUTLINE_BTN, SCard, SHead } from '../ui';
 
 const errText = (e: unknown) => (e instanceof ApiError ? e.message : i18n.t('common.genericError', { ns: 'settings' }));
 
-/** Ô thương hiệu thẻ 74x54 (chữ nghiêng đậm như bản thiết kế). */
-const BRAND_TILE: Record<string, { label: string; color: string }> = {
-  visa: { label: 'VISA', color: '#1a1f71' },
-  mastercard: { label: 'MC', color: '#eb001b' },
-  amex: { label: 'AMEX', color: '#2e77bb' },
-  discover: { label: 'DISC', color: '#e55c20' },
-  jcb: { label: 'JCB', color: '#0b7a3e' },
-  unionpay: { label: 'UP', color: '#d10429' },
-  diners: { label: 'DC', color: '#0079be' },
-};
-
-function BrandTile({ brand }: { brand: string }) {
-  const t = BRAND_TILE[brand] ?? { label: 'CARD', color: '#57534e' };
-  return (
-    <span style={{ color: t.color }} className="grid h-[54px] w-[74px] flex-none place-items-center rounded-xl bg-[#f3f4f8] text-[19px] font-black italic">
-      {t.label}
-    </span>
-  );
-}
-
-const expText = (c: SavedCard) => `${String(c.expMonth).padStart(2, '0')}/${String(c.expYear % 100).padStart(2, '0')}`;
-const isExpired = (c: SavedCard, now = new Date()) => c.expYear < now.getFullYear() || (c.expYear === now.getFullYear() && c.expMonth < now.getMonth() + 1);
-
 type Modal =
-  | { kind: 'card'; mode: 'add' | 'update'; card?: SavedCard }
-  | { kind: 'delete'; card: SavedCard }
   | { kind: 'sub'; sub: Subscription }
   | { kind: 'refund'; payment: PaymentRecord }
   | null;
 
-/* ------------------------------------------------------------------ thẻ */
-function CardsCard({ onModal }: { onModal: (m: Modal) => void }) {
+/* ------------------------------------------------------------------ khoản chờ thanh toán */
+function PendingPaymentsCard({ onPay }: { onPay: (id: string) => void }) {
   const { t } = useTranslation('settings');
-  const cards = useCards();
-  const setDefault = useSetDefaultCard();
-  const toast = useToast();
-  const { openMenu, menuEl } = useMenu();
-  const defaultCard = cards.data?.find((c) => c.isDefault);
-
+  const payments = useMyPayments(1);
+  const pending = (payments.data?.data ?? []).filter((p) => p.status === 'pending');
   return (
     <SCard>
-      <SHead icon="credit_card" size="lg" title={t('billing.cards.title')} sub={t('billing.cards.sub')} className="mb-[18px]" />
+      <SHead icon="qr_code_2" size="lg" title={t('billing.pending.title')} sub={t('billing.pending.sub')} className="mb-[18px]" />
       <div className="flex flex-col gap-2.5">
-        {cards.isPending && <p className="py-4 text-center text-stone-400">{t('billing.loading')}</p>}
-        {cards.isError && <p role="alert" className="py-4 text-center text-[#dc2626]">{errText(cards.error)}</p>}
-        {cards.data?.length === 0 && <p className="rounded-2xl border border-dashed border-[#e7e0da] px-4 py-6 text-center text-sm text-stone-500">{t('billing.cards.empty')}</p>}
-        {cards.data?.map((c) => (
-          <div key={c.id} className="flex items-center gap-4 rounded-2xl border border-[#f0ebe6] px-4 py-3.5">
-            <BrandTile brand={c.brand} />
+        {payments.isPending && <p className="py-4 text-center text-stone-400">{t('billing.loading')}</p>}
+        {payments.isError && <p role="alert" className="py-4 text-center text-[#dc2626]">{errText(payments.error)}</p>}
+        {payments.data && pending.length === 0 && <p className="rounded-2xl border border-dashed border-[#e7e0da] px-4 py-6 text-center text-sm text-stone-500">{t('billing.pending.empty')}</p>}
+        {pending.map((p) => (
+          <div key={p.id} className="flex flex-wrap items-center gap-3 rounded-2xl border border-[#f0ebe6] px-4 py-3.5">
             <div className="min-w-0 flex-1">
-              <div className="text-[17px] font-extrabold tracking-[.04em]">•••• {c.last4}</div>
-              <div className={`mt-0.5 text-sm ${isExpired(c) ? 'font-semibold text-[#dc2626]' : 'text-stone-600'}`}>{isExpired(c) ? t('billing.cards.expired', { exp: expText(c) }) : t('billing.cards.expires', { exp: expText(c) })}</div>
+              <div className="truncate text-[15px] font-bold" title={paymentDescription(p)}>{paymentDescription(p)}</div>
+              <div className="mt-0.5 text-sm text-stone-600">
+                {formatCents(p.amountCents ?? p.amountUsd)}
+                {p.expiresAt ? ` · ${t('billing.pending.until', { date: formatDateTime(p.expiresAt) })}` : ''}
+              </div>
             </div>
-            {c.isDefault && <span className="rounded-full bg-[#dcfce7] px-3 py-[5px] text-[13px] font-semibold text-[#15803d]">{t('billing.cards.default')}</span>}
-            <button
-              type="button"
-              aria-label={t('billing.cards.options', { last4: c.last4 })}
-              onClick={(e) =>
-                openMenu(
-                  e,
-                  [
-                    ...(c.isDefault
-                      ? []
-                      : [
-                          {
-                            label: t('billing.cards.setDefault'),
-                            onClick: () => setDefault.mutate(c.id, { onSuccess: () => toast.success(t('billing.cards.defaultToast', { last4: c.last4 })), onError: (er) => toast.error(errText(er)) }),
-                          },
-                        ]),
-                    { label: t('billing.cards.update'), onClick: () => onModal({ kind: 'card', mode: 'update', card: c }) },
-                    { label: t('billing.cards.delete'), danger: true, onClick: () => onModal({ kind: 'delete', card: c }) },
-                  ],
-                  undefined,
-                  210,
-                )
-              }
-              className="grid size-[34px] place-items-center rounded-[10px] border-0 bg-transparent hover:bg-[#f5f2ef]"
-            >
-              <MaterialIcon name="more_horiz" size={22} />
+            <button type="button" onClick={() => onPay(p.id)} className="inline-flex h-[42px] items-center gap-2 rounded-xl bg-brand px-5 text-sm font-bold text-white hover:opacity-90">
+              <MaterialIcon name="qr_code_2" size={18} color="#fff" />
+              {t('billing.pending.payNow')}
             </button>
           </div>
         ))}
       </div>
-      <div className="mt-4 flex flex-wrap items-center gap-5">
-        <button type="button" onClick={() => onModal({ kind: 'card', mode: 'add' })} className="inline-flex h-[46px] items-center gap-2 rounded-xl border-[1.5px] border-[#fdba74] bg-white px-[22px] text-[14.5px] font-bold">
-          <MaterialIcon name="add" size={20} />
-          {t('billing.cards.add')}
-        </button>
-        <button
-          type="button"
-          disabled={!defaultCard}
-          onClick={() => defaultCard && onModal({ kind: 'card', mode: 'update', card: defaultCard })}
-          className="inline-flex items-center gap-2 border-0 bg-transparent p-0 text-[14.5px] font-bold text-[#15803d] disabled:opacity-40"
-        >
-          <MaterialIcon name="sync" size={20} />
-          {t('billing.cards.update')}
-        </button>
-      </div>
-      {menuEl}
     </SCard>
   );
 }
 
-/* ------------------------------------------------------------------ lần trừ tiếp theo */
-function NextChargeCard() {
+/* ------------------------------------------------------------------ hóa đơn tiếp theo */
+function NextInvoiceCard() {
   const { t } = useTranslation('settings');
   const summary = useBillingSummary();
   const s = summary.data;
@@ -219,9 +152,9 @@ function SubscriptionsCard({ onModal }: { onModal: (m: Modal) => void }) {
 }
 
 /* ------------------------------------------------------------------ lịch sử */
-const COLS = 'grid-cols-[120px_minmax(240px,2fr)_130px_150px_100px]';
+const COLS = 'grid-cols-[120px_minmax(240px,2fr)_130px_150px_120px]';
 
-function HistoryCard({ onInvoice }: { onInvoice: (id: string) => void }) {
+function HistoryCard({ onInvoice, onPay }: { onInvoice: (id: string) => void; onPay: (id: string) => void }) {
   const { t } = useTranslation('settings');
   const toast = useToast();
   const [page, setPage] = useState(1);
@@ -271,7 +204,7 @@ function HistoryCard({ onInvoice }: { onInvoice: (id: string) => void }) {
           {payments.data?.data.length === 0 && <p className="py-8 text-center text-stone-500">{t('billing.history.empty')}</p>}
           {payments.data?.data.map((p) => {
             const st = PAY_STATUS[p.status] ?? { text: p.status, color: '#57534e', dot: '#a8a29e' };
-            const cents = p.amountCents ?? Math.round(p.amountUsd * 100);
+            const cents = p.amountCents ?? p.amountUsd;
             return (
               <div key={p.id} className={`grid ${COLS} items-center gap-3 border-b border-[#f3eee9] px-[18px] py-4 text-[15px]`}>
                 <span>{formatDate(p.confirmedAt ?? p.createdAt)}</span>
@@ -289,7 +222,11 @@ function HistoryCard({ onInvoice }: { onInvoice: (id: string) => void }) {
                     {p.refundStatus && p.status !== 'refunded' && <span className="block text-xs text-stone-500">{p.refundStatus === 'rejected' ? t('billing.history.refundRejected') : t('billing.history.refundPending')}</span>}
                   </span>
                 </span>
-                {p.invoiceNumber ? (
+                {p.status === 'pending' ? (
+                  <button type="button" onClick={() => onPay(p.id)} className="flex items-center gap-1.5 border-0 bg-transparent p-0 font-semibold text-brand underline">
+                    {t('billing.pending.payNow')}
+                  </button>
+                ) : p.invoiceNumber ? (
                   <button type="button" onClick={() => onInvoice(p.id)} className="flex items-center gap-1.5 border-0 bg-transparent p-0 font-semibold text-[#15803d] underline">
                     {t('billing.history.invoice')}
                     <MaterialIcon name="open_in_new" size={18} />
@@ -307,62 +244,25 @@ function HistoryCard({ onInvoice }: { onInvoice: (id: string) => void }) {
   );
 }
 
-/* ------------------------------------------------------------------ xác nhận xóa thẻ */
-function DeleteCardModal({ card, onClose }: { card: SavedCard; onClose: () => void }) {
-  const { t } = useTranslation('settings');
-  const del = useDeleteCard();
-  const toast = useToast();
-  const [error, setError] = useState<string | null>(null);
-  return (
-    <SettingsModal
-      title={t('billing.del.title', { last4: card.last4 })}
-      body={t('billing.del.body')}
-      onClose={onClose}
-      busy={del.isPending}
-    >
-      {error && (
-        <div role="alert" className="text-[13px] font-semibold text-[#dc2626]">
-          {error}
-        </div>
-      )}
-      <ModalActions
-        okLabel={t('billing.cards.delete')}
-        danger
-        pending={del.isPending}
-        onCancel={onClose}
-        onOk={() =>
-          del.mutate(card.id, {
-            onSuccess: () => {
-              toast.success(t('billing.del.toast', { last4: card.last4 }));
-              onClose();
-            },
-            onError: (e) => setError(errText(e)),
-          })
-        }
-      />
-    </SettingsModal>
-  );
-}
-
 export function BillingTab() {
   const [modal, setModal] = useState<Modal>(null);
   const [invoiceId, setInvoiceId] = useState<string | null>(null);
+  const [payId, setPayId] = useState<string | null>(null);
   const close = () => setModal(null);
 
   return (
     <main className="flex min-w-0 flex-col gap-[18px]">
       <div className="grid items-stretch gap-[18px] min-[1180px]:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
-        <CardsCard onModal={setModal} />
-        <NextChargeCard />
+        <PendingPaymentsCard onPay={setPayId} />
+        <NextInvoiceCard />
       </div>
       <SubscriptionsCard onModal={setModal} />
-      <HistoryCard onInvoice={setInvoiceId} />
+      <HistoryCard onInvoice={setInvoiceId} onPay={setPayId} />
 
-      {modal?.kind === 'card' && <CardModal key={`${modal.mode}-${modal.card?.id ?? 'new'}`} mode={modal.mode} card={modal.card} onClose={close} />}
-      {modal?.kind === 'delete' && <DeleteCardModal card={modal.card} onClose={close} />}
       {modal?.kind === 'sub' && <SubscriptionModal sub={modal.sub} onClose={close} onRefund={(payment) => setModal({ kind: 'refund', payment })} />}
       {modal?.kind === 'refund' && <RefundModal payment={modal.payment} onClose={close} />}
       {invoiceId && <InvoiceDialog paymentId={invoiceId} onClose={() => setInvoiceId(null)} />}
+      {payId && <PayNowDialog paymentId={payId} onClose={() => setPayId(null)} />}
     </main>
   );
 }

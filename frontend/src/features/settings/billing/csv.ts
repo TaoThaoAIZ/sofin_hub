@@ -18,16 +18,16 @@ export function paymentDescription(p: PaymentRecord): string {
 const BOM = String.fromCharCode(0xfeff);
 const cell = (v: string | number) => `"${String(v).replaceAll('"', '""')}"`;
 
-/** CSV lịch sử thanh toán (BOM để Excel mở đúng tiếng Việt). Số tiền theo USD, 2 chữ số thập phân. */
+/** CSV lịch sử thanh toán (BOM để Excel mở đúng tiếng Việt). Số tiền theo VND (đồng, số nguyên). */
 export function buildPaymentsCsv(rows: PaymentRecord[]): string {
   const head = ['csv.colDate', 'csv.colDesc', 'csv.colAmount', 'csv.colRefunded', 'csv.colStatus', 'csv.colInvoice'].map((k) => i18n.t(k, { ns: 'settings' }));
   const lines = rows.map((p) => {
-    const cents = p.amountCents ?? Math.round(p.amountUsd * 100);
+    const cents = p.amountCents ?? p.amountUsd;
     return [
       formatDate(p.confirmedAt ?? p.createdAt),
       paymentDescription(p),
-      (cents / 100).toFixed(2),
-      ((p.refundedCents ?? 0) / 100).toFixed(2),
+      String(cents),
+      String(p.refundedCents ?? 0),
       (PAY_STATUS[p.status] ?? { text: p.status }).text,
       p.invoiceNumber ?? '',
     ]
