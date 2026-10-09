@@ -163,29 +163,39 @@ describe('thanh toán chuyển khoản, gói thành viên, hoàn tiền, webhook
 
     });
 
-    it('dùng thử: 1 lần / cộng đồng, cấp quyền ngay, hết hạn thì thu hồi', async () => {
+    it('đã bỏ dùng thử miễn phí: POST /courses/:id/trial → 404 (kể cả khi đã đăng nhập / cộng đồng có phí / miễn phí)', async () => {
       const u = await c.registerUser('trial');
-      assert.equal((await c.call('POST', '/courses/yoga/trial')).status, 401);
-      assert.equal((await c.call('POST', '/courses/photo/trial', { token: u.token })).status, 400); // miễn phí
-      assert.equal((await c.call('POST', '/courses/nope/trial', { token: u.token })).status, 404);
+      for (const slug of ['yoga', 'photo', 'nope']) {
+        assert.equal((await c.call('POST', `/courses/${slug}/trial`, { token: u.token })).status, 404, slug);
+        assert.equal((await c.call('POST', `/communities/${slug}/trial`, { token: u.token, body: {} })).status, 404, slug);
+      }
+      assert.equal(await enrollmentService.isEnrolled(u.id, 'yoga'), false);
+      assert.equal(await prisma.subscription.count({ where: { userId: u.id } }), 0);
+    });
 
-      const t = await c.call('POST', '/courses/yoga/trial', { token: u.token });
-      assert.equal(t.status, 201);
-      assert.equal(t.body.data.status, 'trialing');
+    it('gói trialing CŨ (dữ liệu legacy): hết hạn dùng thử thì thu hồi quyền', async () => {
+      const u = await c.registerUser('legacytrial');
+      const comm = await prisma.community.findUniqueOrThrow({ where: { id: 'yoga' } });
+      await prisma.subscription.create({
+        data: { userId: u.id, communityId: comm.id, status: 'trialing', priceCents: 500, currentPeriodStart: new Date(), currentPeriodEnd: new Date(Date.now() + 7 * DAY), trialEndsAt: new Date(Date.now() + 7 * DAY) },
+      });
+      await prisma.enrollment.create({ data: { userId: u.id, communityId: comm.id } });
       assert.equal(await enrollmentService.isEnrolled(u.id, 'yoga'), true);
-      assert.equal((await c.call('POST', '/courses/yoga/trial', { token: u.token })).status, 409); // đã tham gia
 
       const r = await paymentsService.processDueSubscriptions(new Date(Date.now() + 8 * DAY));
       assert.ok(r.trialsExpired >= 1);
       assert.equal(await enrollmentService.isEnrolled(u.id, 'yoga'), false);
       assert.equal((await c.call('GET', '/me/subscriptions', { token: u.token })).body.data[0].status, 'expired');
-      assert.equal((await c.call('POST', '/courses/yoga/trial', { token: u.token })).status, 409); // đã dùng thử rồi
     });
 
-    it('dùng thử rồi thanh toán → chuyển thành gói active, không bị thu hồi khi hết hạn dùng thử', async () => {
+    it('gói trialing CŨ rồi thanh toán → chuyển thành gói active, không bị thu hồi khi hết hạn dùng thử', async () => {
       const u = await c.registerUser('convert');
-      await c.call('POST', '/courses/cook/trial', { token: u.token });
-      await pay(u, 'cook'); // checkout khi đang dùng thử được phép
+      const comm = await prisma.community.findUniqueOrThrow({ where: { id: 'cook' } });
+      await prisma.subscription.create({
+        data: { userId: u.id, communityId: comm.id, status: 'trialing', priceCents: 500, currentPeriodStart: new Date(), currentPeriodEnd: new Date(Date.now() + 7 * DAY), trialEndsAt: new Date(Date.now() + 7 * DAY) },
+      });
+      await prisma.enrollment.create({ data: { userId: u.id, communityId: comm.id } });
+      await pay(u, 'cook'); // checkout khi còn gói trialing cũ được phép
       const sub = (await c.call('GET', '/me/subscriptions', { token: u.token })).body.data[0];
       assert.equal(sub.status, 'active');
       await paymentsService.processDueSubscriptions(new Date(Date.now() + 8 * DAY));

@@ -139,8 +139,8 @@ async function draftView(row: DraftRow) {
       priceUsd: centsToUsd(row.priceCents),
       priceAnnualUsd: annual,
       annualSavingsPct: annualSavingsPct(centsToUsd(row.priceCents), annual),
-      memberTrialEnabled: row.memberTrialEnabled,
-      trialDays: row.memberTrialEnabled && row.priceCents > 0 ? cfg().payments.trialDays : 0,
+      memberTrialEnabled: false, // đã bỏ dùng thử miễn phí
+      trialDays: 0,
       joinQuestions: row.joinQuestions,
       rules: asRules(row.rules),
       requireRulesAgreement: row.requireRulesAgreement,
@@ -301,7 +301,6 @@ export const wizardService = {
     data.priceAnnualCents = annual == null ? null : usdToCents(annual);
     if (b.visibility !== undefined) data.visibility = b.visibility;
     if (b.language !== undefined) data.language = b.language;
-    if (b.memberTrialEnabled !== undefined) data.memberTrialEnabled = b.memberTrialEnabled;
     if (b.joinQuestions !== undefined) data.joinQuestions = b.joinQuestions.filter((q) => q.trim());
     if (b.rules !== undefined) data.rules = b.rules as unknown as Prisma.InputJsonValue;
     if (b.requireRulesAgreement !== undefined) data.requireRulesAgreement = b.requireRulesAgreement;

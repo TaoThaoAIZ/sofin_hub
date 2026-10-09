@@ -5,6 +5,15 @@
 > `PAYMENT_WEBHOOK_SECRET`, `WebhookEvent`, `reapStaleWebhooks`, `reconcileUnsettledCharges`, `recordRenewal`, tự trừ thẻ khi hết thử/gia hạn, `$`/USD/cent đã **lỗi thời**
 > (số dư owner, hoàn tiền 2 pha, hóa đơn, idempotency, vòng đời kick/ban/rời, quyền Owner/Admin **vẫn đúng** vì dùng chung `settle`).
 
+## Bỏ dùng thử miễn phí (2026-10-14)
+Dùng thử miễn phí của THÀNH VIÊN đã bị **bỏ hoàn toàn**: cộng đồng chỉ là miễn phí hoặc trả phí.
+- Đã xóa `POST /courses/:id/trial`, `POST /communities/:id/trial` (nay 404), `paymentsService.startTrial`, `startTrialBody`, mã lỗi `TRIAL_NOT_AVAILABLE`.
+- `GET /communities/:id/checkout-quote` luôn trả `trialDays: 0`, `trialEligible: false`, `firstChargeDate = startsAt`, `dueTodayUsd = giá kỳ`, `remindAt: null`.
+- `Community.memberTrialEnabled` luôn `false` trong API; schema vẫn nhận field nhưng bỏ qua (tạo/sửa/wizard). Wizard `members.trialDays` luôn 0. Enum `pricing: 'trial'` còn trong enum nhưng dữ liệu đã chuyển sang `paid` (migration `20261014110000_remove_member_trial`), seed không dùng nữa.
+- Dữ liệu CŨ vẫn chạy đúng: gói `trialing` còn sót hết hạn thì `processDueSubscriptions` đặt `expired` + thu hồi quyền; trả tiền khi còn gói `trialing` ⇒ `settle` chuyển thành `active`; `sendTrialReminders` / job `payments.trialReminders` vẫn nhắc gói `trialing` cũ.
+- KHÔNG đổi: dùng thử gói HOSTING của owner (`owner.trialDays`, bước `plan` của wizard) — tính năng mô phỏng khác.
+- Các mục "dùng thử" của thành viên bên dưới được đánh dấu **LỖI THỜI**; chỉ phần mô tả hành vi gói `trialing` cũ còn hiệu lực.
+
 ## Chuyển khoản VietQR + SePay (2026-10-14)
 Port từ `payment-engine` (Python/FastAPI) và `sofin/apps/lms/src/payment` (NestJS) sang SofinHub. Code: `payments.bank.ts` (khớp tiền), `payments.service.ts` (`checkout`, `confirm`, `settle*`, gia hạn),
 `payments.gateway.ts` (chỉ còn `refund`). Test: **`tests/bank-transfer.test.ts`**. Migration `20261014100000_bank_transfer_vnd`.
@@ -28,7 +37,7 @@ song song cho cùng một giao dịch vẫn chỉ cấp **một lần**. FE poll
 | GET | `/payments/:id` | chủ phiên | Trạng thái + `transfer` (khi còn pending). Pending quá hạn ⇒ tự chuyển `failed/expired` |
 | POST | `/payments/:id/confirm` | chủ phiên | Giống GET, thêm quét SePay theo yêu cầu (giãn cách ≥ 10s toàn hệ thống). **Không cấp quyền** |
 | POST | `/communities/:id/modules/:moduleId/purchase` | login | 201 Payment `kind=module` **pending** + `transfer`; module mở khóa khi tiền về |
-| POST | `/communities/:id/trial` | login | Không còn thẻ. Hết thử không trả ⇒ `expired` |
+| ~~POST~~ | ~~`/communities/:id/trial`~~ | | **[LỖI THỜI — đã bỏ 2026-10-14]** Đã xóa, trả 404. Gói `trialing` cũ: hết thử không trả ⇒ `expired` |
 | POST | `/payments/webhook` | key tĩnh | `Authorization: Apikey <key>` hoặc `Bearer <key>`, so sánh timing-safe. **Chưa đặt `SEPAY_WEBHOOK_KEY` ⇒ 401 mọi request**. Nhận payload webhook (camelCase) lẫn dòng `transactions/list` (snake_case) |
 | GET | `/admin/bank/status` | Platform Admin | `{configured}` |
 | GET | `/admin/bank/transactions` | Platform Admin | `credited?, page, limit` — tiền vào chưa khớp (kèm `note` lý do) |
@@ -82,7 +91,7 @@ Response thành công `{ data }` (danh sách: `{ data, meta }`). Lỗi tiếng V
 | POST | `/courses/:id/subscription/cancel` | thành viên có gói | `{atPeriodEnd=true}` | `Subscription` | 400, 404 chưa có gói |
 | POST | `/courses/:id/subscription/resume` | thành viên có gói | | `Subscription` | 404, 409 chưa hủy / đã hết kỳ |
 | GET | `/me/subscriptions` | đăng nhập | | `Subscription[]` (+ `courseTitle, accessUntil`) | |
-| POST | `/courses/:id/trial` | đăng nhập | | 201 `Subscription` (`trialing`) | 400 khóa miễn phí, 403 bị cấm / cộng đồng khóa / riêng tư chưa được duyệt, 404, 409 đã tham gia / có gói / đã dùng thử |
+| ~~POST~~ | ~~`/courses/:id/trial`~~ (LỖI THỜI — đã xóa, nay 404) | đăng nhập | | 201 `Subscription` (`trialing`) | 400 khóa miễn phí, 403 bị cấm / cộng đồng khóa / riêng tư chưa được duyệt, 404, 409 đã tham gia / có gói / đã dùng thử |
 | GET | `/me/payments` | đăng nhập | `page, limit(<=100)` | `{data, meta}` | 400 |
 | GET | `/payments/:id/invoice` | chủ giao dịch, Owner cộng đồng đó, Platform Admin | | hóa đơn JSON: `invoiceNumber (INV-2026-000123), issuedAt, status, buyer, community, items[], subtotalCents, refundedCents, totalCents` | 403, 404, 409 chưa có hóa đơn |
 | POST | `/payments/:id/refund-request` | chủ giao dịch | `{reason}` | 201 `RefundRequest` (`approved` nếu trong cửa sổ, ngược lại `pending`) | 400, 403, 404, 409 |
@@ -118,7 +127,7 @@ Response thành công `{ data }` (danh sách: `{ data, meta }`). Lỗi tiếng V
 - **Gia hạn**: `processDueSubscriptions(now)` (scheduler mỗi 5 phút, `unref`, tắt khi `NODE_ENV=test`, gọi từ `src/index.ts`): hết dùng thử → `expired` + thu hồi quyền;
   hủy-cuối-kỳ đến hạn → `canceled` + thu hồi; còn lại tính tiền qua gateway, tạo giao dịch `renewal` mới (mỗi lần chạy chỉ tiến 1 kỳ); trừ tiền lỗi → `expired` + thu hồi + notify.
   Owner không bao giờ bị thu hồi quyền (`revokeAccess` bỏ qua vai trò owner).
-- **Dùng thử**: `TRIAL_DAYS` (mặc định 7), 1 lần/user/cộng đồng, cấp quyền ngay, không thu tiền. Đang dùng thử vẫn `checkout` + `confirm` được → chuyển thành `active` (kỳ mới từ lúc trả tiền).
+- **[LỖI THỜI — đã bỏ 2026-10-14]** **Dùng thử** (chỉ còn đúng với gói `trialing` cũ): `TRIAL_DAYS` (mặc định 7), 1 lần/user/cộng đồng, cấp quyền ngay, không thu tiền. Đang dùng thử vẫn `checkout` + `confirm` được → chuyển thành `active` (kỳ mới từ lúc trả tiền).
 - **Hoàn tiền (đề xuất chờ xác nhận)**: trong `REFUND_WINDOW_DAYS` (mặc định 7) kể từ **lần thanh toán đầu của gói** → tự duyệt, hoàn 100%; ngoài cửa sổ → `pending`,
   Platform Admin duyệt/từ chối. Hoàn xong: giao dịch `refunded`, nếu là kỳ hiện tại của gói thì gói `canceled` + thu hồi quyền, notify.
 - **Doanh thu** (`lineEconomics`): mỗi giao dịch `succeeded|refunded`: hoa hồng = `round((amount - refunded) * PLATFORM_COMMISSION_PCT)`; phí cổng =
@@ -161,7 +170,7 @@ Hiện thực interface `PaymentGateway` trong file mới (vd. `payments.stripe-
 - Mô hình doanh thu & tỉ lệ hoa hồng (#6), chính sách hoàn tiền (#8: cửa sổ 7 ngày là đề xuất), chu kỳ/ngưỡng payout (#9: hiện rút theo yêu cầu, tối thiểu $50).
 - Thuế/VAT trên hóa đơn, PDF hóa đơn, thông tin pháp lý người bán.
 - Email giao dịch (hiện chỉ thông báo trong app), retry gia hạn nhiều lần (dunning) thay vì hết hạn ngay.
-- Dùng thử theo cộng đồng có thể cấu hình riêng (`pricing: 'trial'` trong seed chưa được dùng để giới hạn).
+- **[LỖI THỜI — đã bỏ 2026-10-14]** Dùng thử theo cộng đồng có thể cấu hình riêng (`pricing: 'trial'` trong seed chưa được dùng để giới hạn).
 - FE: trang quản lý gói, lịch sử/hóa đơn, doanh thu — chưa làm (không thuộc phạm vi backend).
 
 ## Vòng đời tiền (audit STEP 2 — đã khóa bằng test `tests/money-lifecycle.test.ts`)
@@ -174,7 +183,7 @@ Mỗi kịch bản 3.x được viết thành test **trước khi sửa** và đ
 ### 3.2 Không trừ tiền người bị kick/ban, cộng đồng xóa/khóa
 - `lockNextDueSubscription` JOIN `Course`: bỏ qua cộng đồng `locked`/`moderationStatus=suspended`; cộng đồng đã xóa được trả về để **kết thúc gói** (không trừ). `processDueSubscriptions` thêm: bị cấm / không còn là thành viên → `canceled` không trừ tiền.
 - Hook vòng đời (`paymentsService`): `endMembership` (kick, xóa cộng đồng → gói `canceled` ngay, thông báo "Gói thành viên đã kết thúc… không bị tính phí thêm"), `stopRenewals` (ban, khóa/đình chỉ → `cancelAtPeriodEnd`, thông báo "sẽ không được gia hạn"), `endAllForCommunity(courseId, mode)` (gọi từ `communities.service` remove/lock và `admin-communities` suspend/delete).
-- `checkout`/`confirm`/`startTrial`/`adminRetryPayment`/`requestPayout` → 403 `COMMUNITY_LOCKED`; cộng đồng **riêng tư** chỉ cho mua/dùng thử khi đã có join request `approved` (lời mời cộng đồng riêng tư có phí ghi sẵn 1 request approved) hoặc đang là thành viên.
+- `checkout`/`confirm`/`adminRetryPayment`/`requestPayout` → 403 `COMMUNITY_LOCKED`; cộng đồng **riêng tư** chỉ cho mua khi đã có join request `approved` (lời mời cộng đồng riêng tư có phí ghi sẵn 1 request approved) hoặc đang là thành viên.
 ### 3.3 "Rời cộng đồng"
 - **Quyết định**: rời = xóa Enrollment ngay (mất truy cập ngay như cũ) **và** hủy gói **cuối kỳ** (`cancelAtPeriodEnd`) — không bị trừ kỳ sau, nhưng tiền kỳ đã trả không bị mất: `POST /courses/:id/enroll` khi gói còn hiệu lực cho **vào lại không 402, không trả tiền, không đổi kỳ** (kể cả riêng tư/có phí). Không tự bỏ `cancelAtPeriodEnd` khi vào lại (muốn tiếp tục gia hạn gọi `/subscription/resume`).
 - Ban = dừng gia hạn + gỡ quyền; **gỡ cấm khi gói còn hạn trả lại quyền** (không trừ lần hai, không reset kỳ). Kick/xóa cộng đồng = kết thúc gói ngay (kick xong user vẫn tự `checkout` lại được — kick không phải ban).
@@ -191,14 +200,14 @@ Mỗi kịch bản 3.x được viết thành test **trước khi sửa** và đ
 - **Charge xong settle lỗi**: `gatewayChargeId` được ghi vào Payment ngay sau khi cổng trừ tiền (trước `settle`); `reconcileUnsettledCharges` hoàn tất giao dịch `pending` có `gatewayChargeId`.
 - **Webhook**: `claimWebhookEvent` atomic (`INSERT` hoặc `UPDATE ... WHERE status IN (failed,received) OR processing quá 2 phút`). `duplicate:true` chỉ khi `done` hoặc đang `processing` còn mới; lỗi xử lý → `failed` + `lastError` (không còn xóa/nuốt); `reapStaleWebhooks` replay từ `payload` (tối đa 8 lần).
 
-## Gói năm, báo giá, dùng thử có thẻ, gói hosting owner, payout account (2026-10-07)
+## Gói năm, báo giá, (dùng thử có thẻ — ĐÃ BỎ 2026-10-14), gói hosting owner, payout account (2026-10-07)
 Hợp đồng chi tiết: `docs/api/community-wizard.md` (mục 3–6). Test: `tests/annual-subscription.test.ts`, `tests/community-wizard.test.ts`.
 
 | Method · Path | Auth | Body / Query | Ghi chú |
 |---|---|---|---|
 | `GET /communities/:id/checkout-quote?interval=` | tùy chọn | `interval=monthly\|annual` | Mọi số/ngày do server tính: `plans[]`, `trialDays`, `firstChargeDate/Amount`, `remindAt`, `dueTodayUsd`. 400 `COMMUNITY_FREE`/`INTERVAL_UNAVAILABLE` |
 | `POST /communities/:id/checkout` | login | `{ method?='stripe', interval?='monthly', paymentMethod? }` + `Idempotency-Key` | Số tiền theo `interval` do server quyết; intent pending chỉ được tái dùng khi CÙNG `interval` + số tiền |
-| `POST /communities/:id/trial` | login | `{ interval?, paymentMethod? }` | Có thẻ ⇒ hết thử tự trừ (cổng giả lập) rồi `active`; 400 `TRIAL_NOT_AVAILABLE` nếu cộng đồng tắt thử |
+| ~~`POST /communities/:id/trial`~~ | | **[LỖI THỜI — đã bỏ 2026-10-14]** Đã xóa (404). Cũ: `{ interval?, paymentMethod? }` | Có thẻ ⇒ hết thử tự trừ (cổng giả lập) rồi `active`; 400 `TRIAL_NOT_AVAILABLE` nếu cộng đồng tắt thử |
 | `GET /me/payment-methods` | login | | Chỉ `brand/last4/expMonth/expYear` |
 | `GET /owner-plans`, `GET\|PUT /communities/:id/hosting-plan` | — / owner | `{ planKey, cycle?, paymentMethod? }` | **MÔ PHỎNG** (A16) |
 | `GET\|PUT /communities/:id/payout-account`, `POST …/payout-account/skip` | owner | `{ bankName, accountHolder, accountNumber }` | **MÔ PHỎNG**; chỉ lưu 4 số cuối |
@@ -206,8 +215,8 @@ Hợp đồng chi tiết: `docs/api/community-wizard.md` (mục 3–6). Test: `t
 Quyết định thiết kế:
 - `Subscription.interval` + `Payment.interval`: `monthly` = `payments.subscriptionPeriodDays` (30), `annual` = `payments.annualPeriodDays` (365). `priceCents` của gói = số tiền MỖI KỲ (gói năm = giá cả năm). Mọi luồng giữ nguyên: unique index "1 gói sống/user/cộng đồng", advisory lock + thứ tự khóa Subscription→Payment→số hóa đơn, chống trừ trùng (void + hoàn), rời cộng đồng = hủy cuối kỳ (vào lại được tới hết năm), hoàn tiền trong cửa sổ (kể cả toàn bộ giá năm) thu hồi quyền. MRR của gói năm = `priceCents / 12`. Hệ thống không có proration (hoàn tiền là cả khoản hoặc admin duyệt một phần) nên chu kỳ không ảnh hưởng tới hoàn tiền.
 - **Thẻ**: client tokenize (mock `tok_mock_*`; sau này Stripe Elements → PaymentMethod id). Body `paymentMethod` là object STRICT (field lạ như `number`/`cvc` ⇒ 400), kiểm brand/last4/hạn dùng. DB chỉ có `PaymentCard{brand,last4,expMonth,expYear,gatewayToken}`; token cổng không ra API. Cổng giả lập: token `tok_mock_declined` luôn bị từ chối (để test).
-- **Dùng thử có thẻ** (`processDueSubscriptions`): hết kỳ thử + có `paymentCardId` + chưa hủy + còn là thành viên ⇒ `createCharge` (idempotencyKey `<subId>:trial-end`) → ghi Payment `initial` + hóa đơn, gói `active` (kỳ theo `interval`, tính từ cuối thử); thẻ bị từ chối ⇒ Payment `failed` + gói `expired` + thu hồi quyền + thông báo. Kết quả job có thêm `trialsConverted`.
-- **Email nhắc trước ngày trừ tiền đầu** (`payments.trialReminderDays`=3): job `payments.trialReminders` (15 phút) → `sendTrialReminders`; claim nguyên tử `UPDATE … trialReminderSentAt IS NULL … FOR UPDATE SKIP LOCKED` TRƯỚC khi gửi ⇒ đúng 1 lần/gói dù chạy lặp/song song (mail lỗi thì không gửi lại). Gửi qua `mailService` (dev: `GET /dev/outbox`) + thông báo trong app. Không nhắc gói đã hủy hoặc không có thẻ.
+- **[LỖI THỜI — đã bỏ 2026-10-14]** **Dùng thử có thẻ** (`processDueSubscriptions`): hết kỳ thử + có `paymentCardId` + chưa hủy + còn là thành viên ⇒ `createCharge` (idempotencyKey `<subId>:trial-end`) → ghi Payment `initial` + hóa đơn, gói `active` (kỳ theo `interval`, tính từ cuối thử); thẻ bị từ chối ⇒ Payment `failed` + gói `expired` + thu hồi quyền + thông báo. Kết quả job có thêm `trialsConverted`.
+- **Email nhắc trước ngày trừ tiền đầu** (chỉ còn áp dụng cho gói `trialing` cũ; `payments.trialReminderDays`=3): job `payments.trialReminders` (15 phút) → `sendTrialReminders`; claim nguyên tử `UPDATE … trialReminderSentAt IS NULL … FOR UPDATE SKIP LOCKED` TRƯỚC khi gửi ⇒ đúng 1 lần/gói dù chạy lặp/song song (mail lỗi thì không gửi lại). Gửi qua `mailService` (dev: `GET /dev/outbox`) + thông báo trong app. Không nhắc gói đã hủy hoặc không có thẻ.
 - **Payout**: `PayoutAccount.status='skipped'` ⇒ `POST /communities/:id/payouts` trả 400 `PAYOUT_ACCOUNT_REQUIRED`; `connected` ⇒ `method` trong body tùy chọn. Cộng đồng không có bản ghi (tạo kiểu cũ) giữ luồng cũ.
 - **Gói hosting owner**: giá/ngày thử/phí hiển thị ở Global Settings `owner.*`; `HostingPlan` lưu giá chụp + mốc dùng thử (một lần/cộng đồng). **Không có job/cổng trừ tiền khi hết thử** (`mock:true`). `owner.requirePlan` (mặc định false) bắt buộc chọn gói mới publish được.
 - Tiền gói thành viên USD, gói hosting owner theo `owner.currency` (mặc định VND, số nguyên) — chưa thống nhất 1 đơn vị tiền (xem A16).

@@ -150,7 +150,7 @@ function RevenueInner() {
               <Stat label={t('stats.available')} value={formatCents(d.availableBalanceCents)} hint={t('stats.allTime')} accent />
               {d.heldCents !== undefined && <Stat label={t('stats.held')} value={formatCents(d.heldCents)} hint={pol ? t('stats.heldHint', { days: pol.holdDays }) : undefined} />}
               {d.reserveCents !== undefined && <Stat label={t('stats.reserve')} value={formatCents(d.reserveCents)} hint={pol ? t('stats.reserveHint', { pct: pol.reservePct }) : undefined} />}
-              <Stat label="MRR" value={formatCents(d.mrrCents)} hint={t('stats.mrrHint', { paid: d.activePaidMembers, trial: d.trialingMembers })} />
+              <Stat label="MRR" value={formatCents(d.mrrCents)} hint={t('stats.mrrHint', { paid: d.activePaidMembers })} />
               <Stat label={t('stats.pending')} value={formatCents(d.payoutRequestedCents)} />
             </div>
             {debt > 0 && (

@@ -220,15 +220,16 @@ describe('điểm thưởng không farm được + chính sách quyền ở ranh
       }
     });
 
-    it('cộng đồng riêng tư có phí: duyệt chỉ cho phép thanh toán (không enroll); checkout/trial không có duyệt → 403; lời mời cũng vậy', async () => {
+    it('cộng đồng riêng tư có phí: duyệt chỉ cho phép thanh toán (không enroll); checkout không có duyệt → 403 (đường /trial đã bỏ → 404); lời mời cũng vậy', async () => {
       const owner = await c.registerUser('pp-owner');
       await enrollmentService.grant(owner.id, 'lead', 'owner'); // 'lead': riêng tư, $10
       const u = await c.registerUser('pp-user');
-      // Chưa được duyệt: checkout + trial đều bị chặn.
+      // Chưa được duyệt: checkout bị chặn; /trial không còn tồn tại.
       const r1 = await c.call('POST', '/courses/lead/checkout', { token: u.token, body: { method: 'stripe' } });
       assert.equal(r1.status, 403);
       assert.equal(r1.body.error?.code ?? r1.body.code, 'JOIN_REQUEST_REQUIRED');
-      assert.equal((await c.call('POST', '/courses/fin/trial', { token: u.token })).status, 403); // 'fin': riêng tư, $5
+      assert.equal((await c.call('POST', '/courses/fin/checkout', { token: u.token, body: { method: 'stripe' } })).status, 403); // 'fin': riêng tư, $5
+      assert.equal((await c.call('POST', '/courses/fin/trial', { token: u.token })).status, 404);
 
       const req = await c.call('POST', '/courses/lead/join-requests', { token: u.token, body: {} });
       assert.equal(req.status, 201);

@@ -17,14 +17,14 @@ metaRouter.get('/categories', async (_req, res) => {
 
 /**
  * Số liệu trang chủ, tính từ DB (không còn hằng số):
- * - learners: số người dùng THẬT (không demo, chưa xóa) có ít nhất 1 ghi danh;
+ * - learners: số tài khoản THẬT đã đăng ký và xác thực email (không demo, chưa xóa) — không cần đã tham gia cộng đồng nào;
  * - courses: số cộng đồng đang được liệt kê công khai (cùng điều kiện danh sách /courses);
  * - instructors: số chủ sở hữu thật (distinct ownerId) của các cộng đồng đó;
  * - rating: điểm trung bình có trọng số (theo số lượt đánh giá) của các cộng đồng đang liệt kê — cùng số liệu hiển thị trên thẻ; null nếu chưa có đánh giá nào.
  */
 metaRouter.get('/stats', async (_req, res) => {
   const [learners, courses, instructors, agg] = await Promise.all([
-    prisma.user.count({ where: { isDemo: false, deletedAt: null, enrollments: { some: {} } } }),
+    prisma.user.count({ where: { isDemo: false, deletedAt: null, emailVerified: true } }),
     prisma.community.count({ where: LISTED }),
     prisma.community.findMany({ where: { ...LISTED, ownerId: { not: null } }, distinct: ['ownerId'], select: { ownerId: true } }).then((r) => r.length),
     prisma.community.findMany({ where: { ...LISTED, ratingCount: { gt: 0 } }, select: { rating: true, ratingCount: true } }),

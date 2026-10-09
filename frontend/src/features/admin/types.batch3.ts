@@ -254,7 +254,6 @@ export interface PlatformSettings {
     gatewayFeeFixedCents: number;
     refundWindowDays: number;
     payoutMinUsd: number;
-    trialDays: number;
     subscriptionPeriodDays: number;
     currency: 'USD' | 'VND' | 'EUR';
     autoPayouts: boolean;

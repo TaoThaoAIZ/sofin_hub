@@ -92,11 +92,10 @@ describe('courses + enrollments (Prisma)', () => {
       assert.equal('modules' in d, false, 'modules thật nằm ở /courses/:id/modules');
       const realLessons = await prisma.classroomLesson.count({ where: { communityId: 'photo', hidden: false, removedAt: null, module: { publishStatus: 'published', removedAt: null } } });
       assert.equal(d.facts.find((f: any) => f.label === 'Bài học').value, String(realLessons), 'số bài học lấy từ lớp học thật');
-      const trial = (await import('../src/modules/settings/settings.service.js')).cfg().payments.trialDays;
       const paid = (await call('GET', `/courses/${(await prisma.community.findFirstOrThrow({ where: { priceCents: { gt: 0 }, deletedAt: null } })).id}`)).body.data;
-      assert.ok(paid.priceNotes.includes(`Miễn phí dùng thử ${trial} ngày`), 'ngày dùng thử từ cấu hình thật');
+      assert.deepEqual(paid.priceNotes, ['Hủy bất kỳ lúc nào'], 'không còn quảng cáo dùng thử miễn phí');
       const free = (await call('GET', `/courses/${(await prisma.community.findFirstOrThrow({ where: { priceCents: 0, deletedAt: null } })).id}`)).body.data;
-      assert.deepEqual(free.priceNotes, [], 'cộng đồng miễn phí không quảng cáo dùng thử');
+      assert.deepEqual(free.priceNotes, [], 'cộng đồng miễn phí không có ghi chú giá');
       assert.ok(d.stats.members >= 1 && d.stats.admins >= 1 && d.stats.online >= 0);
       assert.equal(d.viewerRole, null);
     });
@@ -157,8 +156,7 @@ describe('courses + enrollments (Prisma)', () => {
       assert.notEqual(st.learners, 100000);
       assert.notEqual(st.courses, 1000);
       const before = st.learners;
-      const u = await registerUser('st-a');
-      await call('POST', '/courses/photo/enroll', { token: u.token });
+      await registerUser('st-a'); // chỉ cần đăng ký + xác thực, không cần tham gia cộng đồng nào
       assert.ok((await call('GET', '/stats')).body.data.learners >= before + 1);
       await prisma.community.update({ where: { id: 'photo' }, data: { rating: 3, ratingCount: 2 } });
       await prisma.community.update({ where: { id: 'yt' }, data: { rating: 4, ratingCount: 2 } });

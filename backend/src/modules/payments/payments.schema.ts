@@ -33,11 +33,6 @@ export const createCheckoutBody = z.object({
 });
 export type CreateCheckoutBody = z.infer<typeof createCheckoutBody>;
 
-export const startTrialBody = z.object({
-  interval: intervalField.default('monthly'),
-  paymentMethod: paymentMethodInput.optional(),
-});
-
 /** Mua lẻ module: giá luôn do server quyết định (không nhận số tiền). Idempotency-Key ở body hoặc header (body ưu tiên). */
 export const purchaseModuleBody = z.object({
   paymentMethod: paymentMethodInput.optional(),

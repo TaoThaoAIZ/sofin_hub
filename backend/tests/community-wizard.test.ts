@@ -186,7 +186,7 @@ describe('wizard tạo cộng đồng: nháp, slug, publish, câu hỏi gia nh�
       const u = await c.registerUser('mem');
       const d = await newDraft(u);
       const ok = await step(u, d.id, 'members', {
-        visibility: 'private', priceUsd: 175_000, priceAnnualUsd: 1_200_000, memberTrialEnabled: true,
+        visibility: 'private', priceUsd: 175_000, priceAnnualUsd: 1_200_000, memberTrialEnabled: true, // bị bỏ qua: không còn dùng thử
         joinQuestions: ['Bạn đã từng làm gốm chưa?', 'Bạn biết đến lớp từ đâu?'],
         rules: [{ title: 'Tôn trọng nhau', body: 'Góp ý văn minh' }, { title: 'Không spam' }],
         requireRulesAgreement: true, autoApprovePaid: false,
@@ -196,7 +196,7 @@ describe('wizard tạo cộng đồng: nháp, slug, publish, câu hỏi gia nh�
       assert.equal(m.priceUsd, 175_000);
       assert.equal(m.priceAnnualUsd, 1_200_000);
       assert.equal(m.annualSavingsPct, 43);
-      assert.equal(m.trialDays, 7);
+      assert.equal(m.trialDays, 0, 'không còn dùng thử dù client gửi memberTrialEnabled: true');
       assert.equal(m.rules.length, 2);
       assert.equal(m.rules[1].body, '');
       assert.deepEqual(ok.body.data.completedSteps, ['basics', 'members']);
@@ -211,6 +211,7 @@ describe('wizard tạo cộng đồng: nháp, slug, publish, câu hỏi gia nh�
       assert.equal((await step(u, d.id, 'members', { joinQuestions: ['ab'] })).status, 400);
       assert.equal((await step(u, d.id, 'members', { visibility: 'secret' })).status, 400);
       assert.equal((await step(u, d.id, 'members', { memberTrialEnabled: false })).body.data.members.trialDays, 0);
+      assert.equal((await step(u, d.id, 'members', { memberTrialEnabled: true })).body.data.members.trialDays, 0, 'công tắc dùng thử bị bỏ qua');
       const free = await step(u, d.id, 'members', { priceUsd: 0 });
       assert.equal(free.body.data.members.priceAnnualUsd, null);
       assert.equal((await step(u, d.id, 'members', { priceUsd: 0, priceAnnualUsd: 250_000 })).status, 400);
@@ -411,7 +412,7 @@ describe('wizard tạo cộng đồng: nháp, slug, publish, câu hỏi gia nh�
       const a = await c.call('POST', '/communities', { token: u.token, body: { title: 'Một Phát', description: 'd', category: 'tech', priceUsd: 0, visibility: 'public' } });
       assert.equal(a.status, 201);
       assert.equal(a.body.data.priceAnnualUsd, null);
-      assert.equal(a.body.data.memberTrialEnabled, true);
+      assert.equal(a.body.data.memberTrialEnabled, false, 'không còn dùng thử');
       assert.deepEqual(a.body.data.joinQuestions, []);
       const b = await c.call('POST', '/communities', { token: u.token, body: { title: 'Có Năm', description: 'd', category: 'tech', priceUsd: 175_000, priceAnnualUsd: 1_200_000, visibility: 'public' } });
       assert.equal(b.status, 201);

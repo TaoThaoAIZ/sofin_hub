@@ -9,7 +9,7 @@ export type CategoryId =
   | 'relationships';
 
 export type CourseTag = 'hot' | 'bestseller' | 'new';
-export type Pricing = 'free' | 'paid' | 'trial';
+export type Pricing = 'free' | 'paid';
 export type Visibility = 'public' | 'private';
 export type CourseStatus = 'open' | 'soon' | 'completed';
 export type Language = 'vi' | 'en';
@@ -32,7 +32,6 @@ export interface Course {
   /** Giá năm (USD); null/vắng = không bán gói năm. */
   priceAnnualUsd?: number | null;
   annualSavingsPct?: number;
-  memberTrialEnabled?: boolean;
   logoUrl?: string | null;
   brandColor?: string | null;
   pricing: Pricing;

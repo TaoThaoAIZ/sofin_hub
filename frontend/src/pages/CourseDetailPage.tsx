@@ -169,10 +169,10 @@ export function CourseDetailPage() {
       enroll.mutate(undefined, { onSuccess: () => navigate(`/communities/${id}/community`), onError: onJoinError });
       return;
     }
-    // Chưa tham gia + khóa học có phí: hiện dialog xác nhận trước khi sang trang thanh toán
-    // (tham khảo flow skool.com), thay vì tham gia thẳng như khóa miễn phí.
+    // Chưa tham gia + khóa học có phí: hỏi BE trước. Còn gói đã trả chưa hết kỳ (vd. vừa "rời") thì BE cho vào lại, không phải trả tiền;
+    // không thì BE trả 402 PAYMENT_REQUIRED → onJoinError mở dialog chọn gói/thanh toán (flow skool.com).
     if (course.priceUsd > 0) {
-      setShowPaidDialog(true);
+      enroll.mutate(undefined, { onSuccess: () => navigate(`/communities/${id}/community`), onError: onJoinError });
       return;
     }
     enroll.mutate(undefined, { onSuccess: () => navigate(`/communities/${id}/community`), onError: onJoinError });

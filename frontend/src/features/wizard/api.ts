@@ -35,7 +35,6 @@ export interface MembersBody {
   language?: 'vi' | 'en';
   priceUsd?: number;
   priceAnnualUsd?: number | null;
-  memberTrialEnabled?: boolean;
   joinQuestions?: string[];
   rules?: { title: string; body?: string }[];
   requireRulesAgreement?: boolean;

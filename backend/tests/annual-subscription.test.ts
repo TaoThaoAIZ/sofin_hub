@@ -18,7 +18,7 @@ const card = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
-describe('gói thành viên theo năm, báo giá, dùng thử không thẻ, nhắc trước hết thử (chuyển khoản VND)', () => {
+describe('gói thành viên theo năm, báo giá (không còn dùng thử), gói trialing cũ: hết hạn/nhắc/chuyển active (chuyển khoản VND)', () => {
   let server: TestServer;
   let db: TestDb;
   let c: ReturnType<typeof makeClient>;
@@ -60,7 +60,7 @@ describe('gói thành viên theo năm, báo giá, dùng thử không thẻ, nh�
   const subOf = (userId: string, communityId: string) => db.prisma.subscription.findFirst({ where: { userId, communityId }, orderBy: { createdAt: 'desc' } });
 
   describe('báo giá (checkout-quote) do server tính', () => {
-    it('monthly + annual: giá/tháng, % tiết kiệm, ngày trừ tiền đầu, ngày nhắc; 7 ngày dùng thử', async () => {
+    it('monthly + annual: giá/tháng, % tiết kiệm, ngày trừ tiền đầu, ngày nhắc; không còn dùng thử (trialDays 0)', async () => {
       const { id } = await paidCommunity();
       const now = new Date('2026-10-01T00:00:00.000Z');
       const q = await paymentsService.quote(id, undefined, 'annual', now);
@@ -68,12 +68,13 @@ describe('gói thành viên theo năm, báo giá, dùng thử không thẻ, nh�
       assert.deepEqual(q.plans[0], { interval: 'monthly', label: 'Hàng tháng', priceUsd: M, billedUsd: M, perMonthUsd: M, savingsPct: 0, popular: true, periodDays: 30 });
       assert.deepEqual(q.plans[1], { interval: 'annual', label: 'Hàng năm', priceUsd: A, billedUsd: A, perMonthUsd: 100_000, savingsPct: 43, popular: false, periodDays: 365 });
       assert.equal(q.selected, 'annual');
-      assert.equal(q.trialDays, 7);
-      assert.equal(q.firstChargeDate, '2026-10-08T00:00:00.000Z');
-      assert.equal(q.remindAt, '2026-10-05T00:00:00.000Z');
+      assert.equal(q.trialDays, 0);
+      assert.equal(q.trialEligible, false);
+      assert.equal(q.firstChargeDate, '2026-10-01T00:00:00.000Z', 'thu ngay, không có thời gian dùng thử');
+      assert.equal(q.remindAt, null);
       assert.equal(q.firstChargeAmountUsd, A);
       assert.equal(q.firstChargeAmountCents, A);
-      assert.equal(q.dueTodayUsd, 0);
+      assert.equal(q.dueTodayUsd, A);
       assert.equal(q.remindDaysBefore, 3);
       assert.equal(q.currency, 'VND');
       assert.equal(q.provider, 'bank_transfer');
@@ -84,11 +85,12 @@ describe('gói thành viên theo năm, báo giá, dùng thử không thẻ, nh�
       // qua HTTP (không cần đăng nhập)
       const h = await c.call('GET', `/communities/${id}/checkout-quote?interval=annual`);
       assert.equal(h.status, 200);
-      assert.equal(new Date(h.body.data.firstChargeDate).getTime() - new Date(h.body.data.startsAt).getTime(), 7 * DAY);
+      assert.equal(h.body.data.firstChargeDate, h.body.data.startsAt);
+      assert.equal(h.body.data.trialDays, 0);
       assert.equal((await c.call('GET', `/communities/${id}/checkout-quote`)).body.data.selected, 'monthly');
     });
 
-    it('lỗi: 404, miễn phí 400, giá năm không có 400, interval sai 400; tắt dùng thử / đã dùng thử ⇒ trialDays 0', async () => {
+    it('lỗi: 404, miễn phí 400, giá năm không có 400, interval sai 400; memberTrialEnabled bị bỏ qua ⇒ luôn trialDays 0 / trialEligible false', async () => {
       assert.equal((await c.call('GET', '/communities/khong-co/checkout-quote')).status, 404);
       assert.equal((await c.call('GET', '/communities/photo/checkout-quote')).body.error.code, 'COMMUNITY_FREE');
       const noAnnual = await paidCommunity({ priceAnnualUsd: undefined });
@@ -97,22 +99,25 @@ describe('gói thành viên theo năm, báo giá, dùng thử không thẻ, nh�
       assert.equal((await c.call('GET', `/communities/${noAnnual.id}/checkout-quote?interval=annual`)).body.error.code, 'INTERVAL_UNAVAILABLE');
       assert.equal((await c.call('GET', `/communities/${noAnnual.id}/checkout-quote?interval=weekly`)).status, 400);
 
-      const off = await paidCommunity({ memberTrialEnabled: false });
-      const o = (await c.call('GET', `/communities/${off.id}/checkout-quote?interval=annual`)).body.data;
-      assert.equal(o.trialDays, 0);
-      assert.equal(o.trialEligible, false);
-      assert.equal(o.dueTodayUsd, A);
-      assert.equal(o.remindAt, null);
-      assert.equal(o.firstChargeDate, o.startsAt);
+      // dù client gửi memberTrialEnabled: true hay false, cộng đồng không có dùng thử
+      for (const flag of [true, false]) {
+        const cm = await paidCommunity({ memberTrialEnabled: flag });
+        const detail = await c.call('GET', `/communities/${cm.id}`);
+        assert.equal(detail.body.data.memberTrialEnabled, false, 'luôn false trong API');
+        const o = (await c.call('GET', `/communities/${cm.id}/checkout-quote?interval=annual`)).body.data;
+        assert.equal(o.trialDays, 0);
+        assert.equal(o.trialEligible, false);
+        assert.equal(o.dueTodayUsd, A);
+        assert.equal(o.remindAt, null);
+        assert.equal(o.firstChargeDate, o.startsAt);
+      }
 
       const { id } = await paidCommunity();
       const u = await c.registerUser('qt');
-      assert.equal((await c.call('GET', `/communities/${id}/checkout-quote`, { token: u.token })).body.data.trialDays, 7);
-      assert.equal((await c.call('POST', `/communities/${id}/trial`, { token: u.token, body: {} })).status, 201);
-      await c.call('POST', `/communities/${id}/subscription/cancel`, { token: u.token, body: { atPeriodEnd: false } });
-      const after = (await c.call('GET', `/communities/${id}/checkout-quote`, { token: u.token })).body.data;
-      assert.equal(after.trialDays, 0, 'đã dùng thử rồi');
-      assert.equal(after.dueTodayUsd, M);
+      const own = (await c.call('GET', `/communities/${id}/checkout-quote`, { token: u.token })).body.data;
+      assert.equal(own.trialDays, 0);
+      assert.equal(own.trialEligible, false);
+      assert.equal(own.dueTodayUsd, M);
     });
   });
 
@@ -277,51 +282,51 @@ describe('gói thành viên theo năm, báo giá, dùng thử không thẻ, nh�
     });
   });
 
-  describe('dùng thử không thẻ: nhắc trước 3 ngày, thanh toán QR trong lúc thử', () => {
-    it('không PAN/CVC: object strict vẫn từ chối số thẻ/cvc, thẻ hết hạn, token sai; thẻ hợp lệ bị BỎ QUA (không lưu thẻ, paymentMethod null)', async () => {
+  /** Gói trialing CŨ (dữ liệu từ trước khi bỏ dùng thử), tạo thẳng bằng prisma. */
+  async function legacyTrial(userId: string, communityId: string, opts: { interval?: 'monthly' | 'annual'; endsInDays?: number; cancelAtPeriodEnd?: boolean } = {}) {
+    const interval = opts.interval ?? 'monthly';
+    const start = new Date();
+    const end = new Date(start.getTime() + (opts.endsInDays ?? 7) * DAY);
+    const sub = await db.prisma.subscription.create({
+      data: {
+        userId, communityId, status: 'trialing', priceCents: interval === 'annual' ? A : M, interval,
+        currentPeriodStart: start, currentPeriodEnd: end, trialEndsAt: end, cancelAtPeriodEnd: opts.cancelAtPeriodEnd ?? false,
+      },
+    });
+    await db.prisma.enrollment.create({ data: { userId, communityId } });
+    return sub;
+  }
+
+  describe('đã bỏ dùng thử miễn phí; gói trialing CŨ: nhắc trước 3 ngày, thanh toán QR, hết hạn', () => {
+    it('POST /communities/:id/trial → 404 với mọi body (kể cả paymentMethod sai/đúng); không tạo gói, không lưu thẻ; checkout vẫn từ chối PAN/CVC', async () => {
       const { id } = await paidCommunity();
       const u = await c.registerUser('pan');
-      const bad = (paymentMethod: unknown) => c.call('POST', `/communities/${id}/trial`, { token: u.token, body: { interval: 'annual', paymentMethod } });
-      assert.equal((await bad({ ...card(), number: '4242424242424242' })).status, 400);
-      assert.equal((await bad({ ...card(), cvc: '123' })).status, 400);
-      assert.equal((await bad(card({ expYear: thisYear - 1 }))).status, 400);
-      assert.equal((await bad(card({ expMonth: 13 }))).status, 400);
-      assert.equal((await bad(card({ token: '4242424242424242' }))).status, 400);
-      assert.equal((await bad(card({ brand: 'bitcoin' }))).status, 400);
+      const post = (body: unknown) => c.call('POST', `/communities/${id}/trial`, { token: u.token, body });
+      assert.equal((await post({})).status, 404);
+      assert.equal((await post({ interval: 'annual', paymentMethod: { ...card(), cvc: '123' } })).status, 404);
+      assert.equal((await post({ interval: 'annual', paymentMethod: card({ token: 'tok_mock_safe123456' }) })).status, 404);
+      assert.equal((await c.call('POST', `/communities/${id}/trial`, { body: {} })).status, 404);
       assert.equal((await checkout(u, id, { paymentMethod: { ...card(), cvc: '123' } })).status, 400);
       assert.equal(await db.prisma.paymentCard.count({ where: { userId: u.id } }), 0);
       assert.equal(await db.prisma.subscription.count({ where: { userId: u.id } }), 0);
-
-      const ok = await bad(card({ token: 'tok_mock_safe123456' }));
-      assert.equal(ok.status, 201, JSON.stringify(ok.body));
-      assert.equal(ok.body.data.paymentMethod, null, 'trial không bao giờ gắn thẻ');
-      assert.equal(JSON.stringify(ok.body).includes('tok_mock_safe123456'), false, 'token không lộ ra API');
-      assert.equal(ok.body.data.nextChargeAmountCents, A);
-      assert.equal(ok.body.data.interval, 'annual');
-      assert.equal(ok.body.data.status, 'trialing');
-      assert.equal(await db.prisma.paymentCard.count({ where: { userId: u.id } }), 0, 'không lưu thẻ');
+      assert.equal(await enrollmentService.isEnrolled(u.id, id), false);
     });
 
-    it('tắt dùng thử ở cộng đồng ⇒ 400 TRIAL_NOT_AVAILABLE; trial không thẻ: hết thử không trả là hết quyền', async () => {
-      const off = await paidCommunity({ memberTrialEnabled: false });
-      const u = await c.registerUser('toff');
-      assert.equal((await c.call('POST', `/communities/${off.id}/trial`, { token: u.token, body: {} })).body.error.code, 'TRIAL_NOT_AVAILABLE');
-
+    it('gói trialing cũ không thẻ: hết thử không trả là hết quyền (expired)', async () => {
       const { id } = await paidCommunity();
-      const t = await c.call('POST', `/communities/${id}/trial`, { token: u.token });
-      assert.equal(t.status, 201);
-      assert.equal(t.body.data.interval, 'monthly');
-      assert.equal(t.body.data.nextChargeAmountCents, M);
+      const u = await c.registerUser('toff');
+      await legacyTrial(u.id, id);
+      assert.equal(await enrollmentService.isEnrolled(u.id, id), true);
       const r = await paymentsService.processDueSubscriptions(new Date(Date.now() + 8 * DAY));
       assert.ok(r.trialsExpired >= 1);
       assert.equal(await enrollmentService.isEnrolled(u.id, id), false);
       assert.equal((await subOf(u.id, id))!.status, 'expired');
     });
 
-    it('nhắc 3 ngày trước hết thử: đúng cửa sổ, đúng 1 lần dù chạy lặp/song song, email (hướng dẫn chuyển khoản) + thông báo; đã hủy thì không nhắc', async () => {
+    it('nhắc 3 ngày trước hết thử (gói trialing cũ): đúng cửa sổ, đúng 1 lần dù chạy lặp/song song, email (hướng dẫn chuyển khoản) + thông báo; đã hủy thì không nhắc', async () => {
       const { id } = await paidCommunity();
       const u = await c.registerUser('rem');
-      await c.call('POST', `/communities/${id}/trial`, { token: u.token, body: { interval: 'annual' } });
+      await legacyTrial(u.id, id, { interval: 'annual' });
       // chỉ xét gói trialing do test này tạo (test khác trong file có thể để lại gói đang thử).
       await db.prisma.subscription.updateMany({ where: { status: 'trialing', userId: { not: u.id } }, data: { trialReminderSentAt: new Date() } });
       const outbox = async () => (await c.call('GET', `/dev/outbox?to=${encodeURIComponent(u.email)}`)).body.data as Array<{ subject: string; text: string }>;
@@ -341,18 +346,15 @@ describe('gói thành viên theo năm, báo giá, dùng thử không thẻ, nh�
 
       // không nhắc: đã đặt hủy cuối kỳ
       const v = await c.registerUser('rem2');
-      await c.call('POST', `/communities/${id}/trial`, { token: v.token, body: {} });
-      await c.call('POST', `/communities/${id}/subscription/cancel`, { token: v.token, body: { atPeriodEnd: true } });
+      await legacyTrial(v.id, id, { cancelAtPeriodEnd: true });
       await paymentsService.sendTrialReminders(new Date(Date.now() + 4.5 * DAY));
       assert.equal((await db.prisma.subscription.findFirst({ where: { userId: v.id } }))!.trialReminderSentAt, null);
     });
 
-    it('trả tiền QR trong lúc thử: chuyển active, kỳ 365 ngày, hóa đơn, vẫn là thành viên, đúng 1 payment; xử lý đến hạn không phát sinh thêm', async () => {
+    it('trả tiền QR khi còn gói trialing cũ: chuyển active, kỳ 365 ngày, hóa đơn, vẫn là thành viên, đúng 1 payment; xử lý đến hạn không phát sinh thêm', async () => {
       const { id } = await paidCommunity();
       const u = await c.registerUser('conv');
-      await c.call('POST', `/communities/${id}/trial`, { token: u.token, body: { interval: 'annual' } });
-      const trial = (await subOf(u.id, id))!;
-      assert.equal(Math.round((trial.currentPeriodEnd.getTime() - trial.currentPeriodStart.getTime()) / DAY), 7);
+      const trial = await legacyTrial(u.id, id, { interval: 'annual' });
       assert.equal(trial.status, 'trialing');
 
       const paid = await pay(u, id, { interval: 'annual' });
@@ -374,12 +376,12 @@ describe('gói thành viên theo năm, báo giá, dùng thử không thẻ, nh�
       assert.equal(rf.body.data.status, 'approved');
     });
 
-    it('hết thử không trả ⇒ expired + thu hồi quyền, không có giao dịch nào; đã hủy trước hạn cũng không bị tính phí', async () => {
+    it('gói trialing cũ hết thử không trả ⇒ expired + thu hồi quyền, không có giao dịch nào; đã hủy trước hạn cũng không bị tính phí', async () => {
       const { id } = await paidCommunity();
       const lapsed = await c.registerUser('lapse');
-      await c.call('POST', `/communities/${id}/trial`, { token: lapsed.token, body: { interval: 'annual' } });
+      await legacyTrial(lapsed.id, id, { interval: 'annual' });
       const cancelled = await c.registerUser('canc');
-      await c.call('POST', `/communities/${id}/trial`, { token: cancelled.token, body: { interval: 'annual' } });
+      await legacyTrial(cancelled.id, id, { interval: 'annual' });
       const cr = await c.call('POST', `/communities/${id}/subscription/cancel`, { token: cancelled.token, body: { atPeriodEnd: true } });
       assert.equal(cr.status, 200);
 
@@ -394,16 +396,16 @@ describe('gói thành viên theo năm, báo giá, dùng thử không thẻ, nh�
       assert.equal(await enrollmentService.isEnrolled(cancelled.id, id), false);
     });
 
-    it('statusFor: trial không có thẻ (paymentMethod null); /me/payment-methods rỗng; 401', async () => {
+    it('statusFor gói trialing cũ: không có thẻ (paymentMethod null); /me/payment-methods rỗng; 401', async () => {
       const { id } = await paidCommunity();
       const u = await c.registerUser('st');
       assert.equal((await c.call('GET', '/me/payment-methods')).status, 401);
-      await c.call('POST', `/communities/${id}/trial`, { token: u.token, body: { paymentMethod: card({ brand: 'mastercard', last4: '4444' }) } });
+      await legacyTrial(u.id, id);
       const st = (await c.call('GET', `/communities/${id}/subscription`, { token: u.token })).body.data;
       assert.equal(st.subscription.paymentMethod, null);
       assert.equal(st.subscription.interval, 'monthly');
       const list = (await c.call('GET', '/me/payment-methods', { token: u.token })).body.data;
-      assert.equal(list.length, 0, 'trial/checkout không tự lưu thẻ');
+      assert.equal(list.length, 0);
     });
   });
 });

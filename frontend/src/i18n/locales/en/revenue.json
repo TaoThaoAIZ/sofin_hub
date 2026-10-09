@@ -45,7 +45,7 @@
     "reserve": "Reserve fund",
     "reserveHint": "{{pct}}% retained",
     "mrr": "MRR",
-    "mrrHint": "{{paid}} paying members · {{trial}} on trial",
+    "mrrHint": "{{paid}} paying members",
     "pending": "Pending payouts"
   },
   "debt": "You owe {{amount}} due to refunds/chargebacks after withdrawal. Payouts are temporarily locked until new revenue offsets this debt.",

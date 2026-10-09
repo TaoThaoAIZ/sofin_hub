@@ -359,7 +359,6 @@ export function CreateWizard() {
           ? t('wizard.perMonth', { amount: formatMoney(parseMoney(form.priceMonthly) || 0, 'VND') })
           : t('wizard.perYear', { amount: formatMoney(parseMoney(form.priceAnnual) || 0, 'VND') });
 
-  const trialDaysMember = draft?.members.trialDays ?? 0;
   const summary: SummaryRow[] = [
     { label: t('summary.name'), value: form.name, step: 0 },
     { label: t('summary.slug'), value: `sofinhub.com/${form.slug}`, step: 0 },
@@ -380,7 +379,7 @@ export function CreateWizard() {
       value:
         form.billing === 'free'
           ? t('wizard.free')
-          : `${t('wizard.perMonth', { amount: formatMoney(parseMoney(form.priceMonthly) || 0, 'VND') })}${form.billing === 'year' ? t('summary.priceYear', { amount: formatMoney(parseMoney(form.priceAnnual) || 0, 'VND') }) : ''}${form.trialEnabled && trialDaysMember ? t('summary.trialDays', { days: trialDaysMember }) : ''}`,
+          : `${t('wizard.perMonth', { amount: formatMoney(parseMoney(form.priceMonthly) || 0, 'VND') })}${form.billing === 'year' ? t('summary.priceYear', { amount: formatMoney(parseMoney(form.priceAnnual) || 0, 'VND') }) : ''}`,
       step: 3,
     },
   ];
@@ -537,7 +536,6 @@ export function CreateWizard() {
                       annualDiscountPct={annualDiscountPct}
                       net={netUsd !== undefined ? { monthly: netUsd, annual: netUsd } : undefined}
                       feeNote={estimate.data ? t('wizard.feeNote', { commission: estimate.data.commissionPct, gateway: estimate.data.gatewayFeePct }) : undefined}
-                      trialDays={draft?.members.trialDays}
                       maxQuestions={MAX_QUESTIONS}
                       payout={payoutInfo}
                       onConnectPayout={connectPayout}

@@ -30,7 +30,6 @@ export interface WizardForm {
   billing: 'free' | 'month' | 'year';
   priceMonthly: string;
   priceAnnual: string;
-  trialEnabled: boolean;
   questions: string[];
   rules: WizardRule[];
   rulesRequireAgreement: boolean;
@@ -70,7 +69,6 @@ export const defaultForm = (): WizardForm => ({
   billing: 'free',
   priceMonthly: '',
   priceAnnual: '',
-  trialEnabled: true,
   questions: [],
   rules: [],
   rulesRequireAgreement: true,

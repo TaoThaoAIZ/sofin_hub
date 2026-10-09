@@ -54,7 +54,7 @@ export function CommunitiesList() {
   };
   const filters: TableFilter[] = [
     { key: 'status', label: t('communities.filterStatus'), value: f.status, options: statusOptions(), onChange: set('status') },
-    { key: 'pricing', label: t('communities.filterPricing'), value: f.pricing, options: [{ value: 'free', label: t('communities.pricingFree') }, { value: 'paid', label: t('communities.pricingPaid') }, { value: 'trial', label: t('communities.pricingTrial') }], onChange: set('pricing') },
+    { key: 'pricing', label: t('communities.filterPricing'), value: f.pricing, options: [{ value: 'free', label: t('communities.pricingFree') }, { value: 'paid', label: t('communities.pricingPaid') }], onChange: set('pricing') },
     { key: 'category', label: t('communities.filterCategory'), value: f.category, options: categoryOptions, onChange: set('category') },
     { key: 'visibility', label: t('communities.filterVisibility'), value: f.visibility, options: [{ value: 'public', label: t('communities.visPublic') }, { value: 'private', label: t('communities.visPrivate') }], onChange: set('visibility') },
     { key: 'sort', label: t('communities.filterSort'), value: f.sort, options: sortOptions(), onChange: set('sort') },

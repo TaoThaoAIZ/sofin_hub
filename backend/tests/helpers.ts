@@ -156,6 +156,8 @@ export async function startTestServer(): Promise<TestServer> {
     baseUrl: `http://127.0.0.1:${port}/api`,
     close: async () => {
       await new Promise<void>((resolve) => server.close(() => resolve()));
+      // Chờ thông báo ghi nền (báo admin/owner khi có thanh toán...) xong để DROP SCHEMA không đụng deadlock với ghi dở.
+      await (await import('../src/modules/notifications/notifications.service.js')).flushNotifications().catch(() => undefined);
       await (await import('../src/infra/shared.js')).closeShared(); // đóng kết nối Redis (nếu REDIS_URL được đặt) để process test thoát
       await db.drop();
     },

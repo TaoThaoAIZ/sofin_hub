@@ -106,8 +106,6 @@ export interface DraftView {
     priceUsd: number;
     priceAnnualUsd: number | null;
     annualSavingsPct?: number | null;
-    memberTrialEnabled: boolean;
-    trialDays: number;
     joinQuestions: string[];
     rules: { title: string; body?: string }[];
     requireRulesAgreement: boolean;

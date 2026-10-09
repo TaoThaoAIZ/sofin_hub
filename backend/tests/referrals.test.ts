@@ -330,14 +330,17 @@ describe('chương trình giới thiệu: mã, ghi nhận, hoa hồng, KPI', () 
       assert.deepEqual([...times].sort().reverse(), times);
     });
 
-    it('người dùng thử: trạng thái trial + nhắc nâng cấp gửi thông báo thật, 1 lần / 24h; người đã trả phí thì 409', async () => {
+    it('người có gói trialing cũ: trạng thái trial + nhắc nâng cấp gửi thông báo thật, 1 lần / 24h; người đã trả phí thì 409', async () => {
       const { id: communityId } = await paidCommunity();
       const ref = await signup('rem');
       const code = await codeOf(ref);
       const trialer = await signup('rem-t', code);
       const payer = await signup('rem-p', code);
-      const t = await c.call('POST', `/communities/${communityId}/trial`, { token: trialer.token, body: {} });
-      assert.equal(t.status, 201, JSON.stringify(t.body));
+      // Đường /trial đã bỏ; người đang dùng thử là gói trialing CŨ (tạo thẳng bằng prisma).
+      assert.equal((await c.call('POST', `/communities/${communityId}/trial`, { token: trialer.token, body: {} })).status, 404);
+      const end = new Date(Date.now() + 7 * 86_400_000);
+      await db.prisma.subscription.create({ data: { userId: trialer.id, communityId, status: 'trialing', priceCents: 175_000, currentPeriodStart: new Date(), currentPeriodEnd: end, trialEndsAt: end } });
+      await db.prisma.enrollment.create({ data: { userId: trialer.id, communityId } });
       await pay(payer, communityId);
 
       const rows = (await c.call('GET', '/me/referral/users?kind=member&all=true', { token: ref.token })).body.data as { userId: string; status: string }[];

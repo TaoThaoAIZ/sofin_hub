@@ -18,7 +18,6 @@ export function StepMembers({
   annualDiscountPct,
   net,
   feeNote,
-  trialDays,
   maxQuestions,
   payout,
   onConnectPayout,
@@ -31,7 +30,6 @@ export function StepMembers({
   /** Số tiền chủ nhận về mỗi thành viên sau phí (BE tính). */
   net?: { monthly?: number; annual?: number };
   feeNote?: string;
-  trialDays?: number;
   maxQuestions: number;
   payout?: PayoutInfo;
   onConnectPayout: (v: PayoutValues) => Promise<void>;
@@ -103,12 +101,6 @@ export function StepMembers({
               <PriceBox label={t('members.priceMonthly')} unit={t('members.perMonth')} value={form.priceMonthly} error={errors.priceMonthly} currency={currency} onChange={(v) => set({ priceMonthly: v }, ['priceMonthly'])} onStep={(d) => bump('priceMonthly', d * unit)} />
               {form.billing === 'year' && (
                 <PriceBox label={t('members.priceYearly')} unit={t('members.perYear')} value={form.priceAnnual} error={errors.priceAnnual} currency={currency} onChange={(v) => set({ priceAnnual: v }, ['priceAnnual'])} onStep={(d) => bump('priceAnnual', d * unit * 10)} />
-              )}
-              {!!trialDays && trialDays > 0 && (
-                <button type="button" role="checkbox" aria-checked={form.trialEnabled} onClick={() => set({ trialEnabled: !form.trialEnabled })} className="flex h-[58px] items-center gap-2.5 rounded-[14px] border-[1.5px] border-[#e7e0da] bg-white px-4 text-left text-[14.5px]">
-                  <MaterialIcon name={form.trialEnabled ? 'check_box' : 'check_box_outline_blank'} size={24} filled={form.trialEnabled} color={form.trialEnabled ? '#f26a1b' : '#a8a29e'} />
-                  {t('members.trialOffer', { days: trialDays })}
-                </button>
               )}
             </div>
             {form.billing === 'year' && savings > 0 && <p className="mt-2 mb-0 text-[13px] font-semibold text-green-700">{t('members.yearSavings', { pct: savings })}</p>}

@@ -353,15 +353,27 @@ describe('thanh toán chuyển khoản VietQR + SePay', () => {
     });
   });
 
-  describe('dùng thử không thẻ', () => {
-    it('trial không cần thẻ; thanh toán trong lúc thử chuyển sang gói trả phí; hết thử không trả → hết quyền', async () => {
+  describe('không còn dùng thử miễn phí (đã bỏ 2026-10-14)', () => {
+    it('POST /courses/:id/trial → 404; memberTrialEnabled luôn false; checkout-quote trialDays 0 / trialEligible false', async () => {
       const u = await c.registerUser('trial');
-      const pending = await prisma.community.findUniqueOrThrow({ where: { id: 'des' } });
-      await prisma.community.update({ where: { id: pending.id }, data: { memberTrialEnabled: true } });
+      await prisma.community.update({ where: { id: 'des' }, data: { memberTrialEnabled: true } });
       const t = await c.call('POST', '/courses/des/trial', { token: u.token, body: {} });
-      assert.equal(t.status, 201, JSON.stringify(t.body));
-      assert.equal(t.body.data.status, 'trialing');
-      assert.equal(t.body.data.paymentMethod, null);
+      assert.equal(t.status, 404, JSON.stringify(t.body));
+      assert.equal((await c.call('POST', '/communities/des/trial', { token: u.token, body: {} })).status, 404);
+      const q = await c.call('GET', '/communities/des/checkout-quote', { token: u.token });
+      assert.equal(q.status, 200, JSON.stringify(q.body));
+      assert.equal(q.body.data.trialDays, 0);
+      assert.equal(q.body.data.trialEligible, false);
+      const d = await c.call('GET', '/communities/des', { token: u.token });
+      assert.equal(d.body.data.memberTrialEnabled, false, 'luôn false dù DB còn true');
+      assert.equal(await prisma.subscription.count({ where: { userId: u.id } }), 0);
+    });
+
+    it('gói trialing CŨ: thanh toán chuyển sang active; gói trialing CŨ quá hạn không trả → hết quyền', async () => {
+      const u = await c.registerUser('trial');
+      const future = new Date(Date.now() + 7 * 86400_000);
+      await prisma.subscription.create({ data: { userId: u.id, communityId: 'des', status: 'trialing', priceCents: 500, currentPeriodStart: new Date(), currentPeriodEnd: future, trialEndsAt: future } });
+      await prisma.enrollment.create({ data: { userId: u.id, communityId: 'des' } });
 
       const p = await checkout(u, 'des');
       await c.bankWebhook(c.sepayTx({ id: txId(), refCode: p.refCode, amount: p.amountCents }));
@@ -369,8 +381,8 @@ describe('thanh toán chuyển khoản VietQR + SePay', () => {
       assert.equal(sub.status, 'active');
 
       const u2 = await c.registerUser('trial2');
-      await c.call('POST', '/courses/des/trial', { token: u2.token, body: {} });
-      await prisma.subscription.updateMany({ where: { userId: u2.id }, data: { currentPeriodEnd: new Date(Date.now() - 1000) } });
+      await prisma.subscription.create({ data: { userId: u2.id, communityId: 'des', status: 'trialing', priceCents: 500, currentPeriodStart: new Date(), currentPeriodEnd: new Date(Date.now() - 1000), trialEndsAt: new Date(Date.now() - 1000) } });
+      await prisma.enrollment.create({ data: { userId: u2.id, communityId: 'des' } });
       const r = await paymentsService.processDueSubscriptions();
       assert.ok(r.trialsExpired >= 1);
       assert.equal(await enrollmentService.isEnrolled(u2.id, 'des'), false);

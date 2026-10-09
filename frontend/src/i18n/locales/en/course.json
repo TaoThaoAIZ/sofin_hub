@@ -24,8 +24,7 @@
     "pricing": {
       "label": "Price",
       "free": "Free",
-      "paid": "Paid",
-      "trial": "Free trial"
+      "paid": "Paid"
     },
     "visibility": {
       "label": "Type",

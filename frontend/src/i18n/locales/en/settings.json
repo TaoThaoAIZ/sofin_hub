@@ -435,7 +435,7 @@
     "step1Body": "Anyone who clicks your link is credited to you for {{days}} days.",
     "step2Creator": "They start a community",
     "step2Member": "They join a community",
-    "step2Body": "You’ll see them in the table below as soon as they start a trial.",
+    "step2Body": "You’ll see them in the table below as soon as they join.",
     "step3Title": "You earn commission",
     "step3Body": "Every month they pay, you earn {{rate}}.",
     "menuMessage": "Send message",

@@ -19,9 +19,9 @@
       "p1": "When you join a paid course or community, you are granted a non-exclusive, non-transferable right to access the content for personal learning purposes. You may not copy, redistribute, sell or publicly share course content without the written permission of SofinHub or the instructor who owns that content."
     },
     "s4": {
-      "title": "4. Payments, trials and cancellation",
+      "title": "4. Payments and cancellation",
       "li1": "Some courses and communities are charged monthly, with the price clearly shown before you join.",
-      "li2": "If a free trial is offered, its length and conditions are stated on the course page.",
+      "li2": "Payment is made by bank transfer only when you choose to; nothing renews automatically.",
       "li3": "You can cancel your plan at any time; cancellation takes effect from the next billing cycle unless the law provides otherwise.",
       "li4": "We are not responsible for transactions that result from you disclosing your login or payment information."
     },
@@ -151,8 +151,8 @@
       "title": "Payments & Memberships",
       "q0": "How does payment for paid communities work?",
       "a0": "Paid communities are billed on a monthly plan. You pay on that community's checkout page; the price is clearly shown on the detail page. Your transactions and plans are under \"Plans & billing\".",
-      "q1": "Is there a free trial?",
-      "a1": "Paid communities offer a free trial period; the exact number of days is shown on the community detail page and may change depending on platform settings.",
+      "q1": "Will I be charged automatically?",
+      "a1": "No. Nothing auto-renews; you pay the plan price by bank transfer only when you choose to join or renew.",
       "q2": "Can I cancel my plan at any time?",
       "a2": "Yes. You cancel under \"Plans & billing\"; your access remains until the end of the period you have paid for and you will not be charged again.",
       "q3": "Are refunds available?",

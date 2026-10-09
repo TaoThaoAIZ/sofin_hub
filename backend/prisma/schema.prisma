@@ -562,7 +562,7 @@ model Community {
   rules                 Json                 @default("[]")
   /// Câu hỏi khi xin gia nhập (tối đa 3).
   joinQuestions         String[]             @default([])
-  memberTrialEnabled    Boolean              @default(true)
+  memberTrialEnabled    Boolean              @default(false)
   requireRulesAgreement Boolean              @default(false)
   autoApprovePaid       Boolean              @default(false)
   /// Các bước wizard đã lưu (basics|plan|identity|members) khi còn là bản nháp.

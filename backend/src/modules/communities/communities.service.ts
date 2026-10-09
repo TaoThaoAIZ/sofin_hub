@@ -109,7 +109,6 @@ export function createCommunitiesService(repo: CommunitiesRepository = communiti
           ratingCount: 0,
           priceUsd: input.priceUsd,
           priceAnnualUsd: input.priceUsd > 0 ? (input.priceAnnualUsd ?? null) : null,
-          memberTrialEnabled: input.memberTrialEnabled,
           joinQuestions: input.joinQuestions,
           rules: input.rules,
           requireRulesAgreement: input.requireRulesAgreement,
@@ -130,7 +129,7 @@ export function createCommunitiesService(repo: CommunitiesRepository = communiti
     async update(userId: string, communityId: string, input: UpdateCommunityBody) {
       const course = await getCourse(communityId);
       await requireRole(userId, communityId, 'admin');
-      const touchesMoney = input.priceUsd !== undefined || input.priceAnnualUsd !== undefined || input.visibility !== undefined || input.autoApprovePaid !== undefined || input.memberTrialEnabled !== undefined;
+      const touchesMoney = input.priceUsd !== undefined || input.priceAnnualUsd !== undefined || input.visibility !== undefined || input.autoApprovePaid !== undefined;
       if (touchesMoney) await requireRole(userId, communityId, 'owner');
 
       const patch: Partial<Community> = { ...input };

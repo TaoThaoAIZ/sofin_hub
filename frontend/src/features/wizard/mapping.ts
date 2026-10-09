@@ -28,7 +28,6 @@ export function formFromDraft(d: DraftView, base: WizardForm = defaultForm()): W
     billing: m.priceUsd > 0 ? (annual ? 'year' : 'month') : 'free',
     priceMonthly: m.priceUsd > 0 ? String(m.priceUsd) : '',
     priceAnnual: annual ? String(m.priceAnnualUsd) : '',
-    trialEnabled: m.memberTrialEnabled,
     questions: [...m.joinQuestions],
     rules: m.rules.map((r) => ({ title: r.title, body: r.body ?? '' })),
     rulesRequireAgreement: m.requireRulesAgreement,
@@ -77,7 +76,6 @@ export const membersBody = (f: WizardForm): MembersBody => {
     language: f.language,
     priceUsd: paid ? parseMoney(f.priceMonthly) : 0,
     priceAnnualUsd: paid && f.billing === 'year' ? parseMoney(f.priceAnnual) : null,
-    memberTrialEnabled: paid ? f.trialEnabled : false,
     joinQuestions: f.questions.map((q) => q.trim()).filter(Boolean),
     rules: f.rules
       .map((r) => ({ title: r.title.trim().slice(0, 80), body: r.body.trim().slice(0, 500) }))

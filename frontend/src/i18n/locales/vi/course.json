@@ -24,8 +24,7 @@
     "pricing": {
       "label": "Giá",
       "free": "Miễn phí",
-      "paid": "Có phí",
-      "trial": "Dùng thử miễn phí"
+      "paid": "Có phí"
     },
     "visibility": {
       "label": "Loại",

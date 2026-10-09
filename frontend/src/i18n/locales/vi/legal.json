@@ -19,9 +19,9 @@
       "p1": "Khi tham gia một khóa học/cộng đồng có phí, bạn được cấp quyền truy cập nội dung cho mục đích học tập cá nhân, không độc quyền và không thể chuyển nhượng. Bạn không được sao chép, phân phối lại, bán hoặc công khai chia sẻ nội dung khóa học nếu không có sự cho phép bằng văn bản của SofinHub hoặc giảng viên sở hữu nội dung đó."
     },
     "s4": {
-      "title": "4. Thanh toán, dùng thử và hủy",
+      "title": "4. Thanh toán và hủy",
       "li1": "Một số khóa học/cộng đồng tính phí theo tháng, được hiển thị rõ giá trước khi bạn tham gia.",
-      "li2": "Nếu có chương trình dùng thử miễn phí, thời hạn và điều kiện sẽ được nêu rõ tại trang khóa học.",
+      "li2": "Bạn chỉ thanh toán bằng chuyển khoản khi chủ động tham gia hoặc gia hạn; không có khoản nào tự động bị trừ.",
       "li3": "Bạn có thể hủy gói bất kỳ lúc nào; việc hủy có hiệu lực từ chu kỳ thanh toán tiếp theo, trừ khi pháp luật có quy định khác.",
       "li4": "Chúng tôi không chịu trách nhiệm cho các giao dịch phát sinh do bạn để lộ thông tin đăng nhập hoặc thanh toán."
     },
@@ -151,8 +151,8 @@
       "title": "Thanh toán & Gói thành viên",
       "q0": "Thanh toán cộng đồng có phí như thế nào?",
       "a0": "Cộng đồng có phí tính theo gói tháng. Bạn thanh toán ở trang thanh toán của cộng đồng đó; giá được hiển thị rõ ở trang chi tiết. Các giao dịch và gói của bạn nằm ở mục \"Gói & thanh toán\".",
-      "q1": "Có được dùng thử miễn phí không?",
-      "a1": "Cộng đồng có phí áp dụng thời gian dùng thử miễn phí; số ngày cụ thể được hiển thị ở trang chi tiết cộng đồng và có thể thay đổi theo cấu hình của nền tảng.",
+      "q1": "Tôi có bị tự động trừ tiền không?",
+      "a1": "Không. Không có gì tự động gia hạn; bạn chỉ trả giá gói bằng chuyển khoản khi chủ động tham gia hoặc gia hạn.",
       "q2": "Tôi có thể hủy gói bất kỳ lúc nào không?",
       "a2": "Có. Bạn hủy trong \"Gói & thanh toán\"; quyền truy cập vẫn còn tới hết chu kỳ đã trả và sẽ không bị trừ phí thêm.",
       "q3": "Có hoàn tiền không?",

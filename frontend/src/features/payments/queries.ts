@@ -128,15 +128,6 @@ export const useConfirmPayment = () => {
   });
 };
 
-export const useStartTrial = (courseId: string) => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (input?: { interval?: api.BillingInterval }) => api.startTrial(courseId, input),
-    // Dùng thử cấp quyền vào cộng đồng ngay -> làm mới mọi cache phụ thuộc quyền truy cập.
-    onSuccess: () => qc.invalidateQueries(),
-  });
-};
-
 export const useMySubscriptions = () => {
   const { status } = useAuth();
   return useQuery({

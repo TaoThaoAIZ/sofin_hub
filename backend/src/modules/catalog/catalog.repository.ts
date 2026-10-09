@@ -125,7 +125,7 @@ function toCommunity(row: DbCommunity, real: number, lessons: number): Community
     priceUsd: centsToUsd(row.priceCents),
     priceAnnualUsd: row.priceAnnualCents == null ? null : centsToUsd(row.priceAnnualCents),
     annualSavingsPct: annualSavingsPct(centsToUsd(row.priceCents), row.priceAnnualCents == null ? null : centsToUsd(row.priceAnnualCents)),
-    memberTrialEnabled: row.memberTrialEnabled,
+    memberTrialEnabled: false, // đã bỏ dùng thử miễn phí: cộng đồng chỉ có 2 loại — miễn phí hoặc trả phí
     logoUrl: row.logoUrl,
     coverUrl: row.coverUrl,
     brandColor: row.brandColor,
@@ -188,7 +188,6 @@ function toRowPatch(patch: CommunityPatch): Prisma.CommunityUpdateInput {
   if (patch.ratingCount !== undefined) data.ratingCount = patch.ratingCount;
   if (patch.priceUsd !== undefined) data.priceCents = usdToCents(patch.priceUsd);
   if (patch.priceAnnualUsd !== undefined) data.priceAnnualCents = patch.priceAnnualUsd === null ? null : usdToCents(patch.priceAnnualUsd);
-  if (patch.memberTrialEnabled !== undefined) data.memberTrialEnabled = patch.memberTrialEnabled;
   if (patch.logoUrl !== undefined) data.logoUrl = patch.logoUrl;
   if (patch.coverUrl !== undefined) data.coverUrl = patch.coverUrl;
   if (patch.brandColor !== undefined) data.brandColor = patch.brandColor;
@@ -228,7 +227,7 @@ function toRowCreate(community: NewCommunity): Prisma.CommunityUncheckedCreateIn
     ratingCount: community.ratingCount,
     priceCents: usdToCents(community.priceUsd),
     priceAnnualCents: community.priceAnnualUsd == null ? null : usdToCents(community.priceAnnualUsd),
-    memberTrialEnabled: community.memberTrialEnabled ?? true,
+    memberTrialEnabled: false,
     logoUrl: community.logoUrl ?? null,
     coverUrl: community.coverUrl ?? null,
     brandColor: community.brandColor ?? null,

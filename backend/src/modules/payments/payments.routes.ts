@@ -9,7 +9,6 @@ import {
   createCheckoutBody,
   listBankTransactionsQuery,
   quoteQuery,
-  startTrialBody,
   createPayoutBody,
   listPayoutsQuery,
   listRefundsQuery,
@@ -101,11 +100,6 @@ paymentsRouter.post('/courses/:id/subscription/resume', requireAuth, async (req,
 
 paymentsRouter.get('/me/subscriptions', requireAuth, async (req, res) => {
   res.json({ data: await paymentsService.mySubscriptions(req.userId!) });
-});
-
-paymentsRouter.post('/courses/:id/trial', requireAuth, requireVerifiedEmail, async (req, res) => {
-  const body = startTrialBody.parse(req.body ?? {});
-  res.status(201).json({ data: await paymentsService.startTrial(id(req.params.id), req.userId!, new Date(), body) });
 });
 
 // ---- lịch sử & hóa đơn

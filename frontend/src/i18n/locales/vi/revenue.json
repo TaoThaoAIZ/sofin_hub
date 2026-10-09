@@ -45,7 +45,7 @@
     "reserve": "Quỹ dự phòng",
     "reserveHint": "giữ lại {{pct}}%",
     "mrr": "MRR",
-    "mrrHint": "{{paid}} thành viên trả phí · {{trial}} dùng thử",
+    "mrrHint": "{{paid}} thành viên trả phí",
     "pending": "Đang chờ rút"
   },
   "debt": "Bạn đang còn nợ {{amount}} do hoàn tiền/chargeback sau khi đã rút. Tính năng rút tiền tạm khóa cho đến khi doanh thu mới bù trừ khoản nợ này.",

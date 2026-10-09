@@ -35,7 +35,7 @@ Tên bước (`:step`): `basics` (1) · `plan` (2) · `identity` (3) · `members
 - `basics`: `{ title: 3–30 ký tự, slug?: string (mặc định slugify(title)), description: 1–150 ký tự ("Mô tả ngắn"), category: 'business'|'content'|'tech'|'finance'|'health'|'self'|'hobby'|'relationships'|'marketing'|'design'|'music'|'sports'|'spirituality' }`. Mapping nhãn mockup: Sở thích=hobby, Âm nhạc=music, Tài chính=finance, Công nghệ=tech, Sức khỏe=health, Thể thao=sports, Phát triển bản thân=self, Tâm linh=spirituality, Mối quan hệ=relationships. (`marketing`/`design`/`business`/`content` có thể chưa được admin bật ở Khám phá.)
 - `plan` (gói hosting của owner — **MÔ PHỎNG, chưa trừ tiền thật**, xem §6): `{ planKey: 'start'|'pro', cycle?: 'monthly'|'annual' (mặc định monthly; 'start' bỏ qua), paymentMethod?: PaymentMethodInput }`. `pro` BẮT BUỘC `paymentMethod`; `start` không cần. Trả `draft.plan`.
 - `identity` (cả bước bỏ qua được — FE không cần gọi gì khi bấm "Bỏ qua, làm sau"): `{ logoUrl?: string|null, coverUrl?: string|null, brandColor?: '#rrggbb'|null, promise?: ≤100|null, benefits?: string[] (tối đa 6, mỗi ≤100, mục rỗng bị bỏ), introVideoUrl?: string|null (YouTube/Vimeo — link khác 400; server lưu URL nhúng chuẩn hóa) }`. `logoUrl/coverUrl` = `fileUrl` của upload (`POST /uploads/presign` với `purpose:'avatar'` cho logo, `'cover'` cho ảnh bìa → PUT → dùng `fileUrl` trả về; dạng `/api/files/<key>`), hoặc `null` để xóa. Server kiểm file thuộc chính user và đúng purpose.
-- `members`: `{ visibility?: 'public'|'private', priceUsd?: number (0 = miễn phí; tối đa 10000), priceAnnualUsd?: number|null (tùy chọn; >0; ≤ 12×priceUsd; chỉ khi priceUsd>0), memberTrialEnabled?: boolean (mặc định true; "Cho thành viên mới dùng thử 7 ngày"), joinQuestions?: string[] (tối đa 3, mỗi 3–200 ký tự), rules?: { title: 1–80, body?: ≤500 }[] (tối đa 20, có thứ tự), requireRulesAgreement?: boolean, autoApprovePaid?: boolean }`. Mockup: toggle "Yêu cầu đồng ý nội quy" = `requireRulesAgreement`, "Tự duyệt người trả phí" = `autoApprovePaid`.
+- `members`: `{ visibility?: 'public'|'private', priceUsd?: number (0 = miễn phí; tối đa 10000), priceAnnualUsd?: number|null (tùy chọn; >0; ≤ 12×priceUsd; chỉ khi priceUsd>0), memberTrialEnabled?: boolean (ĐÃ BỎ 2026-10-14: schema vẫn nhận nhưng bị bỏ qua, API luôn trả false), joinQuestions?: string[] (tối đa 3, mỗi 3–200 ký tự), rules?: { title: 1–80, body?: ≤500 }[] (tối đa 20, có thứ tự), requireRulesAgreement?: boolean, autoApprovePaid?: boolean }`. Mockup: toggle "Yêu cầu đồng ý nội quy" = `requireRulesAgreement`, "Tự duyệt người trả phí" = `autoApprovePaid`.
   Bộ nội quy mẫu ("Sửa nội quy mẫu") lấy ở `GET /communities/rules-template` → `{ data: { rules: {title, body}[] } }`.
 
 **`DraftView`**
@@ -60,16 +60,16 @@ Tên bước (`:step`): `basics` (1) · `plan` (2) · `identity` (3) · `members
 - `GET /communities/revenue-estimate?price=<usd>&interval=monthly|annual&members=<n=1>` (public) → `{ data: { interval, priceUsd, members, grossCents, platformFeeCents, gatewayFeeCents, netCents, netPerMemberCents, commissionPct, gatewayFeePct, gatewayFeeFixedCents, note } }` ("Bạn nhận về khoảng X"). Dùng đúng công thức báo cáo doanh thu thật (hoa hồng + phí cổng từ Global Settings). FE chỉ cần hiển thị `netPerMemberCents/100`.
 
 ## 4. Hộp thoại tham gia / thanh toán (trang chi tiết cộng đồng)
-### `GET /communities/:id/checkout-quote?interval=monthly|annual` (không bắt buộc đăng nhập; đăng nhập thì tính đúng quyền dùng thử)
+### `GET /communities/:id/checkout-quote?interval=monthly|annual` (không bắt buộc đăng nhập)
 ```
 { data: {
   communityId, currency: 'USD', paid: true,
   plans: [ { interval:'monthly', label:'Hàng tháng', priceUsd:7, billedUsd:7, perMonthUsd:7, savingsPct:0, popular:true,  periodDays:30 },
            { interval:'annual',  label:'Hàng năm',  priceUsd:48, billedUsd:48, perMonthUsd:4, savingsPct:43, popular:false, periodDays:365 } ],   // chỉ có 'annual' nếu cộng đồng đặt priceAnnualUsd
   selected: 'monthly'|'annual',          // = interval yêu cầu (mặc định monthly; annual không tồn tại → 400 INTERVAL_UNAVAILABLE)
-  trialDays: 7,                           // 0 nếu cộng đồng tắt thử / user đã dùng thử rồi
-  trialEligible: boolean,
-  startsAt: ISO, firstChargeDate: ISO,    // = startsAt + trialDays ngày (hoặc = startsAt nếu không thử)
+  trialDays: 0,                           // luôn 0 (đã bỏ dùng thử thành viên 2026-10-14)
+  trialEligible: false,                   // luôn false
+  startsAt: ISO, firstChargeDate: ISO,    // = startsAt (không có thời gian thử)
   firstChargeAmountUsd: 48, firstChargeAmountCents: 4800,
   dueTodayUsd: 0|48,                      // "Hôm nay thanh toán"
   remindDaysBefore: 3, remindAt: ISO|null,
@@ -79,13 +79,10 @@ Tên bước (`:step`): `basics` (1) · `plan` (2) · `identity` (3) · `members
 Lỗi: 404 (không có/nháp/đã xóa), 400 `COMMUNITY_FREE` (cộng đồng miễn phí), 400 `INTERVAL_UNAVAILABLE`.
 FE dựng câu chữ: "`$perMonth/tháng · thanh toán $billed mỗi năm`", "Lần thanh toán đầu tiên vào ngày `firstChargeDate` (định dạng d/M) với giá `$firstChargeAmountUsd`. Chúng tôi sẽ gửi email nhắc trước `remindDaysBefore` ngày."
 
-### Bắt đầu (một trong hai đường — FE chọn theo `quote.trialEligible`)
-**A. Dùng thử có thẻ** — `POST /communities/:id/trial` (đã có) nay nhận body tùy chọn `{ interval?: 'monthly'|'annual' (mặc định monthly), paymentMethod?: PaymentMethodInput }` → 201 `SubscriptionView` (`status:'trialing'`, `interval`, `priceCents`, `currentPeriodEnd`=hết thử, `trialEndsAt`, `paymentMethod:{brand,last4,expMonth,expYear}|null`, `nextChargeAmountCents`).
-- Có `paymentMethod` ⇒ khi hết thử server **tự trừ** (cổng giả lập) `priceCents` và chuyển `active` (kỳ 30/365 ngày); trừ thất bại ⇒ `expired` + thông báo. Không `paymentMethod` ⇒ hành vi cũ (hết thử là hết quyền).
-- Hủy trước ngày đó (`POST /communities/:id/subscription/cancel`) ⇒ không bị trừ. Email nhắc 3 ngày trước (idempotent, 1 lần/gói) + thông báo in-app.
-- Lỗi: 409 (đã thành viên / đã dùng thử / đã có gói), 400 `TRIAL_NOT_AVAILABLE` (cộng đồng tắt dùng thử), 400 `INTERVAL_UNAVAILABLE`, 403 `JOIN_REQUEST_REQUIRED` (riêng tư, trừ khi chủ bật `autoApprovePaid`), 403 `COMMUNITY_LOCKED`. Thẻ KHÔNG bắt buộc (không thẻ = dùng thử kiểu cũ, hết thử là hết quyền).
+### Bắt đầu
+Không còn dùng thử miễn phí cho thành viên (đã bỏ 2026-10-14): `POST /communities/:id/trial` trả 404; `quote.trialDays` luôn 0 / `trialEligible` false. Chỉ còn đường trả tiền.
 
-**B. Trả tiền ngay** — `POST /communities/:id/checkout` body `{ method?: 'stripe'|'vnpay'|'momo' (mặc định 'stripe'), interval?: 'monthly'|'annual', paymentMethod?: PaymentMethodInput }` (+ header `Idempotency-Key` như cũ) → 201 `PaymentIntent` (thêm `interval`, `paymentMethod?`) → `POST /payments/:id/confirm` như cũ. Số tiền do **server** quyết định theo `interval`; client KHÔNG gửi số tiền. Cùng user gọi lại cùng `interval` ⇒ tái dùng intent pending; đổi `interval` ⇒ intent mới.
+**Trả tiền** — `POST /communities/:id/checkout` body `{ method?: 'stripe'|'vnpay'|'momo' (mặc định 'stripe'), interval?: 'monthly'|'annual', paymentMethod?: PaymentMethodInput }` (+ header `Idempotency-Key` như cũ) → 201 `PaymentIntent` (thêm `interval`, `paymentMethod?`) → `POST /payments/:id/confirm` như cũ. Số tiền do **server** quyết định theo `interval`; client KHÔNG gửi số tiền. Cùng user gọi lại cùng `interval` ⇒ tái dùng intent pending; đổi `interval` ⇒ intent mới.
 - Lỗi mới: 400 `INTERVAL_UNAVAILABLE`.
 
 **`PaymentMethodInput`** (FE tokenize phía client — hiện là MOCK; sau này thay bằng Stripe Elements/PaymentMethod id): 
@@ -144,13 +141,13 @@ Tất cả tính từ dữ liệu thật (bài học, bài viết ≤7 ngày, s�
 
 
 ## 10. Sai khác so với bản đầu (sự thật cuối)
-- Ngày dùng thử của OWNER = **14** (theo mockup "Dùng thử 14 ngày"), không phải 7; `owner.trialDays` chỉnh được. 7 ngày là dùng thử của THÀNH VIÊN (`payments.trialDays`).
+- Ngày dùng thử của OWNER (gói hosting) = **14** (theo mockup "Dùng thử 14 ngày"); `owner.trialDays` chỉnh được. Dùng thử của THÀNH VIÊN (`payments.trialDays`, 7 ngày) đã bị BỎ 2026-10-14.
 - `title` của wizard tối đa **30** ký tự (mockup đếm /30); `POST /communities` một phát vẫn cho tới 80.
 - `PaymentIntent` trả `interval` + `paymentCardId` (id nội bộ của thẻ đã lưu) chứ không nhúng object `paymentMethod`; xem thẻ ở `GET /me/payment-methods` hoặc `paymentMethod` trong `SubscriptionView`/`GET /communities/:id/subscription`.
-- Hủy-cuối-kỳ khi đang dùng thử rồi đến hạn ⇒ gói chuyển `expired` (hành vi sẵn có của nhánh dùng thử), không phải `canceled`; không bị trừ tiền.
+- (Hosting owner) Hủy-cuối-kỳ khi đang dùng thử rồi đến hạn ⇒ gói chuyển `expired` (hành vi sẵn có của nhánh dùng thử), không phải `canceled`; không bị trừ tiền.
 - `GET /communities/:id/launch-checklist` với cộng đồng còn là nháp ⇒ 409 `NOT_PUBLISHED`; người không phải owner ⇒ 403 (qua policy).
 - Publish tự tạo `PayoutAccount{status:'skipped'}` nếu chưa chọn bước payout ⇒ cộng đồng wizard chưa kết nối tài khoản sẽ bị chặn rút (`PAYOUT_ACCOUNT_REQUIRED`); cộng đồng tạo kiểu cũ không có bản ghi nên giữ luồng cũ.
-- `PATCH /communities/:id` (sau khi publish) cũng nhận: `priceAnnualUsd, memberTrialEnabled, joinQuestions, rules, requireRulesAgreement, autoApprovePaid, brandColor, promise, benefits, introVideoUrl` (không có upload logo/cover sau publish — chưa làm).
+- `PATCH /communities/:id` (sau khi publish) cũng nhận: `priceAnnualUsd, joinQuestions, rules, requireRulesAgreement, autoApprovePaid, brandColor, promise, benefits, introVideoUrl` (không có upload logo/cover sau publish — chưa làm).
 - Điều kiện Khám phá (`discovery.eligible`) chỉ để hiển thị, không lọc danh sách công khai.
-- `requireRulesAgreement` chỉ được ÉP ở `POST /communities/:id/join-requests` (`acceptRules`); checkout/trial/enroll miễn phí chưa ép.
+- `requireRulesAgreement` chỉ được ÉP ở `POST /communities/:id/join-requests` (`acceptRules`); checkout/enroll miễn phí chưa ép.
 - `npm test` chạy với `--test-concurrency=16` (xem cuối `docs/api/payments.md`).

@@ -181,3 +181,18 @@ def load(add):
     A("Dùng thử", "Nhắc thanh toán trước khi hết dùng thử (3 ngày): email + thông báo hướng dẫn chuyển khoản", "Chức năng", "Trung bình", ENV + MUTATE,
       ["Bắt đầu dùng thử; SQL ép currentPeriodEnd = now()+2 ngày", "Chờ job payments.trialReminders (15 phút) hoặc gọi sendTrialReminders()", "Xem GET /api/dev/outbox và /api/notifications"], "-",
       "Đúng 1 email + 1 thông báo/gói: nêu ngày kết thúc, số tiền VND, hướng dẫn thanh toán bằng chuyển khoản QR (không nhắc thẻ). Chạy lại không nhắc lần 2; gói đã hủy không nhận nhắc.", pw="Không")
+
+    # ============================================================ 9. BỎ DÙNG THỬ MIỄN PHÍ (14/10/2026)
+    A("Bỏ dùng thử", "Không còn dùng thử miễn phí: gọi POST /api/courses/<id>/trial trả 404; checkout-quote trialDays=0, trialEligible=false; wizard không còn công tắc dùng thử", "Chức năng", "Cao",
+      ENV + " Đăng nhập newbie@sofinhub.test. Đã chạy migration 20261014110000_remove_member_trial.",
+      ["POST /api/courses/paid-demo/trial (có token) và POST /api/communities/paid-demo/trial", "GET /api/communities/annual-demo/checkout-quote?interval=annual",
+       "POST /api/communities với body có \"memberTrialEnabled\": true rồi GET /api/communities/<id>",
+       "Mở /create (wizard) bước 4 'Thành viên & giá' chọn Có phí", "Mở hộp thoại Tham gia ở annual-demo"], "-",
+      "Bước 1: cả hai đường đều 404 NOT_FOUND, không tạo Subscription. Bước 2: trialDays=0, trialEligible=false, firstChargeDate=startsAt, dueTodayUsd=giá kỳ, remindAt=null. "
+      "Bước 3: 201 nhưng memberTrialEnabled=false trong response (field bị bỏ qua). Bước 4: KHÔNG có checkbox 'Cho thành viên mới dùng thử 7 ngày' (dùng thử 14 ngày ở bước 2 là của GÓI HOSTING owner, vẫn còn). "
+      "Bước 5: CTA là 'Thanh toán', không có 'Bắt đầu dùng thử miễn phí' hay ghi chú dùng thử.")
+    A("Bỏ dùng thử", "Cộng đồng chỉ có 2 loại: miễn phí hoặc trả phí (bộ lọc giá không còn mục Dùng thử; thẻ cộng đồng không còn nhãn dùng thử)", "Giao diện", "Trung bình",
+      ENV + " Đã chạy npm run db:reset sau migration remove_member_trial (dữ liệu pricing 'trial' đã chuyển 'paid').",
+      ["Mở trang khám phá khóa học, đọc bộ lọc giá", "GET /api/courses?pricing=trial và GET /api/courses?pricing=paid", "Mở thẻ cộng đồng có phí và trang chi tiết (ghi chú giá)"], "-",
+      "Bộ lọc chỉ có Tất cả / Có phí / Miễn phí (không có 'Dùng thử miễn phí'); không cộng đồng nào có pricing 'trial' (đã thành 'paid'); thẻ cộng đồng và ghi chú giá chỉ hiện 'Hủy bất kỳ lúc nào', không có nhãn/ghi chú dùng thử. "
+      "Gói trialing CŨ còn trong dữ liệu (seed member3) vẫn hết hạn/được nhắc bình thường.", pw="Có")

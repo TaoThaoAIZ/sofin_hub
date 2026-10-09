@@ -50,7 +50,6 @@ export const FILTER_DROPDOWNS: FilterDropdown[] = [
     options: [
       { value: 'free', labelKey: 'filter.pricing.free' },
       { value: 'paid', labelKey: 'filter.pricing.paid' },
-      { value: 'trial', labelKey: 'filter.pricing.trial' },
     ],
   },
   {

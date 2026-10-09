@@ -128,7 +128,6 @@
     "perMonth": "/ month",
     "priceYearly": "Yearly price",
     "perYear": "/ year",
-    "trialOffer": "Give new members a {{days}}-day trial",
     "yearSavings": "The yearly price saves {{pct}}% compared with paying monthly.",
     "netLine": "You receive about <b>{{amount}}</b> per member after transaction fees.",
     "questionsTitle": "Join questions",

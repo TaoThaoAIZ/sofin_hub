@@ -44,8 +44,8 @@ Bước 1 "Tiếp tục" tạo nháp (hoặc PATCH nếu đã có); mỗi bướ
 ## Hộp thoại "Chọn gói thành viên"
 `features/payments/components/JoinDialog.tsx` (`JoinDialog` = modal, `JoinCheckout` = nội dung, dùng lại ở `/communities/:id/checkout`).
 - Mở từ `CourseDetailPage` khi cộng đồng có phí (nhánh `PAYMENT_REQUIRED` / bấm "Tham gia ngay"). Giữ nguyên: tham gia miễn phí, yêu cầu tham gia cộng đồng riêng tư (`JoinRequestDialog`; BE trả `JOIN_REQUEST_REQUIRED` trong dialog thì đóng dialog và mở form yêu cầu), đã tham gia, rời cộng đồng (nguyên văn hộp xác nhận cũ), `COMMUNITY_LOCKED`.
-- Mọi con số lấy từ `GET /communities/:id/checkout-quote?interval=`: gói (tháng/năm), giá/tháng, tổng, % tiết kiệm, "Phổ biến nhất", số ngày dùng thử, ngày thanh toán đầu (`d/M`), số tiền, nhắc trước N ngày. Mặc định chọn gói năm nếu có.
-- CTA: `trialEligible` → "Bắt đầu dùng thử miễn phí" (`POST /communities/:id/trial {interval, paymentMethod}`); ngược lại "Thanh toán" (`POST /checkout {method:'stripe', interval, paymentMethod}` + `Idempotency-Key` theo (cộng đồng, kỳ hạn) → `POST /payments/:id/confirm`). Miễn phí không qua dialog (nút "Tham gia" cũ).
+- Mọi con số lấy từ `GET /communities/:id/checkout-quote?interval=`: gói (tháng/năm), giá/tháng, tổng, % tiết kiệm, "Phổ biến nhất", ngày thanh toán đầu (`d/M`, = hôm nay), số tiền (không còn dùng thử miễn phí). Mặc định chọn gói năm nếu có.
+- CTA: luôn "Thanh toán" (không còn "Bắt đầu dùng thử miễn phí"; `POST /communities/:id/trial` đã bỏ, 404) (`POST /checkout {method:'stripe', interval, paymentMethod}` + `Idempotency-Key` theo (cộng đồng, kỳ hạn) → `POST /payments/:id/confirm`). Miễn phí không qua dialog (nút "Tham gia" cũ).
 - Chip đầu dialog: thành viên (`stats.members`), số bài học (nếu >0), đánh giá hoặc đang trực tuyến — lấy từ dữ liệu chi tiết cộng đồng, không có chuỗi marketing cứng.
 
 ## Gaps / lưu ý

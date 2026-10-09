@@ -181,8 +181,6 @@ export interface CheckoutQuote {
   paid: boolean;
   plans: QuotePlan[];
   selected: 'monthly' | 'annual';
-  trialDays: number;
-  trialEligible: boolean;
   startsAt: string;
   firstChargeDate: string;
   firstChargeAmountUsd: number;

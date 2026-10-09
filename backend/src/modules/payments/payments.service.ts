@@ -825,47 +825,6 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
       return Promise.all(subs.map(async (s) => subscriptionView(s, await courseTitle(s.communityId))));
     },
 
-    async startTrial(communityId: string, userId: string, at = new Date(), opts: { interval?: BillingInterval; paymentMethod?: PaymentMethodInput } = {}) {
-      // Chuyển khoản không có thẻ để trừ tự động: `opts.paymentMethod` (thẻ) bị bỏ qua. Hết dùng thử khách tự thanh toán qua QR.
-      const course = await catalogService.getById(communityId);
-      if (course.locked) throw locked();
-      if (course.priceUsd <= 0) throw HttpError.badRequest('Cộng đồng miễn phí không có dùng thử');
-      if (!course.memberTrialEnabled) throw HttpError.coded(400, 'TRIAL_NOT_AVAILABLE', 'Cộng đồng này không có dùng thử miễn phí');
-      const interval = opts.interval ?? 'monthly';
-      const priceCents = intervalPriceCents(course, interval);
-      if (await enrollmentService.isEnrolled(userId, communityId)) throw HttpError.conflict('Bạn đã tham gia cộng đồng này rồi');
-      if (await repo.hasHadTrial(userId, communityId)) throw HttpError.conflict('Bạn đã dùng thử cộng đồng này rồi');
-      await assertMayPurchase(userId, communityId, course.visibility, course.autoApprovePaid);
-      const end = addDays(at, cfg().payments.trialDays);
-      const sub = await inTx(async (ops, after) => {
-        await ops.advisoryLock(`sub:${userId}:${communityId}`);
-        if (await ops.lockLiveSubscription(userId, communityId)) throw HttpError.conflict('Bạn đang có gói thành viên còn hiệu lực ở cộng đồng này');
-        if (await ops.hasHadTrial(userId, communityId)) throw HttpError.conflict('Bạn đã dùng thử cộng đồng này rồi'); // đua với request song song
-        const created = await ops.createSubscription({
-          userId,
-          communityId,
-          status: 'trialing',
-          priceCents,
-          interval,
-          currentPeriodStart: at.toISOString(),
-          currentPeriodEnd: end.toISOString(),
-          cancelAtPeriodEnd: false,
-          trialEndsAt: end.toISOString(),
-        });
-        await ops.grantAccess(userId, communityId); // 403 nếu đang bị cấm ⇒ rollback cả gói dùng thử
-        later(after, {
-          userId,
-          type: 'system',
-          title: 'Bắt đầu dùng thử',
-          body: `Bạn được dùng thử "${course.title}" đến ${end.toISOString().slice(0, 10)}. Sau đó hãy thanh toán ${vnd(priceCents)} bằng chuyển khoản QR để tiếp tục.`,
-          link: `/courses/${communityId}/community`,
-          communityId,
-        });
-        return created;
-      });
-      return { ...subscriptionView(sub, course.title), paymentMethod: null, nextChargeAmountCents: priceCents };
-    },
-
     async cancelSubscription(communityId: string, userId: string, atPeriodEnd: boolean, at = new Date()) {
       const sub = await repo.findSubscriptionFor(userId, communityId);
       if (!sub || (sub.status !== 'active' && sub.status !== 'trialing')) throw HttpError.notFound('Bạn không có gói thành viên đang hoạt động ở cộng đồng này');

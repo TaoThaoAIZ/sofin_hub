@@ -173,7 +173,7 @@ describe('vòng đời tiền: 5 kịch bản audit §3 + P1', () => {
       assert.ok(notes.some((n) => /gói|xóa/i.test(n.title + n.body)));
     });
 
-    it('cộng đồng bị khóa: checkout/trial bị từ chối; tiền về sau khi khóa KHÔNG tự cấp quyền; gói đang có không bị gia hạn', async () => {
+    it('cộng đồng bị khóa: checkout bị từ chối (đường /trial đã bỏ: 404); tiền về sau khi khóa KHÔNG tự cấp quyền; gói đang có không bị gia hạn', async () => {
       const early = await c.registerUser('lockpaid');
       await pay(early, 'mkt');
       const pending = await c.registerUser('lockpending');
@@ -184,7 +184,7 @@ describe('vòng đời tiền: 5 kịch bản audit §3 + P1', () => {
 
       const u = await c.registerUser('locked');
       assert.equal((await c.call('POST', '/courses/mkt/checkout', { token: u.token, body: { method: 'stripe' } })).status, 403);
-      assert.equal((await c.call('POST', '/courses/mkt/trial', { token: u.token })).status, 403);
+      assert.equal((await c.call('POST', '/courses/mkt/trial', { token: u.token })).status, 404);
       // Khách đã quét QR từ trước khi khóa và tiền về: không được cấp quyền vào cộng đồng đang khóa.
       await c.bankWebhook(c.sepayTx({ id: txId(), refCode: co.body.data.refCode, amount: co.body.data.amountCents }));
       assert.equal(await prisma.payment.count({ where: { userId: pending.id, status: 'succeeded' } }), 0, 'không cấp quyền khi cộng đồng bị khóa');
@@ -443,7 +443,7 @@ describe('vòng đời tiền: 5 kịch bản audit §3 + P1', () => {
       assert.equal(await enrollmentService.isEnrolled(u2.id, 'ux'), true);
     });
 
-    it('stress: thanh toán (dùng thử -> trả phí) song song với processDueSubscriptions trên cùng gói — không deadlock, trạng thái nhất quán', async () => {
+    it('stress: thanh toán (gói trialing cũ -> trả phí) song song với processDueSubscriptions trên cùng gói — không deadlock, trạng thái nhất quán', async () => {
       const users = await Promise.all(Array.from({ length: 6 }, (_, i) => c.registerUser(`dl${i}`)));
       const errors: unknown[] = [];
       const origError = console.error;
@@ -451,7 +451,11 @@ describe('vòng đời tiền: 5 kịch bản audit §3 + P1', () => {
         errors.push(a);
       };
       try {
-        for (const u of users) await c.call('POST', '/courses/yoga/trial', { token: u.token });
+        for (const u of users) {
+          const end = new Date(Date.now() + 7 * DAY);
+          await prisma.subscription.create({ data: { userId: u.id, communityId: 'yoga', status: 'trialing', priceCents: 500, currentPeriodStart: new Date(), currentPeriodEnd: end, trialEndsAt: end } });
+          await prisma.enrollment.create({ data: { userId: u.id, communityId: 'yoga' } });
+        }
         const intents = await Promise.all(users.map((u) => c.call('POST', '/courses/yoga/checkout', { token: u.token, body: { method: 'stripe' } })));
         const due = new Date(Date.now() + 8 * DAY);
         const results = await Promise.allSettled([

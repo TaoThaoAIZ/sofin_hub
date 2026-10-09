@@ -7,17 +7,12 @@ import { formatCompact, formatMoney } from '../../../lib/format';
 import type { CommunityDetail } from '../../courses/types';
 import type { BillingInterval } from '../api';
 import { useCategories } from '../../courses/queries';
-import { resetCheckoutKeys, useCheckout, useCheckoutQuote, useStartTrial } from '../queries';
+import { resetCheckoutKeys, useCheckout, useCheckoutQuote } from '../queries';
 import type { PaymentIntent, QuotePlan } from '../types';
 import { BankTransferPanel } from './BankTransferPanel';
 
-const dayMonth = (iso: string) => {
-  const d = new Date(iso);
-  return `${d.getDate()}/${d.getMonth() + 1}`;
-};
-
 /**
- * Nội dung hộp thoại "Chọn gói thành viên": gói/giá/%tiết kiệm/ngày dùng thử/ngày trừ tiền đầu/số tiền đều lấy từ
+ * Nội dung hộp thoại "Chọn gói thành viên": gói/giá/%tiết kiệm/số tiền thanh toán đều lấy từ
  * GET /communities/:id/checkout-quote. Thanh toán bằng chuyển khoản VietQR (SePay): tạo phiên → hiện QR (BankTransferPanel) → quyền truy cập được cấp khi tiền về.
  */
 export function JoinCheckout({
@@ -46,23 +41,18 @@ export function JoinCheckout({
   const [error, setError] = useState<string | null>(null);
 
   const checkout = useCheckout(courseId);
-  const trial = useStartTrial(courseId);
-  const busy = checkout.isPending || trial.isPending;
+  const busy = checkout.isPending;
 
   const plans = quote?.plans ?? [];
   const maxSavings = plans.reduce((m, p) => Math.max(m, p.savingsPct), 0);
   const current = plans.find((p) => p.interval === selected);
-  const trialMode = !!quote && quote.trialEligible && quote.trialDays > 0;
   const stale = quoteQuery.isFetching || (!!quote && quote.selected !== selected);
 
   const submit = async () => {
     if (!quote || !current || stale) return;
     setError(null);
     try {
-      if (trialMode) {
-        await trial.mutateAsync({ interval: selected });
-        onDone();
-      } else if (payment?.status === 'pending' && payment.interval === selected) {
+      if (payment?.status === 'pending' && payment.interval === selected) {
         setShowPanel(true); // đã có phiên chuyển khoản còn hạn cho kỳ hạn này
       } else {
         setPayment(await checkout.mutateAsync({ interval: selected }));
@@ -91,7 +81,7 @@ export function JoinCheckout({
   ];
 
   const hasPending = payment?.status === 'pending' && payment.interval === selected;
-  const cta = trialMode ? t('join.ctaTrial') : quote?.paid === false ? t('join.ctaJoin') : hasPending ? t('join.ctaContinue') : t('join.ctaPay');
+  const cta = quote?.paid === false ? t('join.ctaJoin') : hasPending ? t('join.ctaContinue') : t('join.ctaPay');
 
   const newSession = async () => {
     setError(null);
@@ -206,7 +196,7 @@ export function JoinCheckout({
             <Button onClick={() => void submit()} disabled={busy || stale || !current} className="mt-4 h-[52px] w-full gap-2.5 rounded-2xl text-base font-bold">
               {busy ? t('join.processing') : (
                 <>
-                  <MaterialIcon name={trialMode ? 'workspace_premium' : 'qr_code_2'} size={20} filled color="#fff" />
+                  <MaterialIcon name={'qr_code_2'} size={20} filled color="#fff" />
                   {cta}
                   <MaterialIcon name="arrow_forward" size={20} color="#fff" />
                 </>
@@ -218,19 +208,8 @@ export function JoinCheckout({
                 <MaterialIcon name="redeem" size={20} filled color="#f26a1b" />
               </span>
               <div className="text-[13px] leading-relaxed text-stone-600">
-                {trialMode ? (
-                  <>
-                    <div className="text-sm font-bold text-stone-900">{t('join.trialTitle', { days: quote.trialDays })}</div>
-                    {t('join.trialBody', { date: dayMonth(quote.firstChargeDate), amount: formatMoney(quote.firstChargeAmountUsd, quote.currency) })}{' '}
-                    {quote.remindDaysBefore > 0 && t('join.remind', { days: quote.remindDaysBefore })}
-                    {quote.cancelAnytime && t('join.cancelAnytime')}
-                  </>
-                ) : (
-                  <>
-                    <div className="text-sm font-bold text-stone-900">{t('join.dueToday', { amount: formatMoney(quote.dueTodayUsd, quote.currency) })}</div>
-                    {quote.cancelAnytime && t('join.cancelAnytime')}
-                  </>
-                )}
+                <div className="text-sm font-bold text-stone-900">{t('join.dueToday', { amount: formatMoney(quote.dueTodayUsd, quote.currency) })}</div>
+                {quote.cancelAnytime && t('join.cancelAnytime')}
               </div>
             </div>
           </>

@@ -56,9 +56,6 @@ export const confirmPayment = (paymentIntentId: string, token: string) =>
 export const fetchSubscription = (courseId: string, token: string, signal?: AbortSignal) =>
   apiGet<{ data: SubscriptionStatus }>(`/communities/${courseId}/subscription`, undefined, signal, { token }).then((r) => r.data);
 
-export const startTrial = (courseId: string, input?: { interval?: BillingInterval }) =>
-  apiPost<{ data: Subscription }>(`/communities/${courseId}/trial`, input).then((r) => r.data);
-
 export const fetchCheckoutQuote = (courseId: string, interval: BillingInterval, signal?: AbortSignal) =>
   apiGet<{ data: CheckoutQuote }>(`/communities/${courseId}/checkout-quote`, { interval }, signal).then((r) => r.data);
 
