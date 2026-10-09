@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -10,7 +11,7 @@ import { PathIcon, StarIcon, UserIcon } from '../components/ui/icons';
 import { SectionTitle } from '../components/ui/SectionTitle';
 import { useAuth } from '../features/auth/AuthContext';
 import { TAG_UI } from '../features/courses/constants';
-import { useCategories, useCommunityDetail, useToggleEnrollment } from '../features/courses/queries';
+import { courseKeys, useCategories, useCommunityDetail, useToggleEnrollment } from '../features/courses/queries';
 import type { CommunityDetail, CourseFaq, CourseHighlight } from '../features/courses/types';
 import { ApiError } from '../lib/api';
 import { formatCompact } from '../lib/format';
@@ -47,6 +48,7 @@ export function CourseDetailPage() {
   const { data: categories = [] } = useCategories();
   const { data: course, isPending, error } = useCommunityDetail(id);
   const enroll = useToggleEnrollment(id);
+  const qc = useQueryClient();
   const [tab, setTab] = useState<TabKey>('overview');
   const [showPaidDialog, setShowPaidDialog] = useState(false);
   const reviewsRef = useRef<HTMLDivElement>(null);
@@ -78,8 +80,10 @@ export function CourseDetailPage() {
     } else if (!mine && pendingRequest !== null) {
       savePendingRequestId(id, null);
       setPendingRequest(null);
+      // Yêu cầu vừa được duyệt/từ chối: nạp lại chi tiết để nút "Tham gia" / quyền vào cộng đồng cập nhật theo.
+      void qc.invalidateQueries({ queryKey: courseKeys.detail(id) });
     }
-  }, [serverPending.data, pendingRequest, id]);
+  }, [serverPending.data, pendingRequest, id, qc]);
 
   if (isPending) {
     return (

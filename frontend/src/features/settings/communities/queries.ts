@@ -17,7 +17,12 @@ export const useMyCommunities = () => {
 
 export const usePendingItems = () => {
   const { status } = useAuth();
-  return useQuery({ queryKey: pendingKey, queryFn: ({ signal }) => api.fetchPending(signal), enabled: status === 'authenticated', refetchOnMount: 'always' });
+  return useQuery({ queryKey: pendingKey, queryFn: ({ signal }) => api.fetchPending(signal), enabled: status === 'authenticated',
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: 'always',
+    // Đang có yêu cầu chờ duyệt: hỏi lại mỗi 15s để khi được duyệt/từ chối thì trang tự đổi trạng thái, không cần F5.
+    refetchInterval: (q) => (q.state.data?.requests.length ? 15_000 : false),
+  });
 };
 
 /** Đổi ngay trên giao diện, lỗi thì trả lại bản cũ rồi đồng bộ lại với BE. */
