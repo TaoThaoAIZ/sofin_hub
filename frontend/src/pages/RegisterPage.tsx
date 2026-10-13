@@ -180,7 +180,7 @@ export function RegisterPage() {
           <FormField
             type="email"
             autoComplete="email"
-            maxLength={180}
+            maxLength={30}
             value={email}
             onChange={(v) => {
               setEmail(v);
@@ -218,12 +218,12 @@ export function RegisterPage() {
               />
               <span>
                 {t('register.agreePrefix')}{' '}
-                <Link to="/terms" className="font-semibold text-brand underline">
+                <Link to="/terms?from=register" className="font-semibold text-brand underline">
                   {t('register.terms')}
                 </Link>{' '}
                 {termsRead && '✓ '}
                 {t('register.and')}{' '}
-                <Link to="/privacy" className="font-semibold text-brand underline">
+                <Link to="/privacy?from=register" className="font-semibold text-brand underline">
                   {t('register.privacy')}
                 </Link>
                 {privacyRead && ' ✓'}{t('register.agreeSuffix')}

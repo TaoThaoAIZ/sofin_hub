@@ -42,9 +42,19 @@ export function createEventsService(repo: EventsRepository = eventsRepository) {
     },
 
     async create(communityId: string, hostId: string, body: CreateEventBody) {
-      const event = await repo.create({ communityId, hostId, ...body });
+      const { inviteeIds: rawInvitees, ...fields } = body;
+      const inviteeIds = [...new Set(rawInvitees)].filter((id) => id !== hostId);
+      for (const id of inviteeIds) {
+        if (!(await enrollmentService.getActiveRole(id, communityId))) throw HttpError.badRequest('Chỉ có thể mời thành viên đang tham gia cộng đồng');
+      }
+      const event = await repo.create({ communityId, hostId, ...fields });
+      const invited = new Set(inviteeIds);
+      for (const userId of inviteeIds) {
+        notify({ userId, type: 'event_created', title: 'Bạn được mời tham dự sự kiện', body: `Bạn được mời tham dự "${event.title}"`, link: eventPath(event), communityId });
+      }
       const notifyBatch = (ids: string[]) => {
         for (const userId of ids) {
+          if (invited.has(userId)) continue; // đã nhận thông báo mời riêng
           notify({ userId, type: 'event_created', title: 'Sự kiện mới', body: `Sự kiện "${event.title}" vừa được tạo`, link: eventPath(event), communityId });
         }
       };

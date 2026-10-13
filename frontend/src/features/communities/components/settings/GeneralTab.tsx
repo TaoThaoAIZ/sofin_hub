@@ -7,6 +7,7 @@ import type { CategoryId, CommunityDetail, Language, Visibility } from '../../..
 import { useUpdateCommunity } from '../../queries';
 import { ROLE_RANK, type UpdateCommunityInput, type ViewerRole } from '../../types';
 import { ErrorLine, errorText, INPUT_CLASS } from '../Modal';
+import { MediaField } from './MediaField';
 
 import { formatCents } from '../../../../lib/datetime';
 function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
@@ -29,6 +30,7 @@ export function GeneralTab({ course, viewerRole }: { course: CommunityDetail; vi
   const [title, setTitle] = useState(course.title);
   const [description, setDescription] = useState(course.description);
   const [thumbnail, setThumbnail] = useState(course.thumbnail);
+  const [media, setMedia] = useState(course.media ?? []);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [category, setCategory] = useState<CategoryId>(course.category);
   const [language, setLanguage] = useState<Language>(course.language);
@@ -52,6 +54,7 @@ export function GeneralTab({ course, viewerRole }: { course: CommunityDetail; vi
     if (title.trim() !== course.title) patch.title = title.trim();
     if (description.trim() !== course.description) patch.description = description.trim();
     if (thumbnail.trim() && thumbnail.trim() !== course.thumbnail) patch.thumbnail = thumbnail.trim();
+    if (JSON.stringify(media) !== JSON.stringify(course.media ?? [])) patch.media = media;
     if (category !== course.category) patch.category = category;
     if (language !== course.language) patch.language = language;
     if (isOwner && visibility !== course.visibility) patch.visibility = visibility;
@@ -72,6 +75,7 @@ export function GeneralTab({ course, viewerRole }: { course: CommunityDetail; vi
       </Field>
       <CoverField value={thumbnail} onChange={setThumbnail} onError={setUploadError} label={t('general.thumbnail')} ariaLabel={t('general.thumbnail')} height={170} />
       {uploadError && <p className="m-0 text-sm font-medium text-red-600">{uploadError}</p>}
+      <MediaField value={media} onChange={setMedia} />
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label={t('general.category')}>
           <select value={category} onChange={(e) => setCategory(e.target.value as CategoryId)} className={INPUT_CLASS}>

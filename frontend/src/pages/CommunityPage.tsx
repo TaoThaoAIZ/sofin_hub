@@ -21,7 +21,7 @@ export function CommunityPage() {
   if (!course) return <Navigate to="/" replace />;
   // Chặn ở FE cho trải nghiệm mượt (redirect thay vì hiện lỗi 403) — quyền thật luôn được BE
   // xác thực lại ở từng API (bảng tin/lớp học/lịch/thành viên/xếp hạng), không tin riêng cờ này.
-  if (!course.viewerEnrolled) return <Navigate to={`/communities/${id}`} replace />;
+  if (!course.viewerEnrolled && course.viewerRole !== 'platform_admin') return <Navigate to={`/communities/${id}`} replace />;
 
   return (
     <div className="min-h-screen bg-white">

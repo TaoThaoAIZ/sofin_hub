@@ -7,6 +7,7 @@ export const UPLOAD_PURPOSES = [
   'cover',
   'lesson_attachment',
   'message_attachment',
+  'community_media',
 ] as const;
 export type UploadPurpose = (typeof UPLOAD_PURPOSES)[number];
 
@@ -66,6 +67,8 @@ export function purposeRule(purpose: UploadPurpose): PurposeRule {
       return { types: IMAGE_TYPES, maxBytes: env.UPLOAD_MAX_AVATAR_MB * MB };
     case 'cover':
       return { types: IMAGE_TYPES, maxBytes: env.UPLOAD_MAX_COVER_MB * MB };
+    case 'community_media':
+      return { types: { ...IMAGE_TYPES, ...VIDEO_TYPES }, maxBytes: file };
     case 'post_file':
     case 'lesson_attachment':
       return { types: { ...DOC_TYPES, ...VIDEO_TYPES }, maxBytes: file };
@@ -78,5 +81,5 @@ export const KEY_PATTERN = /^[a-f0-9]{32}\.[a-z0-9]{2,5}$/;
 export const FILE_URL_PREFIX = '/api/files/';
 
 /** Ảnh công khai (avatar/bìa/ảnh bài viết): ai có URL cũng xem được, cache dài. Mục đích khác là RIÊNG TƯ (cần đăng nhập + quyền). */
-export const PUBLIC_PURPOSES: readonly UploadPurpose[] = ['avatar', 'cover', 'post_image'];
+export const PUBLIC_PURPOSES: readonly UploadPurpose[] = ['avatar', 'cover', 'post_image', 'community_media'];
 export const isPublicPurpose = (p: UploadPurpose) => PUBLIC_PURPOSES.includes(p);

@@ -13,6 +13,8 @@ import { catalogService } from '../catalog/catalog.service.js';
 import type { MemberRole } from '../enrollments/enrollments.repository.js';
 import { enrollmentService } from '../enrollments/enrollments.service.js';
 import { notify } from '../notifications/notifications.service.js';
+import { prismaUploadRepository } from '../uploads/uploads.repository.js';
+import { FILE_URL_PREFIX, KEY_PATTERN } from '../uploads/uploads.types.js';
 import { paymentsService } from '../payments/payments.service.js';
 import { isPlatformAdmin, requirePlatformAdmin, requireRole, roleRank } from '../permissions/policy.js';
 import { communitiesRepository, type CommunitiesRepository } from './communities.repository.js';
@@ -30,6 +32,24 @@ const normalize = (s: string) =>
     .normalize('NFD')
     .replace(/\p{Diacritic}/gu, '')
     .replace(/đ/g, 'd');
+
+/** Mỗi mục thư viện phải là file đã tải lên đúng mục đích `community_media` và khớp loại (ảnh/video); không cho nhúng URL ngoài. */
+async function validateMedia(items: Array<{ type: 'image' | 'video'; url: string }>): Promise<Array<{ type: 'image' | 'video'; url: string }>> {
+  const seen = new Set<string>();
+  const out: Array<{ type: 'image' | 'video'; url: string }> = [];
+  for (const m of items) {
+    const key = m.url.startsWith(FILE_URL_PREFIX) ? m.url.slice(FILE_URL_PREFIX.length) : '';
+    const rec = KEY_PATTERN.test(key) ? await prismaUploadRepository.get(key) : undefined;
+    const kind = rec?.contentType.startsWith('video/') ? 'video' : 'image';
+    if (!rec || rec.purpose !== 'community_media' || rec.status !== 'uploaded' || rec.removed || kind !== m.type) {
+      throw HttpError.coded(400, 'UPLOAD_INVALID', 'Ảnh/video không hợp lệ: hãy tải lên (purpose "community_media") rồi dùng fileUrl trả về');
+    }
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ type: m.type, url: `${FILE_URL_PREFIX}${key}` });
+  }
+  return out;
+}
 
 export function createCommunitiesService(repo: CommunitiesRepository = communitiesRepository) {
   const slugBase = (title: string): string =>
@@ -142,6 +162,7 @@ export function createCommunitiesService(repo: CommunitiesRepository = communiti
         patch.priceAnnualUsd = annual;
       }
       if (input.introVideoUrl !== undefined) patch.introVideoUrl = input.introVideoUrl ? toEmbedUrl(input.introVideoUrl) : null;
+      if (input.media !== undefined) patch.media = await validateMedia(input.media);
       if (input.benefits !== undefined) patch.benefits = input.benefits.filter((b) => b.trim());
       if (input.priceUsd !== undefined) {
         // free <-> paid theo giá; giữ nguyên 'trial' nếu vẫn có phí
@@ -257,7 +278,8 @@ export function createCommunitiesService(repo: CommunitiesRepository = communiti
         if (await enrollmentService.isBanned(req.userId, req.communityId)) throw HttpError.conflict('Người này đã bị cấm khỏi cộng đồng');
       }
       // Cộng đồng CÓ PHÍ: duyệt chỉ cho phép người này thanh toán/dùng thử — KHÔNG cấp quyền miễn phí.
-      const paid = course.priceUsd > 0;
+      // Ngoại lệ: người còn gói đã trả (vd. rời rồi xin vào lại trong kỳ) — duyệt là vào luôn, không phải trả tiền lại.
+      const paid = course.priceUsd > 0 && !(approve && (await paymentsService.hasLiveSubscription(req.userId, req.communityId)));
       // Chốt quyết định TRƯỚC (atomic) và chỉ cấp quyền trong cùng transaction khi vừa chốt "approved".
       const updated = await repo.decideJoinRequestAndGrant(requestId, approve ? 'approved' : 'rejected', userId, approve && !paid);
       if (!updated) throw HttpError.conflict('Yêu cầu này đã được xử lý');

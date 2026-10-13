@@ -17,6 +17,12 @@ export const CATEGORY_IDS = [
 ] as const;
 export type CategoryId = (typeof CATEGORY_IDS)[number];
 
+export interface CommunityMedia {
+  type: 'image' | 'video';
+  /** Đường dẫn file đã tải lên (/api/files/<key>). */
+  url: string;
+}
+
 export interface CommunityRule {
   title: string;
   body: string;
@@ -74,6 +80,8 @@ export interface Community {
   promise: string | null;
   benefits: string[];
   introVideoUrl: string | null;
+  /** Thư viện ảnh/video giới thiệu (admin tải lên), theo thứ tự hiển thị. */
+  media: CommunityMedia[];
   rules: CommunityRule[];
   joinQuestions: string[];
   requireRulesAgreement: boolean;
@@ -96,7 +104,7 @@ export interface Community {
 /** Các trường wizard — tùy chọn khi TẠO (có mặc định), luôn có mặt khi ĐỌC. */
 type WizardKeys =
   | 'priceAnnualUsd' | 'annualSavingsPct' | 'memberTrialEnabled' | 'logoUrl' | 'coverUrl' | 'brandColor' | 'promise' | 'benefits'
-  | 'introVideoUrl' | 'rules' | 'joinQuestions' | 'requireRulesAgreement' | 'autoApprovePaid';
+  | 'introVideoUrl' | 'media' | 'rules' | 'joinQuestions' | 'requireRulesAgreement' | 'autoApprovePaid';
 export type NewCommunity = Omit<Community, WizardKeys> & Partial<Pick<Community, WizardKeys>>;
 
 /** Patch cho catalogService.update: mọi trường của Community + `lockReason` (không nằm trong Community để không lộ ra API). */

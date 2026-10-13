@@ -18,7 +18,7 @@ const SORTS = [
   { key: 'joined', labelKey: 'members.sortJoined' },
 ] as const;
 
-const GRID = 'grid grid-cols-[minmax(200px,2.2fr)_1.2fr_1fr_1.2fr_92px] gap-3';
+const GRID = 'grid grid-cols-[minmax(0,1fr)_92px] gap-3 md:grid-cols-[minmax(200px,2.2fr)_1.2fr_1fr_1.2fr_92px]';
 
 function formatJoined(iso: string) {
   const d = new Date(iso);
@@ -167,12 +167,12 @@ export function MembersTab() {
           </div>
 
           <div className="overflow-x-auto">
-            <div className="min-w-[640px]">
+            <div className="md:min-w-[640px]">
               <div className={`${GRID} border-b border-[rgba(120,60,20,.08)] px-3 pt-3.5 pb-2.5 text-[11.5px] font-semibold tracking-wide text-stone-500`}>
                 <span>{t('members.colMember')}</span>
-                <span>{t('members.colStatus')}</span>
-                <span>{t('members.colJoined')}</span>
-                <span>{t('members.colLastActive')}</span>
+                <span className="max-md:hidden">{t('members.colStatus')}</span>
+                <span className="max-md:hidden">{t('members.colJoined')}</span>
+                <span className="max-md:hidden">{t('members.colLastActive')}</span>
                 <span />
               </div>
               {members.isPending && <p className="py-8 text-center text-stone-400">{t('members.loading')}</p>}
@@ -198,7 +198,7 @@ export function MembersTab() {
                       <div className="truncate text-[12.5px] text-stone-500">@{m.handle}</div>
                     </div>
                   </div>
-                  <div>
+                  <div className="max-md:hidden">
                     <span
                       className={`inline-flex h-[26px] items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium whitespace-nowrap ${
                         m.online ? 'bg-green-500/10 text-green-700' : 'bg-stone-900/5 text-stone-600'
@@ -208,8 +208,8 @@ export function MembersTab() {
                       {m.online ? t('members.filterOnline') : t('members.inactive')}
                     </span>
                   </div>
-                  <span className="text-[13px] text-stone-700">{formatJoined(m.enrolledAt)}</span>
-                  <span className="text-[13px] text-stone-700">{formatAgo(m.lastActiveAt)}</span>
+                  <span className="text-[13px] text-stone-700 max-md:hidden">{formatJoined(m.enrolledAt)}</span>
+                  <span className="text-[13px] text-stone-700 max-md:hidden">{formatAgo(m.lastActiveAt)}</span>
                   <div className="flex justify-end gap-2">
                     <button
                       type="button"

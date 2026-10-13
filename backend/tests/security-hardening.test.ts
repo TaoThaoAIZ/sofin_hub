@@ -79,7 +79,7 @@ describe('4.1 NODE_ENV bắt buộc + hộp thư dev opt-in', () => {
   it('cookie refresh có cờ Secure khi không phải development', async () => {
     const server = await startTestServer();
     try {
-      const email = `cookie-${Date.now()}@test.local`;
+      const email = `ck${Date.now().toString(36)}@t.io`;
       const post = (path: string, body: unknown) =>
         fetch(`${server.baseUrl}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       assert.ok((await post('/auth/register', { email, password: 'Passw0rd!x', firstName: 'C', lastName: 'K' })).status < 300);

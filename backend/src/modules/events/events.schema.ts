@@ -7,6 +7,8 @@ export const createEventBody = z.object({
   timezone: z.string().trim().default('Asia/Ho_Chi_Minh'),
   meetingLink: z.string().trim().url('Liên kết không hợp lệ').refine((v) => /^https?:\/\//i.test(v), 'Liên kết phải là http/https').optional(),
   capacity: z.coerce.number().int().positive().optional(),
+  /** Thành viên được mời trực tiếp (nhận thông báo "được mời"); phải đang là thành viên cộng đồng. */
+  inviteeIds: z.array(z.string().trim().min(1)).max(200, 'Tối đa 200 người được mời').default([]),
 });
 export type CreateEventBody = z.infer<typeof createEventBody>;
 

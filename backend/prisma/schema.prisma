@@ -328,6 +328,7 @@ enum UploadPurpose {
   cover
   lesson_attachment
   message_attachment
+  community_media
 }
 
 enum UploadStatus {
@@ -558,6 +559,8 @@ model Community {
   promise               String?
   benefits              String[]             @default([])
   introVideoUrl         String?
+  /// Thư viện ảnh/video giới thiệu do admin tải lên: [{ type: 'image'|'video', url }] (thứ tự hiển thị; phần tử đầu là mục chính).
+  media                 Json                 @default("[]")
   /// Nội quy có thứ tự: [{ title, body }].
   rules                 Json                 @default("[]")
   /// Câu hỏi khi xin gia nhập (tối đa 3).

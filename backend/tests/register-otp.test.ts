@@ -15,7 +15,7 @@ describe('đăng ký + OTP email, đăng nhập mạng xã hội', () => {
   after(() => server.close());
 
   let n = 0;
-  const fresh = (prefix = 'otp') => ({ email: `${prefix}-${Date.now()}-${n++}@test.local`, password: 'Passw0rd!x', firstName: 'Otp', lastName: 'Test' });
+  const fresh = (prefix = 'otp') => ({ email: `${prefix.slice(0, 6)}${Date.now().toString(36)}${n++}@t.io`, password: 'Passw0rd!x', firstName: 'Otp', lastName: 'Test' });
   const register = (body: ReturnType<typeof fresh> & { referralCode?: string }) => c.call('POST', '/auth/register', { body });
   const verify = (email: string, code: string, extra: object = {}) => c.call('POST', '/auth/register/verify', { body: { email, code, ...extra } });
   /** Cho phép gửi lại ngay: lùi mốc gửi cuối (cooldown 60 giây) về quá khứ. */
@@ -237,7 +237,7 @@ describe('đăng ký + OTP email, đăng nhập mạng xã hội', () => {
     const profile = (over: Partial<import('../src/modules/auth/oauth.js').SocialProfile> = {}) => ({
       provider: 'google' as const,
       id: `g-${Date.now()}-${n++}`,
-      email: `social-${Date.now()}-${n++}@test.local`,
+      email: `so${Date.now().toString(36)}${n++}@t.io`,
       emailVerified: true,
       firstName: 'Gu',
       lastName: 'Gồ',

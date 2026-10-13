@@ -69,6 +69,8 @@
     "leaveCancel": "Ở lại",
     "leaveMessage": "Bạn sẽ mất quyền truy cập ngay, gói thành viên sẽ bị hủy vào cuối kỳ hiện tại (không bị tính phí kỳ sau) và khoản đã thanh toán cho kỳ này không được hoàn lại. Bạn có thể vào lại miễn phí trong kỳ đã trả.",
     "homeAria": "Trang chủ",
+    "showMore": "Xem thêm",
+    "showLess": "Thu gọn",
     "by": "Bởi <b>{{name}}</b>",
     "perMonth": "/tháng",
     "perMonthSpaced": "/ tháng",

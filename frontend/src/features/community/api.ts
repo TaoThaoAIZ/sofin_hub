@@ -72,7 +72,7 @@ export const fetchEvents = (courseId: string, token: string, signal?: AbortSigna
 
 export const createEvent = (
   courseId: string,
-  body: { title: string; description: string; startAt: string; timezone: string; meetingLink?: string; capacity?: number },
+  body: { title: string; description: string; startAt: string; timezone: string; meetingLink?: string; capacity?: number; inviteeIds?: string[] },
   token: string,
 ) => apiPost<{ data: CommunityEvent }>(`/communities/${courseId}/events`, body, { token }).then((r) => r.data);
 

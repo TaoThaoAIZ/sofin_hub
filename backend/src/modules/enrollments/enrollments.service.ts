@@ -51,11 +51,13 @@ export function createEnrollmentService(repo: EnrollmentRepository = enrollmentR
       // Chỉ "vào" mới bị chặn theo loại cộng đồng; rời đi luôn được (trừ owner, xử lý dưới).
       if (next) {
         if (course.locked) throw HttpError.coded(403, 'COMMUNITY_LOCKED', 'Cộng đồng này đang bị khóa');
-        // Gói còn hiệu lực (vd. đã "rời" nhưng chưa hết kỳ đã trả, hoặc vừa được gỡ cấm): vào lại KHÔNG phải trả tiền/duyệt lại.
-        if (!(await paymentsService.hasLiveSubscription(userId, communityId))) {
-          if (course.visibility === 'private') {
-            throw HttpError.coded(403, 'JOIN_REQUEST_REQUIRED', 'Cộng đồng riêng tư: hãy gửi yêu cầu tham gia hoặc dùng lời mời');
-          }
+        // Gói còn hiệu lực (vd. đã "rời" nhưng chưa hết kỳ đã trả): vào lại KHÔNG phải trả tiền lại (nhưng cộng đồng riêng tư vẫn phải được duyệt).
+        const live = await paymentsService.hasLiveSubscription(userId, communityId);
+        // Cộng đồng riêng tư: luôn qua bước duyệt (kể cả còn gói đã trả); còn gói thì chỉ khỏi trả tiền lại, không khỏi duyệt.
+        if (course.visibility === 'private' && !(live && (await repo.hasApprovedJoinRequest(userId, communityId)))) {
+          throw HttpError.coded(403, 'JOIN_REQUEST_REQUIRED', 'Cộng đồng riêng tư: hãy gửi yêu cầu tham gia hoặc dùng lời mời');
+        }
+        if (!live) {
           if (course.priceUsd > 0) {
             throw HttpError.coded(402, 'PAYMENT_REQUIRED', 'Cộng đồng có phí: vui lòng thanh toán để tham gia', { communityId, courseId: communityId });
           }
@@ -67,6 +69,8 @@ export function createEnrollmentService(repo: EnrollmentRepository = enrollmentR
       }
       await repo.setEnrolled(userId, communityId, next);
       await syncStudents(communityId);
+      // Rời cộng đồng riêng tư: quyền vào cũ (yêu cầu đã duyệt) hết hiệu lực, muốn vào lại phải gửi yêu cầu mới.
+      if (!next && course.visibility === 'private') await repo.revokeApprovedJoinRequests(userId, communityId);
       // Rời cộng đồng có phí = hủy gói CUỐI KỲ (không bị trừ tiền kỳ sau; vẫn vào lại được tới hết kỳ đã trả).
       if (!next) await paymentsService.onMemberLeft(userId, communityId).catch((err) => console.error('onMemberLeft lỗi:', err));
       return { enrolled: next };

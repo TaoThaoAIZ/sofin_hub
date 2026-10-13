@@ -69,7 +69,7 @@ export function MainCell({ name, sub, avatar, shape = 'round', avatarSrc, icon, 
   );
 }
 
-export const TextCell = ({ children }: { children: ReactNode }) => <span className="truncate text-[13.5px] text-stone-800">{children}</span>;
+export const TextCell = ({ children }: { children: ReactNode }) => <span className="truncate text-[13.5px] text-stone-800" title={typeof children === "string" ? children : undefined}>{children}</span>;
 export const MutedCell = ({ children }: { children: ReactNode }) => <span className="truncate text-[13px] text-stone-500">{children}</span>;
 export const NumCell = ({ children }: { children: ReactNode }) => <span className="truncate text-[13.5px] font-semibold tabular-nums">{children}</span>;
 export const MonoCell = ({ children }: { children: ReactNode }) => (

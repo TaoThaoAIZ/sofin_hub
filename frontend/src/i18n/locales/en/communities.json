@@ -137,6 +137,13 @@
     }
   },
   "general": {
+    "media": "Intro photos & videos",
+    "mediaMain": "Main",
+    "mediaMoveFirst": "Move to first",
+    "mediaRemove": "Remove",
+    "mediaUploading": "Uploading…",
+    "mediaAdd": "Add photo / video",
+    "mediaHint": "Select several files at once (JPG/PNG/WEBP/GIF images or MP4 video, up to 25MB each, 12 items). The first item is the main one on the intro page.",
     "errTitle": "Community name must be 3 to 80 characters",
     "errDesc": "Please enter a description",
     "errPrice": "Price must be a whole number from 0 to 50,000,000 (VND)",
@@ -200,6 +207,7 @@
     "reject": "Reject"
   },
   "settingsPage": {
+    "title": "Settings",
     "tabs": {
       "general": "General",
       "courses": "Courses",

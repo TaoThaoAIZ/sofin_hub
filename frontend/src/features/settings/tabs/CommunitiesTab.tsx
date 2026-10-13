@@ -91,7 +91,7 @@ export function CommunitiesTab() {
           sub={t('communitiesTab.sub')}
           className="border-b border-[#f1ebe6] pb-4"
           action={
-            <div role="tablist" className="flex rounded-[14px] bg-[#f5f2ef] p-1">
+            <div role="tablist" className="flex max-w-full overflow-x-auto rounded-[14px] bg-[#f5f2ef] p-1">
               {tabs.map(([id, label]) => (
                 <button
                   key={id}

@@ -6,7 +6,7 @@ import { after, before, describe, it } from 'node:test';
 import { ensureMainCourse, makeClient, startTestServer, useTestDb, type TestDb, type TestServer } from './helpers.js';
 
 // env.ts parse lúc import app, nên phải đặt TRƯỚC startTestServer().
-const ADMIN_EMAIL = 'platform-admin-batch2@test.local';
+const ADMIN_EMAIL = 'pa-batch2@test.local';
 process.env.PLATFORM_ADMIN_EMAILS = ADMIN_EMAIL;
 // Phí cổng mặc định nay = 0 (chuyển khoản); test này kiểm công thức phí nên đặt tường minh (2.9% + 30đ).
 process.env.PLATFORM_COMMISSION_PCT = '10';

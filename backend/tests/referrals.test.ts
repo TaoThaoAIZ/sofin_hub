@@ -28,7 +28,7 @@ describe('chương trình giới thiệu: mã, ghi nhận, hoa hồng, KPI', () 
   let n = 0;
   /** Đăng ký user (tùy chọn kèm mã giới thiệu) qua API thật. */
   async function signup(prefix: string, referralCode?: string) {
-    const email = `${prefix}-${Date.now()}-${n++}@test.local`;
+    const email = `${prefix.slice(0, 6)}${Date.now().toString(36)}${n++}@t.io`;
     const r = await c.registerVerified({ email, password: 'Passw0rd!x', firstName: 'Ref', lastName: prefix, ...(referralCode !== undefined ? { referralCode } : {}) });
     assert.ok(r.status < 300, JSON.stringify(r.body));
     return { token: r.body.data.accessToken as string, id: r.body.data.user.id as string };

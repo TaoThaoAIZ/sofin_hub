@@ -10,6 +10,7 @@ import { MaterialIcon } from '../components/ui/MaterialIcon';
 import { PathIcon, StarIcon, UserIcon } from '../components/ui/icons';
 import { SectionTitle } from '../components/ui/SectionTitle';
 import { useAuth } from '../features/auth/AuthContext';
+import { MediaGallery } from '../features/courses/components/MediaGallery';
 import { TAG_UI } from '../features/courses/constants';
 import { courseKeys, useCategories, useCommunityDetail, useToggleEnrollment } from '../features/courses/queries';
 import type { CommunityDetail, CourseFaq, CourseHighlight } from '../features/courses/types';
@@ -37,6 +38,23 @@ function sidebarPerks(course: CommunityDetail): string[] {
     i18n.t('detail.perkDiscuss', { ns: 'course' }),
     ...course.priceNotes,
   ];
+}
+
+/** Mô tả hiển thị gọn (tối đa ~4 dòng); dài hơn thì có nút Xem thêm / Thu gọn. */
+function ShortText({ text }: { text: string }) {
+  const { t } = useTranslation('course');
+  const [open, setOpen] = useState(false);
+  const long = text.length > 220 || text.split('\n').length > 4;
+  return (
+    <div className="mt-3.5 max-w-[760px]">
+      <p className={`m-0 text-base leading-[1.65] text-stone-700 text-pretty whitespace-pre-line break-words ${long && !open ? 'line-clamp-4' : ''}`}>{text}</p>
+      {long && (
+        <button type="button" onClick={() => setOpen((o) => !o)} className="mt-1 border-0 bg-transparent p-0 text-sm font-semibold text-brand hover:underline">
+          {open ? t('detail.showLess') : t('detail.showMore')}
+        </button>
+      )}
+    </div>
+  );
 }
 
 export function CourseDetailPage() {
@@ -223,17 +241,21 @@ export function CourseDetailPage() {
 
       <div className="mx-auto flex max-w-[1400px] flex-wrap items-start gap-7 px-4 pt-4 md:px-10">
         <main className="flex min-w-0 flex-[999_1_620px] flex-col gap-[22px]">
-          <div className="relative aspect-[16/8] overflow-hidden rounded-3xl bg-[#2a1a10] shadow-[0_20px_50px_rgba(120,60,20,.16)]">
-            <img src={course.thumbnail} alt={course.title} className="size-full object-cover" />
-            {tag && (
-              <span
-                className="absolute top-[18px] left-[18px] flex items-center gap-1.5 rounded-full border border-white/50 px-3.5 py-1.5 text-sm font-semibold"
-                style={{ background: tag.bg, color: tag.fg, boxShadow: `0 6px 16px color-mix(in srgb, ${tag.bg} 45%, transparent)` }}
-              >
-                {t(tag.labelKey)}
-              </span>
-            )}
-          </div>
+          <MediaGallery
+            items={course.media ?? []}
+            fallback={course.thumbnail}
+            alt={course.title}
+            overlay={
+              tag && (
+                <span
+                  className="absolute top-[18px] left-[18px] flex items-center gap-1.5 rounded-full border border-white/50 px-3.5 py-1.5 text-sm font-semibold"
+                  style={{ background: tag.bg, color: tag.fg, boxShadow: `0 6px 16px color-mix(in srgb, ${tag.bg} 45%, transparent)` }}
+                >
+                  {t(tag.labelKey)}
+                </span>
+              )
+            }
+          />
 
           <div>
             <h1 className="m-0 text-[clamp(28px,2.6vw,38px)] font-extrabold tracking-[-1px]">{course.title}</h1>
@@ -249,9 +271,7 @@ export function CourseDetailPage() {
                 <Trans t={t} i18nKey="detail.by" values={{ name: course.instructor.name }} components={{ b: <b className="text-stone-900" /> }} />
               </span>
             </div>
-            <p className="mt-3.5 max-w-[760px] text-base leading-[1.65] text-stone-700 text-pretty whitespace-pre-line break-words">
-              {course.description}
-            </p>
+            <ShortText text={course.description} />
           </div>
 
           <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-3">
@@ -301,7 +321,7 @@ export function CourseDetailPage() {
             </div>
             <div className="flex flex-col gap-4 px-3 pt-[18px] pb-3">
               <div className="flex items-center justify-between gap-2.5">
-                <div className="text-[40px] leading-none font-extrabold tracking-[-1px] text-brand">
+                <div className="text-[32px] sm:text-[40px] leading-none font-extrabold tracking-[-1px] text-brand">
                   {priceLabel}
                   {course.priceUsd > 0 && <span className="text-lg font-semibold">{t('detail.perMonth')}</span>}
                 </div>
@@ -525,8 +545,8 @@ function OverviewTab({ course, priceLabel }: { course: CommunityDetail; priceLab
             <div className="grid size-[68px] flex-none place-items-center rounded-[18px] bg-white shadow-[0_8px_20px_rgba(242,106,27,.14)]">
               <PathIcon d="M4 7h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a1 1 0 0 1-1-1zM4 7l11-3v3M16 13.5h.01" stroke="#f26a1b" size={32} />
             </div>
-            <div className="text-[40px] font-extrabold tracking-[-1px] whitespace-nowrap">
-              {priceLabel} {course.priceUsd > 0 && <span className="text-[26px] font-semibold tracking-normal">{t('detail.perMonthSpaced')}</span>}
+            <div className="text-[32px] font-extrabold tracking-[-1px] sm:text-[40px] sm:whitespace-nowrap">
+              {priceLabel} {course.priceUsd > 0 && <span className="text-[20px] sm:text-[26px] font-semibold tracking-normal">{t('detail.perMonthSpaced')}</span>}
             </div>
           </div>
           {course.priceNotes.length > 0 && <div className="hidden w-px self-stretch bg-[rgba(242,106,27,.2)] sm:block" />}

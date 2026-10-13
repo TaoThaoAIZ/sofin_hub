@@ -30,6 +30,8 @@ export const createCommunityBody = z.object({
 });
 export type CreateCommunityBody = z.infer<typeof createCommunityBody>;
 
+export const MAX_COMMUNITY_MEDIA = 12;
+
 export const updateCommunityBody = z
   .object({
     title: title.optional(),
@@ -49,6 +51,10 @@ export const updateCommunityBody = z
     brandColor: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/, 'Màu chủ đạo phải có dạng #rrggbb').nullable().optional(),
     promise: z.string().trim().max(100, 'Lời hứa tối đa 100 ký tự').nullable().optional(),
     benefits: z.array(z.string().trim().max(100, 'Mỗi lợi ích tối đa 100 ký tự')).max(6, 'Tối đa 6 lợi ích').optional(),
+    media: z
+      .array(z.object({ type: z.enum(['image', 'video']), url: z.string().trim().min(1).max(200) }))
+      .max(MAX_COMMUNITY_MEDIA, `Tối đa ${MAX_COMMUNITY_MEDIA} ảnh/video`)
+      .optional(),
     introVideoUrl: z.string().trim().max(500).nullable().optional().refine((v) => !v || toEmbedUrl(v) !== null, 'Chỉ chấp nhận link video YouTube hoặc Vimeo hợp lệ'),
   })
   .refine((v) => Object.keys(v).length > 0, { message: 'Không có trường nào để cập nhật' });

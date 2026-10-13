@@ -52,7 +52,7 @@ export function Header({ active = 'discover' }: { active?: string }) {
         })}
       </nav>
 
-      <div className="ml-auto flex flex-none items-center gap-3 whitespace-nowrap md:ml-0">
+      <div className="ml-auto flex min-w-0 flex-none items-center gap-1.5 whitespace-nowrap sm:gap-3 md:ml-0">
         {status === 'authenticated' && (
           <div className="hidden items-center gap-3 sm:flex">
             <MessagesButton variant="header" />
@@ -64,7 +64,7 @@ export function Header({ active = 'discover' }: { active?: string }) {
           onClick={toggleLanguage}
           aria-label={t('header.language')}
           title={t('header.language')}
-          className="flex items-center gap-1.5 rounded-xl px-2 py-1 text-sm font-medium hover:bg-brand/10 hover:text-brand"
+          className="flex h-10 items-center gap-1.5 rounded-xl px-2 text-sm font-medium hover:bg-brand/10 hover:text-brand"
         >
           <GlobeIcon size={18} />
           {i18n.language === 'en' ? 'EN' : 'VI'}
@@ -87,17 +87,22 @@ export function Header({ active = 'discover' }: { active?: string }) {
               <span className="hidden max-w-[120px] truncate sm:inline">{user.firstName}</span>
             </button>
             {menuOpen && (
-              <div className="absolute top-[calc(100%+8px)] right-0 z-30 flex w-56 flex-col gap-1 rounded-2xl border border-[rgba(120,60,20,.1)] bg-white p-2 text-sm shadow-[0_16px_40px_rgba(120,60,20,.18)]">
-                <div className="truncate px-3 py-1.5 text-stone-500">{user.email}</div>
+              <div className="absolute top-[calc(100%+8px)] right-0 z-30 flex w-56 max-w-[calc(100vw-48px)] flex-col gap-1 rounded-2xl border border-[rgba(120,60,20,.1)] bg-white p-2 text-sm shadow-[0_16px_40px_rgba(120,60,20,.18)]">
+                <div className="truncate px-3 py-1.5 text-stone-500" title={user.email}>{user.email}</div>
+                {/* Mobile: thanh điều hướng/chuông/tin nhắn/nút tạo bị ẩn ở header nên đưa vào menu này. */}
                 {[
-                  { label: t('header.profileSettings'), to: '/settings' },
-                  ...(isAdmin ? [{ label: t('header.admin'), to: '/admin' }] : []),
+                  ...NAV_ITEMS.map((n) => ({ label: t(`nav.${n.key}`), to: n.to, cls: 'md:hidden' })),
+                  { label: t('header.messages'), to: '/messages', cls: 'sm:hidden' },
+                  { label: t('header.notifications'), to: '/notifications', cls: 'sm:hidden' },
+                  { label: t('header.createCommunity'), to: '/communities/new', cls: 'sm:hidden' },
+                  { label: t('header.profileSettings'), to: '/settings', cls: '' },
+                  ...(isAdmin ? [{ label: t('header.admin'), to: '/admin', cls: '' }] : []),
                 ].map((item) => (
                   <Link
                     key={item.to}
                     to={item.to}
                     onClick={() => setMenuOpen(false)}
-                    className="rounded-xl px-3 py-2 text-left font-medium text-stone-900 hover:bg-brand/10 hover:text-brand"
+                    className={`rounded-xl px-3 py-2.5 text-left font-medium text-stone-900 hover:bg-brand/10 hover:text-brand ${item.cls}`}
                   >
                     {item.label}
                   </Link>
@@ -116,13 +121,13 @@ export function Header({ active = 'discover' }: { active?: string }) {
           <Link
             to="/login"
             state={{ from: location.pathname }}
-            className="glass hidden h-10 items-center rounded-[14px] px-4 text-sm font-medium sm:flex"
+            className="glass flex h-10 items-center rounded-[14px] px-4 text-sm font-medium"
           >
             {t('header.login')}
           </Link>
         )}
 
-        <ButtonLink to="/communities/new" className="h-10 rounded-[14px] px-[18px] text-sm font-semibold">
+        <ButtonLink to="/communities/new" className="h-10 rounded-[14px] px-[18px] text-sm font-semibold max-sm:hidden">
           {t('header.createCommunity')}
         </ButtonLink>
       </div>

@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, NavLink, useParams } from 'react-router-dom';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { useCommunityDetail } from '../../courses/queries';
+import { isAtLeast } from '../../communities/types';
 import { isModPlus } from './contentUi';
 
 // Tên icon lấy đúng từ file thiết kế gốc SofinHub Community.html (font Material Symbols Rounded).
@@ -90,6 +91,19 @@ export function CommunitySidebar({ courseTitle }: { courseTitle: string }) {
           >
             <MaterialIcon name="payments" size={21} color="currentColor" />
             {t('sidebar.revenue')}
+          </NavLink>
+        )}
+        {isAtLeast(viewerCourse?.viewerRole, 'admin') && (
+          <NavLink
+            to="cai-dat"
+            className={({ isActive }) =>
+              `flex h-11 items-center gap-3.5 rounded-xl px-3.5 text-[14.5px] ${
+                isActive ? 'bg-brand-soft font-semibold text-brand' : 'font-normal text-stone-900 hover:bg-stone-50'
+              }`
+            }
+          >
+            <MaterialIcon name="settings" size={21} color="currentColor" />
+            {t('sidebar.settings')}
           </NavLink>
         )}
       </nav>

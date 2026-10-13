@@ -40,7 +40,7 @@ export interface CreateCommunityInput {
   thumbnail?: string;
 }
 
-export type UpdateCommunityInput = Partial<CreateCommunityInput>;
+export type UpdateCommunityInput = Partial<CreateCommunityInput> & { media?: { type: 'image' | 'video'; url: string }[] };
 
 export interface UserBrief {
   id: string;

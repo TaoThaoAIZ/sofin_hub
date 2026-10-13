@@ -5,6 +5,8 @@
     "admin": "Admin",
     "logout": "Log out",
     "login": "Log in",
+    "messages": "Messages",
+    "notifications": "Notifications",
     "createCommunity": "Create community",
     "language": "Language"
   },

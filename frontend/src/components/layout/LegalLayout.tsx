@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
+import { Footer } from './Footer';
+import { Header } from './Header';
 import { ButtonLink } from '../ui/Button';
 import { SectionTitle } from '../ui/SectionTitle';
 
 /**
- * Layout riêng cho trang pháp lý trong flow đăng ký (không dùng Header/Footer của trang chủ).
- * Theo dõi khi người dùng cuộn tới cuối nội dung để đánh dấu "đã đọc" (dùng cho checkbox đồng ý ở trang Đăng ký).
+ * Trang pháp lý có 2 chế độ:
+ *  - Mở từ form Đăng ký (`?from=register`): layout riêng, theo dõi cuộn tới cuối để đánh dấu "đã đọc" (checkbox đồng ý) + nút quay lại đăng ký.
+ *  - Mở từ nơi khác (Footer, FAQ…): chỉ để đọc, dùng Header/Footer chung, không có nút đồng ý.
  */
 export function LegalLayout({
   title,
@@ -20,12 +23,13 @@ export function LegalLayout({
   children: ReactNode;
 }) {
   const { t } = useTranslation('layout');
+  const consentMode = useSearchParams()[0].get('from') === 'register';
   const [reachedBottom, setReachedBottom] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const el = sentinelRef.current;
-    if (!el) return;
+    if (!consentMode || !el) return;
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry?.isIntersecting) {
@@ -37,7 +41,21 @@ export function LegalLayout({
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [onRead]);
+  }, [onRead, consentMode]);
+
+  if (!consentMode) {
+    return (
+      <div className="min-h-screen bg-white">
+        <Header />
+        <div className="mx-auto max-w-[760px] px-4 pt-10 pb-16 sm:px-6">
+          <h1 className="m-0 text-[clamp(28px,3.4vw,44px)] font-extrabold tracking-[-1px]">{title}</h1>
+          <p className="mt-2 text-sm text-stone-500">{t('legal.updatedAt', { date: updatedAt })}</p>
+          <div className="mt-8 flex flex-col gap-8">{children}</div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div

@@ -22,7 +22,8 @@
     "labels": {
       "images": "ảnh JPG, PNG, WEBP, GIF",
       "files": "PDF, ZIP, DOCX, XLSX, PPTX, TXT, MP4",
-      "message": "ảnh, PDF, ZIP, DOCX, XLSX, PPTX, TXT"
+      "message": "ảnh, PDF, ZIP, DOCX, XLSX, PPTX, TXT",
+      "media": "ảnh JPG, PNG, WEBP, GIF hoặc video MP4"
     },
     "failedStatus": "Tải tệp lên thất bại ({{status}})",
     "failed": "Tải tệp lên thất bại, vui lòng thử lại",

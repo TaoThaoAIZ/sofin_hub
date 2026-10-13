@@ -8,7 +8,9 @@ import { useCommunityDetail } from '../../courses/queries';
 import { useCancelRsvp, useCreateEvent, useDeleteEvent, useDownloadIcs, useEvents, useToggleRsvp, useUpdateEvent } from '../queries';
 import type { CommunityEvent } from '../types';
 import { areaCls, ConfirmDialog, Dialog, errText, ErrorNote, ghostBtn, inputCls, isModPlus, primaryBtn, safeUrl, toast, ToastHost, toLocalInput } from './contentUi';
+import { InviteePicker } from './InviteePicker';
 import { PageBanner } from './shared';
+import { useAuth } from '../../auth/AuthContext';
 
 type View = 'month' | 'week' | 'day';
 type EventFilter = 'all' | 'upcoming' | 'rsvped';
@@ -46,6 +48,7 @@ function buildDays(view: View, cur: Date): Date[] {
 export function CalendarTab() {
   const { t } = useTranslation('community');
   const { id: courseId = '' } = useParams();
+  const { user } = useAuth();
   const { data: course } = useCommunityDetail(courseId);
   const canManage = isModPlus(course?.viewerRole);
   const events = useEvents(courseId);
@@ -68,6 +71,7 @@ export function CalendarTab() {
   const [meetingLink, setMeetingLink] = useState('');
   const [description, setDescription] = useState('');
   const [capacity, setCapacity] = useState('');
+  const [invitees, setInvitees] = useState<Record<string, string>>({});
 
   const shift = (k: number) => {
     const d = new Date(cur);
@@ -182,6 +186,7 @@ export function CalendarTab() {
                   timezone: 'Asia/Ho_Chi_Minh',
                   meetingLink: meetingLink.trim() || undefined,
                   capacity: capacity ? Number(capacity) : undefined,
+                  inviteeIds: Object.keys(invitees),
                 },
                 {
                   onSuccess: () => {
@@ -190,6 +195,7 @@ export function CalendarTab() {
                     setMeetingLink('');
                     setDescription('');
                     setCapacity('');
+                    setInvitees({});
                     setShowForm(false);
                     toast(t('calendar.created'));
                   },
@@ -203,6 +209,7 @@ export function CalendarTab() {
             <input value={meetingLink} onChange={(e) => setMeetingLink(e.target.value)} placeholder={t('calendar.meetingLinkOpt')} aria-label={t('calendar.meetingLink')} className={inputCls} />
             <input type="number" min={1} value={capacity} onChange={(e) => setCapacity(e.target.value)} placeholder={t('calendar.capacityPh')} aria-label={t('calendar.capacity')} className={inputCls} />
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} maxLength={2000} placeholder={t('calendar.descPh')} aria-label={t('calendar.desc')} className={`${areaCls} sm:col-span-2`} />
+            <InviteePicker courseId={courseId} selfId={user?.id} value={invitees} onChange={setInvitees} />
             <div className="flex items-center gap-3 sm:col-span-2">
               <button type="submit" disabled={createEvent.isPending} className={primaryBtn}>
                 {createEvent.isPending ? t('calendar.creating') : t('calendar.create')}

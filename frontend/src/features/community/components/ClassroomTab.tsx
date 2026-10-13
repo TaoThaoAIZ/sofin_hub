@@ -1,12 +1,12 @@
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../../i18n';
-import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
-import { communityCheckout, lessonPath, modulePath } from '../../../lib/paths';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { communityCheckout, lessonPath } from '../../../lib/paths';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { useCommunityDetail } from '../../courses/queries';
 import { formatCompact } from '../../../lib/format';
-import { useClaimCertificate, useCourseList, useDeleteLesson, useLessons, useModules, useProgress, useToggleLessonComplete } from '../queries';
+import { useClaimCertificate, useCourseList, useDeleteLesson, useFirstLessonId, useLessons, useModules, useProgress, useToggleLessonComplete } from '../queries';
 import type { Certificate, ClassroomModule } from '../types';
 import { ModulePurchaseDialog } from '../../payments/components/ModulePurchaseDialog';
 import { CertificateDialog } from './CertificateCard';
@@ -137,6 +137,21 @@ export function ClassroomTab() {
   const [editMode] = useState(false);
   const [cert, setCert] = useState<Certificate | null>(null);
   const [wizard, setWizard] = useState<ClassroomModule | 'new' | null>(null);
+  const navigate = useNavigate();
+  const firstLessonId = useFirstLessonId(communityId, courseId);
+  const [opening, setOpening] = useState<string | null>(null);
+  const openModule = async (m: ClassroomModule) => {
+    setOpening(m.id);
+    try {
+      const id = await firstLessonId(m.id);
+      if (id) navigate(lessonPath(communityId, id));
+      else toast(t('classroom.lessonList.empty'), 'error');
+    } catch (e) {
+      toast(errText(e), 'error');
+    } finally {
+      setOpening(null);
+    }
+  };
   const [buying, setBuying] = useState<ClassroomModule | null>(null);
 
   const role = community?.viewerRole;
@@ -360,9 +375,9 @@ export function ClassroomTab() {
                       <MaterialIcon name="arrow_forward" size={22} color="#f26a1b" />
                     </span>
                   ) : (
-                    <Link to={modulePath(communityId, m.id, courseId)} aria-label={t('classroom.openAria', { title: m.title })} className="grid size-[42px] flex-none place-items-center rounded-[14px] bg-brand/10 hover:bg-brand/20">
+                    <button type="button" disabled={opening === m.id} onClick={() => void openModule(m)} aria-label={t('classroom.openAria', { title: m.title })} className="grid size-[42px] flex-none place-items-center rounded-[14px] bg-brand/10 hover:bg-brand/20">
                       <MaterialIcon name="arrow_forward" size={22} color="#f26a1b" />
-                    </Link>
+                    </button>
                   )
                   )}
                 </div>

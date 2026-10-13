@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { Header } from '../components/layout/Header';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { ButtonLink } from '../components/ui/Button';
 import { MaterialIcon } from '../components/ui/MaterialIcon';
 import { useAuth } from '../features/auth/AuthContext';
@@ -53,32 +52,23 @@ export function CommunitySettingsPage() {
 
   if (isPending || status === 'loading') {
     return (
-      <div className="min-h-screen bg-white">
-        <Header active="myCommunities" />
-        <p className="py-24 text-center text-stone-500">{t('settingsPage.loading')}</p>
-      </div>
+      <p className="py-24 text-center text-stone-500">{t('settingsPage.loading')}</p>
     );
   }
   if (error || !course) {
     return (
-      <div className="min-h-screen bg-white">
-        <Header active="myCommunities" />
-        <Notice title={t('settingsPage.notFoundTitle')} message={t('settingsPage.notFoundMessage')} to="/" />
-      </div>
+      <Notice title={t('settingsPage.notFoundTitle')} message={t('settingsPage.notFoundMessage')} to="/" />
     );
   }
 
   const role = course.viewerRole;
   if (!role || !isAtLeast(role, 'admin')) {
     return (
-      <div className="min-h-screen bg-white">
-        <Header active="myCommunities" />
-        <Notice
+      <Notice
           title={t('settingsPage.noAccessTitle')}
           message={t('settingsPage.noAccessMessage')}
           to={`/communities/${id}`}
         />
-      </div>
     );
   }
 
@@ -86,27 +76,15 @@ export function CommunitySettingsPage() {
   const activeTab = visibleTabs.some((tb) => tb.key === tab) ? tab : 'general';
 
   return (
-    <div
-      className="min-h-screen pb-16"
-      style={{
-        background:
-          'radial-gradient(700px 500px at 0% 20%, rgba(255,186,140,.25), transparent 70%), radial-gradient(700px 600px at 100% 30%, rgba(251,207,232,.22), transparent 70%), #fdfbfa',
-      }}
-    >
-      <Header active="myCommunities" />
-      <div className="mx-auto max-w-[1000px] px-4 pt-6">
-        <Link to={course.viewerEnrolled ? `/communities/${id}/community` : `/communities/${id}`} className="inline-flex items-center gap-1 text-sm font-medium text-stone-600 hover:text-brand">
-          <MaterialIcon name="arrow_back" size={18} color="currentColor" />
-          {t('settingsPage.backToCommunity')}
-        </Link>
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <h1 className="m-0 min-w-0 text-[clamp(24px,3vw,32px)] font-extrabold tracking-[-0.5px] break-words">{t('settingsPage.heading', { title: course.title })}</h1>
-          <span className="rounded-full bg-brand/10 px-3 py-1 text-xs font-bold text-brand">{ROLE_LABEL[role]}</span>
-          {course.locked && <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-700">{t('settingsPage.locked')}</span>}
-        </div>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <h1 className="m-0 min-w-0 text-[clamp(24px,3vw,32px)] font-extrabold tracking-[-0.5px] break-words">{t('settingsPage.title')}</h1>
+        <span className="rounded-full bg-brand/10 px-3 py-1 text-xs font-bold text-brand">{ROLE_LABEL[role]}</span>
+        {course.locked && <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-700">{t('settingsPage.locked')}</span>}
+      </div>
 
-        <div className="mt-5 grid grid-cols-[220px_minmax(0,1fr)] items-start gap-5 max-md:grid-cols-1">
-          <nav className="glass flex gap-1 rounded-2xl p-2 max-md:overflow-x-auto md:flex-col" aria-label={t('settingsPage.navLabel')}>
+      <div className="grid grid-cols-[220px_minmax(0,1fr)] items-start gap-5 max-lg:grid-cols-1">
+          <nav className="glass flex gap-1 rounded-2xl p-2 max-lg:overflow-x-auto lg:flex-col" aria-label={t('settingsPage.navLabel')}>
             {visibleTabs.map((tb) => (
               <button
                 key={tb.key}
@@ -136,7 +114,6 @@ export function CommunitySettingsPage() {
             {activeTab === 'bans' && <BansTab courseId={id} />}
             {activeTab === 'danger' && <DangerTab course={course} viewerRole={role} />}
           </div>
-        </div>
       </div>
     </div>
   );

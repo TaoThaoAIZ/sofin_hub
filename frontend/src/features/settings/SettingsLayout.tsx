@@ -29,10 +29,10 @@ function SideNav() {
       <div className="flex items-center gap-3.5 px-2 pb-3.5">
         <span className="text-[26px] font-extrabold tracking-[-.02em]">{t('layout.title')}</span>
       </div>
-      <nav aria-label={t('layout.title')} className="flex flex-col gap-1">
+      <nav aria-label={t('layout.title')} className="flex flex-col gap-1 max-[899px]:flex-row max-[899px]:gap-2 max-[899px]:overflow-x-auto max-[899px]:pb-1">
         {NAV.map((n) => (
-          <div key={n.to}>
-            {n.divider && <div className="mx-2.5 my-2.5 h-px bg-[#efe9e4]" />}
+          <div key={n.to} className="max-[899px]:flex-none">
+            {n.divider && <div className="mx-2.5 my-2.5 h-px bg-[#efe9e4] max-[899px]:hidden" />}
             <NavLink
               to={n.to}
               end
@@ -41,7 +41,7 @@ function SideNav() {
                 if (hasUnsavedProfile() && !window.confirm(t('layout.unsavedConfirm'))) e.preventDefault();
               }}
               className={({ isActive }) =>
-                `flex items-center gap-3.5 rounded-[14px] px-2.5 py-[9px] text-[15.5px] no-underline ${
+                `flex items-center gap-3.5 rounded-[14px] px-2.5 py-[9px] text-[15.5px] no-underline max-[899px]:gap-2.5 max-[899px]:pr-4 max-[899px]:whitespace-nowrap ${
                   isActive ? 'bg-gradient-to-r from-[#ffe9da] to-[#fff3ea] font-bold text-brand' : 'font-medium text-stone-800 hover:bg-[#faf5f1]'
                 }`
               }

@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { formatCompact } from '../../../lib/format';
+import { MediaGallery } from '../../courses/components/MediaGallery';
 import { useCommunityDetail } from '../../courses/queries';
 import { CommunityInfoCard, initials } from './shared';
 
@@ -33,13 +34,7 @@ export function AboutTab() {
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_336px] items-start gap-6 max-[1280px]:grid-cols-1">
       <main className="flex min-w-0 flex-col gap-4">
-        <section className="relative aspect-[1235/665] overflow-hidden rounded-[26px] bg-[#140c07] shadow-[0_18px_40px_rgba(60,20,0,.25)]">
-          <img src={course.thumbnail} alt={course.title} className="size-full object-cover" />
-        </section>
-
-        <div className="h-[120px] w-[130px] flex-none overflow-hidden rounded-[18px] bg-[#1c130e]">
-          <img src={course.thumbnail} alt="" className="size-full object-cover" />
-        </div>
+        <MediaGallery items={course.media ?? []} fallback={course.thumbnail} alt={course.title} className="aspect-[1235/665] !rounded-[26px] shadow-[0_18px_40px_rgba(60,20,0,.25)]" />
 
         <div className="grid grid-cols-4 gap-3 max-md:grid-cols-2">
           {chips.map((c) => (

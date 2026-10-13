@@ -147,7 +147,7 @@ export function SecurityTab() {
             }
           >
             <div className="mt-[3px] flex flex-wrap items-center gap-2.5 text-sm break-all text-stone-600">
-              {user.email}
+              <span className="max-w-[220px] truncate" title={user.email}>{user.email}</span>
               <Badge tone={user.emailVerified ? 'green' : 'amber'}>{user.emailVerified ? t('securityTab.verified') : t('securityTab.unverified')}</Badge>
             </div>
             {needsVerify && (

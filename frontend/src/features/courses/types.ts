@@ -99,8 +99,15 @@ export interface CourseFact {
   fg: string;
 }
 
+export interface CommunityMediaItem {
+  type: 'image' | 'video';
+  url: string;
+}
+
 export interface CourseDetail extends Course {
   about: string;
+  /** Thư viện ảnh/video giới thiệu do admin tải lên (rỗng = chỉ dùng ảnh bìa `thumbnail`). */
+  media?: CommunityMediaItem[];
   highlights: CourseHighlight[];
   gains: CourseHighlight[];
   priceNotes: string[];

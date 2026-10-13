@@ -177,7 +177,7 @@ export function ReferralTab() {
   return (
     <main className="flex min-w-0 flex-col gap-[18px]">
       <div className="flex flex-wrap items-center gap-3.5">
-        <div role="tablist" className="flex rounded-[14px] bg-[#f5f2ef] p-1">
+        <div role="tablist" className="flex max-w-full overflow-x-auto rounded-[14px] bg-[#f5f2ef] p-1">
           {KINDS.map((k) => {
             const on = k.id === kind;
             return (

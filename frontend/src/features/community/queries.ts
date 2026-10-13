@@ -116,7 +116,7 @@ export const useCreateEvent = (courseId: string) => {
   const token = useToken();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (vars: { title: string; description: string; startAt: string; timezone: string; meetingLink?: string; capacity?: number }) =>
+    mutationFn: (vars: { title: string; description: string; startAt: string; timezone: string; meetingLink?: string; capacity?: number; inviteeIds?: string[] }) =>
       api.createEvent(courseId, vars, token),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.events(courseId) }),
   });
@@ -370,6 +370,22 @@ export const useLessons = (cid: string, courseId: string | null, moduleId: strin
     queryFn: ({ signal }) => api.fetchLessons(cid, courseId!, moduleId!, accessToken!, signal),
     enabled: !!courseId && !!moduleId && !!accessToken,
   });
+};
+
+/** Mở một module = vào thẳng bài học đầu tiên chưa hoàn thành (không có thì bài đầu tiên mở được). Trả null nếu module chưa có bài nào mở được. */
+export const useFirstLessonId = (cid: string, courseId: string | null) => {
+  const { accessToken } = useAuth();
+  const qc = useQueryClient();
+  return async (moduleId: string): Promise<string | null> => {
+    if (!courseId || !accessToken) return null;
+    const lessons = await qc.fetchQuery({
+      queryKey: ck.lessons(cid, courseId, moduleId),
+      queryFn: ({ signal }) => api.fetchLessons(cid, courseId, moduleId, accessToken, signal),
+      staleTime: 0,
+    });
+    const open = lessons.filter((l) => !l.locked);
+    return (open.find((l) => !l.completed) ?? open[0])?.id ?? null;
+  };
 };
 
 export const useLesson = (cid: string, lessonId: string) => {

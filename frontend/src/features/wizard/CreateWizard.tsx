@@ -419,7 +419,7 @@ export function CreateWizard() {
 
   return (
     <div className="mx-auto grid w-full max-w-[1320px] gap-4 px-4 pt-6 pb-10 md:px-10 lg:grid-cols-[260px_minmax(0,1fr)]">
-      <aside className="flex flex-col gap-1.5 rounded-[20px] border border-[rgba(120,60,20,.07)] bg-white p-3.5 lg:self-start">
+      <aside className="flex min-w-0 flex-col gap-1.5 rounded-[20px] border border-[rgba(120,60,20,.07)] bg-white p-3.5 lg:self-start">
         <div className="flex items-center gap-3.5 px-2 pt-1 pb-3.5">
           <span className="text-xl font-extrabold tracking-[-0.02em]">{t('wizard.title')}</span>
           <MaterialIcon name="auto_awesome" size={20} color="#fbbf24" filled />

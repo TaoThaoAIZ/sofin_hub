@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { centsToUsd, usdToCents } from '../../db/enums.js';
-import { annualSavingsPct, type CommunityRule } from './community.types.js';
+import { annualSavingsPct, type CommunityMedia, type CommunityRule } from './community.types.js';
 import { prisma } from '../../db/prisma.js';
 import { Prisma as PrismaNamespace, type Community as DbCommunity, type Prisma } from '../../generated/prisma/client.js';
 import { HttpError } from '../../utils/http-error.js';
@@ -99,6 +99,12 @@ async function realLessonCounts(ids: string[]): Promise<Map<string, number>> {
   return new Map(rows.map((r) => [r.communityId, r.n]));
 }
 
+/** Cột JSON `media` → thư viện ảnh/video hợp lệ (bỏ phần tử sai hình dạng). */
+function asMedia(v: unknown): CommunityMedia[] {
+  if (!Array.isArray(v)) return [];
+  return v.filter((m): m is CommunityMedia => !!m && typeof m === 'object' && ((m as CommunityMedia).type === 'image' || (m as CommunityMedia).type === 'video') && typeof (m as CommunityMedia).url === 'string');
+}
+
 /** Cột JSON `rules` → danh sách nội quy hợp lệ (bỏ phần tử sai hình dạng). */
 export function asRules(v: unknown): CommunityRule[] {
   if (!Array.isArray(v)) return [];
@@ -132,6 +138,7 @@ function toCommunity(row: DbCommunity, real: number, lessons: number): Community
     promise: row.promise,
     benefits: row.benefits,
     introVideoUrl: row.introVideoUrl,
+    media: asMedia(row.media),
     rules: asRules(row.rules),
     joinQuestions: row.joinQuestions,
     requireRulesAgreement: row.requireRulesAgreement,
@@ -194,6 +201,7 @@ function toRowPatch(patch: CommunityPatch): Prisma.CommunityUpdateInput {
   if (patch.promise !== undefined) data.promise = patch.promise;
   if (patch.benefits !== undefined) data.benefits = patch.benefits;
   if (patch.introVideoUrl !== undefined) data.introVideoUrl = patch.introVideoUrl;
+  if (patch.media !== undefined) data.media = patch.media as unknown as Prisma.InputJsonValue;
   if (patch.rules !== undefined) data.rules = patch.rules as unknown as Prisma.InputJsonValue;
   if (patch.joinQuestions !== undefined) data.joinQuestions = patch.joinQuestions;
   if (patch.requireRulesAgreement !== undefined) data.requireRulesAgreement = patch.requireRulesAgreement;
@@ -234,6 +242,7 @@ function toRowCreate(community: NewCommunity): Prisma.CommunityUncheckedCreateIn
     promise: community.promise ?? null,
     benefits: community.benefits ?? [],
     introVideoUrl: community.introVideoUrl ?? null,
+    media: (community.media ?? []) as unknown as Prisma.InputJsonValue,
     rules: (community.rules ?? []) as unknown as Prisma.InputJsonValue,
     joinQuestions: community.joinQuestions ?? [],
     requireRulesAgreement: community.requireRulesAgreement ?? false,

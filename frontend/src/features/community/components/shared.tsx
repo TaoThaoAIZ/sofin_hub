@@ -1,10 +1,8 @@
 import { Link } from 'react-router-dom';
 import { Avatar } from '../../account/components/Avatar';
-import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { formatCompact } from '../../../lib/format';
 import type { CommunityDetail } from '../../courses/types';
 import { useTranslation } from 'react-i18next';
-import { isAtLeast } from '../../communities/types';
 import { useMembers } from '../queries';
 
 // Bảng màu avatar lấy đúng từ pal[] trong file thiết kế gốc SofinHub Community.html.
@@ -87,15 +85,6 @@ export function CommunityInfoCard({ course, coverHeight = 150 }: { course: Commu
               <span className="text-stone-600">{t('info.yourRole')}</span>
               <span className="font-semibold text-stone-900">{t(`roles.${course.viewerRole}`)}</span>
             </div>
-          )}
-          {isAtLeast(course.viewerRole, 'admin') && (
-            <Link
-              to={`/communities/${course.id}/community/cai-dat`}
-              className="mt-3 flex h-[42px] w-full items-center justify-center gap-2 rounded-xl bg-brand/10 text-sm font-semibold text-brand hover:bg-brand/15"
-            >
-              <MaterialIcon name="settings" size={19} color="#f26a1b" />
-              {t('info.settings')}
-            </Link>
           )}
         </div>
       </div>

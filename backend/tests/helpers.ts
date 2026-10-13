@@ -257,7 +257,7 @@ export function makeClient(baseUrl: string) {
   let counter = 0;
   /** Đăng ký user mới (mật khẩu đạt quy tắc: >= 8 ký tự, có chữ hoa và ký tự đặc biệt) và trả về token + id. */
   async function registerUser(prefix = 'user') {
-    const email = `${prefix}-${Date.now()}-${counter++}@test.local`;
+    const email = `${prefix.replace(/[^a-z0-9]/gi, "").slice(0, 8)}${Date.now().toString(36)}${counter++}@t.io`;
     const password = 'Passw0rd!x';
     const r = await registerVerified({ email, password, firstName: 'Test', lastName: prefix });
     if (r.status >= 300) throw new Error(`register failed: ${r.status} ${JSON.stringify(r.body)}`);

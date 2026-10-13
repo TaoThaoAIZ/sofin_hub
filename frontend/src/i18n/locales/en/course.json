@@ -69,6 +69,8 @@
     "leaveCancel": "Stay",
     "leaveMessage": "You will lose access immediately, your membership will be canceled at the end of the current period (no further charges), and the payment for this period is non-refundable. You can rejoin for free during the period you paid for.",
     "homeAria": "Home",
+    "showMore": "Show more",
+    "showLess": "Show less",
     "by": "By <b>{{name}}</b>",
     "perMonth": "/month",
     "perMonthSpaced": "/ month",

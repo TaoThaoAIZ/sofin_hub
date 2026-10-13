@@ -3,7 +3,7 @@ import { after, before, describe, it } from 'node:test';
 import { makeClient, startTestServer, useTestDb, type TestServer } from './helpers.js';
 
 // env.ts parse lúc import app, nên phải đặt TRƯỚC startTestServer().
-const ADMIN_EMAIL = 'platform-admin-moderation@test.local';
+const ADMIN_EMAIL = 'pa-moderation@test.local';
 process.env.PLATFORM_ADMIN_EMAILS = ADMIN_EMAIL;
 
 /** Báo cáo vi phạm + xử lý (bỏ qua / ẩn nội dung / cấm thành viên). */

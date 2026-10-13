@@ -22,7 +22,8 @@
     "labels": {
       "images": "JPG, PNG, WEBP, GIF images",
       "files": "PDF, ZIP, DOCX, XLSX, PPTX, TXT, MP4",
-      "message": "images, PDF, ZIP, DOCX, XLSX, PPTX, TXT"
+      "message": "images, PDF, ZIP, DOCX, XLSX, PPTX, TXT",
+      "media": "JPG, PNG, WEBP, GIF images or MP4 video"
     },
     "failedStatus": "File upload failed ({{status}})",
     "failed": "File upload failed, please try again",

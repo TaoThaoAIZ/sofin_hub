@@ -3,7 +3,7 @@ import { after, before, describe, it } from 'node:test';
 import { makeClient, startTestServer, useTestDb, type TestDb, type TestServer } from './helpers.js';
 
 // env.ts parse lúc import app, nên phải đặt TRƯỚC startTestServer().
-const ADMIN_EMAIL = 'platform-admin-batch3@test.local';
+const ADMIN_EMAIL = 'pa-batch3@test.local';
 process.env.PLATFORM_ADMIN_EMAILS = ADMIN_EMAIL;
 
 /** Admin đợt 3: Analytics · Support · System + phân quyền nhân viên trên toàn bộ /admin/*. */
@@ -150,7 +150,7 @@ describe('admin đợt 3', () => {
     });
 
     it('mời email chưa có tài khoản: cần firstName, tạo user + gửi email đặt mật khẩu', async () => {
-      const email = `invited-${Date.now()}@test.local`;
+      const email = `inv${Date.now().toString(36)}@t.io`;
       assert.equal((await A('POST', '/system/admins', { email, roleKey: 'finance' })).status, 400);
       const r = await A('POST', '/system/admins', { email, roleKey: 'finance', firstName: 'Mời' });
       assert.equal(r.status, 201, JSON.stringify(r.body));
@@ -303,7 +303,7 @@ describe('admin đợt 3', () => {
       assert.equal(list[0].status, 'new');
       assert.equal(list[0].requester.id, u.id, 'liên kết user theo email');
       // email lạ -> khách không có tài khoản
-      const g = `guest-${Date.now()}@test.local`;
+      const g = `gu${Date.now().toString(36)}@t.io`;
       await c.call('POST', '/contact', { body: { name: 'Khách', email: g, subject: 'Hỏi nhanh', message: 'Xin chào' } });
       const gl = (await GET(`/support/tickets?q=${encodeURIComponent(g)}`)).body.data;
       assert.equal(gl[0].requester.id, null);

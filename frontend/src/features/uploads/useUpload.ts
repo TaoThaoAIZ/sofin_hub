@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import i18n from '../../i18n';
 import { ApiError, apiPost, resolveApiPath } from '../../lib/api';
 
-export type UploadPurpose = 'post_image' | 'post_file' | 'avatar' | 'cover' | 'lesson_attachment' | 'message_attachment';
+export type UploadPurpose = 'post_image' | 'post_file' | 'avatar' | 'cover' | 'lesson_attachment' | 'message_attachment' | 'community_media';
 
 export interface UploadedFile {
   /** Đường dẫn file do BE trả (vd. "/api/files/<key>") — lưu nguyên giá trị này vào bài viết/tin nhắn/avatar. */
@@ -26,13 +26,14 @@ const DOCS = [
 ];
 
 // Khớp bảng whitelist ở backend/docs/api/uploads.md (chỉ để báo lỗi sớm — BE vẫn kiểm tra lại).
-const RULES: Record<UploadPurpose, { types: string[]; maxMb: number; label: 'images' | 'files' | 'message' }> = {
+const RULES: Record<UploadPurpose, { types: string[]; maxMb: number; label: 'images' | 'files' | 'message' | 'media' }> = {
   post_image: { types: IMAGES, maxMb: 5, label: 'images' },
   avatar: { types: IMAGES, maxMb: 3, label: 'images' },
   cover: { types: IMAGES, maxMb: 8, label: 'images' },
   post_file: { types: [...DOCS, 'video/mp4'], maxMb: 25, label: 'files' },
   lesson_attachment: { types: [...DOCS, 'video/mp4'], maxMb: 25, label: 'files' },
   message_attachment: { types: [...IMAGES, ...DOCS], maxMb: 25, label: 'message' },
+  community_media: { types: [...IMAGES, 'video/mp4'], maxMb: 25, label: 'media' },
 };
 
 /** Kiểm tra sớm ở FE; trả về thông báo lỗi tiếng Việt hoặc null nếu hợp lệ. */

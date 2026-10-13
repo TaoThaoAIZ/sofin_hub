@@ -40,6 +40,9 @@ export interface EnrollmentRepository {
   /** Owner hiện tại (không bị cấm), nếu có — 1 truy vấn. */
   findOwnerId(communityId: string): Promise<string | undefined>;
   touchActivity(userId: string, communityId: string): Promise<void>;
+  /** Thu hồi các yêu cầu tham gia đã duyệt (rời cộng đồng riêng tư ⇒ phải gửi yêu cầu lại). */
+  hasApprovedJoinRequest(userId: string, communityId: string): Promise<boolean>;
+  revokeApprovedJoinRequests(userId: string, communityId: string): Promise<void>;
   /** Cập nhật hoạt động CHỈ khi đang là thành viên (không bị cấm) — 1 truy vấn; trả true nếu là thành viên. */
   touchIfMember(userId: string, communityId: string): Promise<boolean>;
   /** Vai trò trong cộng đồng nếu đang là thành viên (không bị cấm), ngược lại undefined — 1 truy vấn. */
@@ -131,6 +134,12 @@ export const enrollmentRepository: EnrollmentRepository = {
     return row?.userId;
   },
 
+  async hasApprovedJoinRequest(userId, communityId) {
+    return (await prisma.joinRequest.count({ where: { communityId, userId, status: 'approved' } })) > 0;
+  },
+  async revokeApprovedJoinRequests(userId, communityId) {
+    await prisma.joinRequest.updateMany({ where: { communityId, userId, status: 'approved' }, data: { status: 'rejected', decidedAt: new Date() } });
+  },
   async touchActivity(userId, communityId) {
     await prisma.enrollment.updateMany({ where: { userId, communityId }, data: { lastActiveAt: new Date() } });
   },
