@@ -1,5 +1,5 @@
 {
-  "nav": { "discover": "Discover", "courses": "Courses", "myCommunities": "My communities" },
+  "nav": { "discover": "Discover", "courses": "Courses", "myCommunities": "My communities", "tools": "Download Tools" },
   "header": {
     "profileSettings": "Profile settings",
     "admin": "Admin",

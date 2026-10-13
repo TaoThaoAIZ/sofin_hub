@@ -16,6 +16,7 @@ const NAV_ITEMS: { key: string; to: string }[] = [
   { key: 'discover', to: '/' },
   { key: 'courses', to: '/#courses' },
   { key: 'myCommunities', to: '/me/communities' },
+  { key: 'tools', to: '/tools' },
 ];
 
 export function Header({ active = 'discover' }: { active?: string }) {

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { HttpError } from '../../utils/http-error.js';
-import { contactBody, newsletterBody } from './support.schema.js';
+import { contactBody, newsletterBody, toolLeadBody } from './support.schema.js';
 import { supportService } from './support.service.js';
 
 export const supportRouter = Router();
@@ -29,4 +29,9 @@ supportRouter.post('/newsletter/unsubscribe', limiter(10), async (req, res) => {
 supportRouter.post('/contact', limiter(5), async (req, res) => {
   await supportService.contact(contactBody.parse(req.body));
   res.status(202).json({ data: { message: 'Chúng tôi đã nhận được tin nhắn và sẽ phản hồi sớm.' } });
+});
+
+supportRouter.post('/tools/lead', limiter(5), async (req, res) => {
+  await supportService.toolLead(toolLeadBody.parse(req.body));
+  res.status(202).json({ data: { message: 'Đã ghi nhận. Đội ngũ hỗ trợ sẽ liên hệ hướng dẫn thanh toán và gửi link tải!' } });
 });

@@ -1,5 +1,5 @@
 {
-  "nav": { "discover": "Khám phá", "courses": "Khóa học", "myCommunities": "Cộng đồng của tôi" },
+  "nav": { "discover": "Khám phá", "courses": "Khóa học", "myCommunities": "Cộng đồng của tôi", "tools": "Tải Tool" },
   "header": {
     "profileSettings": "Cài đặt hồ sơ",
     "admin": "Quản trị",

@@ -1,0 +1,28 @@
+{
+  "title": "Tải Tool",
+  "subtitle": "Công cụ hỗ trợ làm phim & sản xuất nội dung AI — tải miễn phí hoặc để lại thông tin để được hỗ trợ mua các tool nâng cao.",
+  "categoryLabel": "Danh mục:",
+  "all": "Tất cả",
+  "empty": "Chưa có tool nào trong danh mục này.",
+  "badgeHot": "HOT",
+  "badgeNew": "MỚI",
+  "free": "MIỄN PHÍ",
+  "contact": "LIÊN HỆ",
+  "downloadFree": "Tải miễn phí",
+  "buyNow": "Mua ngay",
+  "form": {
+    "title": "Mua {{tool}}",
+    "intro": "Để lại thông tin — đội ngũ hỗ trợ sẽ liên hệ hướng dẫn thanh toán, sau đó gửi link tải trực tiếp cho bạn.",
+    "name": "Họ và tên",
+    "phone": "Số điện thoại",
+    "phoneInvalid": "Số điện thoại không hợp lệ.",
+    "email": "Email (không bắt buộc)",
+    "submit": "Gửi thông tin →",
+    "sending": "Đang gửi…",
+    "close": "Đóng",
+    "successTitle": "Đã nhận thông tin!",
+    "successBody": "Đội ngũ hỗ trợ sẽ liên hệ trong 24h để hướng dẫn thanh toán, sau khi xác nhận sẽ gửi bạn link tải tool trực tiếp.",
+    "rateLimit": "Bạn đã gửi quá nhiều yêu cầu, vui lòng thử lại sau ít phút.",
+    "failed": "Có lỗi xảy ra, vui lòng thử lại."
+  }
+}

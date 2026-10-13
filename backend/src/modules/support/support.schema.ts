@@ -11,6 +11,15 @@ export const contactBody = z.object({
   message: z.string().trim().min(1, 'Vui lòng nhập nội dung').max(5000, 'Nội dung tối đa 5000 ký tự'),
   category: z.enum(['user', 'creator', 'payment']).default('user'),
 });
+export const toolLeadBody = z.object({
+  name: z.string().trim().min(1, 'Vui lòng nhập họ tên').max(120),
+  phone: z.string().trim().regex(/^(\+?84|0)\d{9}$/, 'Số điện thoại không hợp lệ'),
+  email: email.optional().or(z.literal('').transform(() => undefined)),
+  toolId: z.string().trim().min(1).max(100),
+  toolName: z.string().trim().min(1).max(200),
+});
+export type ToolLeadBody = z.infer<typeof toolLeadBody>;
+
 export type ContactBody = z.infer<typeof contactBody>;
 
 export const myTicketBody = z.object({

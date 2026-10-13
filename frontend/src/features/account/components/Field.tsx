@@ -12,16 +12,19 @@ interface Props {
   autoComplete?: string;
   maxLength?: number;
   rows?: number;
+  required?: boolean;
 }
 
 const INPUT = 'w-full rounded-2xl border bg-white/80 px-4 py-3 text-[15px] outline-0 focus:border-brand';
 
 /** Ô nhập có nhãn phía trên (dùng cho form Cài đặt / Liên hệ). */
-export function Field({ label, value, onChange, error, hint, multiline, type = 'text', autoComplete, maxLength, rows = 4 }: Props) {
+export function Field({ label, value, onChange, error, hint, multiline, type = 'text', autoComplete, maxLength, rows = 4, required }: Props) {
   const border = error ? 'border-red-400' : 'border-[rgba(120,60,20,.12)]';
   return (
     <label className="block">
-      <span className="mb-1.5 ml-1 block text-[13px] font-semibold text-stone-700">{label}</span>
+      <span className="mb-1.5 ml-1 block text-[13px] font-semibold text-stone-700">{label}
+        {required && <span className="ml-0.5 text-red-500" aria-hidden>*</span>}
+      </span>
       {multiline ? (
         <textarea
           value={value}

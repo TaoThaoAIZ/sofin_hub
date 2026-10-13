@@ -1,0 +1,28 @@
+{
+  "title": "Download Tools",
+  "subtitle": "Tools for AI filmmaking & content production — download for free or leave your details to get help buying the advanced tools.",
+  "categoryLabel": "Category:",
+  "all": "All",
+  "empty": "No tools in this category yet.",
+  "badgeHot": "HOT",
+  "badgeNew": "NEW",
+  "free": "FREE",
+  "contact": "CONTACT US",
+  "downloadFree": "Download free",
+  "buyNow": "Buy now",
+  "form": {
+    "title": "Buy {{tool}}",
+    "intro": "Leave your details — our support team will guide you through payment, then send you a direct download link.",
+    "name": "Full name",
+    "phone": "Phone number",
+    "phoneInvalid": "Invalid phone number.",
+    "email": "Email (optional)",
+    "submit": "Submit →",
+    "sending": "Sending…",
+    "close": "Close",
+    "successTitle": "We got your details!",
+    "successBody": "Our support team will contact you within 24h to guide you through payment and then send you the download link.",
+    "rateLimit": "Too many requests, please try again in a few minutes.",
+    "failed": "Something went wrong, please try again."
+  }
+}

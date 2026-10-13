@@ -37,6 +37,7 @@ import { NotFoundPage } from './pages/NotFoundPage';
 import { PrivacyPage } from './pages/PrivacyPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { TermsPage } from './pages/TermsPage';
+import { ToolsPage } from './pages/ToolsPage';
 import { CertificateVerifyPage } from './pages/CertificateVerifyPage';
 import { LessonPage } from './pages/LessonPage';
 import { VerifyOtpPage } from './pages/VerifyOtpPage';
@@ -98,6 +99,7 @@ export default function App() {
         <Route path="/users/:id" element={<ProfilePage />} />
         <Route path="/me/communities" element={<MyCommunitiesPage />} />
         <Route path="/contact" element={<ContactPage />} />
+        <Route path="/tools" element={<ToolsPage />} />
         <Route path="/certificates/:code" element={<CertificateVerifyPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/messages" element={<MessagesPage />} />

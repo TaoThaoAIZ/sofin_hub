@@ -2,7 +2,8 @@ import { cfg } from '../settings/settings.service.js';
 import { userRepository } from '../auth/auth.repository.js';
 import { createTicket } from './tickets.core.js';
 import { mailService } from '../mail/mail.service.js';
-import type { ContactBody } from './support.schema.js';
+import { sendTelegram } from '../payments/payments.alerts.js';
+import type { ContactBody, ToolLeadBody } from './support.schema.js';
 import { prismaNewsletterRepository, type NewsletterRepository } from './support.repository.js';
 
 export function createSupportService(repo: NewsletterRepository = prismaNewsletterRepository) {
@@ -44,6 +45,38 @@ ${body.message}`,
         requesterName: body.name,
         requesterEmail: body.email,
         source: 'contact_form',
+      });
+    },
+
+    /** Lead mua tool (trang /tools): tạo ticket + thư hỗ trợ như /contact, đồng thời báo nhóm Telegram vận hành (như taothaoai.com). */
+    async toolLead(body: ToolLeadBody): Promise<void> {
+      const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const time = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+      // Telegram không chặn luồng chính: sendTelegram không ném lỗi nghiêm trọng, lỗi mạng chỉ log.
+      void sendTelegram(
+        `🛠️ <b>YÊU CẦU MUA TOOL MỚI</b>
+
+` +
+          `🔧 <b>Tool:</b> ${esc(body.toolName)}
+` +
+          `👤 <b>Họ và tên:</b> ${esc(body.name)}
+` +
+          `📞 <b>Số điện thoại:</b> ${esc(body.phone)}
+` +
+          `📧 <b>Email:</b> ${esc(body.email ?? 'Không cung cấp')}
+
+` +
+          `🕐 <i>${time}</i>`,
+      ).catch((err) => console.error('[tool-lead] gửi Telegram lỗi:', err));
+      // Ticket cần email; khách không nhập thì dùng địa chỉ giữ chỗ để vẫn lưu được lead.
+      await this.contact({
+        name: body.name,
+        email: body.email ?? 'khong-co-email@tool-lead.local',
+        subject: `Mua tool: ${body.toolName}`,
+        message: `Yêu cầu mua tool "${body.toolName}" (${body.toolId}).
+Họ tên: ${body.name}
+Số điện thoại: ${body.phone}`,
+        category: 'user',
       });
     },
   };
