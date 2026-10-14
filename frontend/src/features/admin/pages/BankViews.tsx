@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatCents, formatDateTime } from '../../../lib/datetime';
 import { ActionDialog, useDialogSlot } from '../components/Batch2Parts';
@@ -46,7 +46,17 @@ export function BankInflowView() {
   const [page, setPage] = useState(1);
   const status = useBankStatus();
   const [tab, setTab] = useState<'' | 'true' | 'false'>('');
-  const list = useBankTransactions(page, LIMIT, tab);
+  const [search, setSearch] = useState('');
+  const [q, setQ] = useState('');
+  // Debounce 300ms: gõ tới đâu tìm tới đó nhưng không bắn request mỗi phím.
+  useEffect(() => {
+    const id = setTimeout(() => {
+      setQ(search.trim());
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(id);
+  }, [search]);
+  const list = useBankTransactions(page, LIMIT, tab, q);
   const act = useAdminAction();
   const total = list.data?.total ?? 0;
   const configured = status.data?.configured;
@@ -66,6 +76,8 @@ export function BankInflowView() {
   const columns: Column<BankTransaction>[] = [
     { key: 'date', label: t('bank.colDate'), render: (x) => <MutedCell>{formatDateTime(x.transactionDate)}</MutedCell> },
     { key: 'amt', label: t('common.amount'), render: (x) => <NumCell>{formatCents(x.amount)}</NumCell> },
+    { key: 'txid', label: t('bank.colTxId'), render: (x) => <MonoCell>{x.externalId}</MonoCell> },
+    { key: 'acc', label: t('bank.colAccount'), render: (x) => <MonoCell>{x.accountNumber ?? '—'}</MonoCell> },
     { key: 'desc', label: t('bank.colDesc'), w: 2.2, render: (x) => <TextCell>{x.description}</TextCell> },
     { key: 'ref', label: t('bank.colRef'), render: (x) => <MonoCell>{x.referenceCode ?? '—'}</MonoCell> },
     { key: 'gw', label: t('bank.colBank'), render: (x) => <MutedCell>{x.gateway}</MutedCell> },
@@ -104,6 +116,7 @@ export function BankInflowView() {
           setTab(k as '' | 'true' | 'false');
           setPage(1);
         }}
+        search={{ value: search, onChange: setSearch, placeholder: t('bank.searchPlaceholder') }}
         columns={columns}
         rows={list.data?.data ?? []}
         rowKey={(x) => x.id}

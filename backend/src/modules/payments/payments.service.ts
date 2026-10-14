@@ -166,6 +166,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
   async function settle(intent: PaymentIntent, chargeId: string): Promise<{ payment: PaymentIntent; voided: boolean }> {
     return inTx(async (ops, after) => {
       const at = new Date();
+      if (intent.kind === 'hosting') return settleHosting(ops, after, intent, chargeId, at); // tiền của nền tảng: không phụ thuộc cộng đồng bị khóa
       // Cộng đồng bị khóa/xóa sau khi khách tạo phiên: tiền có thể vẫn về, nhưng KHÔNG cấp quyền (payment giữ pending, admin xử lý tay/hoàn tiền).
       const state = await ops.courseState(intent.communityId);
       if (state.locked || state.deleted) throw locked();
@@ -269,6 +270,44 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
   }
 
   /**
+   * Chốt hóa đơn phí HOSTING (Pro) trong transaction của `settle`: thành công → gói Pro `active` tới hết kỳ → số hóa đơn (cuối cùng).
+   * Hoa hồng giới thiệu "creator" tính SAU commit qua `referralsService.onHostingCharge` (KHÔNG dùng hoa hồng member cho giao dịch này).
+   * Gói đã bị hạ/hủy trong lúc chờ ⇒ void `duplicate_charge` để hoàn tiền.
+   */
+  async function settleHosting(ops: PaymentsOps, after: After, intent: PaymentIntent, chargeId: string, at: Date): Promise<{ payment: PaymentIntent; voided: boolean }> {
+    const planId = intent.hostingPlanId;
+    if (!planId) throw HttpError.badRequest('Hóa đơn hosting thiếu gói');
+    await ops.advisoryLock(`hosting:${planId}`);
+    const current = await ops.findById(intent.id);
+    if (!current || current.status !== 'pending') return { payment: current ?? intent, voided: false };
+    const plan = await ops.findHostingPlan(planId);
+    if (!plan || plan.planKey !== 'pro' || plan.status === 'canceled') {
+      const voided = await ops.transition(intent.id, ['pending'], { status: 'failed', gatewayChargeId: chargeId, failureReason: 'duplicate_charge' });
+      return { payment: voided ?? current, voided: true };
+    }
+    const done = await ops.transition(intent.id, ['pending'], { status: 'succeeded', confirmedAt: at.toISOString(), gatewayChargeId: chargeId });
+    if (!done) return { payment: (await ops.findById(intent.id))!, voided: false };
+    // Kỳ mới nối tiếp kỳ cũ / hết dùng thử; đã quá hạn thì tính từ bây giờ.
+    const periodStart = intent.periodStart ? new Date(intent.periodStart) : at;
+    const periodEnd = intent.periodEnd ? new Date(intent.periodEnd) : addDays(periodStart, periodDaysFor(plan.cycle));
+    const newEnd = plan.currentPeriodEnd && plan.currentPeriodEnd > periodEnd ? plan.currentPeriodEnd : periodEnd;
+    await ops.updateHostingPlan(plan.id, { status: 'active', currentPeriodEnd: newEnd });
+    const invoiceNumber = await ops.nextInvoiceNumber(at.getUTCFullYear());
+    const final = await ops.transition(intent.id, ['succeeded'], { invoiceNumber, periodStart: periodStart.toISOString(), periodEnd: periodEnd.toISOString() });
+    after.push(() => referralsService.onHostingCharge({ ownerId: intent.userId, communityId: intent.communityId, chargeRef: intent.id, amount: intent.amountCents, at }));
+    after.push(() => announcePaid(final!));
+    later(after, {
+      userId: intent.userId,
+      type: 'payment_succeeded',
+      title: 'Gói Chuyên nghiệp đã được thanh toán',
+      body: `Đã nhận ${vnd(intent.amountCents)} phí gói Chuyên nghiệp. Gói có hiệu lực đến ${newEnd.toISOString().slice(0, 10)}. Hóa đơn ${invoiceNumber}.`,
+      link: `/communities/${intent.communityId}/community/cai-dat`,
+      communityId: intent.communityId,
+    });
+    return { payment: final!, voided: false };
+  }
+
+  /**
    * Chốt hóa đơn GIA HẠN (kỳ kế tiếp của gói đang có) trong transaction của `settle`. Gói còn active ⇒ kỳ mới nối tiếp kỳ cũ;
    * gói đã hết hạn (trả muộn / admin duyệt tay) ⇒ kỳ mới bắt đầu từ bây giờ. Gói đã bị hủy/tạm dừng/đã có gói khác ⇒ void `duplicate_charge`
    * để ghi nhận hoàn tiền. Khóa theo thứ tự thống nhất: advisory → Subscription → Payment → số hóa đơn CUỐI.
@@ -322,7 +361,9 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
       userId: payment.userId,
       type: 'system',
       title: 'Đã hoàn khoản thanh toán trùng',
-      body: payment.moduleId
+      body: payment.kind === 'hosting'
+        ? `Gói hosting đã được thanh toán trước đó nên khoản ${vnd(payment.amountCents)} bị trùng đã được hoàn lại.`
+        : payment.moduleId
         ? `Bạn đã sở hữu module này nên khoản thanh toán ${vnd(payment.amountCents)} bị trùng đã được hoàn lại.`
         : `Bạn đã có gói thành viên nên khoản thanh toán ${vnd(payment.amountCents)} bị trùng đã được hoàn lại.`,
       link: `/courses/${payment.communityId}`,
@@ -443,6 +484,8 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
     }
     // Mua lẻ module: hoàn toàn bộ thì thu hồi quyền mở module (chỉ dòng source 'purchase'); không đụng gói thành viên.
     if (full && payment.moduleId) await ops.revokeModuleAccess(payment.userId, payment.moduleId);
+    // Hoàn toàn bộ phí hosting: hạ gói về Khởi đầu (không còn kỳ đã trả).
+    if (full && payment.hostingPlanId) await ops.updateHostingPlan(payment.hostingPlanId, { planKey: 'start', status: 'active', priceAmount: 0, currentPeriodEnd: null, paymentCardId: null });
     // Hoàn tiền SAU khi owner đã rút (số dư ròng < 0) ⇒ ghi sổ nợ.
     await recordDebt(ops, payment.communityId, balanceBefore, { kind: ledgerKind, paymentId: payment.id, refundId: refund.id, note: refund.reason });
     if (full) after.push(() => referralsService.voidForPayment(payment.id)); // hủy hoa hồng giới thiệu chưa chi trả (sau commit)
@@ -972,6 +1015,73 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
       return { issued };
     },
 
+    /**
+     * Thu phí gói hosting Pro (job nền, idempotent). (1) Hóa đơn của kỳ đang đến hạn đã hết hạn/thất bại mà chưa trả ⇒ hạ về gói Khởi đầu.
+     * (2) Gói Pro tới hạn trong `trialReminderDays` ngày (hết dùng thử / hết kỳ) và chưa có hóa đơn đang chờ ⇒ phát hóa đơn chuyển khoản.
+     * Chỉ thu được khi giá tính bằng VND (cổng duy nhất là chuyển khoản VND).
+     */
+    async processHostingBilling(now = new Date()) {
+      const lead = Math.max(1, cfg().payments.trialReminderDays);
+      const out = { issued: 0, downgraded: 0 };
+      for (const cand of await repo.listProHostingPlans(500)) {
+        try {
+          await inTx(async (ops, after) => {
+            await ops.advisoryLock(`hosting:${cand.id}`);
+            const plan = await ops.findHostingPlan(cand.id);
+            if (!plan || plan.planKey !== 'pro' || plan.status === 'canceled' || plan.priceAmount <= 0) return;
+            const last = await ops.latestHostingInvoice(plan.id);
+            const due = (plan.status === 'trialing' ? plan.trialEndsAt : plan.currentPeriodEnd) ?? now;
+            if (last?.status === 'pending' && last.expiresAt && new Date(last.expiresAt) > now) return; // đang chờ khách chuyển khoản
+            if (last && last.status !== 'succeeded' && last.status !== 'refunded' && last.periodStart && new Date(last.periodStart).getTime() <= due.getTime() + DAY_MS && due.getTime() < now.getTime()) {
+              // Hóa đơn của kỳ này đã quá hạn mà không được trả ⇒ hạ gói.
+              await ops.updateHostingPlan(plan.id, { planKey: 'start', status: 'active', priceAmount: 0, currentPeriodEnd: null, paymentCardId: null });
+              out.downgraded++;
+              later(after, {
+                userId: plan.ownerId,
+                type: 'system',
+                title: 'Gói Chuyên nghiệp đã hết hiệu lực',
+                body: 'Hóa đơn gói Chuyên nghiệp chưa được thanh toán nên cộng đồng đã trở về gói Khởi đầu. Bạn có thể nâng cấp lại bất cứ lúc nào.',
+                link: `/communities/${plan.communityId}/community/cai-dat`,
+                communityId: plan.communityId,
+              });
+              return;
+            }
+            if (plan.currency !== 'VND' || due.getTime() > now.getTime() + lead * DAY_MS) return;
+            const start = due.getTime() > now.getTime() ? due : now;
+            const end = addDays(start, periodDaysFor(plan.cycle));
+            const expiresAt = addDays(start, RENEWAL_GRACE_DAYS + 1);
+            await ops.create({
+              communityId: plan.communityId,
+              userId: plan.ownerId,
+              method: 'bank_transfer',
+              amountUsd: plan.priceAmount,
+              amountCents: plan.priceAmount,
+              trialDays: 0,
+              interval: plan.cycle,
+              kind: 'hosting',
+              hostingPlanId: plan.id,
+              periodStart: start.toISOString(),
+              periodEnd: end.toISOString(),
+              refCode: makeRefCode(),
+              expiresAt: expiresAt.toISOString(),
+            });
+            out.issued++;
+            later(after, {
+              userId: plan.ownerId,
+              type: 'system',
+              title: 'Đến hạn thanh toán gói Chuyên nghiệp',
+              body: `Hãy thanh toán ${vnd(plan.priceAmount)} bằng chuyển khoản QR trước ${expiresAt.toISOString().slice(0, 10)} để giữ gói Chuyên nghiệp (Cài đặt cộng đồng > Gói).`,
+              link: `/communities/${plan.communityId}/community/cai-dat`,
+              communityId: plan.communityId,
+            });
+          });
+        } catch (err) {
+          console.error('processHostingBilling: bỏ qua 1 gói do lỗi:', err);
+        }
+      }
+      return out;
+    },
+
     /** Dọn phiên chuyển khoản pending quá hạn ⇒ failed/expired (tiền về muộn vẫn được ghi nhận và chờ admin duyệt tay). */
     async expireStaleSessions(now = new Date(), limit = 200) {
       let expired = 0;
@@ -1062,7 +1172,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
         currency: p.currency,
         buyer: { id: p.userId, name: buyer ? `${buyer.firstName} ${buyer.lastName}` : 'Thành viên SofinHub', email: buyer?.email },
         community: { id: p.communityId, title },
-        items: [{ description: p.moduleId ? `Module "${(await repo.moduleTitles([p.moduleId])).get(p.moduleId) ?? p.moduleId}" — ${title}` : `Gói thành viên "${title}"${period}`, quantity: 1, unitCents: p.amountCents, amountCents: p.amountCents }],
+        items: [{ description: p.kind === 'hosting' ? `Gói hosting Chuyên nghiệp — ${title}${period}` : p.moduleId ? `Module "${(await repo.moduleTitles([p.moduleId])).get(p.moduleId) ?? p.moduleId}" — ${title}` : `Gói thành viên "${title}"${period}`, quantity: 1, unitCents: p.amountCents, amountCents: p.amountCents }],
         subtotalCents: p.amountCents,
         refundedCents: p.refundedCents,
         totalCents: p.amountCents,
@@ -1219,7 +1329,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
     },
 
     /** Giao dịch tiền vào ngân hàng (mặc định: chưa khớp) để admin soi tiền lạ. */
-    listBankTransactions(filter: { credited?: boolean }, page: number, limit: number) {
+    listBankTransactions(filter: { credited?: boolean; q?: string }, page: number, limit: number) {
       return repo.listBankTransactions(filter, page, limit);
     },
 

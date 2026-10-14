@@ -161,7 +161,7 @@ export function TransactionsView() {
         filters={[
           { key: 'status', label: t('common.status'), value: ts.f.status, options: Object.entries(TX_STATUS).map(([value, m]) => ({ value, label: m.label })), onChange: ts.setFilter('status') },
           { key: 'method', label: t('tx.paymentMethod'), value: ts.f.method, options: ['bank_transfer', 'stripe', 'vnpay', 'momo'].map((value) => ({ value, label: methodLabel(value) })), onChange: ts.setFilter('method') },
-          { key: 'kind', label: t('tx.type'), value: ts.f.kind, options: [{ value: 'initial', label: t('tx.initial') }, { value: 'renewal', label: t('tx.renewal') }], onChange: ts.setFilter('kind') },
+          { key: 'kind', label: t('tx.type'), value: ts.f.kind, options: [{ value: 'initial', label: t('tx.initial') }, { value: 'renewal', label: t('tx.renewal') }, { value: 'hosting', label: t('tx.hosting') }], onChange: ts.setFilter('kind') },
           { key: 'sort', label: t('common.sortBy'), value: ts.f.sort, options: [{ value: 'oldest', label: t('tx.oldest') }, { value: 'amount', label: t('tx.highestAmount') }], onChange: ts.setFilter('sort') },
         ]}
         onClearFilters={ts.clear}

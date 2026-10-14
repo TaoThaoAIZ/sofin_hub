@@ -436,7 +436,8 @@
       "system_email": "Mẫu email",
       "system_audit": "Nhật ký hoạt động",
       "system_settings": "Cài đặt chung",
-      "payments_bank": "Tiền vào ngân hàng"
+      "payments_bank": "Tiền vào ngân hàng",
+      "payments_referrals": "Giao dịch giới thiệu"
     }
   }
 }

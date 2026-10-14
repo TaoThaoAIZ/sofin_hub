@@ -27,8 +27,10 @@ const tell = (userId: string | null | undefined, title: string, body: string, co
 const usd = (vnd: number) => `${Math.round(vnd).toLocaleString('vi-VN')}đ`; // tên cũ; tiền nay là VND
 
 /** Phí theo công thức của `/courses/:id/revenue` (số nguyên, làm tròn như SQL). Giao dịch chưa thành công = 0. */
-function fees(p: { status: string; amountCents: number; refundedCents: number }) {
+function fees(p: { status: string; amountCents: number; refundedCents: number; kind?: string }) {
   if (p.status !== 'succeeded' && p.status !== 'refunded') return { platformFeeCents: 0, gatewayFeeCents: 0, creatorEarningsCents: 0 };
+  // Phí hosting: nền tảng giữ 100% (không có phần chia cho creator, không có phí cổng).
+  if (p.kind === 'hosting') return { platformFeeCents: p.amountCents - p.refundedCents, gatewayFeeCents: 0, creatorEarningsCents: 0 };
   const r = rates();
   const platformFeeCents = Math.floor(((p.amountCents - p.refundedCents) * r.commissionBp + 5000) / 10000);
   const gatewayFeeCents = Math.floor((p.amountCents * r.gatewayFeeBp + 5000) / 10000) + r.gatewayFeeFixedCents;
@@ -43,7 +45,7 @@ export const txQuery = pageQuery.extend({
   communityId: z.string().max(100).optional(),
   userId: z.string().max(100).optional(),
   ownerId: z.string().max(100).optional(),
-  kind: z.enum(['initial', 'renewal', 'module']).optional(),
+  kind: z.enum(['initial', 'renewal', 'module', 'hosting']).optional(),
   ...dateRangeFields,
   sort: z.enum(['newest', 'oldest', 'amount']).default('newest'),
 });
@@ -113,7 +115,9 @@ const toTx = (p: TxRow) => ({
   community: { id: p.community.id, name: p.community.title, ownerName: p.community.owner ? person(p.community.owner)!.name : null },
   product: p.kind === 'module'
     ? { type: 'module' as const, label: `Module · ${p.module?.title ?? 'đã xóa'}` }
-    : { type: 'membership' as const, label: p.kind === 'renewal' ? 'Membership · Renewal' : 'Membership · Monthly' },
+    : p.kind === 'hosting'
+      ? { type: 'hosting' as const, label: 'Hosting · Pro' }
+      : { type: 'membership' as const, label: p.kind === 'renewal' ? 'Membership · Renewal' : 'Membership · Monthly' },
   kind: p.kind,
   method: p.method,
   paymentMethodLabel: METHOD_LABEL[p.method],
@@ -280,7 +284,8 @@ export const adminPaymentsService = {
     const [byStatus, [fee]] = await Promise.all([
       prisma.payment.groupBy({ by: ['status'], where: range, _count: { _all: true }, _sum: { amountCents: true, refundedCents: true } }),
       prisma.$queryRaw<{ platform: bigint }[]>(Prisma.sql`
-        SELECT COALESCE(SUM((("amountCents" - "refundedCents")::bigint * ${r.commissionBp} + 5000) / 10000), 0)::bigint AS platform
+        SELECT COALESCE(SUM(CASE WHEN "kind" = 'hosting' THEN ("amountCents" - "refundedCents")::bigint
+                                 ELSE (("amountCents" - "refundedCents")::bigint * ${r.commissionBp} + 5000) / 10000 END), 0)::bigint AS platform
         FROM "Payment" WHERE "status" IN ('succeeded', 'refunded') ${rangeSql}`),
     ]);
     const sum = (s: string, f: 'amountCents' | 'refundedCents') => byStatus.find((x) => x.status === s)?._sum[f] ?? 0;
@@ -586,12 +591,12 @@ export const adminPaymentsService = {
       prisma.$queryRaw<{ id: string; net: bigint }[]>(Prisma.sql`
         SELECT c."ownerId" AS id, COALESCE(SUM(p."amountCents" - p."refundedCents" - (${comm}) - (${gate})), 0)::bigint AS net
         FROM "Payment" p JOIN "Course" c ON c."id" = p."courseId"
-        WHERE c."ownerId" IS NOT NULL AND p."status" IN ('succeeded', 'refunded') GROUP BY c."ownerId"`),
+        WHERE c."ownerId" IS NOT NULL AND p."kind" <> 'hosting' AND p."status" IN ('succeeded', 'refunded') GROUP BY c."ownerId"`),
       prisma.$queryRaw<{ id: string; gross: bigint; refunds: bigint; platform: bigint; gateway: bigint }[]>(Prisma.sql`
         SELECT c."ownerId" AS id, COALESCE(SUM(p."amountCents"), 0)::bigint AS gross, COALESCE(SUM(p."refundedCents"), 0)::bigint AS refunds,
                COALESCE(SUM(${comm}), 0)::bigint AS platform, COALESCE(SUM(${gate}), 0)::bigint AS gateway
         FROM "Payment" p JOIN "Course" c ON c."id" = p."courseId"
-        WHERE c."ownerId" IS NOT NULL AND p."status" IN ('succeeded', 'refunded') ${win} GROUP BY c."ownerId"`),
+        WHERE c."ownerId" IS NOT NULL AND p."kind" <> 'hosting' AND p."status" IN ('succeeded', 'refunded') ${win} GROUP BY c."ownerId"`),
       prisma.$queryRaw<{ id: string; requested: bigint; paid: bigint }[]>(Prisma.sql`
         SELECT c."ownerId" AS id, COALESCE(SUM(po."amountCents") FILTER (WHERE po."status" <> 'rejected'), 0)::bigint AS requested,
                COALESCE(SUM(po."amountCents") FILTER (WHERE po."status" = 'paid'), 0)::bigint AS paid
@@ -609,7 +614,7 @@ export const adminPaymentsService = {
       JOIN LATERAL (
         SELECT COALESCE(p."confirmedAt", p."createdAt") AS "at",
                (p."amountCents" - p."refundedCents" - (${comm}) - (${gate}))::bigint AS "n"
-        FROM "Payment" p WHERE p."courseId" = c."id" AND p."status" IN ('succeeded', 'refunded')
+        FROM "Payment" p WHERE p."courseId" = c."id" AND p."kind" <> 'hosting' AND p."status" IN ('succeeded', 'refunded')
       ) t ON true
       WHERE c."ownerId" IS NOT NULL
       GROUP BY c."ownerId", c."id"`);
@@ -700,15 +705,15 @@ export const adminPaymentsService = {
                SUM(p."amountCents" - p."refundedCents" - (((p."amountCents" - p."refundedCents")::bigint * ${r.commissionBp} + 5000) / 10000)
                    - (((p."amountCents"::bigint * ${r.gatewayFeeBp} + 5000) / 10000) + ${r.gatewayFeeFixedCents}))::bigint AS net
         FROM "Payment" p JOIN "Course" c ON c."id" = p."courseId"
-        WHERE c."ownerId" = ${userId} AND p."status" IN ('succeeded', 'refunded')
+        WHERE c."ownerId" = ${userId} AND p."kind" <> 'hosting' AND p."status" IN ('succeeded', 'refunded')
           ${range.from ? Prisma.sql`AND COALESCE(p."confirmedAt", p."createdAt") >= ${range.from.toISOString()}::timestamp` : Prisma.empty} AND COALESCE(p."confirmedAt", p."createdAt") <= ${to.toISOString()}::timestamp
         GROUP BY 1`),
       prisma.$queryRaw<{ id: string; title: string; gross: bigint; net: bigint; requested: bigint }[]>(Prisma.sql`
         SELECT c."id", c."title",
-          COALESCE((SELECT SUM(p."amountCents") FROM "Payment" p WHERE p."courseId" = c."id" AND p."status" IN ('succeeded','refunded')), 0)::bigint AS gross,
+          COALESCE((SELECT SUM(p."amountCents") FROM "Payment" p WHERE p."courseId" = c."id" AND p."kind" <> 'hosting' AND p."status" IN ('succeeded','refunded')), 0)::bigint AS gross,
           COALESCE((SELECT SUM(p."amountCents" - p."refundedCents" - (((p."amountCents" - p."refundedCents")::bigint * ${r.commissionBp} + 5000) / 10000)
                    - (((p."amountCents"::bigint * ${r.gatewayFeeBp} + 5000) / 10000) + ${r.gatewayFeeFixedCents}))
-                   FROM "Payment" p WHERE p."courseId" = c."id" AND p."status" IN ('succeeded','refunded')), 0)::bigint AS net,
+                   FROM "Payment" p WHERE p."courseId" = c."id" AND p."kind" <> 'hosting' AND p."status" IN ('succeeded','refunded')), 0)::bigint AS net,
           COALESCE((SELECT SUM(po."amountCents") FROM "Payout" po WHERE po."courseId" = c."id" AND po."status" <> 'rejected'), 0)::bigint AS requested
         FROM "Course" c WHERE c."ownerId" = ${userId} AND c."deletedAt" IS NULL ORDER BY c."title"`),
       prisma.payment.findMany({ where: { community: { ownerId: userId } }, orderBy: { createdAt: 'desc' }, take: 20, include: txInclude }),

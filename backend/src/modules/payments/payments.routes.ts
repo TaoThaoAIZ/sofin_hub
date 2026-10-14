@@ -146,7 +146,7 @@ paymentsRouter.get('/admin/bank/status', ...adminOnly, async (_req, res) => {
 
 paymentsRouter.get('/admin/bank/transactions', ...adminOnly, async (req, res) => {
   const q = listBankTransactionsQuery.parse(req.query);
-  res.json(await paymentsService.listBankTransactions({ credited: q.credited }, q.page, q.limit).then((r) => ({ data: r.items, total: r.total, page: q.page, limit: q.limit })));
+  res.json(await paymentsService.listBankTransactions({ credited: q.credited, q: q.q || undefined }, q.page, q.limit).then((r) => ({ data: r.items, total: r.total, page: q.page, limit: q.limit })));
 });
 
 paymentsRouter.post('/admin/bank/payments/:refCode/approve', ...adminOnly, async (req, res) => {

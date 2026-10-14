@@ -58,6 +58,7 @@ import {
   txRefundBody,
 } from './admin-payments.service.js';
 import { adminOnly } from './admin.common.js';
+import { adminReferralsService as referrals, referralsQuery } from './admin-referrals.service.js';
 
 /** Admin đợt 2: Content / Payments / Discovery. Mỗi route gắn `adminOnly`. Contract: docs/api/admin-batch2.md. */
 export const adminBatch2Router = Router();
@@ -158,6 +159,9 @@ R.post('/admin/payments/chargebacks/:id/mark-lost', ...adminOnly, async (req, re
 R.get('/admin/payments/creators/summary', ...adminOnly, async (req, res) => res.json({ data: await pay.creatorsSummary(rangeQuery.parse(req.query)) }));
 R.get('/admin/payments/creators', ...adminOnly, async (req, res) => res.json(await pay.listCreators(creatorsQuery.parse(req.query))));
 R.get('/admin/payments/creators/:userId', ...adminOnly, async (req, res) => res.json({ data: await pay.creatorDetail(p(req.params.userId), rangeQuery.parse(req.query)) }));
+
+R.get('/admin/payments/referrals/summary', ...adminOnly, async (_q, res) => res.json({ data: await referrals.summary() }));
+R.get('/admin/payments/referrals', ...adminOnly, async (req, res) => res.json(await referrals.list(referralsQuery.parse(req.query))));
 
 R.get('/admin/payments/payouts/summary', ...adminOnly, async (_q, res) => res.json({ data: await pay.payoutsSummary() }));
 R.get('/admin/payments/payouts', ...adminOnly, async (req, res) => res.json(await pay.listPayouts(payoutsQuery.parse(req.query))));

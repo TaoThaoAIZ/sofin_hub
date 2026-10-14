@@ -236,6 +236,8 @@ enum PaymentKind {
   renewal
   /// Mua lẻ MỘT module trả phí (một lần, không phải gói thành viên). `Payment.moduleId` trỏ module được mua.
   module
+  /// Phí gói hosting (Pro) của chủ cộng đồng trả cho nền tảng. Không phải doanh thu của creator: loại khỏi số dư/rút tiền. `Payment.hostingPlanId` trỏ gói.
+  hosting
 }
 
 enum SubscriptionStatus {
@@ -1293,6 +1295,8 @@ model Payment {
   subscriptionId  String?
   /// Chỉ có khi kind = module: module được mua lẻ (cấp ModuleAccess source 'purchase' khi thanh toán thành công, thu hồi khi hoàn tiền).
   moduleId        String?
+  /// Chỉ có khi kind = hosting: gói hosting đang được thanh toán (kỳ thanh toán = periodStart..periodEnd).
+  hostingPlanId   String?
   /// INV-YYYY-NNNNNN (cấp từ InvoiceSequence khi thanh toán thành công).
   invoiceNumber   String?         @unique
   gatewayChargeId String?
@@ -1314,6 +1318,7 @@ model Payment {
   subscription Subscription?    @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
   paymentCard  PaymentCard?     @relation(fields: [paymentCardId], references: [id], onDelete: SetNull)
   module       ClassroomModule? @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  hostingPlan  HostingPlan?     @relation(fields: [hostingPlanId], references: [id], onDelete: SetNull)
 
   refunds     RefundRequest[]
   chargebacks Chargeback[]
@@ -1323,6 +1328,7 @@ model Payment {
   @@index([subscriptionId])
   @@index([paymentCardId])
   @@index([moduleId])
+  @@index([hostingPlanId])
   @@index([status])
 }
 
@@ -1471,20 +1477,20 @@ model IdempotencyKey {
 /// Giao dịch tiền VÀO từ ngân hàng (SePay webhook hoặc cron quét), ghi lại DÙ khớp hay không để admin soi tiền lạ.
 /// `externalId` UNIQUE ⇒ webhook + quét thấy cùng 1 giao dịch chỉ tạo 1 dòng. Chỉ INSERT/đánh dấu credited — không xóa.
 model BankTransaction {
-  id              String    @id @default(uuid())
-  externalId      String    @unique
-  gateway         String?
-  accountNumber   String?
-  amount          Int
-  description     String
-  referenceCode   String?
-  transactionDate DateTime
+  id               String   @id @default(uuid())
+  externalId       String   @unique
+  gateway          String?
+  accountNumber    String?
+  amount           Int
+  description      String
+  referenceCode    String?
+  transactionDate  DateTime
   matchedPaymentId String?
-  credited        Boolean   @default(false)
+  credited         Boolean  @default(false)
   /// Lý do không khớp / ghi chú (thiếu tiền, phiên hết hạn, chuyển dư...).
-  note            String?
-  rawPayload      Json
-  createdAt       DateTime  @default(now())
+  note             String?
+  rawPayload       Json
+  createdAt        DateTime @default(now())
 
   @@index([credited, createdAt])
   @@index([matchedPaymentId])
@@ -1790,23 +1796,26 @@ model PaymentCard {
 
 /// MÔ PHỎNG (A16 chưa chốt): gói hosting của owner cho 1 cộng đồng. Chưa có job/cổng trừ tiền khi hết dùng thử.
 model HostingPlan {
-  id             String            @id @default(uuid())
-  communityId    String            @unique @map("courseId")
-  ownerId        String
-  planKey        HostingPlanKey
-  cycle          BillingInterval   @default(monthly)
+  id               String            @id @default(uuid())
+  communityId      String            @unique @map("courseId")
+  ownerId          String
+  planKey          HostingPlanKey
+  cycle            BillingInterval   @default(monthly)
   /// Giá chụp lúc chọn (đơn vị nhỏ nhất của `currency`, VND không có phần thập phân).
-  priceAmount    Int
-  currency       String
-  status         HostingPlanStatus
-  trialStartedAt DateTime?
-  trialEndsAt    DateTime?
-  paymentCardId  String?
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
+  priceAmount      Int
+  currency         String
+  status           HostingPlanStatus
+  trialStartedAt   DateTime?
+  trialEndsAt      DateTime?
+  /// Hết kỳ đã thanh toán (gói Pro sau khi trả hóa đơn hosting). null = chưa trả kỳ nào (đang dùng thử / gói miễn phí).
+  currentPeriodEnd DateTime?
+  paymentCardId    String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
   community   Community    @relation(fields: [communityId], references: [id], onDelete: Cascade)
   paymentCard PaymentCard? @relation(fields: [paymentCardId], references: [id], onDelete: SetNull)
+  payments    Payment[]
 
   @@index([ownerId])
   @@index([paymentCardId])

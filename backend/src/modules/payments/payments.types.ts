@@ -42,10 +42,12 @@ export interface PaymentIntent {
   amountCents: number;
   currency: 'vnd';
   /** initial = lần thanh toán đầu của 1 gói; renewal = gia hạn kỳ tiếp theo; module = mua lẻ một module (một lần, không có gói). */
-  kind: 'initial' | 'renewal' | 'module';
+  kind: 'initial' | 'renewal' | 'module' | 'hosting';
   subscriptionId?: string;
   /** Chỉ có khi kind = module: module được mua lẻ. */
   moduleId?: string;
+  /** Chỉ có khi kind = hosting: gói hosting (HostingPlan) được thanh toán. */
+  hostingPlanId?: string;
   invoiceNumber?: string;
   gatewayChargeId?: string;
   /** Mã khách ghi vào nội dung chuyển khoản. */

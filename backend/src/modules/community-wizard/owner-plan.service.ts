@@ -3,6 +3,7 @@ import type { HostingPlan, PayoutAccount, Prisma } from '../../generated/prisma/
 import { HttpError } from '../../utils/http-error.js';
 import { paymentsRepository } from '../payments/payments.repository.js';
 import { cardView } from '../payments/payments.service.js';
+import { transferInfoFor } from '../payments/payments.bank.js';
 import { requireRole } from '../permissions/policy.js';
 import { cfg } from '../settings/settings.service.js';
 import type { PlanBody } from './wizard.schema.js';
@@ -61,7 +62,37 @@ export function ownerPlanCatalogue() {
   };
 }
 
-type PlanRow = HostingPlan & { paymentCard: { id: string; brand: string; last4: string; expMonth: number; expYear: number; createdAt: Date } | null };
+type PlanRow = HostingPlan & {
+  invoice?: HostingInvoice | null; paymentCard: { id: string; brand: string; last4: string; expMonth: number; expYear: number; createdAt: Date } | null };
+
+/** Hóa đơn phí hosting đang chờ chuyển khoản (kèm thông tin QR) — FE hiện để chủ cộng đồng trả. */
+export interface HostingInvoice {
+  id: string;
+  amountCents: number;
+  refCode: string | null;
+  expiresAt: string | null;
+  periodStart: string | null;
+  periodEnd: string | null;
+  transfer: ReturnType<typeof transferInfoFor> | null;
+}
+
+async function pendingInvoice(planId: string): Promise<HostingInvoice | null> {
+  const p = await prisma.payment.findFirst({
+    where: { hostingPlanId: planId, kind: 'hosting', status: 'pending', expiresAt: { gt: new Date() } },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+  });
+  if (!p) return null;
+  const expiresAt = p.expiresAt?.toISOString();
+  return {
+    id: p.id,
+    amountCents: p.amountCents,
+    refCode: p.refCode,
+    expiresAt: expiresAt ?? null,
+    periodStart: p.periodStart?.toISOString() ?? null,
+    periodEnd: p.periodEnd?.toISOString() ?? null,
+    transfer: transferInfoFor({ refCode: p.refCode ?? undefined, amountCents: p.amountCents, expiresAt }) ?? null,
+  };
+}
 
 function planView(r: PlanRow) {
   const trialing = r.status === 'trialing';
@@ -75,6 +106,8 @@ function planView(r: PlanRow) {
     trialEndsAt: r.trialEndsAt?.toISOString() ?? null,
     firstChargeDate: trialing ? (r.trialEndsAt?.toISOString() ?? null) : null,
     firstChargeAmount: r.planKey === 'pro' ? r.priceAmount : 0,
+    currentPeriodEnd: r.currentPeriodEnd?.toISOString() ?? null,
+    invoice: r.invoice ?? null,
     todayDue: r.planKey === 'pro' && !trialing && r.status === 'active' ? r.priceAmount : 0,
     paymentMethod: r.paymentCard ? cardView({ ...r.paymentCard, userId: r.ownerId, gatewayToken: '', createdAt: r.paymentCard.createdAt.toISOString() }) : null,
     mock: true as const,
@@ -84,7 +117,7 @@ export type HostingPlanView = ReturnType<typeof planView>;
 
 export async function getHostingPlanView(communityId: string): Promise<HostingPlanView | null> {
   const row = await prisma.hostingPlan.findUnique({ where: { communityId }, include: { paymentCard: true } });
-  return row ? planView(row) : null;
+  return row ? planView({ ...row, invoice: await pendingInvoice(row.id) }) : null;
 }
 
 export async function selectHostingPlan(userId: string, communityId: string, input: PlanBody, now = new Date()): Promise<HostingPlanView> {
@@ -95,7 +128,7 @@ export async function selectHostingPlan(userId: string, communityId: string, inp
 
   if (input.planKey === 'start') {
     // Gói miễn phí: không thẻ, không dùng thử; giữ mốc dùng thử cũ (nếu có) để không bị "dùng thử lại" khi đổi qua đổi lại.
-    data = { planKey: 'start', cycle: 'monthly', priceAmount: 0, currency: o.currency, status: 'active', paymentCardId: null, trialStartedAt: existing?.trialStartedAt ?? null, trialEndsAt: existing?.trialEndsAt ?? null };
+    data = { planKey: 'start', cycle: 'monthly', priceAmount: 0, currency: o.currency, status: 'active', paymentCardId: null, currentPeriodEnd: null, trialStartedAt: existing?.trialStartedAt ?? null, trialEndsAt: existing?.trialEndsAt ?? null };
   } else {
     if (!input.paymentMethod) throw HttpError.coded(400, 'PAYMENT_METHOD_REQUIRED', 'Nhập thông tin thẻ để dùng thử gói Chuyên nghiệp');
     const card = await paymentsRepository.upsertCard(userId, input.paymentMethod); // chỉ brand/last4/hạn + token
@@ -112,7 +145,9 @@ export async function selectHostingPlan(userId: string, communityId: string, inp
     update: { ...data, ownerId: userId },
     include: { paymentCard: true },
   });
-  return planView(row);
+  // Đổi gói/chu kỳ/giá: hóa đơn đang chờ của lựa chọn cũ không còn đúng — hủy, job thu phí sẽ phát hóa đơn mới khi tới hạn.
+  await prisma.payment.updateMany({ where: { hostingPlanId: row.id, kind: 'hosting', status: 'pending' }, data: { status: 'failed', failureReason: 'plan_changed' } });
+  return planView({ ...row, invoice: null });
 }
 
 export async function readHostingPlan(userId: string, communityId: string): Promise<HostingPlanView | null> {

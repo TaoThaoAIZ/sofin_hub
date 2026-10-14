@@ -55,6 +55,7 @@ export interface BankTransaction {
   id: string;
   externalId: string;
   gateway: string;
+  accountNumber?: string | null;
   amount: number;
   description: string;
   referenceCode: string | null;
@@ -83,9 +84,9 @@ export const useBankStatus = () =>
 
 /** Giao dịch ngân hàng chưa được ghi có (credited=false) — cần admin xử lý tay. */
 /** `credited`: 'false' = chưa ghi có, 'true' = đã ghi có, '' = tất cả. */
-export const useBankTransactions = (page: number, limit: number, credited: '' | 'true' | 'false' = '') =>
+export const useBankTransactions = (page: number, limit: number, credited: '' | 'true' | 'false' = '', q = '') =>
   useQuery({
-    queryKey: ['admin', 'bank', 'transactions', page, limit, credited],
-    queryFn: ({ signal }) => apiGet<{ data: BankTransaction[]; total: number; page: number; limit: number }>('/admin/bank/transactions', { ...(credited ? { credited } : {}), page, limit }, signal),
+    queryKey: ['admin', 'bank', 'transactions', page, limit, credited, q],
+    queryFn: ({ signal }) => apiGet<{ data: BankTransaction[]; total: number; page: number; limit: number }>('/admin/bank/transactions', { ...(credited ? { credited } : {}), ...(q ? { q } : {}), page, limit }, signal),
     placeholderData: keepPreviousData,
   });

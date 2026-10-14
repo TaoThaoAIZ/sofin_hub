@@ -58,7 +58,7 @@ export async function alertMoneyIssue(message: string): Promise<void> {
   }
 }
 
-const KIND_LABEL: Record<PaymentIntent['kind'], string> = { initial: 'Gói thành viên', renewal: 'Gia hạn gói', module: 'Mua module' };
+const KIND_LABEL: Record<PaymentIntent['kind'], string> = { initial: 'Gói thành viên', renewal: 'Gia hạn gói', module: 'Mua module', hosting: 'Gói hosting Pro' };
 
 /** Có thanh toán thành công (đã commit): báo admin (chuông + Telegram) và owner cộng đồng. */
 export async function announcePaid(p: PaymentIntent): Promise<void> {

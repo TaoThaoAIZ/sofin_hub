@@ -91,6 +91,7 @@ export const listBankTransactionsQuery = paginationQuery.extend({
     .enum(['true', 'false'])
     .transform((v) => v === 'true')
     .optional(),
+  q: z.string().trim().max(100).optional(),
 });
 
 export const approveBankPaymentBody = z.object({

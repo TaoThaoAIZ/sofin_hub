@@ -77,7 +77,7 @@ export const referralsRepository = {
       SELECT p."id" FROM "Payment" p
       JOIN "Referral" r ON r."referredUserId" = p."userId"
       WHERE p."status" = 'succeeded' AND p."amountCents" > 0 AND p."confirmedAt" >= ${since}
-        AND NOT EXISTS (SELECT 1 FROM "ReferralCommission" c WHERE c."sourceRef" = 'payment:' || p."id")
+        AND NOT EXISTS (SELECT 1 FROM "ReferralCommission" c WHERE c."sourceRef" = (CASE WHEN p."kind" = 'hosting' THEN 'hosting:' ELSE 'payment:' END) || p."id")
       ORDER BY p."confirmedAt" LIMIT ${limit}`,
   findPayment: (id: string) => prisma.payment.findUnique({ where: { id } }),
   recentReminder: (userId: string, title: string, bodyPrefix: string, since: Date) =>

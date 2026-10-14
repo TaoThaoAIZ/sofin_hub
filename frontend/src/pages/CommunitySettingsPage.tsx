@@ -7,6 +7,7 @@ import { useAuth } from '../features/auth/AuthContext';
 import { BansTab } from '../features/communities/components/settings/BansTab';
 import { DangerTab } from '../features/communities/components/settings/DangerTab';
 import { GeneralTab } from '../features/communities/components/settings/GeneralTab';
+import { HostingPlanTab } from '../features/communities/components/settings/HostingPlanTab';
 import { InvitesTab } from '../features/communities/components/settings/InvitesTab';
 import { JoinRequestsTab } from '../features/communities/components/settings/JoinRequestsTab';
 import { isAtLeast, ROLE_LABEL } from '../features/communities/types';
@@ -14,7 +15,7 @@ import { CourseManager } from '../features/community/components/CourseManager';
 import { ToastHost } from '../features/community/components/contentUi';
 import { useCommunityDetail } from '../features/courses/queries';
 
-type TabKey = 'general' | 'courses' | 'requests' | 'invites' | 'bans' | 'danger';
+type TabKey = 'general' | 'courses' | 'requests' | 'invites' | 'bans' | 'plan' | 'danger';
 
 const TABS: { key: TabKey; icon: string }[] = [
   { key: 'general', icon: 'tune' },
@@ -22,6 +23,7 @@ const TABS: { key: TabKey; icon: string }[] = [
   { key: 'requests', icon: 'how_to_reg' },
   { key: 'invites', icon: 'link' },
   { key: 'bans', icon: 'block' },
+  { key: 'plan', icon: 'workspace_premium' },
   { key: 'danger', icon: 'warning' },
 ];
 
@@ -72,7 +74,7 @@ export function CommunitySettingsPage() {
     );
   }
 
-  const visibleTabs = TABS.filter((tb) => tb.key !== 'danger' || isAtLeast(role, 'owner'));
+  const visibleTabs = TABS.filter((tb) => (tb.key !== 'danger' && tb.key !== 'plan') || isAtLeast(role, 'owner'));
   const activeTab = visibleTabs.some((tb) => tb.key === tab) ? tab : 'general';
 
   return (
@@ -112,6 +114,7 @@ export function CommunitySettingsPage() {
             {activeTab === 'requests' && <JoinRequestsTab courseId={id} isPrivate={course.visibility === 'private'} />}
             {activeTab === 'invites' && <InvitesTab courseId={id} />}
             {activeTab === 'bans' && <BansTab courseId={id} />}
+            {activeTab === 'plan' && <HostingPlanTab communityId={id} />}
             {activeTab === 'danger' && <DangerTab course={course} viewerRole={role} />}
           </div>
       </div>

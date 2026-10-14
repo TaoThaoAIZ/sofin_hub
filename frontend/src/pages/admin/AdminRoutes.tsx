@@ -9,7 +9,7 @@ import {
   AdminChargebacksPage,
   AdminCreatorDetailPage,
   AdminCreatorsPage,
-  AdminBankInflowPage,
+  AdminBankInflowPage, AdminReferralTxPage,
   AdminPayoutsPage,
   AdminRefundDetailPage,
   AdminRefundsPage,
@@ -59,6 +59,7 @@ export default function AdminRoutes() {
         <Route path="payments/creator/:userId" element={<AdminCreatorDetailPage />} />
         <Route path="payments/payouts" element={<AdminPayoutsPage />} />
         <Route path="payments/bank" element={<AdminBankInflowPage />} />
+        <Route path="payments/referrals" element={<AdminReferralTxPage />} />
         <Route path="discovery/listed" element={<AdminListedPage />} />
         <Route path="discovery/categories" element={<AdminCategoriesPage />} />
         <Route path="discovery/featured" element={<AdminFeaturedPage />} />
