@@ -403,8 +403,12 @@ describe('chatbot', () => {
       const b = await import('../src/modules/chatbot/chatbot.baseline.js');
       await prisma.platformSetting.deleteMany({ where: { key: b.CHATBOT_BASELINE_KEY } });
       await prisma.chatbotQA.update({ where: { id: 'seed-chatbot-qa-tools-price' }, data: { answer: 'dạ admin đã sửa ạ' } });
+      // Không tự nạp: trang admin báo chưa nạp cho tới khi chạy lệnh riêng.
+      assert.deepEqual((await ADM('GET', '/summary')).body.data.baseline, { loaded: null, current: b.CHATBOT_BASELINE_VERSION });
       const r1 = await b.ensureChatbotBaseline();
       assert.ok(!('skipped' in r1));
+      assert.deepEqual((await ADM('GET', '/summary')).body.data.baseline, { loaded: b.CHATBOT_BASELINE_VERSION, current: b.CHATBOT_BASELINE_VERSION });
+      assert.ok(!('skipped' in (await b.ensureChatbotBaseline({ force: true }))), '--force nạp lại dù đã nạp');
       assert.equal((await prisma.chatbotQA.findUniqueOrThrow({ where: { id: 'seed-chatbot-qa-tools-price' } })).answer, 'dạ admin đã sửa ạ');
       assert.deepEqual(await b.ensureChatbotBaseline(), { skipped: true });
 

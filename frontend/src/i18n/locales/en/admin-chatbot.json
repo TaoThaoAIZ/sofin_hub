@@ -156,5 +156,6 @@
     "deviceHelp": "Sign-in page says \"Enable device code sign-in…\"? Turn on \"Device code sign-in\" in that ChatGPT account's security settings, then Cancel and sign in again for a new code:",
     "securityLink": "Open ChatGPT > Settings > Security"
   },
-  "quota": "The chatbot's ChatGPT account hit its USAGE LIMIT ({{time}}): customers get a \"temporarily busy\" reply and are pointed to Zalo. Sample-answer matches still work. Wait for the limit to reset or sign in with a higher-plan account in Settings. Details: {{message}}"
+  "quota": "The chatbot's ChatGPT account hit its USAGE LIMIT ({{time}}): customers get a \"temporarily busy\" reply and are pointed to Zalo. Sample-answer matches still work. Wait for the limit to reset or sign in with a higher-plan account in Settings. Details: {{message}}",
+  "baselineMissing": "Chatbot baseline data not loaded (v{{current}}, DB has: {{loaded}}): bundled sample answers and documents are missing. Run on the server: `npm run chatbot:baseline` (Docker: `docker compose exec backend node dist/cli/chatbot-baseline.js`). Admin edits are never overwritten."
 }

@@ -5,6 +5,7 @@ import type { ChatbotQA } from '../../generated/prisma/client.js';
 import { HttpError } from '../../utils/http-error.js';
 import { auditService } from '../admin/admin-audit.service.js';
 import { codexLoggedIn, llmHealth } from './chatbot.llm.js';
+import { CHATBOT_BASELINE_VERSION, chatbotBaselineVersion } from './chatbot.baseline.js';
 import { chatbotAvailable, chatbotSettings, patchChatbotSettingsBody, refreshChatbotSettings, writeChatbotSettings } from './chatbot.config.js';
 import { conversationRepository } from './chatbot.conversations.js';
 import { chatbotRepository } from './chatbot.repository.js';
@@ -110,6 +111,8 @@ export const adminChatbotService = {
       codexLoggedIn: codexLoggedIn(),
       fakeModel: env.CHATBOT_FAKE_MODEL,
       llm: llmHealth(),
+      /** Dữ liệu nền chỉ nạp bằng lệnh riêng (`npm run chatbot:baseline`) — loaded < current => trang admin nhắc chạy lệnh. */
+      baseline: { loaded: await chatbotBaselineVersion(), current: CHATBOT_BASELINE_VERSION },
       qa,
       documents: docs,
       last7Days: { conversations: conversations7d, handedOff: handedOff7d, negativeFeedback: negative7d },

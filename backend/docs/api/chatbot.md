@@ -105,15 +105,18 @@ Hội thoại im ≥ 30 phút và chưa `learnedAt`:
 - **Mọi** cặp học được ⇒ `candidate` (`source=learned`), kể cả khi khách 👍 — bot không tự bật câu trả lời nào, admin duyệt ở tab Chờ duyệt (chốt 2026-10-14). Hội thoại có 👍 và không 👎 ⇒ thêm tag `khách 👍` để admin ưu tiên.
 - Ghi `learnedAt`; chạy lại không nhân đôi.
 
-## Dữ liệu nền (tự nạp khi khởi động)
+## Dữ liệu nền (nạp bằng lệnh riêng)
 
-Production **không** chạy `db:seed`, nên `src/index.ts` gọi `ensureChatbotBaseline()` (`chatbot.baseline.ts`) mỗi lần khởi động: nếu PlatformSetting `chatbot.baseline.version` < `CHATBOT_BASELINE_VERSION` (hiện **3**) thì nạp rồi ghi version — chạy đúng một lần mỗi phiên bản.
+Backend **không** tự nạp (chủ dự án chốt 2026-10-14). Dữ liệu nằm trong code (`chatbot.baseline.ts` + `prisma/chatbot-kb/*.md`, đi theo branch/image) nhưng chỉ vào DB khi người vận hành chạy lệnh riêng `src/cli/chatbot-baseline.ts` (build ra `dist/cli/chatbot-baseline.js` ⇒ chạy được trong image production, không cần `tsx`):
+- dev: `npm run chatbot:baseline:dev [-- --status | --force]`; sau `npm run build`: `npm run chatbot:baseline`; AWS: `docker compose exec backend node dist/cli/chatbot-baseline.js [--status | --force]`.
+- Mặc định: nạp nếu PlatformSetting `chatbot.baseline.version` < `CHATBOT_BASELINE_VERSION` (hiện **3**) rồi ghi version; đã nạp ⇒ không làm gì. `--force` nạp lại phần còn thiếu dù đã nạp. `--status` chỉ xem (version DB / code, số câu mẫu nền theo trạng thái, số tài liệu).
+- Chưa nạp bản hiện tại ⇒ backend ghi cảnh báo log lúc khởi động và `GET /admin/support/chatbot/summary` có `baseline: { loaded, current }` ⇒ trang Admin > Chatbot hiện dải nhắc kèm lệnh. `npm run db:seed` (dev) vẫn nạp câu mẫu + tài liệu như trước.
 - Câu mẫu (id `seed-chatbot-qa-<key>`, `source=admin`, createMany skipDuplicates — câu admin đã sửa không bị ghi đè):
   - `CHATBOT_FAQ` (16, `active`): viết lại từ FAQ công khai.
   - `CHATBOT_ZALO_TOPICS` (9, `active`): chủ đề khách hỏi nhiều nhất trên Zalo, **viết lại** (không chép chat, không tên/SĐT, không con số giá), nội dung chỉ lấy từ thông tin đã xác nhận: giá tool (báo riêng → Mua ngay/Zalo), Ngân Lượng, tốn NL khi tạo video, cách mua tool, hỏi số tài khoản (→ VietQR, không gửi STK), thanh toán MoMo/ví/thẻ (→ chỉ VietQR, quét bằng app ngân hàng/ví hỗ trợ VietQR — v3), ảnh chuyển khoản, báo lỗi tool, hỏi khi nào sửa xong (không hứa giờ). Lỗi kỹ thuật cụ thể để AI trả từ tài liệu "Xử lý lỗi thường gặp".
   - `CHATBOT_NEEDS_ANSWER` (4, `candidate`): dùng thử, cấu hình máy, phí API/tài khoản AI, người mới/lớn tuổi học — **chưa có thông tin xác nhận**, câu trả lời là `[CẦN ADMIN ĐIỀN: …]`. Admin không bật được câu còn chỗ trống này (400, cả approve lẫn PATCH/POST `status=active`) cho tới khi điền nội dung.
 - Tài liệu `prisma/chatbot-kb/*.md`: chỉ tạo slug chưa có (`importKnowledgeDir(..., { onlyMissing: true })`) — tài liệu admin đã sửa/lưu trữ không bị ghi đè.
-- Đổi/thêm dữ liệu nền ⇒ tăng `CHATBOT_BASELINE_VERSION`. Câu admin đã **xóa** sẽ quay lại khi tăng version (lưu trữ/từ chối thì không).
+- Đổi/thêm dữ liệu nền ⇒ tăng `CHATBOT_BASELINE_VERSION` rồi chạy lại lệnh sau khi deploy. Câu admin đã **xóa** sẽ quay lại khi tăng version (lưu trữ/từ chối thì không).
 
 ## Nạp tri thức (CLI)
 

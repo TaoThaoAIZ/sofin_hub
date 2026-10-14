@@ -26,7 +26,7 @@ Bot **chỉ** dùng câu mẫu đang bật + tài liệu đang bật; mọi th�
 | Tài liệu tri thức | 2 tài liệu | Đang dùng | Xử lý lỗi thường gặp (9 mục), Ngân Lượng & báo giá (không có Techcombank) |
 | Chat Zalo nhập nguyên văn (bản cũ) | 33 câu | **Đã từ chối** (DB dev) | Chất lượng thấp: hỏi–đáp lệch, văn nói, "gói 0", "lấy bên khác dùng"… |
 
-- Production không chạy seed ⇒ backend **tự nạp dữ liệu nền khi khởi động** (một lần mỗi phiên bản, không ghi đè bản admin đã sửa).
+- Dữ liệu nền nằm trong code (đi theo branch) nhưng **chỉ vào DB khi chạy lệnh riêng** `npm run chatbot:baseline` (AWS: `docker compose exec backend node dist/cli/chatbot-baseline.js`) — backend không tự nạp. Chưa chạy thì trang Admin > Chatbot hiện dải nhắc. Lệnh chạy lại nhiều lần an toàn, không ghi đè câu admin đã sửa; `--status` để xem.
 - Script nhập Zalo có bộ lọc chặt (bỏ câu chào, giá, "gửi ultra", hỏi ngược, hứa giờ, văn nói, không phải câu hỏi) + `--dry-run` xem trước: 35 nhóm → còn 4.
 
 ### Bot hỏi lại khách (gợi ý trả lời nhanh)
@@ -53,7 +53,7 @@ Khi câu hỏi chưa đủ rõ (khóa học chủ đề nào, tool nào…), bot
 | 8 | Đường dẫn trong câu trả lời hiện "/tools" | Hiện tên trang ("Tải Tool", "Gói & thanh toán"…) tô màu, bấm được |
 | 9 | Backend dev chạy lại bản cũ dùng model giả (tiến trình node mồ côi) | Đã dọn; tài liệu ghi rõ cách chạy |
 | 10 | Bộ regression có thể PASS giả (review bộ test) | Runner bản 3: kết quả bắt buộc liệt kê rõ, manifest ID bắt buộc, chụp **toàn bộ** DB (56 bảng), kiểm ngữ cảnh gửi model, dò rò rỉ chặt hơn, dọn dẹp trong `finally`, tự đăng nhập lại khi token hết hạn, lỗi một case không làm sập cả bộ, `selftest.py` 25 test |
-| 11 | **Production không có dữ liệu chatbot** (prod không chạy seed ⇒ 0 câu mẫu, 0 tài liệu) | Tự nạp dữ liệu nền khi khởi động (`chatbot.baseline.ts`, version 2) |
+| 11 | **Production không có dữ liệu chatbot** (prod không chạy seed ⇒ 0 câu mẫu, 0 tài liệu) | Dữ liệu nền trong code + **lệnh riêng** `chatbot:baseline` (build vào `dist/` nên chạy được trong image production — đã kiểm trong Docker); trang admin nhắc khi chưa nạp |
 | 12 | Dữ liệu Zalo nhập nguyên văn, chất lượng thấp | Từ chối 33 câu cũ; viết lại 8 chủ đề thành câu mẫu sạch + 4 câu chờ điền; lọc chặt + `--dry-run` cho lần nhập sau |
 | 13 | Câu học được tự bật khi khách 👍 | Bỏ tự bật: **mọi** câu học được đều chờ admin duyệt (tag "khách 👍" để ưu tiên); bỏ 2 cài đặt ngưỡng/tự học |
 | 14 | Giá "200.000đ/tháng" bị biến thành link "trang này" dẫn tới `/th` | Đường dẫn phải đứng riêng (không dính chữ có dấu); chỉ trang có thật mới thành link; link markdown `[Tên khóa học](/communities/...)` hiện đúng tên |
@@ -88,7 +88,7 @@ cd ../chatbot_qa_security_suite; python selftest.py; python runner.py --repeat 3
 1. Merge `feat/chatbot-ai` vào `master` khi sẵn sàng ⇒ CI ⇒ tự deploy AWS (migration chạy khi `RUN_MIGRATIONS=1`).
 2. Production **không** đặt `CHATBOT_FAKE_MODEL`, `CHATBOT_TRACE_CONTEXT` (app từ chối khởi động nếu có).
 3. Sau deploy: Super Admin vào Admin > Hỗ trợ > Chatbot > Cài đặt > "Tài khoản ChatGPT của chatbot" ⇒ đăng nhập bằng mã thiết bị (tài khoản phải bật *Device code sign-in* trong ChatGPT > Settings > Security). Nhập link Zalo hỗ trợ ở cùng trang.
-4. Câu mẫu + tài liệu nền tự nạp khi backend khởi động. Vào tab **Chờ duyệt**: điền 4 câu `[CẦN ADMIN ĐIỀN]` rồi duyệt; duyệt dần các câu bot học được.
+4. **Nạp dữ liệu nền (bắt buộc, chạy tay):** `npm run chatbot:baseline` (AWS: `docker compose exec backend node dist/cli/chatbot-baseline.js`). Kiểm tra: thêm `--status`. Sau đó vào tab **Chờ duyệt**: điền 4 câu `[CẦN ADMIN ĐIỀN]` rồi duyệt; duyệt dần các câu bot học được.
 5. (Tùy chọn) Nhập câu hỏi Zalo mới: chạy `npm run chatbot:import-candidates -- <file> --dry-run` xem trước, rồi bỏ `--dry-run`.
 
 ## 7. Rủi ro & việc còn mở

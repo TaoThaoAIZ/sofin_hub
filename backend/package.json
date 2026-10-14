@@ -26,6 +26,8 @@
     "db:import-users": "cross-env NODE_ENV=development tsx prisma/import-users-json.ts",
     "db:reset": "prisma migrate reset --force && cross-env NODE_ENV=development tsx prisma/seed.ts",
     "db:studio": "prisma studio",
+    "chatbot:baseline": "node dist/cli/chatbot-baseline.js",
+    "chatbot:baseline:dev": "cross-env NODE_ENV=development tsx src/cli/chatbot-baseline.ts",
     "chatbot:import-kb": "cross-env NODE_ENV=development tsx prisma/import-chatbot-kb.ts",
     "chatbot:import-candidates": "cross-env NODE_ENV=development tsx prisma/import-chatbot-candidates.ts",
     "chatbot:codex-login": "cross-env NODE_ENV=development tsx prisma/chatbot-codex-login.ts",

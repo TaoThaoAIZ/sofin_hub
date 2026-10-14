@@ -37,6 +37,7 @@ interface Summary {
   enabled: boolean;
   codexLoggedIn: boolean;
   fakeModel: boolean;
+  baseline?: { loaded: number | null; current: number };
   llm?: { lastSuccessAt: string | null; lastIssue: { kind: 'quota' | 'error'; message: string; at: string } | null; pausedUntil: string | null };
   qa: Record<QaStatus, number>;
   documents: number;
@@ -123,6 +124,9 @@ export function ChatbotView() {
     <>
       <PageHeader title={t('title')} subtitle={t('subtitle')} />
       {s && !s.codexLoggedIn && !s.fakeModel && <Notice tone="r">{t('noKey')}</Notice>}
+      {s?.baseline && (s.baseline.loaded === null || s.baseline.loaded < s.baseline.current) && (
+        <Notice tone="o">{t('baselineMissing', { current: s.baseline.current, loaded: s.baseline.loaded ?? '—' })}</Notice>
+      )}
       {s?.llm?.lastIssue?.kind === 'quota' && (!s.llm.lastSuccessAt || s.llm.lastSuccessAt < s.llm.lastIssue.at) && (
         <Notice tone="r">{t('quota', { time: formatDateTime(s.llm.lastIssue.at), message: s.llm.lastIssue.message })}</Notice>
       )}

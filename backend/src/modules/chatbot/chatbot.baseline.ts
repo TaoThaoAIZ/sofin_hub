@@ -2,8 +2,10 @@ import { prisma } from '../../db/prisma.js';
 import { BUNDLED_KB_DIR, importKnowledgeDir } from './chatbot.import.js';
 
 /**
- * Dữ liệu nền của chatbot (câu mẫu + tài liệu đi kèm repo). Production KHÔNG chạy `db:seed`, nên backend tự nạp khi khởi động
- * (`ensureChatbotBaseline`) — một lần cho mỗi CHATBOT_BASELINE_VERSION (lưu ở PlatformSetting `chatbot.baseline`):
+ * Dữ liệu nền của chatbot (câu mẫu + tài liệu đi kèm repo). KHÔNG tự nạp khi khởi động (chủ dự án chốt 2026-10-14: chỉ nạp bằng
+ * lệnh riêng) — chạy `npm run chatbot:baseline` (production: `node dist/cli/chatbot-baseline.js` trong container, xem
+ * src/cli/chatbot-baseline.ts). Backend chỉ ghi cảnh báo log + trang admin hiện nhắc khi chưa nạp bản hiện tại.
+ * Mỗi CHATBOT_BASELINE_VERSION nạp một lần (lưu ở PlatformSetting `chatbot.baseline`; `--force` nạp lại):
  *  - câu mẫu: id xác định `seed-chatbot-qa-<key>` + createMany(skipDuplicates) — câu admin đã sửa không bị ghi đè; câu admin đã xóa
  *    chỉ quay lại khi tăng version;
  *  - tài liệu: chỉ tạo slug chưa có — tài liệu admin đã sửa không bị ghi đè.
@@ -281,11 +283,17 @@ export async function seedBaselineQa(db: Db = prisma): Promise<number> {
   return count;
 }
 
-/** Nạp dữ liệu nền nếu chưa nạp bản hiện tại. Gọi lúc khởi động (không chặn; lỗi chỉ ghi log). */
-export async function ensureChatbotBaseline(): Promise<{ skipped: true } | { qa: number; documents: number }> {
+/** Phiên bản dữ liệu nền đã nạp vào DB (null = chưa nạp lần nào). */
+export async function chatbotBaselineVersion(): Promise<number | null> {
   const cur = await prisma.platformSetting.findUnique({ where: { key: CHATBOT_BASELINE_KEY } });
   const version = (cur?.value as { version?: unknown } | null)?.version;
-  if (typeof version === 'number' && version >= CHATBOT_BASELINE_VERSION) return { skipped: true };
+  return typeof version === 'number' ? version : null;
+}
+
+/** Nạp dữ liệu nền nếu chưa nạp bản hiện tại (`force`: nạp lại dù đã nạp — vẫn không ghi đè bản admin đã sửa). Chỉ gọi từ lệnh riêng / seed / test. */
+export async function ensureChatbotBaseline(opts: { force?: boolean } = {}): Promise<{ skipped: true } | { qa: number; documents: number }> {
+  const version = await chatbotBaselineVersion();
+  if (!opts.force && version !== null && version >= CHATBOT_BASELINE_VERSION) return { skipped: true };
   const qa = await seedBaselineQa();
   const docs = await importKnowledgeDir(BUNDLED_KB_DIR, null, { onlyMissing: true });
   const value = { version: CHATBOT_BASELINE_VERSION, at: new Date().toISOString() };

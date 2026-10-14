@@ -156,5 +156,6 @@
     "deviceHelp": "Trang đăng nhập báo \"Enable device code sign-in…\"? Bật \"Device code sign-in\" trong cài đặt bảo mật của tài khoản ChatGPT đó, rồi bấm Hủy và đăng nhập lại để lấy mã mới:",
     "securityLink": "Mở ChatGPT > Settings > Security"
   },
-  "quota": "Tài khoản ChatGPT của chatbot đã HẾT HẠN MỨC ({{time}}): khách đang nhận câu \"tạm quá tải\" và được mời nhắn Zalo. Câu khớp câu mẫu vẫn trả lời bình thường. Chờ hạn mức hồi hoặc đăng nhập tài khoản gói cao hơn ở tab Cài đặt. Chi tiết: {{message}}"
+  "quota": "Tài khoản ChatGPT của chatbot đã HẾT HẠN MỨC ({{time}}): khách đang nhận câu \"tạm quá tải\" và được mời nhắn Zalo. Câu khớp câu mẫu vẫn trả lời bình thường. Chờ hạn mức hồi hoặc đăng nhập tài khoản gói cao hơn ở tab Cài đặt. Chi tiết: {{message}}",
+  "baselineMissing": "Chưa nạp dữ liệu nền của chatbot (bản v{{current}}, DB đang: {{loaded}}): câu mẫu và tài liệu đi kèm hệ thống chưa có. Người vận hành chạy lệnh trên server: `npm run chatbot:baseline` (Docker: `docker compose exec backend node dist/cli/chatbot-baseline.js`). Câu admin đã sửa không bị ghi đè."
 }
