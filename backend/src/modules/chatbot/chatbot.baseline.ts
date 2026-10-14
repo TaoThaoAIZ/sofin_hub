@@ -9,7 +9,7 @@ import { BUNDLED_KB_DIR, importKnowledgeDir } from './chatbot.import.js';
  *  - tài liệu: chỉ tạo slug chưa có — tài liệu admin đã sửa không bị ghi đè.
  * Thêm/đổi dữ liệu nền => tăng CHATBOT_BASELINE_VERSION.
  */
-export const CHATBOT_BASELINE_VERSION = 2;
+export const CHATBOT_BASELINE_VERSION = 3;
 export const CHATBOT_BASELINE_KEY = 'chatbot.baseline';
 
 export interface BaselineQa {
@@ -189,6 +189,15 @@ export const CHATBOT_ZALO_TOPICS: BaselineQa[] = [
     variants: ['cho xin số tài khoản', 'stk bên mình là gì', 'chuyển tiền vào đâu', 'gửi mình số tài khoản ngân hàng'],
     answer:
       'dạ thanh toán trên SofinHub dùng mã VietQR do hệ thống tạo ở trang thanh toán, tiền về là hệ thống tự xác nhận ạ. Tào không gửi số tài khoản qua tin nhắn, bạn đừng chuyển theo số tài khoản người lạ gửi nha',
+    tags: ['thanh toán'],
+  },
+  {
+    // Bộ Zalo zp06 (2026-10-14): hỏi MoMo thì AI trả đúng VietQR nhưng vẫn chuyển người (tạo ticket thừa).
+    key: 'payment-methods',
+    question: 'Thanh toán bằng MoMo, ví điện tử hay thẻ được không?',
+    variants: ['thanh toán bằng momo được không', 'trả bằng thẻ visa được không', 'có thanh toán qua ví điện tử không', 'thanh toán zalopay được không'],
+    answer:
+      'dạ SofinHub chỉ nhận thanh toán bằng mã VietQR do hệ thống tạo ở trang thanh toán ạ. Bạn mở app ngân hàng (hoặc ví điện tử có hỗ trợ quét VietQR) để quét mã, tiền về là hệ thống tự xác nhận nha',
     tags: ['thanh toán'],
   },
   {

@@ -21,7 +21,7 @@ Bot **chỉ** dùng câu mẫu đang bật + tài liệu đang bật; mọi th�
 | Nguồn | Số lượng | Trạng thái | Nội dung |
 |---|---|---|---|
 | FAQ công khai | 16 câu | Đang dùng | Viết lại từ trang FAQ của web |
-| Chủ đề Zalo viết lại | 8 câu | Đang dùng | Giá tool (báo riêng → Mua ngay/Zalo), Ngân Lượng, tốn NL khi tạo video, cách mua tool, hỏi số tài khoản (→ VietQR, không gửi STK), ảnh chuyển khoản, báo lỗi tool, hỏi khi nào sửa xong. **Không chép chat thật**, không tên/SĐT, không con số giá |
+| Chủ đề Zalo viết lại | 9 câu | Đang dùng | Giá tool (báo riêng → Mua ngay/Zalo), Ngân Lượng, tốn NL khi tạo video, cách mua tool, hỏi số tài khoản (→ VietQR, không gửi STK), ảnh chuyển khoản, báo lỗi tool, hỏi khi nào sửa xong. **Không chép chat thật**, không tên/SĐT, không con số giá |
 | Chủ đề chưa có thông tin | 4 câu | **Chờ admin điền** | Dùng thử, cấu hình máy, phí API/tài khoản AI, người mới/lớn tuổi học. Câu trả lời là `[CẦN ADMIN ĐIỀN…]` — hệ thống **không cho bật** khi chưa điền |
 | Tài liệu tri thức | 2 tài liệu | Đang dùng | Xử lý lỗi thường gặp (9 mục), Ngân Lượng & báo giá (không có Techcombank) |
 | Chat Zalo nhập nguyên văn (bản cũ) | 33 câu | **Đã từ chối** (DB dev) | Chất lượng thấp: hỏi–đáp lệch, văn nói, "gói 0", "lấy bên khác dùng"… |
@@ -57,6 +57,8 @@ Khi câu hỏi chưa đủ rõ (khóa học chủ đề nào, tool nào…), bot
 | 12 | Dữ liệu Zalo nhập nguyên văn, chất lượng thấp | Từ chối 33 câu cũ; viết lại 8 chủ đề thành câu mẫu sạch + 4 câu chờ điền; lọc chặt + `--dry-run` cho lần nhập sau |
 | 13 | Câu học được tự bật khi khách 👍 | Bỏ tự bật: **mọi** câu học được đều chờ admin duyệt (tag "khách 👍" để ưu tiên); bỏ 2 cài đặt ngưỡng/tự học |
 | 14 | Giá "200.000đ/tháng" bị biến thành link "trang này" dẫn tới `/th` | Đường dẫn phải đứng riêng (không dính chữ có dấu); chỉ trang có thật mới thành link; link markdown `[Tên khóa học](/communities/...)` hiện đúng tên |
+| 15 | Bộ Zalo: hỏi \"thanh toán bằng MoMo\" ⇒ bot trả đúng VietQR nhưng vẫn chuyển người (tạo ticket thừa) | Thêm câu mẫu MoMo/ví/thẻ ⇒ trả ngay (0,1s); dữ liệu nền v3 |
+| 16 | Khi chuyển người, câu trả lời lặp \"nhắn Zalo hỗ trợ\" 2 lần | Câu trả lời đã mời nhắn Zalo ⇒ chỉ thêm dòng \"Mã hỗ trợ của bạn: T-…\" |
 
 ## 5. Kết quả kiểm thử
 
@@ -65,7 +67,7 @@ Khi câu hỏi chưa đủ rõ (khóa học chủ đề nào, tool nào…), bot
 | Test backend (`npm test`) | **646/646 PASS** (32 test chatbot, thêm: hỏi lại + gợi ý trả lời nhanh, thêm: dữ liệu nền, chặn bật câu chưa điền, lọc Zalo, hỏi STK → câu mẫu VietQR; cùng các test cũ: luồng, guardrail, chuyển Zalo, học, phân quyền admin, tài khoản ChatGPT, ngữ cảnh RAG, chống spam ticket, hết hạn mức) |
 | Typecheck BE/FE, build FE, lint | Sạch (lint chỉ còn cảnh báo cũ, không thuộc chatbot) |
 | E2E Playwright (`e2e/tests/05-chatbot.spec.ts`, model giả) | **7/7 PASS** (widget, câu mẫu, thẻ tool + nhãn trang, từ chối, chuyển người, hỏi lại chủ đề + bấm gợi ý, trang admin) |
-| Bộ câu hỏi thật từ Zalo — 92 case, 13 nhóm (`tests/chatbot-zalo.vi.json`) | Đã tạo + kiểm offline; **chưa chạy với model thật** (Docker/DB đang tắt) — lệnh: `npm run chatbot:eval -- --file=tests/chatbot-zalo.vi.json` |
+| Bộ câu hỏi thật từ Zalo — 92 case, 13 nhóm (`tests/chatbot-zalo.vi.json`, model thật, 2026-10-14) | Lần 1: **89/92** (trả lời đúng 96%, chuyển người sai 4%, chuyển người đúng 100%, từ chối đúng 100%, hỏi lại kèm gợi ý 100%, ~12,7s/câu). 3 case trượt: 2 do điều kiện test quá chặt (bot hỏi lại là đúng), 1 lỗi thật (hỏi MoMo ⇒ chuyển người thừa) — đã sửa; chạy lại 5 case liên quan: **5/5** |
 | Bộ đo chất lượng 49 câu (model thật) | 46/47 lần chạy đầy đủ (câu trượt do điều kiện kiểm tra — đã sửa); 2 câu mới về khóa học (c01, c02): 2/2 |
 | Regression bảo mật 34 case (model thật) | Lần chạy đầy đủ: **34/34 PASS** — rò rỉ câu trả lời 0, rò rỉ ngữ cảnh 0, DB đổi trái phép 0 |
 | Selftest runner | **25/25 PASS** |

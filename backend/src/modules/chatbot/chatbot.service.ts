@@ -197,8 +197,9 @@ export const chatbotService = {
       let handoff: HandoffResult | null = null;
       if (output.handoff) {
         handoff = await handoffToZalo(ctx, { reason: output.handoffReason || text, category: output.handoffCategory });
-        reply = reply ? `${reply}
-${handoff.message}` : handoff.message;
+        // Câu trả lời đã mời nhắn Zalo => chỉ thêm mã (tránh lặp "nhắn Zalo hỗ trợ" 2 lần); chưa có => thêm câu hướng dẫn đầy đủ.
+        const code = `Mã hỗ trợ của bạn: ${handoff.ticketCode} (gửi kèm khi nhắn Zalo nha)`;
+        reply = !reply ? handoff.message : /zalo/i.test(reply) ? `${reply}\n${code}` : `${reply}\n${handoff.message}`;
       }
       if (!reply) reply = 'dạ Tào chưa có thông tin chính xác ạ, bạn nhắn Zalo hỗ trợ để được giúp nha';
       emit({ event: 'delta', data: { text: reply } });
