@@ -385,6 +385,7 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
       assertLessonOpen(s, lesson);
       const flat = flatLessonIds(modules);
       const i = flat.indexOf(lessonId);
+      const isLocked = (id: string | undefined) => !!id && states.some((x) => x.lockedLessons.has(id));
       return {
         ...lessonView(lesson, doneIds),
         learningCourseId: course.id,
@@ -394,6 +395,8 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
         moduleIndex: s.module.index,
         prevLessonId: flat[i - 1] ?? null,
         nextLessonId: flat[i + 1] ?? null,
+        prevLessonLocked: isLocked(flat[i - 1]),
+        nextLessonLocked: isLocked(flat[i + 1]),
       };
     },
 

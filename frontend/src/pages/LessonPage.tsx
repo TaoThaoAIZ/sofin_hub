@@ -188,14 +188,14 @@ export function LessonPage() {
         </article>
 
         <div className="flex items-center justify-between gap-3">
-          {l.prevLessonId ? (
+          {l.prevLessonId && !l.prevLessonLocked ? (
             <Link to={lessonPath(communityId, l.prevLessonId)} className={ghostBtn}>
               <MaterialIcon name="arrow_back" size={19} /> {t('lesson.prev')}
             </Link>
           ) : (
             <span />
           )}
-          {l.nextLessonId ? (
+          {l.nextLessonId && !l.nextLessonLocked ? (
             <Link to={lessonPath(communityId, l.nextLessonId)} className={primaryBtn}>
               {t('lesson.next')} <MaterialIcon name="arrow_forward" size={19} color="#fff" />
             </Link>
@@ -218,9 +218,12 @@ export function LessonPage() {
               key={s.id}
               to={lessonPath(communityId, s.id)}
               aria-current={s.id === l.id ? 'page' : undefined}
-              className={`flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] ${s.id === l.id ? 'bg-brand-soft font-semibold text-brand' : 'hover:bg-white'}`}
+              aria-disabled={s.locked}
+              tabIndex={s.locked ? -1 : undefined}
+              onClick={(e) => s.locked && e.preventDefault()}
+              className={`flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] ${s.id === l.id ? 'bg-brand-soft font-semibold text-brand' : 'hover:bg-white'} ${s.locked ? 'cursor-not-allowed opacity-60' : ''}`}
             >
-              <MaterialIcon name={s.completed ? 'check_circle' : 'radio_button_unchecked'} size={18} filled={s.completed} color={s.completed ? '#f26a1b' : '#a8a29e'} />
+              <MaterialIcon name={s.locked ? 'lock' : s.completed ? 'check_circle' : 'radio_button_unchecked'} size={18} filled={s.completed && !s.locked} color={s.completed && !s.locked ? '#f26a1b' : '#a8a29e'} />
               <span className="min-w-0 flex-1 truncate">{s.title}</span>
               <span className="text-[11px] text-stone-400">{s.durationMin}'</span>
             </Link>

@@ -90,6 +90,9 @@ export interface ClassroomLessonDetail extends ClassroomLessonView {
   moduleIndex: number;
   prevLessonId: string | null;
   nextLessonId: string | null;
+  /** Bài trước/sau đang khóa với người xem (FE vô hiệu hóa nút điều hướng). */
+  prevLessonLocked: boolean;
+  nextLessonLocked: boolean;
 }
 
 export interface ClassroomProgress {

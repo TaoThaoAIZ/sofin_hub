@@ -272,6 +272,8 @@ export interface LessonDetail extends ClassroomLesson {
   learningCourseId?: string;
   prevLessonId: string | null;
   nextLessonId: string | null;
+  prevLessonLocked: boolean;
+  nextLessonLocked: boolean;
 }
 
 export interface CourseProgress {
