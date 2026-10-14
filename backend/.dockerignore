@@ -3,3 +3,6 @@ dist
 .env
 .git
 *.md
+data/codex-home
+# Tài liệu tri thức của chatbot phải có trong image (seed / import)
+!prisma/chatbot-kb/*.md

@@ -427,6 +427,7 @@
       "support_user": "User issues",
       "support_creator": "Creator issues",
       "support_payment": "Payment issues",
+      "support_chatbot": "Chatbot",
       "system_admins": "Admin accounts",
       "system_roles": "Roles & Permissions",
       "system_categories": "Categories",

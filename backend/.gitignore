@@ -5,3 +5,5 @@ dist
 # Prisma client sinh bởi `npm run db:generate` (tự chạy ở postinstall)
 /src/generated
 /coverage
+# CODEX_HOME riêng của chatbot: chứa token đăng nhập ChatGPT + phiên chat của khách — KHÔNG BAO GIỜ commit
+/data/codex-home/

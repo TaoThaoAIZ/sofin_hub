@@ -32,6 +32,7 @@ export const WRITE_LIMITS = {
   likes: 60,
   rsvp: 30,
   votes: 60,
+  chatbot: num('RATE_LIMIT_CHATBOT_PER_MIN', 12),
   general: num('RATE_LIMIT_WRITE_PER_MIN', 60),
 } as const;
 export type WriteBucket = keyof typeof WRITE_LIMITS;

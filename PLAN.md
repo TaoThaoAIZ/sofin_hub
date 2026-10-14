@@ -274,3 +274,17 @@ Chưa làm / cần chốt: 2FA thật (chỉ lưu cờ), thực thi `sessionTime
 
 ## Wizard tạo cộng đồng + gói thành viên theo năm (backend ✅, 2026-10-07)
 Nháp wizard 4 bước (basics/plan/identity/members) → publish; slug availability; nhận diện (logo/ảnh bìa/màu/lời hứa/lợi ích/video), nội quy, câu hỏi gia nhập (lưu bản chụp câu trả lời trên yêu cầu tham gia), giá năm + % tiết kiệm, ước tính doanh thu, danh sách ra mắt + điều kiện Khám phá; payout account **mô phỏng** (chặn rút tiền khi chưa kết nối); gói hosting owner **mô phỏng** (Global Settings `owner.*`, A16 chưa chốt); báo giá checkout server-tính, `Subscription.interval` tháng/năm, dùng thử có thẻ tự trừ cuối kỳ thử + email nhắc 3 ngày trước (job `payments.trialReminders`). Thẻ chỉ lưu brand/last4/hạn + token cổng mock. Chi tiết: `backend/docs/api/community-wizard.md`; migration `20261007100000_community_wizard_annual`; test `community-wizard.test.ts`, `annual-subscription.test.ts`.
+
+## Chatbot hỗ trợ — trợ lý "Tào" ✅ (2026-10-13)
+
+Kế hoạch & lý do: `chatbot.md`. Hợp đồng API: `backend/docs/api/chatbot.md`. Kịch bản test tay: `docs/features/chatbot.md`.
+
+- [x] BE `modules/chatbot/*` (Codex SDK `@openai/codex-sdk`, đăng nhập ChatGPT — 2026-10-14 thay cho OpenAI Agents SDK): khớp câu mẫu trước (pg_trgm, không gọi AI), server gom ngữ cảnh (kho Q&A, tài liệu, danh mục tool, cộng đồng, thanh toán của chính mình, số liệu nền tảng) rồi gọi Codex 1 lượt trả JSON (trả lời + lạc đề/injection + chuyển người), guardrail ra (số tài khoản, giá không nguồn), SSE; Codex bị cô lập (CODEX_HOME riêng, tắt shell/plugin, read-only, không mạng, không secret)
+- [x] Chuyển Zalo = ticket nội bộ `source=chatbot` kèm transcript + Telegram + mã T-… cho khách; không đưa số tài khoản (thanh toán chỉ VietQR/SePay)
+- [x] Học từ chat (job `chatbot.learn` mỗi giờ): tin cậy cao + 👍 ⇒ bật ngay, còn lại chờ duyệt; thêm cách hỏi khác cho câu mẫu
+- [x] Tri thức: 16 FAQ + tài liệu `prisma/chatbot-kb/` (lỗi tool, Ngân Lượng); nhập câu hỏi Zalo đã phân tích thành hàng chờ duyệt (`npm run chatbot:import-candidates`)
+- [x] Danh mục tool chuyển sang BE (`GET /api/tools`), trang `/tools` + bot dùng chung
+- [x] FE: widget nổi (chỉ khi đăng nhập, ẩn ở /admin), Admin > Hỗ trợ > Chatbot (kho mẫu, chờ duyệt, tài liệu, hội thoại, cài đặt)
+- [x] Test: `backend/tests/chatbot.test.ts` (model giả), E2E `e2e/tests/05-chatbot.spec.ts` (`CHATBOT_FAKE_MODEL=1`)
+- [x] Bộ đo chất lượng với model thật: `backend/tests/chatbot-golden.vi.json` (47 câu) + `npm run chatbot:eval`
+- [ ] Chốt các giá trị ở OPEN_DECISIONS A18

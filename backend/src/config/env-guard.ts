@@ -13,6 +13,8 @@ export function productionEnvProblems(cfg: Record<string, unknown>): string[] {
   }
   if (!cfg.DATABASE_URL) problems.push('DATABASE_URL bắt buộc khi production (không có giá trị mặc định)');
   if (cfg.ENABLE_DEV_OUTBOX) problems.push('ENABLE_DEV_OUTBOX không được bật khi production (lộ token đặt lại mật khẩu)');
+  if (cfg.CHATBOT_FAKE_MODEL) problems.push('CHATBOT_FAKE_MODEL không được bật khi production (chatbot trả lời giả)');
+  if (cfg.CHATBOT_TRACE_CONTEXT) problems.push('CHATBOT_TRACE_CONTEXT không được bật khi production (lưu nguyên văn prompt chứa dữ liệu khách)');
   return problems;
 }
 

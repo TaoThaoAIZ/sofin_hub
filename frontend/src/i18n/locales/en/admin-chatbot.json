@@ -1,0 +1,162 @@
+{
+  "title": "Support chatbot",
+  "subtitle": "Sample questions, knowledge, conversations and settings of the Tào assistant",
+  "noKey": "The chatbot is not signed in to ChatGPT, so it is off for users. Go to Settings > ChatGPT account to sign in.",
+  "kpi": {
+    "status": "Status",
+    "on": "On",
+    "off": "Off",
+    "active": "Active samples",
+    "candidates": "Awaiting review",
+    "conversations7d": "Conversations (7d)",
+    "handedOff7d": "Sent to Zalo (7d)",
+    "negative7d": "👎 (7d)"
+  },
+  "tab": {
+    "qa": "Sample questions",
+    "review": "Review queue",
+    "docs": "Documents",
+    "conversations": "Conversations",
+    "settings": "Settings"
+  },
+  "qaStatus": {
+    "active": "Active",
+    "candidate": "Awaiting review",
+    "rejected": "Rejected",
+    "archived": "Archived",
+    "stale": "Needs re-check"
+  },
+  "docStatus": {
+    "active": "Active",
+    "archived": "Archived"
+  },
+  "convStatus": {
+    "all": "All",
+    "open": "Open",
+    "handed_off": "Sent to Zalo",
+    "closed": "Closed"
+  },
+  "source": {
+    "admin": "Admin",
+    "learned": "Learned from chat",
+    "import": "Imported from Zalo"
+  },
+  "answerSource": {
+    "qa_direct": "sample",
+    "agent": "AI",
+    "refusal": "refused",
+    "handoff": "Zalo handoff",
+    "error": "error"
+  },
+  "col": {
+    "question": "Question / answer",
+    "source": "Source",
+    "hits": "Uses",
+    "updated": "Updated",
+    "status": "Status",
+    "document": "Document",
+    "chunks": "Sections",
+    "user": "User",
+    "firstMessage": "First message",
+    "messages": "Messages",
+    "feedback": "Feedback"
+  },
+  "action": {
+    "create": "Add question",
+    "edit": "Edit",
+    "review": "Review",
+    "approve": "Approve & enable",
+    "reject": "Reject",
+    "archive": "Archive",
+    "activate": "Re-enable",
+    "save": "Save",
+    "createDoc": "Add document",
+    "view": "View",
+    "close": "Close",
+    "learnNow": "Run learning now"
+  },
+  "dialog": {
+    "createTitle": "Add sample question",
+    "createBody": "When a message matches closely, the bot replies with this exact answer without calling the AI.",
+    "editTitle": "Edit sample question",
+    "reviewTitle": "Review learned question"
+  },
+  "field": {
+    "question": "Question",
+    "variants": "Other phrasings (one per line)",
+    "answer": "Answer",
+    "tags": "Tags",
+    "tagsPlaceholder": "account, payments",
+    "slug": "Slug",
+    "title": "Title",
+    "content": "Markdown content (each ## section is one chunk)",
+    "docActive": "Bot may use this document"
+  },
+  "searchQa": "Search questions, answers…",
+  "searchConv": "Search content, email, T-… code",
+  "negativeOnly": "Has 👎",
+  "empty": "No data yet.",
+  "reviewHint": "Questions learned from chats or imported from Zalo are only used after approval. Check that prices and fixes are still correct and remove customer details before enabling.",
+  "docsHint": "Documents hold long answers: tool errors, Ngân Lượng pricing… Editing a document marks the sample questions based on it as “Needs re-check”.",
+  "docBody": "The bot may only answer from these sections. Never include bank account numbers.",
+  "chunksPreview": "{{n}} current sections",
+  "redacted": "contains personal data (not learned)",
+  "settings": {
+    "enabled": "Enable the chatbot for users",
+    "zaloSupportUrl": "Zalo support link",
+    "model": "Codex model",
+    "modelDefault": "Empty = ChatGPT account default",
+    "directThreshold": "Direct sample-answer threshold (0.3–1)",
+    "autoLearnThreshold": "Auto-enable threshold for learned answers (0–1)",
+    "maxHistory": "History messages sent to the AI",
+    "maxInputChars": "Max characters per message",
+    "dailyMessagesPerUser": "Max messages per user per day (0 = unlimited)",
+    "autoLearnEnabled": "Auto-enable learned answers with high confidence and a 👍",
+    "zaloHandoffText": "Message when handing off to Zalo ({code} = support code)",
+    "refusalText": "Out-of-scope refusal",
+    "persona": "Voice",
+    "extraInstructions": "Extra instructions for the bot",
+    "rulesNote": "Safety rules (no made-up facts, no tool prices, no bank account numbers, only the customer's own data) are fixed and cannot be changed here."
+  },
+  "toast": {
+    "saved": "Saved",
+    "noChange": "Nothing changed",
+    "approved": "Approved — the bot now uses this answer",
+    "rejected": "Rejected",
+    "archived": "Archived",
+    "activated": "Re-enabled",
+    "docSavedStale": "Saved. {{n}} sample questions marked “Needs re-check”",
+    "learned": "Learned from {{conversations}} conversations: {{activated}} enabled, {{candidates}} to review, {{variants}} new phrasings",
+    "learnSkipped": "The chatbot is off, learning skipped"
+  },
+  "account": {
+    "title": "Chatbot ChatGPT account",
+    "loggedIn": "Signed in",
+    "loggedOut": "Not signed in",
+    "as": "Using account",
+    "plan": "plan",
+    "hint": "The chatbot answers with the Codex SDK running on this ChatGPT account. Sign in with a code: no popup — copy the link and code into a browser on any device.",
+    "login": "Sign in to ChatGPT",
+    "relogin": "Sign in with another account",
+    "starting": "Getting code…",
+    "logout": "Sign out",
+    "logoutConfirm": "Sign out of ChatGPT? The chatbot will be off for users until you sign in again.",
+    "step1": "Open this link in a browser (any device) and sign in to ChatGPT:",
+    "step2": "Enter the one-time code:",
+    "step3": "Confirm on that page. This card updates automatically when done.",
+    "expires": "Code expires at {{time}}",
+    "waiting": "waiting for confirmation…",
+    "cancel": "Cancel",
+    "copy": "Copy",
+    "copied": "Copied",
+    "lastError": "Previous sign-in failed ({{time}})",
+    "superOnly": "Only a Super Admin can view and change the chatbot's ChatGPT account.",
+    "toast": {
+      "loggedIn": "Chatbot signed in to ChatGPT ({{email}})",
+      "loggedOut": "Signed out — the chatbot is off"
+    },
+    "deviceHelp": "Sign-in page says \"Enable device code sign-in…\"? Turn on \"Device code sign-in\" in that ChatGPT account's security settings, then Cancel and sign in again for a new code:",
+    "securityLink": "Open ChatGPT > Settings > Security"
+  },
+  "quota": "The chatbot's ChatGPT account hit its USAGE LIMIT ({{time}}): customers get a \"temporarily busy\" reply and are pointed to Zalo. Sample-answer matches still work. Wait for the limit to reset or sign in with a higher-plan account in Settings. Details: {{message}}"
+}

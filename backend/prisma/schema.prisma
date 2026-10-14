@@ -397,62 +397,63 @@ model User {
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
 
-  sessions            Session[]
-  referralCode        ReferralCode?            @relation("ReferralCodeOwner")
-  referralsMade       Referral[]               @relation("ReferralReferrer")
-  referredBy          Referral?                @relation("ReferralReferred")
-  commissionsEarned   ReferralCommission[]     @relation("CommissionReferrer")
-  commissionsCaused   ReferralCommission[]     @relation("CommissionReferred")
-  oneTimeTokens       OneTimeToken[]
-  emailOtps           EmailOtp[]
-  socialAccounts      SocialAccount[]
-  ownedCommunities    Community[]              @relation("CourseOwner")
-  enrollments         Enrollment[]
-  bansReceived        CommunityBan[]           @relation("BanTarget")
-  bansIssued          CommunityBan[]           @relation("BanIssuer")
-  joinRequests        JoinRequest[]            @relation("JoinRequester")
-  joinRequestsDecided JoinRequest[]            @relation("JoinDecider")
-  invitesCreated      Invite[]
-  reviews             Review[]
-  posts               Post[]
-  comments            PostComment[]
-  likes               PostLike[]
-  likeNotices         PostLikeNotice[]
-  pollVotes           PollVote[]
-  hostedEvents        CommunityEvent[]
-  eventRsvps          EventRsvp[]
-  pointEvents         PointEvent[]
-  lessonProgress      LessonProgress[]
-  moduleAccess        ModuleAccess[]
-  certificates        Certificate[]
-  notifications       Notification[]
-  notificationPrefs   NotificationPreference?
-  conversationsAsA    Conversation[]           @relation("ConversationUserA")
-  conversationsAsB    Conversation[]           @relation("ConversationUserB")
-  messagesSent        Message[]
-  blocksMade          UserBlock[]              @relation("Blocker")
-  blocksReceived      UserBlock[]              @relation("BlockTarget")
-  reportsFiled        Report[]                 @relation("ReportReporter")
-  reportsAgainst      Report[]                 @relation("ReportTargetUser")
-  reportsResolved     Report[]                 @relation("ReportResolver")
-  reportsAssigned     Report[]                 @relation("ReportAssignee")
-  reportEvents        ReportEvent[]
-  auditLogs           AdminAuditLog[]          @relation("AuditActor")
-  payments            Payment[]
-  paymentCards        PaymentCard[]
-  payoutAccountsOwned PayoutAccount[]
-  subscriptions       Subscription[]
-  refundRequests      RefundRequest[]          @relation("RefundRequester")
-  refundsResolved     RefundRequest[]          @relation("RefundResolver")
-  payouts             Payout[]
-  chargebacks         Chargeback[]
-  idempotencyKeys     IdempotencyKey[]
-  uploads             Upload[]
-  ticketsRequested    SupportTicket[]          @relation("TicketRequester")
-  ticketsAssigned     SupportTicket[]          @relation("TicketAssignee")
-  adminAccount        AdminAccount?            @relation("AdminAccountUser")
+  sessions             Session[]
+  referralCode         ReferralCode?            @relation("ReferralCodeOwner")
+  referralsMade        Referral[]               @relation("ReferralReferrer")
+  referredBy           Referral?                @relation("ReferralReferred")
+  commissionsEarned    ReferralCommission[]     @relation("CommissionReferrer")
+  commissionsCaused    ReferralCommission[]     @relation("CommissionReferred")
+  oneTimeTokens        OneTimeToken[]
+  emailOtps            EmailOtp[]
+  socialAccounts       SocialAccount[]
+  ownedCommunities     Community[]              @relation("CourseOwner")
+  enrollments          Enrollment[]
+  bansReceived         CommunityBan[]           @relation("BanTarget")
+  bansIssued           CommunityBan[]           @relation("BanIssuer")
+  joinRequests         JoinRequest[]            @relation("JoinRequester")
+  joinRequestsDecided  JoinRequest[]            @relation("JoinDecider")
+  invitesCreated       Invite[]
+  reviews              Review[]
+  posts                Post[]
+  comments             PostComment[]
+  likes                PostLike[]
+  likeNotices          PostLikeNotice[]
+  pollVotes            PollVote[]
+  hostedEvents         CommunityEvent[]
+  eventRsvps           EventRsvp[]
+  pointEvents          PointEvent[]
+  lessonProgress       LessonProgress[]
+  moduleAccess         ModuleAccess[]
+  certificates         Certificate[]
+  notifications        Notification[]
+  notificationPrefs    NotificationPreference?
+  conversationsAsA     Conversation[]           @relation("ConversationUserA")
+  conversationsAsB     Conversation[]           @relation("ConversationUserB")
+  messagesSent         Message[]
+  blocksMade           UserBlock[]              @relation("Blocker")
+  blocksReceived       UserBlock[]              @relation("BlockTarget")
+  reportsFiled         Report[]                 @relation("ReportReporter")
+  reportsAgainst       Report[]                 @relation("ReportTargetUser")
+  reportsResolved      Report[]                 @relation("ReportResolver")
+  reportsAssigned      Report[]                 @relation("ReportAssignee")
+  reportEvents         ReportEvent[]
+  auditLogs            AdminAuditLog[]          @relation("AuditActor")
+  payments             Payment[]
+  paymentCards         PaymentCard[]
+  payoutAccountsOwned  PayoutAccount[]
+  subscriptions        Subscription[]
+  refundRequests       RefundRequest[]          @relation("RefundRequester")
+  refundsResolved      RefundRequest[]          @relation("RefundResolver")
+  payouts              Payout[]
+  chargebacks          Chargeback[]
+  idempotencyKeys      IdempotencyKey[]
+  uploads              Upload[]
+  ticketsRequested     SupportTicket[]          @relation("TicketRequester")
+  ticketsAssigned      SupportTicket[]          @relation("TicketAssignee")
+  adminAccount         AdminAccount?            @relation("AdminAccountUser")
+  chatbotConversations ChatbotConversation[]
   /// Cột GENERATED ALWAYS (họ tên đã gập dấu).
-  searchVector        Unsupported("tsvector")?
+  searchVector         Unsupported("tsvector")?
 
   @@index([isDemo])
   @@index([status])
@@ -1471,20 +1472,20 @@ model IdempotencyKey {
 /// Giao dịch tiền VÀO từ ngân hàng (SePay webhook hoặc cron quét), ghi lại DÙ khớp hay không để admin soi tiền lạ.
 /// `externalId` UNIQUE ⇒ webhook + quét thấy cùng 1 giao dịch chỉ tạo 1 dòng. Chỉ INSERT/đánh dấu credited — không xóa.
 model BankTransaction {
-  id              String    @id @default(uuid())
-  externalId      String    @unique
-  gateway         String?
-  accountNumber   String?
-  amount          Int
-  description     String
-  referenceCode   String?
-  transactionDate DateTime
+  id               String   @id @default(uuid())
+  externalId       String   @unique
+  gateway          String?
+  accountNumber    String?
+  amount           Int
+  description      String
+  referenceCode    String?
+  transactionDate  DateTime
   matchedPaymentId String?
-  credited        Boolean   @default(false)
+  credited         Boolean  @default(false)
   /// Lý do không khớp / ghi chú (thiếu tiền, phiên hết hạn, chuyển dư...).
-  note            String?
-  rawPayload      Json
-  createdAt       DateTime  @default(now())
+  note             String?
+  rawPayload       Json
+  createdAt        DateTime @default(now())
 
   @@index([credited, createdAt])
   @@index([matchedPaymentId])
@@ -1631,7 +1632,7 @@ model SupportTicket {
   requesterId     String?
   requesterName   String
   requesterEmail  String
-  /// contact_form | user | admin | seed
+  /// contact_form | user | admin | seed | chatbot
   source          String              @default("user")
   assigneeId      String?
   escalated       Boolean             @default(false)
@@ -1892,4 +1893,155 @@ model ReferralCommission {
 
   @@index([referrerId, createdAt])
   @@index([referredUserId])
+}
+
+// ============================================================================
+// CHATBOT HỖ TRỢ (chatbot.md) — kho câu hỏi mẫu, tài liệu tri thức, hội thoại
+// ============================================================================
+
+enum ChatbotQaStatus {
+  active
+  candidate
+  rejected
+  archived
+  /// Tài liệu gốc đã đổi nội dung, cần admin xem lại.
+  stale
+}
+
+enum ChatbotQaSource {
+  admin
+  learned
+  import
+}
+
+enum ChatbotDocStatus {
+  active
+  archived
+}
+
+enum ChatbotConversationStatus {
+  open
+  handed_off
+  closed
+}
+
+enum ChatbotRole {
+  user
+  assistant
+}
+
+enum ChatbotAnswerSource {
+  qa_direct
+  agent
+  refusal
+  handoff
+  error
+}
+
+/// Câu hỏi mẫu + câu trả lời (admin nhập, bot học được, hoặc nhập từ dữ liệu cũ). Chỉ `active` được bot dùng.
+model ChatbotQA {
+  id                   String                   @id @default(uuid())
+  question             String
+  /// Các cách hỏi khác của cùng câu hỏi (khớp như question).
+  variants             String[]                 @default([])
+  answer               String
+  tags                 String[]                 @default([])
+  status               ChatbotQaStatus          @default(active)
+  source               ChatbotQaSource          @default(admin)
+  /// Độ tin cậy do agent trích xuất chấm (0..1); null với Q&A admin nhập.
+  confidence           Float?
+  hitCount             Int                      @default(0)
+  lastHitAt            DateTime?
+  /// Hội thoại sinh ra Q&A (source=learned); không FK để giữ Q&A khi hội thoại bị xóa.
+  sourceConversationId String?
+  /// Tài liệu mà câu trả lời dựa vào; tài liệu đổi nội dung => status=stale.
+  documentId           String?
+  createdById          String?
+  reviewedById         String?
+  reviewedAt           DateTime?
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+  /// Cột GENERATED ALWAYS (question + variants + answer đã gập dấu).
+  searchVector         Unsupported("tsvector")?
+
+  document ChatbotDocument? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  @@index([status, updatedAt])
+  @@index([documentId])
+  @@index([searchVector], type: Gin)
+}
+
+/// Tài liệu tri thức dạng markdown (lỗi thường gặp, cách tính phí...). Mỗi mục `##` thành 1 ChatbotDocChunk.
+model ChatbotDocument {
+  id          String           @id @default(uuid())
+  slug        String           @unique
+  title       String
+  contentMd   String
+  status      ChatbotDocStatus @default(active)
+  /// sha256 của contentMd: nạp lại cùng nội dung thì bỏ qua.
+  contentHash String
+  updatedById String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  chunks ChatbotDocChunk[]
+  qas    ChatbotQA[]
+}
+
+model ChatbotDocChunk {
+  id           String                   @id @default(uuid())
+  documentId   String
+  position     Int
+  heading      String
+  content      String
+  /// Cột GENERATED ALWAYS (heading + content đã gập dấu).
+  searchVector Unsupported("tsvector")?
+
+  document ChatbotDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, position])
+  @@index([searchVector], type: Gin)
+}
+
+model ChatbotConversation {
+  id            String                    @id @default(uuid())
+  userId        String
+  status        ChatbotConversationStatus @default(open)
+  /// Ticket nội bộ tạo khi chuyển sang Zalo (không FK: ticket có vòng đời riêng).
+  ticketId      String?
+  ticketCode    String?
+  /// Job học đã xử lý hội thoại này (null = chưa).
+  learnedAt     DateTime?
+  lastMessageAt DateTime                  @default(now())
+  tokensIn      Int                       @default(0)
+  tokensOut     Int                       @default(0)
+  createdAt     DateTime                  @default(now())
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages ChatbotMessage[]
+
+  @@index([userId, lastMessageAt])
+  @@index([learnedAt, lastMessageAt])
+  @@index([status, lastMessageAt])
+}
+
+model ChatbotMessage {
+  id             String               @id @default(uuid())
+  conversationId String
+  role           ChatbotRole
+  content        String
+  /// Chỉ có ở tin của bot.
+  answerSource   ChatbotAnswerSource?
+  matchedQaId    String?
+  /// [{name, args}] các tool agent đã gọi (để admin xem lại).
+  toolCalls      Json?
+  /// -1 | 0 | 1 (👎 / chưa đánh giá / 👍), chỉ có ý nghĩa với tin của bot.
+  feedback       Int                  @default(0)
+  /// Tin chứa thông tin cá nhân (SĐT, email, STK...) => không dùng để học.
+  redacted       Boolean              @default(false)
+  createdAt      DateTime             @default(now())
+
+  conversation ChatbotConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
 }

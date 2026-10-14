@@ -26,6 +26,9 @@ services:
       postgres:
         condition: service_healthy
     # Lấy credentials S3 từ IAM role của EC2 qua metadata (cần HttpPutResponseHopLimit=2 trên instance).
+    volumes:
+      # CODEX_HOME của chatbot (token đăng nhập ChatGPT + config) — phải bền qua các lần deploy, nếu không phải đăng nhập lại.
+      - chatbot-codex:/app/data/codex-home
 
   web:
     build:
@@ -44,3 +47,4 @@ services:
 
 volumes:
   pgdata:
+  chatbot-codex:

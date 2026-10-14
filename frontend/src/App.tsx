@@ -4,6 +4,7 @@ import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 import { LegacyCourseRedirect } from './components/LegacyCourseRedirect';
 import { ScrollToTop } from './components/ScrollToTop';
 import { ReferralCapture } from './features/referral/ReferralCapture';
+import { ChatWidget } from './features/chatbot/ChatWidget';
 import { ReferralLandingPage } from './features/referral/ReferralLandingPage';
 import { MessagesProvider } from './features/messages/MessagesProvider';
 import { NotificationsProvider } from './features/notifications/NotificationsProvider';
@@ -60,6 +61,7 @@ export default function App() {
       <MessagesProvider>
       <ScrollToTop />
       <ReferralCapture />
+      <ChatWidget />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />

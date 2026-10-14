@@ -26,6 +26,9 @@ import { adminBatch3Router } from './modules/admin/admin-b3.routes.js';
 import { maintenanceGuard, platformRouter } from './modules/platform/platform.routes.js';
 import { moderationRouter } from './modules/moderation/moderation.routes.js';
 import { myCommunitiesRouter } from './modules/my-communities/my-communities.routes.js';
+import { toolsRouter } from './modules/tools/tools.routes.js';
+import { adminChatbotRouter } from './modules/chatbot/admin-chatbot.routes.js';
+import { chatbotRouter } from './modules/chatbot/chatbot.routes.js';
 
 export const apiRouter = Router();
 
@@ -38,6 +41,8 @@ apiRouter.use('/auth', authRouter);
 apiRouter.use('/', mailRouter);
 apiRouter.use('/', usersRouter);
 apiRouter.use('/', supportRouter);
+apiRouter.use('/', toolsRouter);
+apiRouter.use('/', chatbotRouter);
 apiRouter.use('/', ticketsRouter);
 apiRouter.use('/courses', catalogRouter);
 apiRouter.use('/', metaRouter);
@@ -62,3 +67,5 @@ apiRouter.use('/', adminRouter);
 apiRouter.use('/', adminBatch2Router);
 // Admin đợt 3 (analytics / support / system).
 apiRouter.use('/', adminBatch3Router);
+// Admin > Hỗ trợ > Chatbot (/admin/support/chatbot/*, quyền support.manage).
+apiRouter.use('/', adminChatbotRouter);

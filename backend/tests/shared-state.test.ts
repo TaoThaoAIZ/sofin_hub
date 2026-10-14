@@ -243,6 +243,7 @@ describe('guard production: Redis', () => {
       assert.match(w[0]!, new RegExp(key));
     }
     assert.equal(productionEnvWarnings({ NODE_ENV: 'production', DATABASE_URL: 'postgres://x', RUN_SCHEDULERS: true }, {}).length, 3);
+    assert.match(productionEnvProblems({ ...base, CHATBOT_FAKE_MODEL: true }).join('\n'), /CHATBOT_FAKE_MODEL/);
   });
 });
 

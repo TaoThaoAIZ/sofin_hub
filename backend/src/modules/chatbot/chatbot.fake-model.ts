@@ -1,0 +1,74 @@
+import { normalizeText } from '../search/search.text.js';
+import type { KnowledgeContext } from './chatbot.context.js';
+import type { ChatLlm, LlmRequest, LlmUsage } from './chatbot.llm.js';
+import type { AnswerOutput } from './chatbot.prompt.js';
+
+/**
+ * Model GIẢ cho test / E2E / dev chưa đăng nhập ChatGPT (bật bằng CHATBOT_FAKE_MODEL=1; production bị env-guard chặn).
+ * Không gọi mạng, không chạy codex. Dựng câu trả lời xác định từ ngữ cảnh có cấu trúc (`hint`) theo từ khóa:
+ *  - lạc đề nếu tin có "thơ|code|toán|bài tập|poem"; injection nếu "bỏ qua|ignore|system prompt";
+ *  - chuyển người nếu "gặp nhân viên|zalo|hoàn tiền|khiếu nại";
+ *  - còn lại lấy từ thanh toán / số liệu nền tảng / tool / tài liệu / câu mẫu / cộng đồng.
+ * Test ép câu trả lời bằng setFakeReply(), ép kết quả học bằng setFakeLearn().
+ */
+let replyOverride: ((userText: string) => string) | null = null;
+let learnOverride: ((transcript: string) => unknown) | null = null;
+export const fakeCalls: { kind: 'answer' | 'learn'; input: string }[] = [];
+
+export function setFakeReply(fn: ((userText: string) => string) | null) {
+  replyOverride = fn;
+}
+export function setFakeLearn(fn: ((transcript: string) => unknown) | null) {
+  learnOverride = fn;
+}
+export function resetFake() {
+  replyOverride = null;
+  learnOverride = null;
+  fakeCalls.length = 0;
+}
+
+const USAGE: LlmUsage = { tokensIn: 10, tokensOut: 20 };
+
+function answer(message: string, c: KnowledgeContext): AnswerOutput {
+  const t = normalizeText(message);
+  const base: AnswerOutput = { onTopic: true, injection: false, reply: '', handoff: false, handoffCategory: 'user', handoffReason: '', toolIds: [], usedSampleId: '' };
+  if (/\b(tho|code|toan|bai tap|poem)\b/.test(t)) return { ...base, onTopic: false, reply: 'dạ Tào chỉ hỗ trợ về SofinHub thôi ạ' };
+  if (/bo qua|ignore|system prompt/.test(t)) return { ...base, injection: true, reply: 'dạ Tào chỉ hỗ trợ về SofinHub thôi ạ' };
+  if (replyOverride) return { ...base, reply: replyOverride(message) };
+  if (/gap nhan vien|gap nguoi|zalo|hoan tien|khieu nai/.test(t)) {
+    return { ...base, handoff: true, handoffCategory: /hoan tien/.test(t) ? 'payment' : 'user', handoffReason: message.slice(0, 200), reply: 'dạ để Tào chuyển người hỗ trợ cho bạn nha' };
+  }
+  if (/don cua toi|thanh toan cua toi|nhan tien chua|giao dich cua toi/.test(t)) {
+    const p = c.myPayments?.[0];
+    return { ...base, reply: p ? `dạ giao dịch ${p.amount} cho ${p.community} ${p.status} ạ` : 'dạ bạn chưa có giao dịch nào ạ' };
+  }
+  if (/thoi han hoan|phi nen tang|hoa hong|chu ky/.test(t)) return { ...base, reply: `dạ thời hạn hoàn tiền là ${String(c.platformFacts.refundWindowDays)} ngày ạ` };
+  if (/\btool\b/.test(t)) {
+    const hit = c.tools.find((x) => normalizeText(x.name).split(/\W+/).some((w) => w.length > 3 && w !== 'tool' && t.includes(w))) ?? c.tools[0];
+    if (hit) return { ...base, reply: `dạ ${hit.name}: ${hit.description.split('.')[0]} ạ, bạn xem ở trang /tools nha`, toolIds: [hit.id] };
+  }
+  if (/loi|bi chan|unusual|cookie|vpn|ngan luong|429|credit/.test(t) && c.documents[0]) return { ...base, reply: `dạ ${c.documents[0].content.split('\n')[0]}` };
+  if (c.sampleAnswers[0]) return { ...base, reply: c.sampleAnswers[0].answer, usedSampleId: c.sampleAnswers[0].id };
+  if (c.communities[0]) return { ...base, reply: `dạ bạn xem cộng đồng ${c.communities[0].title} ở ${c.communities[0].link} nha` };
+  return { ...base, reply: 'dạ Tào chưa có thông tin chính xác ạ, bạn nhắn Zalo hỗ trợ để được giúp nha', handoff: false };
+}
+
+export class FakeChatModel implements ChatLlm {
+  async complete<T>(req: LlmRequest<T>): Promise<{ output: T; usage: LlmUsage }> {
+    if (req.kind === 'learn') {
+      const transcript = String(req.hint ?? '');
+      fakeCalls.push({ kind: 'learn', input: transcript });
+      const raw = learnOverride
+        ? learnOverride(transcript)
+        : (() => {
+            const q = /Khách: (.+)/.exec(transcript)?.[1];
+            const a = /Bot: (.+)/.exec(transcript)?.[1];
+            return { pairs: q && a ? [{ question: q, answer: a.replace(/ \[khách [^\]]+\]$/, ''), confidence: 0.9, generalizable: true }] : [] };
+          })();
+      return { output: req.schema.parse(raw), usage: USAGE };
+    }
+    const h = req.hint as { message: string; context: KnowledgeContext };
+    fakeCalls.push({ kind: 'answer', input: h.message });
+    return { output: req.schema.parse(answer(h.message, h.context)), usage: USAGE };
+  }
+}

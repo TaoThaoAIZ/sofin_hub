@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { resolve } from 'node:path';
 import { z } from 'zod';
 import { productionEnvProblems, productionEnvWarnings } from './env-guard.js';
 
@@ -107,6 +108,29 @@ const schema = z.object({
   BANK_BIN: z.string().default('970422'),
   BANK_NAME: z.string().default('MB Bank'),
   PAY_REF_PREFIX: z.string().regex(/^[A-Za-z]{2,5}$/, 'PAY_REF_PREFIX: 2-5 chữ cái').default('SFH'),
+
+  // --- Chatbot hỗ trợ: Codex SDK đăng nhập bằng tài khoản ChatGPT (không dùng OpenAI API key), xem chatbot.md. ---
+  // CODEX_HOME riêng của bot (chứa auth.json sau `npm run chatbot:codex-login`). Chưa đăng nhập ⇒ chatbot tắt (503), phần còn lại chạy bình thường.
+  CHATBOT_CODEX_HOME: z
+    .string()
+    .default('data/codex-home')
+    .transform((v) => resolve(v)),
+  /** Đường dẫn tới file thực thi codex (bỏ trống = bản đi kèm @openai/codex-sdk). */
+  CHATBOT_CODEX_PATH: z.string().optional().transform((v) => v?.trim() || undefined),
+  /** Số lượt Codex chạy song song tối đa (mỗi lượt là 1 tiến trình); chờ quá 20s => 503 bận. */
+  CHATBOT_MAX_CONCURRENCY: z.coerce.number().int().min(1).max(20).default(3),
+  /** Thời gian tối đa một lượt trả lời (ms). */
+  CHATBOT_TIMEOUT_MS: z.coerce.number().int().min(5_000).max(300_000).default(90_000),
+  /** =1: lưu nguyên văn prompt gửi model vào ChatbotMessage.toolCalls (`_trace`) để bộ regression dò canary. CHỈ dev/test. */
+  CHATBOT_TRACE_CONTEXT: z
+    .string()
+    .optional()
+    .transform((v) => v === '1'),
+  /** =1: dùng model giả (trả lời cố định, không gọi ChatGPT) cho dev/test/E2E. KHÔNG được bật khi production. */
+  CHATBOT_FAKE_MODEL: z
+    .string()
+    .optional()
+    .transform((v) => v === '1'),
 });
 
 const parsed = schema.safeParse(process.env);

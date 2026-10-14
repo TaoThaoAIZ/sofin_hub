@@ -25,10 +25,16 @@
     "db:seed": "cross-env NODE_ENV=development tsx prisma/seed.ts",
     "db:import-users": "cross-env NODE_ENV=development tsx prisma/import-users-json.ts",
     "db:reset": "prisma migrate reset --force && cross-env NODE_ENV=development tsx prisma/seed.ts",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "chatbot:import-kb": "cross-env NODE_ENV=development tsx prisma/import-chatbot-kb.ts",
+    "chatbot:import-candidates": "cross-env NODE_ENV=development tsx prisma/import-chatbot-candidates.ts",
+    "chatbot:codex-login": "cross-env NODE_ENV=development tsx prisma/chatbot-codex-login.ts",
+    "chatbot:eval": "cross-env NODE_ENV=development tsx prisma/chatbot-eval.ts",
+    "chatbot:qa-fixture": "cross-env NODE_ENV=development tsx prisma/chatbot-qa-fixture.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1147.0",
+    "@openai/codex-sdk": "^0.162.1",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
     "@types/bcryptjs": "^2.4.6",

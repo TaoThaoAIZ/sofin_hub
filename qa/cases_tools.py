@@ -3,7 +3,7 @@
 
 Nguồn: taothao_ai_training (src/lib/toolsCatalog.ts, src/features/tools-download/*) - danh mục 7 tool + bộ lọc + thẻ + form mua;
 giao diện dựng lại bằng style SofinHub (glass, cam #f26a1b). Code: frontend/src/pages/ToolsPage.tsx, frontend/src/features/tools/*,
-i18n namespace `tools`, mục menu 'Tải Tool' ở Header. Dữ liệu tool là tĩnh (frontend/src/features/tools/catalog.ts), KHÔNG gọi API.
+i18n namespace `tools`, mục menu 'Tải Tool' ở Header. Dữ liệu tool: backend/src/modules/tools/tools.catalog.ts, trang đọc qua GET /api/tools (từ 13/10/2026, dùng chung với chatbot).
 Form 'Mua ngay' gửi qua POST /api/tools/lead {name, phone, email?, toolId, toolName} -> 202: tạo ticket 'Mua tool: <tên>' (Admin > Hỗ trợ) + thư tới SUPPORT_EMAIL + tin Telegram 'YÊU CẦU MUA TOOL MỚI' tới nhóm TELEGRAM_CHAT_ID (cùng nhóm với taothaoai). Email không bắt buộc.
 Thêm case mới = thêm CUỐI file (giữ mã TC-TOOLS-nnn)."""
 DONE = "Đã hoàn thiện"

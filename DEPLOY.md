@@ -54,9 +54,15 @@ Dữ liệu nghiệp vụ (tài khoản, khóa học, ghi danh, phiên đăng nh
    | `SUPPORT_EMAIL` | Không | Hộp thư nhận form liên hệ. |
    | `TRIAL_DAYS`, `SUBSCRIPTION_PERIOD_DAYS`, `REFUND_WINDOW_DAYS`, `PLATFORM_COMMISSION_PCT`, `GATEWAY_FEE_PCT`, `GATEWAY_FEE_FIXED_CENTS`, `PAYOUT_MIN_USD` | Không | Giá trị nghiệp vụ TẠM (chờ chốt) — nay chỉnh ở Admin > System > Global Settings, env chỉ là mặc định. |
    | `RUN_MIGRATIONS` | Tùy chọn | `1` = container tự chạy `prisma migrate deploy` trước khi start (xem 1.3). |
+   | `CHATBOT_CODEX_HOME` | Nên | Thư mục CODEX_HOME riêng của chatbot (mặc định `data/codex-home`; trên server nên trỏ vào **ổ đĩa bền** vì chứa token đăng nhập ChatGPT). Đăng nhập 1 lần: Admin > Hỗ trợ > Chatbot > Cài đặt > "Tài khoản ChatGPT của chatbot" (Super Admin, copy link + mã), hoặc `npm run chatbot:codex-login` trong container. Chưa đăng nhập → chatbot tắt (`/api/chatbot/*` trả 503), app vẫn chạy. |
+   | `CHATBOT_TRACE_CONTEXT` | **PHẢI ĐỂ TRỐNG khi production** | `1` = lưu nguyên văn prompt gửi model (chỉ cho bộ regression QA). Bật khi production → app **từ chối khởi động**. |
+   | `CHATBOT_MAX_CONCURRENCY` / `CHATBOT_TIMEOUT_MS` | Không | `3` / `90000`: số tiến trình `codex` chạy song song và thời gian tối đa mỗi lượt. Hạn mức dùng của tài khoản ChatGPT là giới hạn thật. |
+   | `CHATBOT_FAKE_MODEL` | **PHẢI ĐỂ TRỐNG khi production** | `1` = chatbot dùng model giả (dev/test/E2E). Bật khi production → app **từ chối khởi động**. |
    | `ENABLE_DEV_OUTBOX` | **PHẢI ĐỂ TRỐNG khi production** | Mở `GET /api/dev/outbox` (không cần đăng nhập, lộ nguyên văn mọi email gồm link đặt lại mật khẩu). Bật khi production → app **từ chối khởi động**. Chỉ dùng ở máy dev (`backend/.env`) và test. |
 
-   **Chốt chặn khi `NODE_ENV=production`** (`backend/src/config/env-guard.ts`): app thoát ngay nếu (1) bất kỳ secret nào còn giá trị mặc định `dev-*`, (2) thiếu `DATABASE_URL`, (3) `ENABLE_DEV_OUTBOX` được bật. Ngoài production: cookie refresh vẫn `Secure` trừ khi `NODE_ENV=development`; lỗi 500 chỉ lộ chi tiết khi `NODE_ENV=development`.
+   **Chốt chặn khi `NODE_ENV=production`** (`backend/src/config/env-guard.ts`): app thoát ngay nếu (1) bất kỳ secret nào còn giá trị mặc định `dev-*`, (2) thiếu `DATABASE_URL`, (3) `ENABLE_DEV_OUTBOX` được bật, (4) `CHATBOT_FAKE_MODEL` hoặc `CHATBOT_TRACE_CONTEXT` được bật.
+
+   **Chatbot trên AWS** (`deploy/aws/docker-compose.yml`): volume `chatbot-codex` giữ token ChatGPT của bot qua các lần deploy. Sau lần deploy đầu tiên có chatbot, Super Admin vào Admin > Hỗ trợ > Chatbot > Cài đặt > "Tài khoản ChatGPT của chatbot" → đăng nhập bằng mã thiết bị (copy link + mã, tài khoản ChatGPT phải bật "Device code sign-in"). Nên dùng tài khoản gói trả phí: gói free hết hạn mức rất nhanh (bot sẽ trả "tạm quá tải" + mời nhắn Zalo). Ngoài production: cookie refresh vẫn `Secure` trừ khi `NODE_ENV=development`; lỗi 500 chỉ lộ chi tiết khi `NODE_ENV=development`.
 
 5. **Create Web Service** → chờ build → copy URL Render cấp (dạng `https://sofinhub-api.onrender.com`).
 

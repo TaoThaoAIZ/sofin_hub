@@ -18,7 +18,7 @@ import {
   AdminTransactionsPage,
 } from './PaymentsPages';
 import { AdminAnalyticsCommunitiesPage, AdminAnalyticsConversionPage, AdminAnalyticsEngagementPage, AdminAnalyticsRetentionPage, AdminAnalyticsRevenuePage, AdminAnalyticsUsersPage } from './AnalyticsPages';
-import { AdminCreatorIssuesPage, AdminPaymentIssuesPage, AdminTicketsPage, AdminUserIssuesPage } from './SupportPages';
+import { AdminChatbotPage, AdminCreatorIssuesPage, AdminPaymentIssuesPage, AdminTicketsPage, AdminUserIssuesPage } from './SupportPages';
 import { AdminAdminsPage, AdminAuditPage, AdminEmailTemplatesPage, AdminFlagsPage, AdminIntegrationsPage, AdminNotificationsPage, AdminRolesPage, AdminSettingsPage, AdminSystemCategoriesPage } from './SystemPages';
 import { AdminUserDetailPage, AdminUsersBannedPage, AdminUsersPage, AdminUsersRestrictedPage } from './UsersPages';
 
@@ -74,6 +74,7 @@ export default function AdminRoutes() {
         <Route path="support/user" element={<AdminUserIssuesPage />} />
         <Route path="support/creator" element={<AdminCreatorIssuesPage />} />
         <Route path="support/payment" element={<AdminPaymentIssuesPage />} />
+        <Route path="support/chatbot" element={<AdminChatbotPage />} />
         <Route path="system/admins" element={<AdminAdminsPage />} />
         <Route path="system/roles" element={<AdminRolesPage />} />
         <Route path="system/categories" element={<AdminSystemCategoriesPage />} />
