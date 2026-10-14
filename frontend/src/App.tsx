@@ -102,6 +102,8 @@ export default function App() {
         <Route path="/me/communities" element={<MyCommunitiesPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/tools" element={<ToolsPage />} />
+        {/* Danh sách khóa học (chatbot dẫn tới "/explore") = mục khóa học ở trang chủ. */}
+        <Route path="/explore" element={<Navigate to="/#courses" replace />} />
         <Route path="/certificates/:code" element={<CertificateVerifyPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/messages" element={<MessagesPage />} />

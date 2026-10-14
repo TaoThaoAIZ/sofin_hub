@@ -32,6 +32,8 @@ export interface KnowledgeContext {
   documents: { document: string; section: string; content: string }[];
   tools: ReturnType<typeof toolView>[];
   communities: { title: string; summary: string; link: string; price?: string }[];
+  /** Chủ đề khóa học đang có (chỉ khi khách hỏi chung về khóa học mà chưa nói chủ đề) — để bot hỏi lại + gợi ý. */
+  categories: { name: string; courses: number }[];
   /** null = không đưa vào ngữ cảnh (câu hỏi không liên quan đơn/thanh toán) — giảm dữ liệu cá nhân gửi sang ChatGPT. */
   myPayments: { community: string; amount: string; status: string; type: string; createdAt: string; transferContent?: string; refunded?: string }[] | null;
   platformFacts: Record<string, unknown>;
@@ -104,9 +106,28 @@ const CATALOG_TOPIC = /\b(khoa hoc|cong dong|lop hoc|hoc phi|dang ky hoc|course|
 
 const LISTED = { deletedAt: null, locked: false, moderationStatus: 'active', discoveryStatus: 'listed', visibility: 'public' } as const;
 
-async function featuredCommunities(limit: number): Promise<KnowledgeContext['communities']> {
+/** Chủ đề (DiscoveryCategory đang bật) có ít nhất 1 khóa học hiển thị, nhiều khóa học trước. */
+async function courseCategories(): Promise<(KnowledgeContext['categories'][number] & { key: string })[]> {
+  const [cats, counts] = await Promise.all([
+    prisma.discoveryCategory.findMany({ where: { status: 'active' }, orderBy: [{ position: 'asc' }, { key: 'asc' }], select: { key: true, name: true } }),
+    prisma.community.groupBy({ by: ['category'], where: LISTED, _count: true }),
+  ]);
+  const n = new Map(counts.map((c) => [c.category as string, c._count]));
+  return cats
+    .map((c) => ({ key: c.key as string, name: c.name, courses: n.get(c.key) ?? 0 }))
+    .filter((c) => c.courses > 0)
+    .sort((a, b) => b.courses - a.courses);
+}
+
+/** Tên chủ đề khách nhắc tới (vd bấm gợi ý "Công nghệ") — so khớp không dấu với tên danh mục. */
+function categoryIn(texts: string[], cats: { key: string; name: string }[]) {
+  const t = ` ${texts.map(normalizeText).join(' ')} `;
+  return cats.find((c) => t.includes(` ${normalizeText(c.name)} `));
+}
+
+async function featuredCommunities(limit: number, category?: string): Promise<KnowledgeContext['communities']> {
   const rows = await prisma.community.findMany({
-    where: LISTED,
+    where: { ...LISTED, ...(category ? { category: category as never } : {}) },
     orderBy: [{ students: 'desc' }, { rating: 'desc' }, { id: 'asc' }],
     take: limit,
     select: { id: true, title: true, description: true, pricing: true, priceCents: true, priceAnnualCents: true },
@@ -129,7 +150,7 @@ async function featuredCommunities(limit: number): Promise<KnowledgeContext['com
 export async function gatherContext(ctx: ChatContext, text: string, recentUserTexts: string[] = []): Promise<KnowledgeContext> {
   const wantPayments = isPaymentTopic([text, ...recentUserTexts.slice(-1)]);
   const wantCatalog = CATALOG_TOPIC.test(normalizeText(text));
-  const [qa, chunks, found, payments] = await Promise.all([
+  const [qa, chunks, found, payments, cats] = await Promise.all([
     chatbotRepository.matchQa(text, { limit: 5, order: 'blend' }),
     chatbotRepository.searchChunks(text, 4),
     searchService
@@ -142,15 +163,20 @@ export async function gatherContext(ctx: ChatContext, text: string, recentUserTe
       )
       .catch(() => []),
     wantPayments ? myPayments(ctx.userId) : Promise.resolve(null),
+    courseCategories().catch(() => []),
   ]);
-  // Không khớp cộng đồng nào mà câu hỏi nói về khóa học/cộng đồng => cộng đồng nổi bật (có giá).
-  const communities = found.length || !wantCatalog ? found : await featuredCommunities(5);
+  // Khách nhắc tên một chủ đề (thường do bấm gợi ý) => khóa học của chủ đề đó (có giá).
+  // Hỏi chung về khóa học mà không khớp gì => KHÔNG liệt kê khóa học; đưa danh sách chủ đề để bot hỏi lại khách quan tâm chủ đề nào.
+  const topic = found.length ? undefined : categoryIn([text], cats);
+  const communities = topic ? await featuredCommunities(5, topic.key) : found;
+  const categories = !topic && !found.length && wantCatalog ? cats.map(({ name, courses }) => ({ name, courses })) : [];
   return {
     sampleAnswers: qa.map((q) => ({ id: q.id, question: q.question, answer: q.answer })),
     documents: chunks.map((c) => ({ document: c.documentTitle, section: c.heading, content: c.content })),
     sources: { qaIds: qa.map((q) => q.id), chunks: chunks.map((c) => ({ id: c.id, documentId: c.documentId })) },
     tools: TOOLS.map(toolView),
     communities,
+    categories,
     myPayments: payments,
     platformFacts: platformFacts(),
   };

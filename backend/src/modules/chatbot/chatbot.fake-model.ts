@@ -31,7 +31,7 @@ const USAGE: LlmUsage = { tokensIn: 10, tokensOut: 20 };
 
 function answer(message: string, c: KnowledgeContext): AnswerOutput {
   const t = normalizeText(message);
-  const base: AnswerOutput = { onTopic: true, injection: false, reply: '', handoff: false, handoffCategory: 'user', handoffReason: '', toolIds: [], usedSampleId: '' };
+  const base: AnswerOutput = { onTopic: true, injection: false, reply: '', handoff: false, handoffCategory: 'user', handoffReason: '', toolIds: [], usedSampleId: '', suggestions: [] };
   if (/\b(tho|code|toan|bai tap|poem)\b/.test(t)) return { ...base, onTopic: false, reply: 'dạ Tào chỉ hỗ trợ về SofinHub thôi ạ' };
   if (/bo qua|ignore|system prompt/.test(t)) return { ...base, injection: true, reply: 'dạ Tào chỉ hỗ trợ về SofinHub thôi ạ' };
   if (replyOverride) return { ...base, reply: replyOverride(message) };
@@ -47,7 +47,13 @@ function answer(message: string, c: KnowledgeContext): AnswerOutput {
     const hit = c.tools.find((x) => normalizeText(x.name).split(/\W+/).some((w) => w.length > 3 && w !== 'tool' && t.includes(w))) ?? c.tools[0];
     if (hit) return { ...base, reply: `dạ ${hit.name}: ${hit.description.split('.')[0]} ạ, bạn xem ở trang /tools nha`, toolIds: [hit.id] };
   }
+  // Hỏi chung về khóa học => hỏi lại chủ đề + gợi ý (giống luật trong prompt).
+  if (c.categories.length && !c.communities.length) {
+    return { ...base, reply: 'dạ bạn quan tâm chủ đề nào ạ, Tào gợi ý khóa học phù hợp nha. Bạn cũng xem toàn bộ ở trang /explore ạ', suggestions: c.categories.slice(0, 4).map((x) => x.name) };
+  }
   if (/loi|bi chan|unusual|cookie|vpn|ngan luong|429|credit/.test(t) && c.documents[0]) return { ...base, reply: `dạ ${c.documents[0].content.split('\n')[0]}` };
+  // Khách bấm gợi ý chủ đề (tin ngắn) => giới thiệu khóa học của chủ đề đó.
+  if (c.communities[0] && t.split(/\s+/).length <= 4) return { ...base, reply: `dạ bạn xem khóa học ${c.communities[0].title} ở ${c.communities[0].link} nha` };
   if (c.sampleAnswers[0]) return { ...base, reply: c.sampleAnswers[0].answer, usedSampleId: c.sampleAnswers[0].id };
   if (c.communities[0]) return { ...base, reply: `dạ bạn xem cộng đồng ${c.communities[0].title} ở ${c.communities[0].link} nha` };
   return { ...base, reply: 'dạ Tào chưa có thông tin chính xác ạ, bạn nhắn Zalo hỗ trợ để được giúp nha', handoff: false };

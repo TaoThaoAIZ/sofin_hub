@@ -37,6 +37,8 @@ function Launcher({ onOpen }: { onOpen: () => void }) {
 
 interface Bubble extends ChatMessage {
   tools?: ToolCard[];
+  /** Lựa chọn trả lời nhanh khi bot hỏi lại (chỉ hiện dưới tin mới nhất). */
+  suggestions?: string[];
 }
 
 function ChatPanel(props: { onClose: () => void; zaloUrl: string | null; maxChars: number }) {
@@ -98,12 +100,13 @@ function ChatSession({
     return r.conversation;
   }
 
-  async function send(e?: FormEvent) {
+  /** Gửi ô nhập, hoặc `preset` khi bấm một gợi ý trả lời nhanh (ô nhập giữ nguyên). */
+  async function send(e?: FormEvent, preset?: string) {
     e?.preventDefault();
-    const text = draft.trim();
+    const text = (preset ?? draft).trim();
     if (!text || pending) return;
     setError(null);
-    setDraft('');
+    if (preset === undefined) setDraft('');
     setPending({ user: text, reply: '' });
     try {
       const conv = await ensureConversation();
@@ -112,13 +115,13 @@ function ChatSession({
         onReplace: (r) => setPending((p) => (p ? { ...p, reply: r } : p)),
       });
       const userMsg: Bubble = { id: `local-${done.message.id}`, role: 'user', content: text, answerSource: null, feedback: 0, createdAt: done.message.createdAt };
-      setMessages((m) => [...m, userMsg, { ...done.message, tools: done.tools }]);
+      setMessages((m) => [...m, userMsg, { ...done.message, tools: done.tools, suggestions: done.suggestions }]);
       setConversation(done.conversation);
       if (done.handoff) setHandoff(done.handoff);
       void qc.invalidateQueries({ queryKey: chatbotKeys.current });
     } catch (err) {
       setError(errText(err));
-      setDraft(text);
+      if (preset === undefined) setDraft(text);
     } finally {
       setPending(null);
     }
@@ -198,10 +201,24 @@ function ChatSession({
             </div>
           </div>
         )}
-        {messages.map((m) => (
+        {messages.map((m, i) => (
           <Fragment key={m.id}>
             <MessageBubble m={m} onRate={(v) => void rate(m, v)} />
             {m.tools && m.tools.length > 0 && <ToolCards tools={m.tools} />}
+            {!pending && i === messages.length - 1 && m.suggestions && m.suggestions.length > 0 && (
+              <div className="flex flex-wrap gap-2 pl-1" role="group" aria-label={t('quickReplies')}>
+                {m.suggestions.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => void send(undefined, s)}
+                    className="rounded-xl border border-brand/40 bg-white px-3 py-1.5 text-[13px] font-medium text-brand hover:bg-brand/10"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
           </Fragment>
         ))}
         {pending && (
@@ -346,6 +363,7 @@ const PAGE_LABELS: [prefix: string, key: string][] = [
   ['/courses/', 'community'],
   ['/forgot-password', 'forgotPassword'],
   ['/tools', 'tools'],
+  ['/explore', 'explore'],
   ['/contact', 'contact'],
   ['/faq', 'faq'],
   ['/messages', 'messages'],
@@ -359,12 +377,27 @@ const LINK_CLS = 'rounded-md bg-brand/10 px-1 font-semibold text-brand hover:bg-
 
 /**
  * Đường dẫn nội bộ (/tools, /settings/...) hiện thành TÊN TRANG tô màu, bấm được (không hiện dấu "/");
- * URL https hiện tên miền (zalo.me => "Zalo").
+ * URL https hiện tên miền (zalo.me => "Zalo"). Link markdown `[Tên khóa học](/communities/abc)` hiện đúng tên đó.
  */
 function Linkified({ text }: { text: string }) {
   const { t } = useTranslation('chatbot');
+  const segments = text.split(/(\[[^\]\n]{1,120}\]\((?:\/[a-z0-9][a-z0-9\-/]*|https:\/\/[^\s)]+)\))/gi);
+  return (
+    <>
+      {segments.map((seg, i) => {
+        const md = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(seg);
+        if (!md) return <PlainLinks key={i} text={seg} t={t} />;
+        return <PlainLinks key={i} text={md[2]!} label={md[1]!} t={t} />;
+      })}
+    </>
+  );
+}
+
+/** `label` (từ link markdown) thay cho tên trang / tên miền; đường dẫn không hợp lệ thì chỉ hiện `label` dạng chữ. */
+function PlainLinks({ text, label, t }: { text: string; label?: string; t: (k: string) => string }) {
   // Đường dẫn phải đứng riêng: trước không phải chữ/số/"/"/"." và sau không phải chữ (kể cả chữ có dấu) — "200.000đ/tháng" không phải link.
   const parts = text.split(/(https:\/\/[^\s)]+|(?<![\p{L}\p{N}/.])\/[a-z0-9][a-z0-9\-/]*(?![\p{L}\p{N}]))/giu);
+  if (label !== undefined && parts.length !== 3) return <>{label}</>;
   const pageOf = (path: string) =>
     // Tiền tố kết thúc bằng "/" khớp mọi trang con (/communities/abc); còn lại khớp đúng trang hoặc trang con của nó.
     PAGE_LABELS.find(([prefix]) => (prefix.endsWith('/') ? path.startsWith(prefix) : path === prefix || path.startsWith(`${prefix}/`)));
@@ -382,7 +415,7 @@ function Linkified({ text }: { text: string }) {
         if (/^https:\/\//i.test(p))
           return (
             <a key={i} href={p} target="_blank" rel="noopener noreferrer" title={p} className={LINK_CLS}>
-              {hostLabel(p)}
+              {label ?? hostLabel(p)}
             </a>
           );
         const page = /^\/[a-z0-9]/i.test(p) ? pageOf(p.replace(/\/+$/, '')) : undefined;
@@ -391,10 +424,11 @@ function Linkified({ text }: { text: string }) {
           const path = p.replace(/\/+$/, '');
           return (
             <Link key={i} to={path} title={path} className={LINK_CLS}>
-              {t(`pages.${page[1]}`)}
+              {label ?? t(`pages.${page[1]}`)}
             </Link>
           );
         }
+        if (label !== undefined) return p ? <Fragment key={i}>{label}</Fragment> : null;
         return <Fragment key={i}>{p}</Fragment>;
       })}
     </>

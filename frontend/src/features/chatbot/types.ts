@@ -41,6 +41,8 @@ export interface DoneData {
   conversation: ChatConversation;
   handoff: Handoff | null;
   tools: ToolCard[];
+  /** Lựa chọn trả lời nhanh khi bot hỏi lại khách. */
+  suggestions: string[];
 }
 
 export interface ConversationState {

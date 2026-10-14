@@ -69,6 +69,19 @@ test.describe('Chatbot hỗ trợ', () => {
     await expect(panel.getByText(/Mã hỗ trợ của bạn: T-\d+/)).toBeVisible();
   });
 
+  test('TC-CHATBOT-007: hỏi chung về khóa học => bot hỏi lại chủ đề kèm nút gợi ý; bấm gợi ý => khóa học của chủ đề', async ({ page }) => {
+    await uiLogin(page, 'member1@sofinhub.test');
+    const panel = await openWidget(page);
+    await ask(panel, 'bên mình có những khóa học nào vậy');
+    await expect(panel.getByText(/quan tâm chủ đề nào/)).toBeVisible();
+    await expect(panel.getByRole('link', { name: 'Khám phá khóa học' })).toHaveAttribute('href', '/explore');
+    const chips = panel.getByRole('group', { name: 'Gợi ý trả lời nhanh' }).getByRole('button');
+    await expect(chips.first()).toBeVisible();
+    await chips.first().click();
+    await expect(panel.getByRole('link', { name: 'trang cộng đồng' }).last()).toHaveAttribute('href', /^\/communities\//);
+    await expect(panel.getByRole('group', { name: 'Gợi ý trả lời nhanh' })).toHaveCount(0);
+  });
+
   test('TC-CHATBOT-006: admin xem trang Chatbot (kho mẫu, chờ duyệt, cài đặt)', async ({ page }) => {
     await uiLogin(page, 'admin@sofinhub.test');
     await page.goto('/admin/support/chatbot');

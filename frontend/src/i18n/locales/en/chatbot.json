@@ -41,6 +41,8 @@
     "search": "Search",
     "register": "Sign up",
     "login": "Log in",
-    "fallback": "this page"
-  }
+    "fallback": "this page",
+    "explore": "Explore courses"
+  },
+  "quickReplies": "Quick replies"
 }

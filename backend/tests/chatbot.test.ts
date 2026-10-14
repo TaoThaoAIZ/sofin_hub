@@ -470,7 +470,7 @@ describe('chatbot', () => {
       assert.equal(codes.at(-1), codes[MAX_NEW_HANDOFF_TICKETS_PER_DAY - 1]);
     });
 
-    it('chỉ đưa giao dịch của khách vào ngữ cảnh khi câu hỏi nhắc tới đơn/thanh toán; hỏi khóa học => có cộng đồng nổi bật kèm giá', async () => {
+    it('chỉ đưa giao dịch của khách vào ngữ cảnh khi câu hỏi nhắc tới đơn/thanh toán; hỏi chung khóa học => danh sách chủ đề (không liệt kê giá); nói chủ đề => khóa học của chủ đề', async () => {
       const { gatherContext, isPaymentTopic } = await import('../src/modules/chatbot/chatbot.context.js');
       const u = await c.registerUser('cbctx');
       await prisma.payment.create({ data: { communityId: 'photo', userId: u.id, method: 'bank_transfer', amountCents: 444000, status: 'succeeded' } });
@@ -486,8 +486,31 @@ describe('chatbot', () => {
       assert.ok(follow.myPayments, 'câu nối tiếp sau câu hỏi về đơn vẫn có giao dịch');
 
       const catalog = await gatherContext(ctx, 'Chào bạn, bên mình có những khóa học nào? Hãy giới thiệu nội dung, học phí, thời hạn truy cập và cách đăng ký.');
-      assert.ok(catalog.communities.length > 0, 'câu hỏi chung về khóa học có cộng đồng nổi bật');
-      assert.ok(catalog.communities.every((x) => x.link.startsWith('/communities/') && x.price));
+      assert.equal(catalog.communities.length, 0, 'hỏi chung: không liệt kê khóa học kèm giá');
+      assert.ok(catalog.categories.length > 0, 'hỏi chung: có danh sách chủ đề để hỏi lại');
+      assert.ok(catalog.categories.every((x) => x.courses > 0));
+
+      const topic = catalog.categories[0]!.name;
+      const picked = await gatherContext(ctx, topic);
+      assert.ok(picked.communities.length > 0, `chọn chủ đề "${topic}" => có khóa học của chủ đề đó`);
+      assert.ok(picked.communities.every((x) => x.link.startsWith('/communities/') && x.price));
+      assert.equal(picked.categories.length, 0);
+    });
+
+    it('bot hỏi lại => trả gợi ý trả lời nhanh; chuyển người / trả câu mẫu => không có gợi ý', async () => {
+      const u = await c.registerUser('cbsugg');
+      const conv = await start(u);
+      const r = await c.call('POST', `/chatbot/conversations/${conv}/messages`, { token: u.token, body: { text: 'bên mình có những khóa học nào vậy' } });
+      assert.equal(r.status, 200);
+      const d = r.body.data as { message: { content: string }; suggestions: string[] };
+      assert.ok(d.suggestions.length >= 1 && d.suggestions.length <= 4, JSON.stringify(d.suggestions));
+      assert.match(d.message.content, /\/explore/);
+      assert.doesNotMatch(d.message.content, /\d{2,3}\.\d{3}đ/, 'không liệt kê học phí');
+
+      const direct = await c.call('POST', `/chatbot/conversations/${conv}/messages`, { token: u.token, body: { text: 'quên mật khẩu thì làm sao' } });
+      assert.deepEqual(direct.body.data.suggestions, []);
+      const hand = await c.call('POST', `/chatbot/conversations/${conv}/messages`, { token: u.token, body: { text: 'cho gặp nhân viên' } });
+      assert.deepEqual(hand.body.data.suggestions, []);
     });
   });
 

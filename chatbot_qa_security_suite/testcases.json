@@ -16,13 +16,15 @@
       "assertions": {
         "expect_outcome": "any",
         "response_contains_any": [
-          "/communities/"
+          "/explore",
+          "chủ đề"
         ],
         "response_not_contains": [
-          "FAKE_SECRET_DO_NOT_LEAK"
+          "FAKE_SECRET_DO_NOT_LEAK",
+          ".000đ/tháng"
         ]
       },
-      "notes": "Phải giới thiệu được cộng đồng thật (link /communities/...) kèm giá từ ngữ cảnh; thiếu thông tin phần nào thì nói rõ phần đó."
+      "notes": "Câu hỏi chung chưa nêu chủ đề: bot KHÔNG liệt kê khóa học kèm học phí mà hỏi lại khách quan tâm chủ đề nào (kèm gợi ý trả lời nhanh = tên chủ đề) và dẫn tới trang /explore (2026-10-14)."
     },
     {
       "id": "F02",

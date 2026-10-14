@@ -31,6 +31,8 @@ export interface DoneData {
   conversation: { id: string; status: string; ticketCode: string | null };
   handoff: HandoffResult | null;
   tools: ToolCard[];
+  /** Lựa chọn trả lời nhanh khi bot hỏi lại khách (widget hiện thành nút; bấm = gửi đúng chữ đó). */
+  suggestions: string[];
 }
 
 export interface ToolCard {
@@ -58,6 +60,17 @@ const ERROR_TEXT = 'dạ Tào đang gặp trục trặc một chút, bạn thử
 const BUSY_TEXT = 'dạ hiện nhiều bạn hỏi cùng lúc quá, bạn thử lại sau ít giây hoặc nhắn Zalo hỗ trợ nha';
 const QUOTA_TEXT = 'dạ hiện Tào đang tạm quá tải, bạn thử lại sau ít phút hoặc bấm "Nhắn Zalo hỗ trợ" để gặp người hỗ trợ ngay nha';
 
+/** Gợi ý trả lời nhanh từ model: gọn, không trùng, tối đa 4; bỏ mục vi phạm guardrail (số tài khoản, số tiền không nguồn...). */
+function cleanSuggestions(items: string[], sources: string[]): string[] {
+  const out: string[] = [];
+  for (const raw of items) {
+    const v = raw.replace(/\s+/g, ' ').trim().slice(0, 60);
+    if (!v || checkOutput(v, sources) || out.some((o) => o.toLowerCase() === v.toLowerCase())) continue;
+    out.push(v);
+  }
+  return out.slice(0, 4);
+}
+
 const toolCards = (ids: string[]): ToolCard[] =>
   [...new Set(ids)]
     .map((id) => TOOLS.find((t) => t.id === id))
@@ -76,6 +89,7 @@ function contextTrace(context: KnowledgeContext, toolIds: string[], prompt: stri
   if (context.documents.length) out.push({ name: 'documents', chunks: context.sources.chunks });
   if (toolIds.length) out.push({ name: 'tools', ids: toolIds });
   if (context.communities.length) out.push({ name: 'communities', links: context.communities.map((c) => c.link) });
+  if (context.categories.length) out.push({ name: 'categories', names: context.categories.map((c) => c.name) });
   if (context.myPayments !== null) out.push({ name: 'my_payments', count: context.myPayments.length });
   out.push({ name: 'platform_facts' });
   if (env.CHATBOT_TRACE_CONTEXT) out.push({ name: '_trace', prompt });
@@ -141,7 +155,7 @@ export const chatbotService = {
     const finish = async (
       content: string,
       answerSource: 'qa_direct' | 'agent' | 'refusal' | 'handoff' | 'error',
-      extra: { matchedQaId?: string | null; toolCalls?: Prisma.InputJsonValue; usage?: { tokensIn: number; tokensOut: number }; handoff?: HandoffResult | null; tools?: ToolCard[] } = {},
+      extra: { matchedQaId?: string | null; toolCalls?: Prisma.InputJsonValue; usage?: { tokensIn: number; tokensOut: number }; handoff?: HandoffResult | null; tools?: ToolCard[]; suggestions?: string[] } = {},
     ): Promise<DoneData> => {
       const msg = await conversationRepository.addMessage(
         conv.id,
@@ -149,7 +163,7 @@ export const chatbotService = {
         extra.usage,
       );
       const fresh = (await conversationRepository.findById(conv.id)) ?? conv;
-      const done: DoneData = { message: messageView(msg), conversation: convView(fresh), handoff: extra.handoff ?? null, tools: extra.tools ?? [] };
+      const done: DoneData = { message: messageView(msg), conversation: convView(fresh), handoff: extra.handoff ?? null, tools: extra.tools ?? [], suggestions: extra.suggestions ?? [] };
       emit({ event: 'done', data: done });
       return done;
     };
@@ -177,7 +191,8 @@ export const chatbotService = {
         return finish(s.refusalText, 'refusal', { usage, toolCalls });
       }
       let reply = output.reply.trim();
-      const violation = checkOutput(reply, sourcesOf(context, text));
+      const sources = sourcesOf(context, text);
+      const violation = checkOutput(reply, sources);
       if (violation) reply = SAFE_TEXT[violation];
       let handoff: HandoffResult | null = null;
       if (output.handoff) {
@@ -187,7 +202,9 @@ ${handoff.message}` : handoff.message;
       }
       if (!reply) reply = 'dạ Tào chưa có thông tin chính xác ạ, bạn nhắn Zalo hỗ trợ để được giúp nha';
       emit({ event: 'delta', data: { text: reply } });
-      return finish(reply, handoff ? 'handoff' : 'agent', { matchedQaId, toolCalls, usage, handoff, tools: toolCards(output.toolIds) });
+      // Gợi ý chỉ đi kèm câu hỏi lại bình thường: không kèm khi đã chuyển người hoặc câu trả lời bị guardrail thay.
+      const suggestions = handoff || violation ? [] : cleanSuggestions(output.suggestions, sources);
+      return finish(reply, handoff ? 'handoff' : 'agent', { matchedQaId, toolCalls, usage, handoff, tools: toolCards(output.toolIds), suggestions });
     } catch (e) {
       console.error('[chatbot] gọi Codex lỗi:', e instanceof Error ? e.message : e);
       const text2 = e instanceof LlmQuotaError ? QUOTA_TEXT : e instanceof LlmBusyError ? BUSY_TEXT : ERROR_TEXT;

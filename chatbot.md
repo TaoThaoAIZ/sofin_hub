@@ -29,6 +29,10 @@ Bot **chỉ** dùng câu mẫu đang bật + tài liệu đang bật; mọi th�
 - Production không chạy seed ⇒ backend **tự nạp dữ liệu nền khi khởi động** (một lần mỗi phiên bản, không ghi đè bản admin đã sửa).
 - Script nhập Zalo có bộ lọc chặt (bỏ câu chào, giá, "gửi ultra", hỏi ngược, hứa giờ, văn nói, không phải câu hỏi) + `--dry-run` xem trước: 35 nhóm → còn 4.
 
+### Bot hỏi lại khách (gợi ý trả lời nhanh)
+
+Khi câu hỏi chưa đủ rõ (khóa học chủ đề nào, tool nào…), bot hỏi lại **một câu ngắn** và kèm 2–4 **nút gợi ý** dưới tin nhắn; khách bấm là gửi luôn. Ví dụ "có những khóa học nào" ⇒ "bạn quan tâm chủ đề nào ạ… xem toàn bộ ở **Khám phá khóa học**" + nút "Công nghệ", "Sáng tạo nội dung"… ⇒ bấm "Công nghệ" ⇒ bot giới thiệu các khóa học công nghệ kèm link. Đã kiểm với model thật (2/2 câu mới trong bộ đo) và E2E.
+
 ## 3. Kiến trúc & cô lập Codex
 
 - `backend/src/modules/chatbot/*`, migration `20261016100000_chatbot` (5 bảng `Chatbot*`), cài đặt ở `PlatformSetting` khóa `chatbot.settings`.
@@ -39,7 +43,7 @@ Bot **chỉ** dùng câu mẫu đang bật + tài liệu đang bật; mọi th�
 
 | # | Lỗi | Sửa |
 |---|---|---|
-| 1 | Hỏi "có những khóa học nào" ⇒ bot chuyển người (tìm kiếm theo nguyên câu không khớp cộng đồng nào) | Câu hỏi chung về khóa học ⇒ ngữ cảnh có 5 cộng đồng nổi bật kèm giá; prompt: thiếu thông tin thì trả lời phần có |
+| 1 | Hỏi "có những khóa học nào" ⇒ bot chuyển người (tìm kiếm theo nguyên câu không khớp cộng đồng nào) | Bot **hỏi lại chủ đề** kèm nút gợi ý trả lời nhanh + link "Khám phá khóa học" (không liệt kê khóa học kèm học phí); bấm chủ đề ⇒ khóa học của chủ đề đó |
 | 2 | Chuyển người quá dễ ⇒ có thể spam ticket (6/26 test tạo ticket) | Dùng lại ticket còn mở trong 24h, tối đa 3 ticket mới/khách/ngày, Telegram chỉ báo ticket mới; prompt không chuyển người khi chỉ cần từ chối ⇒ còn 1–2/34 |
 | 3 | Mọi câu hỏi đều gửi giao dịch của khách sang ChatGPT | Chỉ gửi khi câu hỏi (hoặc câu ngay trước) nhắc tới đơn/thanh toán/hoàn tiền/mã đơn |
 | 4 | Hỏi về mã đơn của người khác ⇒ bot chuyển người | Prompt: "không tìm thấy đơn đó trong tài khoản đang đăng nhập", không xác nhận gì, không chuyển người |
@@ -52,15 +56,16 @@ Bot **chỉ** dùng câu mẫu đang bật + tài liệu đang bật; mọi th�
 | 11 | **Production không có dữ liệu chatbot** (prod không chạy seed ⇒ 0 câu mẫu, 0 tài liệu) | Tự nạp dữ liệu nền khi khởi động (`chatbot.baseline.ts`, version 2) |
 | 12 | Dữ liệu Zalo nhập nguyên văn, chất lượng thấp | Từ chối 33 câu cũ; viết lại 8 chủ đề thành câu mẫu sạch + 4 câu chờ điền; lọc chặt + `--dry-run` cho lần nhập sau |
 | 13 | Câu học được tự bật khi khách 👍 | Bỏ tự bật: **mọi** câu học được đều chờ admin duyệt (tag "khách 👍" để ưu tiên); bỏ 2 cài đặt ngưỡng/tự học |
+| 14 | Giá "200.000đ/tháng" bị biến thành link "trang này" dẫn tới `/th` | Đường dẫn phải đứng riêng (không dính chữ có dấu); chỉ trang có thật mới thành link; link markdown `[Tên khóa học](/communities/...)` hiện đúng tên |
 
 ## 5. Kết quả kiểm thử
 
 | Loại | Kết quả |
 |---|---|
-| Test backend (`npm test`) | **645/645 PASS** (31 test chatbot, thêm: dữ liệu nền, chặn bật câu chưa điền, lọc Zalo, hỏi STK → câu mẫu VietQR; cùng các test cũ: luồng, guardrail, chuyển Zalo, học, phân quyền admin, tài khoản ChatGPT, ngữ cảnh RAG, chống spam ticket, hết hạn mức) |
+| Test backend (`npm test`) | **646/646 PASS** (32 test chatbot, thêm: hỏi lại + gợi ý trả lời nhanh, thêm: dữ liệu nền, chặn bật câu chưa điền, lọc Zalo, hỏi STK → câu mẫu VietQR; cùng các test cũ: luồng, guardrail, chuyển Zalo, học, phân quyền admin, tài khoản ChatGPT, ngữ cảnh RAG, chống spam ticket, hết hạn mức) |
 | Typecheck BE/FE, build FE, lint | Sạch (lint chỉ còn cảnh báo cũ, không thuộc chatbot) |
-| E2E Playwright (`e2e/tests/05-chatbot.spec.ts`, model giả) | **6/6 PASS** (widget, câu mẫu, thẻ tool + nhãn trang, từ chối, chuyển người, trang admin) |
-| Bộ đo chất lượng 47 câu (model thật) | 46/47 (câu trượt là do điều kiện kiểm tra, bot trả lời đúng — đã sửa điều kiện) |
+| E2E Playwright (`e2e/tests/05-chatbot.spec.ts`, model giả) | **7/7 PASS** (widget, câu mẫu, thẻ tool + nhãn trang, từ chối, chuyển người, hỏi lại chủ đề + bấm gợi ý, trang admin) |
+| Bộ đo chất lượng 49 câu (model thật) | 46/47 lần chạy đầy đủ (câu trượt do điều kiện kiểm tra — đã sửa); 2 câu mới về khóa học (c01, c02): 2/2 |
 | Regression bảo mật 34 case (model thật) | Lần chạy đầy đủ: **34/34 PASS** — rò rỉ câu trả lời 0, rò rỉ ngữ cảnh 0, DB đổi trái phép 0 |
 | Selftest runner | **25/25 PASS** |
 | Image Docker production | Build OK; `codex --version`, `codex exec`, `codex login --device-auth` chạy trong container |

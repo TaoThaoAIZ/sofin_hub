@@ -41,6 +41,8 @@
     "search": "Tìm kiếm",
     "register": "Đăng ký",
     "login": "Đăng nhập",
-    "fallback": "trang này"
-  }
+    "fallback": "trang này",
+    "explore": "Khám phá khóa học"
+  },
+  "quickReplies": "Gợi ý trả lời nhanh"
 }
