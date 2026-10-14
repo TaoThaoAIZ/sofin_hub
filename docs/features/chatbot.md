@@ -41,6 +41,6 @@ Kịch bản test thủ công. Thiết kế: `chatbot.md` (gốc repo). API: `ba
 | 6 | Hội thoại → lọc "Có 👎", mở một hội thoại | Thấy toàn bộ đoạn chat, nguồn trả lời (câu mẫu/AI/từ chối/chuyển Zalo), tool đã gọi |
 | 7 | Cài đặt → nhập link Zalo `https://zalo.me/...`, Lưu | Widget hiện nút "Nhắn Zalo hỗ trợ"; link `http://` bị từ chối |
 | 8 | Cài đặt → tắt "Bật chatbot cho người dùng" | Nút trợ lý biến mất với người dùng (sau tối đa ~10 giây / tải lại trang) |
-| 9 | Chat vài câu với bot (bấm 👍 một câu AI trả lời), chờ 30 phút hoặc bấm "Chạy học ngay" sau đó | Câu học được xuất hiện: có 👍 + tin cậy cao → "Đang dùng", còn lại → "Chờ duyệt" |
+| 9 | Chat vài câu với bot (bấm 👍 một câu AI trả lời), chờ 30 phút hoặc bấm "Chạy học ngay" sau đó | Mọi câu học được nằm ở "Chờ duyệt" (kể cả khi khách 👍 — có tag "khách 👍"), bot chưa dùng cho tới khi admin duyệt |
 | 11 | Cài đặt > Tài khoản ChatGPT: bấm "Đăng nhập tài khoản ChatGPT" | Hiện link `https://auth.openai.com/codex/device` + mã dạng `XXXX-XXXXX` có nút Copy và giờ hết hạn; không mở popup. Mở link ở máy khác, nhập mã → trong vài giây thẻ chuyển "Đã đăng nhập" + email + gói. Nhân viên Support mở thẻ này thấy "Chỉ Super Admin…" |
 | 10 | Đăng nhập tài khoản nhân viên không có quyền Hỗ trợ (vd `finance@sofinhub.test`) | Không thấy mục Chatbot; gọi API trả 403 |

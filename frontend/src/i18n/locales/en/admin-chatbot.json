@@ -38,7 +38,7 @@
   },
   "source": {
     "admin": "Admin",
-    "learned": "Learned from chat",
+    "learned": "Learned from {{conversations}} conversations: {{candidates}} new answers to review, {{variants}} new phrasings",
     "import": "Imported from Zalo"
   },
   "answerSource": {
@@ -107,11 +107,9 @@
     "model": "Codex model",
     "modelDefault": "Empty = ChatGPT account default",
     "directThreshold": "Direct sample-answer threshold (0.3–1)",
-    "autoLearnThreshold": "Auto-enable threshold for learned answers (0–1)",
     "maxHistory": "History messages sent to the AI",
     "maxInputChars": "Max characters per message",
     "dailyMessagesPerUser": "Max messages per user per day (0 = unlimited)",
-    "autoLearnEnabled": "Auto-enable learned answers with high confidence and a 👍",
     "zaloHandoffText": "Message when handing off to Zalo ({code} = support code)",
     "refusalText": "Out-of-scope refusal",
     "persona": "Voice",
@@ -126,7 +124,7 @@
     "archived": "Archived",
     "activated": "Re-enabled",
     "docSavedStale": "Saved. {{n}} sample questions marked “Needs re-check”",
-    "learned": "Learned from {{conversations}} conversations: {{activated}} enabled, {{candidates}} to review, {{variants}} new phrasings",
+    "learned": "Learned from {{conversations}} conversations: {{candidates}} new answers to review, {{variants}} new phrasings",
     "learnSkipped": "The chatbot is off, learning skipped"
   },
   "account": {

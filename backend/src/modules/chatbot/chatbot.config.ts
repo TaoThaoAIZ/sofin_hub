@@ -24,9 +24,6 @@ export const chatbotSettingsSchema = z.object({
   model: z.string().trim().max(80),
   /** Điểm khớp câu mẫu (0..1) từ mức này => trả nguyên câu trả lời admin, không gọi AI. */
   directThreshold: z.number().min(0.3).max(1),
-  /** Q&A học được có confidence từ mức này (và khách 👍) => bật ngay; thấp hơn => chờ duyệt. */
-  autoLearnThreshold: z.number().min(0).max(1),
-  autoLearnEnabled: z.boolean(),
   maxHistory: z.number().int().min(2).max(40),
   maxInputChars: z.number().int().min(100).max(4000),
   /** Số tin khách gửi tối đa mỗi ngày (0 = không giới hạn). */
@@ -46,8 +43,6 @@ export function chatbotDefaults(): ChatbotSettings {
     enabled: true,
     model: '',
     directThreshold: 0.6,
-    autoLearnThreshold: 0.85,
-    autoLearnEnabled: true,
     maxHistory: 12,
     maxInputChars: 1000,
     dailyMessagesPerUser: 200,

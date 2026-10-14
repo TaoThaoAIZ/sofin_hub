@@ -5,6 +5,7 @@ import { closeShared } from './infra/shared.js';
 import { createScheduler } from './infra/scheduler.js';
 import { allJobs } from './jobs.js';
 import { gracefulShutdown, installSignalHandlers } from './lifecycle.js';
+import { ensureChatbotBaseline } from './modules/chatbot/chatbot.baseline.js';
 import { streamHub } from './modules/messages/messages.stream.js';
 import { closeNotificationStreams } from './modules/notifications/notifications.routes.js';
 import { flushNotifications } from './modules/notifications/notifications.service.js';
@@ -16,6 +17,9 @@ const server = createApp().listen(env.PORT, () => {
 
 // Nạp cấu hình nền tảng (Global Settings) ngay khi khởi động; lỗi thì dùng mặc định từ env.
 void refreshConfig().catch((e) => console.error('[settings] không nạp được cấu hình:', e));
+
+// Chatbot: production không chạy db:seed — nạp câu mẫu + tài liệu nền một lần cho mỗi phiên bản dữ liệu nền (chatbot.baseline.ts).
+if (env.NODE_ENV !== 'test') void ensureChatbotBaseline().catch((e) => console.error('[chatbot] không nạp được dữ liệu nền:', e));
 
 // Job nền (gia hạn, đối soát tiền, nhắc lịch) chạy dưới leader election (Postgres advisory lock): bật ở mọi instance cũng chỉ 1 instance
 // chạy mỗi lượt. RUN_SCHEDULERS=0 => process web-only, job do `npm run start:worker` đảm nhiệm. Không chạy khi test.

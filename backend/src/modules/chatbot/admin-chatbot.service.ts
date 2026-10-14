@@ -87,6 +87,12 @@ async function qaOrThrow(id: string) {
 
 const label = (s: string) => (s.length > 80 ? `${s.slice(0, 79)}…` : s);
 
+/** Câu mẫu nền "cần điền" (chatbot.baseline.ts) có chỗ trống `[CẦN ADMIN ĐIỀN…]`: không cho bật khi chưa điền. */
+export const ANSWER_PLACEHOLDER = '[CẦN ADMIN ĐIỀN';
+function assertAnswerFilled(answer: string) {
+  if (answer.includes(ANSWER_PLACEHOLDER)) throw HttpError.badRequest('Câu trả lời còn phần [CẦN ADMIN ĐIỀN…] — điền nội dung trước khi bật');
+}
+
 export const adminChatbotService = {
   async summary() {
     const since = new Date(Date.now() - 7 * 86_400_000);
@@ -121,13 +127,15 @@ export const adminChatbotService = {
   },
 
   async createQa(actorId: string, b: z.infer<typeof createQaBody>) {
+    if (b.status === 'active') assertAnswerFilled(b.answer);
     const q = await chatbotRepository.createQa({ ...b, source: 'admin', createdById: actorId, reviewedById: actorId, reviewedAt: new Date() });
     await auditService.record(actorId, { action: 'chatbot.qa.create', targetType: 'chatbot_qa', targetId: q.id, targetLabel: label(q.question) });
     return qaView(q);
   },
 
   async updateQa(actorId: string, id: string, b: z.infer<typeof patchQaBody>) {
-    await qaOrThrow(id);
+    const cur = await qaOrThrow(id);
+    if ((b.status ?? cur.status) === 'active') assertAnswerFilled(b.answer ?? cur.answer);
     const q = await chatbotRepository.updateQa(id, { ...b, ...(b.status === 'active' ? { reviewedById: actorId, reviewedAt: new Date() } : {}) });
     await auditService.record(actorId, { action: 'chatbot.qa.update', targetType: 'chatbot_qa', targetId: id, targetLabel: label(q.question), metadata: { fields: Object.keys(b) } });
     return qaView(q);
@@ -137,6 +145,7 @@ export const adminChatbotService = {
   async approveQa(actorId: string, id: string, b: z.infer<typeof approveQaBody>) {
     const cur = await qaOrThrow(id);
     if (cur.status === 'active') throw HttpError.conflict('Câu hỏi mẫu đã được bật');
+    assertAnswerFilled(b.answer ?? cur.answer);
     const q = await chatbotRepository.updateQa(id, { ...b, status: 'active', reviewedById: actorId, reviewedAt: new Date() });
     await auditService.record(actorId, { action: 'chatbot.qa.approve', targetType: 'chatbot_qa', targetId: id, targetLabel: label(q.question), metadata: { from: cur.status, edited: Object.keys(b) } });
     return qaView(q);

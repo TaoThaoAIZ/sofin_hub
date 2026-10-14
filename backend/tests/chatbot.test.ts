@@ -206,7 +206,7 @@ describe('chatbot', () => {
   describe('học từ hội thoại', () => {
     const { learnFromConversations } = { learnFromConversations: async (o?: { idleMs?: number }) => (await import('../src/modules/chatbot/chatbot.learn.js')).learnFromConversations(o) };
 
-    it('có 👍 + tin cậy cao => bật ngay; không 👍 => chờ duyệt; chạy lại không nhân đôi; PII bị che', async () => {
+    it('mọi câu học được đều chờ duyệt (kể cả khi khách 👍, gắn tag); chạy lại không nhân đôi; PII bị che', async () => {
       const u = await c.registerUser('cblearn');
       const liked = await start(u);
       const d1 = await say(u, liked, 'bị báo cookie hết hạn khi dùng tool veo');
@@ -216,8 +216,11 @@ describe('chatbot', () => {
 
       await learnFromConversations({ idleMs: 0 });
       const learned = await prisma.chatbotQA.findMany({ where: { sourceConversationId: { in: [liked, plain] } } });
-      assert.equal(learned.find((q) => q.sourceConversationId === liked)?.status, 'active');
+      const likedQa = learned.find((q) => q.sourceConversationId === liked);
+      assert.equal(likedQa?.status, 'candidate', 'khách 👍 vẫn phải chờ admin duyệt');
+      assert.ok(likedQa?.tags.includes('khách 👍'));
       assert.equal(learned.find((q) => q.sourceConversationId === plain)?.status, 'candidate');
+      assert.ok(learned.every((q) => q.status === 'candidate'));
       assert.ok(learned.every((q) => q.source === 'learned'));
 
       await learnFromConversations({ idleMs: 0 });
@@ -309,7 +312,7 @@ describe('chatbot', () => {
         '',
         '- 7x, newest — **[2026-09-17] Q** (Nguyễn Văn A): ',
         'tool veo giá sao, gọi mình 0987654321',
-        '  **[2026-09-17] A**: dạ bạn cần tool veo tạo phim à',
+        '  **[2026-09-17] A**: dạ giá tool báo riêng theo nhu cầu, bạn bấm Mua ngay để lại thông tin nha',
         '- 6x, newest — **[2026-09-17] Q** (B): chuyển tiền đâu',
         '  **[2026-09-17] A**: bạn chuyển khoản vào stk 123456789 nha',
         '- 2x, newest — **[2026-09-17] Q** (C): hiếm',
@@ -323,6 +326,50 @@ describe('chatbot', () => {
       const row = await prisma.chatbotQA.findFirstOrThrow({ where: { source: 'import', question: { contains: 'tool veo giá sao' } } });
       assert.equal(row.status, 'candidate');
       assert.doesNotMatch(row.question, /0987654321/);
+    });
+
+    it('lọc chặt câu Zalo: bỏ câu chào, giá, "gửi ultra", hỏi ngược, hứa giờ, văn nói, không phải câu hỏi', async () => {
+      const { candidateRejectReason } = await import('../src/modules/chatbot/chatbot.import.js');
+      const keep = { question: 'dán nội dung vào tool bị lỗi thì dán lại kiểu gì nhỉ', answer: 'dạ bạn xóa hết nội dung rồi dán lại từ đầu là được ạ' };
+      assert.equal(candidateRejectReason(keep), null);
+      const bad: [string, string][] = [
+        ['giá tool veo bao nhiêu vậy', 'dạ gói này giá 599k bạn nha, rẻ lắm ạ'],
+        ['tool lỗi 429 sửa sao bạn', 'bạn gửi ultra mình xem nha rồi Tào xử lý ạ'],
+        ['tool grok set sao để không lỗi', 'dạ tool grok lỗi hay sao ạ bạn chụp xem đang dùng bản nào'],
+        ['server sập fix trong ngày mai không', 'dạ trong sáng mai sẽ xong hết nha bạn ơi'],
+        ['tool hay bị lỗi quá vậy sao', 'bên nào cũng lỗi thôi bạn ơi bạn cứ lấy bên khác dùng nhé'],
+        ['ĐANG NGỒI MÁY ĐỢI ĐÂY', 'dạ vâng bạn vào luôn nhé Tào gửi lộ trình cho bạn'],
+        ['ok bạn', 'dạ vâng ạ cảm ơn bạn nhiều lắm nha'],
+      ];
+      for (const [question, answer] of bad) assert.ok(candidateRejectReason({ question, answer }), `phải loại: ${question}`);
+    });
+  });
+
+  describe('dữ liệu nền', () => {
+    it('ensureChatbotBaseline: nạp một lần theo version, không ghi đè câu admin đã sửa; câu "cần điền" chỉ là candidate và không bật được khi chưa điền', async () => {
+      const b = await import('../src/modules/chatbot/chatbot.baseline.js');
+      await prisma.platformSetting.deleteMany({ where: { key: b.CHATBOT_BASELINE_KEY } });
+      await prisma.chatbotQA.update({ where: { id: 'seed-chatbot-qa-tools-price' }, data: { answer: 'dạ admin đã sửa ạ' } });
+      const r1 = await b.ensureChatbotBaseline();
+      assert.ok(!('skipped' in r1));
+      assert.equal((await prisma.chatbotQA.findUniqueOrThrow({ where: { id: 'seed-chatbot-qa-tools-price' } })).answer, 'dạ admin đã sửa ạ');
+      assert.deepEqual(await b.ensureChatbotBaseline(), { skipped: true });
+
+      const pending = await prisma.chatbotQA.findUniqueOrThrow({ where: { id: 'seed-chatbot-qa-tools-trial' } });
+      assert.equal(pending.status, 'candidate');
+      assert.equal((await ADM('POST', `/qa/${pending.id}/approve`, {})).status, 400);
+      assert.equal((await ADM('PATCH', `/qa/${pending.id}`, { status: 'active' })).status, 400);
+      const ok = await ADM('POST', `/qa/${pending.id}/approve`, { answer: 'dạ hiện chưa có bản dùng thử ạ' });
+      assert.equal(ok.status, 200, JSON.stringify(ok.body));
+      assert.equal(ok.body.data.status, 'active');
+    });
+
+    it('hỏi số tài khoản => câu mẫu nền (VietQR), không có số tài khoản', async () => {
+      const u = await c.registerUser('cbstk');
+      const d = await say(u, await start(u), 'cho xin số tài khoản để chuyển khoản');
+      assert.equal(d.message.answerSource, 'qa_direct');
+      assert.match(d.message.content, /VietQR/);
+      assert.doesNotMatch(d.message.content, /\d{6,}/);
     });
   });
 

@@ -38,7 +38,7 @@
   },
   "source": {
     "admin": "Admin nhập",
-    "learned": "Học từ chat",
+    "learned": "Đã học {{conversations}} hội thoại: {{candidates}} câu mới chờ duyệt, thêm {{variants}} cách hỏi",
     "import": "Nhập từ Zalo"
   },
   "answerSource": {
@@ -107,11 +107,9 @@
     "model": "Model Codex",
     "modelDefault": "Bỏ trống = mặc định của tài khoản ChatGPT",
     "directThreshold": "Ngưỡng trả thẳng câu mẫu (0.3–1)",
-    "autoLearnThreshold": "Ngưỡng tự bật câu học được (0–1)",
     "maxHistory": "Số tin lịch sử gửi cho AI",
     "maxInputChars": "Độ dài tối đa mỗi tin",
     "dailyMessagesPerUser": "Số tin tối đa mỗi người / ngày (0 = không giới hạn)",
-    "autoLearnEnabled": "Tự bật câu học được khi tin cậy cao và khách 👍",
     "zaloHandoffText": "Câu bot nói khi chuyển Zalo ({code} = mã hỗ trợ)",
     "refusalText": "Câu từ chối khi hỏi ngoài phạm vi",
     "persona": "Giọng nói",
@@ -126,7 +124,7 @@
     "archived": "Đã lưu trữ",
     "activated": "Đã bật lại",
     "docSavedStale": "Đã lưu. {{n}} câu mẫu chuyển sang “Cần xem lại”",
-    "learned": "Đã học {{conversations}} hội thoại: bật {{activated}}, chờ duyệt {{candidates}}, thêm {{variants}} cách hỏi",
+    "learned": "Đã học {{conversations}} hội thoại: {{candidates}} câu mới chờ duyệt, thêm {{variants}} cách hỏi",
     "learnSkipped": "Chatbot đang tắt nên không chạy học"
   },
   "account": {

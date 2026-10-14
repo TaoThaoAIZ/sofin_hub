@@ -10,8 +10,8 @@ import { chatbotRepository } from './chatbot.repository.js';
 /**
  * Job `chatbot.learn` (chatbot.md mục 3.4): đọc các hội thoại đã im >= 30 phút, trích cặp hỏi–đáp dùng lại được, xóa thông tin cá nhân,
  * khử trùng với kho rồi:
- *  - confidence >= autoLearnThreshold VÀ khách 👍 (không 👎) VÀ autoLearnEnabled => bật ngay (active, source=learned);
- *  - còn lại => chờ admin duyệt (candidate).
+ *  - MỌI cặp học được đều vào hàng chờ admin duyệt (candidate, source=learned) — kể cả khi khách 👍 (chủ dự án chốt 2026-10-14:
+ *    bot không tự bật câu trả lời nào). Hội thoại có 👍 (không 👎) được gắn nhãn "khách 👍" để admin ưu tiên xem.
  * Ngoài ra câu khách hỏi mà bot trả bằng câu mẫu (qa_direct, không bị 👎) được thêm làm "cách hỏi khác" của câu mẫu đó.
  * Idempotent: đánh dấu learnedAt; nếu chết giữa chừng, lần sau khử trùng (>= 0.8) chặn tạo lại.
  */
@@ -25,7 +25,6 @@ export const learnedPairs = learnSchema;
 export interface LearnStats {
   skipped?: 'unavailable';
   conversations: number;
-  activated: number;
   candidates: number;
   variants: number;
   duplicates: number;
@@ -50,7 +49,7 @@ export function learnableTranscript(messages: ChatbotMessage[]): { text: string;
 }
 
 export async function learnFromConversations(opts: { idleMs?: number; batch?: number } = {}): Promise<LearnStats> {
-  const stats: LearnStats = { conversations: 0, activated: 0, candidates: 0, variants: 0, duplicates: 0, failed: 0 };
+  const stats: LearnStats = { conversations: 0, candidates: 0, variants: 0, duplicates: 0, failed: 0 };
   const settings = chatbotSettings();
   if (!chatbotAvailable(settings)) return { ...stats, skipped: 'unavailable' };
   const pending = await conversationRepository.pendingLearning(opts.idleMs ?? LEARN_IDLE_MS, opts.batch ?? BATCH);
@@ -83,18 +82,16 @@ export async function learnFromConversations(opts: { idleMs?: number; batch?: nu
             stats.duplicates++;
             continue;
           }
-          const auto = settings.autoLearnEnabled && liked && pair.confidence >= settings.autoLearnThreshold;
           await chatbotRepository.createQa({
             question,
             answer,
-            status: auto ? 'active' : 'candidate',
+            status: 'candidate',
             source: 'learned',
             confidence: pair.confidence,
             sourceConversationId: conv.id,
-            tags: ['học từ chat'],
+            tags: liked ? ['học từ chat', 'khách 👍'] : ['học từ chat'],
           });
-          if (auto) stats.activated++;
-          else stats.candidates++;
+          stats.candidates++;
         }
       }
       await conversationRepository.markLearned(conv.id);

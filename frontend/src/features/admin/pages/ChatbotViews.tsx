@@ -77,8 +77,6 @@ interface Settings {
   enabled: boolean;
   model: string;
   directThreshold: number;
-  autoLearnThreshold: number;
-  autoLearnEnabled: boolean;
   maxHistory: number;
   maxInputChars: number;
   dailyMessagesPerUser: number;
@@ -502,7 +500,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
   const act = useAdminAction();
   const [s, setS] = useState<Settings>(initial);
   const set = <K extends keyof Settings>(k: K) => (v: Settings[K]) => setS((o) => ({ ...o, [k]: v }));
-  const num = (k: 'directThreshold' | 'autoLearnThreshold' | 'maxHistory' | 'maxInputChars' | 'dailyMessagesPerUser') => (v: string) => set(k)(Number(v.replace(',', '.')) || 0);
+  const num = (k: 'directThreshold' | 'maxHistory' | 'maxInputChars' | 'dailyMessagesPerUser') => (v: string) => set(k)(Number(v.replace(',', '.')) || 0);
 
   const save = () => {
     const changed = Object.fromEntries(Object.entries(s).filter(([k, v]) => initial[k as keyof Settings] !== v));
@@ -515,7 +513,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
   const learn = () =>
     act.mutateAsync({ path: `${B}/learn`, body: {} }).then(
       (r) => {
-        const x = r as { skipped?: string; conversations: number; activated: number; candidates: number; variants: number };
+        const x = r as { skipped?: string; conversations: number; candidates: number; variants: number };
         toast.success(x.skipped ? t('toast.learnSkipped') : t('toast.learned', x));
       },
       (e) => toast.error(errMessage(e)),
@@ -528,12 +526,10 @@ function SettingsForm({ initial }: { initial: Settings }) {
         <InputField label={t('settings.zaloSupportUrl')} value={s.zaloSupportUrl} onChange={set('zaloSupportUrl')} placeholder="https://zalo.me/..." maxLength={300} />
         <InputField label={t('settings.model')} value={s.model} onChange={set('model')} placeholder={t('settings.modelDefault')} maxLength={80} />
         <InputField label={t('settings.directThreshold')} value={String(s.directThreshold)} onChange={num('directThreshold')} />
-        <InputField label={t('settings.autoLearnThreshold')} value={String(s.autoLearnThreshold)} onChange={num('autoLearnThreshold')} />
         <InputField label={t('settings.maxHistory')} value={String(s.maxHistory)} onChange={num('maxHistory')} />
         <InputField label={t('settings.maxInputChars')} value={String(s.maxInputChars)} onChange={num('maxInputChars')} />
         <InputField label={t('settings.dailyMessagesPerUser')} value={String(s.dailyMessagesPerUser)} onChange={num('dailyMessagesPerUser')} />
       </div>
-      <CheckField text={t('settings.autoLearnEnabled')} checked={s.autoLearnEnabled} onChange={set('autoLearnEnabled')} />
       <TextArea label={t('settings.zaloHandoffText')} value={s.zaloHandoffText} onChange={set('zaloHandoffText')} rows={2} maxLength={500} />
       <TextArea label={t('settings.refusalText')} value={s.refusalText} onChange={set('refusalText')} rows={2} maxLength={500} />
       <TextArea label={t('settings.persona')} value={s.persona} onChange={set('persona')} rows={5} maxLength={4000} />

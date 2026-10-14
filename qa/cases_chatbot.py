@@ -77,9 +77,9 @@ def load(add):
       ["Hỏi 'cho tôi gặp nhân viên'"], "-", "Câu trả lời chứa mã T-… và hướng dẫn nhắn Zalo; nguồn 'chuyển Zalo'.")
 
     # ---------------------------------------------------------------- Học từ chat
-    A("Học từ chat", "Có 👍 + tin cậy cao => câu học được bật ngay; không 👍 => chờ duyệt", "Chức năng", "Cao", BASE + " " + ADMIN,
+    A("Học từ chat", "Câu học được luôn vào Chờ duyệt, kể cả khi khách 👍", "Chức năng", "Cao", BASE + " " + ADMIN,
       ["Chat 1 câu AI trả lời (không phải câu mẫu), bấm 👍", "Chat hội thoại khác không đánh giá", "Admin > Cài đặt > 'Chạy học ngay' (hoặc chờ job mỗi giờ, hội thoại phải im ≥ 30 phút)"], "-",
-      "Câu từ hội thoại 👍 xuất hiện ở Kho câu hỏi mẫu (nguồn 'Học từ chat', trạng thái Đang dùng); câu còn lại ở Chờ duyệt. Chạy lại không nhân đôi.", pw="Không")
+      "Mọi câu học được (nguồn 'Học từ chat') nằm ở Chờ duyệt, KHÔNG tự xuất hiện ở Kho câu hỏi mẫu; câu từ hội thoại 👍 có tag 'khách 👍'. Chạy lại không nhân đôi.", pw="Không")
     A("Học từ chat", "Câu trả bằng câu mẫu => thêm 'cách hỏi khác' cho câu mẫu", "Chức năng", "Trung bình", BASE,
       ["Hỏi 'Quên mật khẩu thì làm sao vậy ạ'", "Chạy học"], "-", "Câu mẫu 'Tôi quên mật khẩu thì làm sao?' có thêm cách hỏi vừa dùng.", pw="Không")
     A("Học từ chat", "Tin có SĐT/email không được học; câu học được không chứa thông tin riêng", "Bảo mật", "Cao", BASE,

@@ -89,20 +89,30 @@ Lỗi trước khi stream (validate, 404, 429, 503) trả JSON lỗi bình thư�
 
 Phiên chờ đăng nhập nằm trong tiến trình của instance nhận request (nhiều instance: mở lại trang có thể không thấy mã đang chờ — bấm đăng nhập lại).
 
-Cài đặt (`chatbot.settings`, mặc định trong ngoặc): `enabled` (true), `model` (rỗng = mặc định của tài khoản ChatGPT trong Codex), `directThreshold` (0.6), `autoLearnThreshold` (0.85), `autoLearnEnabled` (true), `maxHistory` (12), `maxInputChars` (1000), `dailyMessagesPerUser` (200, 0 = không giới hạn), `refusalText`, `persona`, `extraInstructions`, `zaloSupportUrl` (rỗng hoặc `https://…`), `zaloHandoffText`. Luật an toàn trong prompt (`chatbot.prompt.ts`) **không** chỉnh được qua API.
+Cài đặt (`chatbot.settings`, mặc định trong ngoặc): `enabled` (true), `model` (rỗng = mặc định của tài khoản ChatGPT trong Codex), `directThreshold` (0.6), `maxHistory` (12), `maxInputChars` (1000), `dailyMessagesPerUser` (200, 0 = không giới hạn), `refusalText`, `persona`, `extraInstructions`, `zaloSupportUrl` (rỗng hoặc `https://…`), `zaloHandoffText`. Luật an toàn trong prompt (`chatbot.prompt.ts`) **không** chỉnh được qua API.
 
 ## Học từ hội thoại (job `chatbot.learn`, mỗi giờ)
 
 Hội thoại im ≥ 30 phút và chưa `learnedAt`:
 - Câu khách được trả bằng câu mẫu (`qa_direct`, không 👎) ⇒ thêm vào `variants` của câu mẫu đó.
 - Các lượt `agent` (bỏ tin `redacted`) ⇒ Codex trích xuất `{ question, answer, confidence, generalizable }` ⇒ xóa PII ⇒ bỏ nếu không dùng lại được / có dấu hiệu số tài khoản / trùng (similarity ≥ 0.8 với Q&A bất kỳ trạng thái).
-- `autoLearnEnabled` + hội thoại có 👍 và không 👎 + `confidence ≥ autoLearnThreshold` ⇒ `active` (`source=learned`); còn lại ⇒ `candidate`.
+- **Mọi** cặp học được ⇒ `candidate` (`source=learned`), kể cả khi khách 👍 — bot không tự bật câu trả lời nào, admin duyệt ở tab Chờ duyệt (chốt 2026-10-14). Hội thoại có 👍 và không 👎 ⇒ thêm tag `khách 👍` để admin ưu tiên.
 - Ghi `learnedAt`; chạy lại không nhân đôi.
+
+## Dữ liệu nền (tự nạp khi khởi động)
+
+Production **không** chạy `db:seed`, nên `src/index.ts` gọi `ensureChatbotBaseline()` (`chatbot.baseline.ts`) mỗi lần khởi động: nếu PlatformSetting `chatbot.baseline.version` < `CHATBOT_BASELINE_VERSION` (hiện **2**) thì nạp rồi ghi version — chạy đúng một lần mỗi phiên bản.
+- Câu mẫu (id `seed-chatbot-qa-<key>`, `source=admin`, createMany skipDuplicates — câu admin đã sửa không bị ghi đè):
+  - `CHATBOT_FAQ` (16, `active`): viết lại từ FAQ công khai.
+  - `CHATBOT_ZALO_TOPICS` (8, `active`): chủ đề khách hỏi nhiều nhất trên Zalo, **viết lại** (không chép chat, không tên/SĐT, không con số giá), nội dung chỉ lấy từ thông tin đã xác nhận: giá tool (báo riêng → Mua ngay/Zalo), Ngân Lượng, tốn NL khi tạo video, cách mua tool, hỏi số tài khoản (→ VietQR, không gửi STK), ảnh chuyển khoản, báo lỗi tool, hỏi khi nào sửa xong (không hứa giờ). Lỗi kỹ thuật cụ thể để AI trả từ tài liệu "Xử lý lỗi thường gặp".
+  - `CHATBOT_NEEDS_ANSWER` (4, `candidate`): dùng thử, cấu hình máy, phí API/tài khoản AI, người mới/lớn tuổi học — **chưa có thông tin xác nhận**, câu trả lời là `[CẦN ADMIN ĐIỀN: …]`. Admin không bật được câu còn chỗ trống này (400, cả approve lẫn PATCH/POST `status=active`) cho tới khi điền nội dung.
+- Tài liệu `prisma/chatbot-kb/*.md`: chỉ tạo slug chưa có (`importKnowledgeDir(..., { onlyMissing: true })`) — tài liệu admin đã sửa/lưu trữ không bị ghi đè.
+- Đổi/thêm dữ liệu nền ⇒ tăng `CHATBOT_BASELINE_VERSION`. Câu admin đã **xóa** sẽ quay lại khi tăng version (lưu trữ/từ chối thì không).
 
 ## Nạp tri thức (CLI)
 
-- `npm run chatbot:import-kb [-- <thư mục>]`: nạp `.md` (mặc định `prisma/chatbot-kb/`: xử lý lỗi tool, Ngân Lượng & báo giá) thành tài liệu; idempotent theo `contentHash`. `npm run db:seed` cũng nạp thư mục này + 16 câu FAQ.
-- `npm run chatbot:import-candidates -- <candidates_pricing.md> <candidates_bugs.md> [--min=5]`: nhập file phân tích Zalo (`crawl_zalo/output/analysis`) thành Q&A `candidate` (`source=import`), bỏ tên khách, che SĐT/email/dãy số, loại câu trả lời nhắc chuyển khoản/STK. **Không** đọc hội thoại thô.
+- `npm run chatbot:import-kb [-- <thư mục>]`: nạp `.md` (mặc định `prisma/chatbot-kb/`: xử lý lỗi tool, Ngân Lượng & báo giá) thành tài liệu; idempotent theo `contentHash`, **ghi đè** bản admin đã sửa nếu nội dung file khác. `npm run db:seed` (dev) nạp thư mục này + câu mẫu nền.
+- `npm run chatbot:import-candidates -- <candidates_pricing.md> <candidates_bugs.md> [--min=5] [--dry-run]`: nhập file phân tích Zalo (`crawl_zalo/output/analysis`) thành Q&A `candidate` (`source=import`), bỏ tên khách, che SĐT/email/dãy số. **Không** đọc hội thoại thô. Bộ lọc `candidateRejectReason` (2026-10-14) bỏ dòng chào/xác nhận đầu câu, chú thích của file phân tích, rồi loại: không phải câu hỏi (không có từ để hỏi / prompt dán vào), câu trả lời quá ngắn, nhắc chuyển khoản/STK, có con số giá, chỉ hẹn kiểm tra/đòi thêm thông tin ("gửi ultra", "đợi xí"…), hỏi ngược lại khách, hứa thời gian ("sáng mai"), văn nói cá nhân ("huynh", "lấy bên khác"). Với dữ liệu hiện có: 35 nhóm → 4 nhóm qua lọc. `--dry-run` in trước các mục sẽ nhập + thống kê lý do loại, không ghi DB. Lần nhập đầu (33 câu chép nguyên văn) đã bị từ chối hết ở DB dev; các chủ đề đáng dùng đã viết lại trong `CHATBOT_ZALO_TOPICS`.
 - `npm run chatbot:eval [-- --only=t01,b02] [-- --user=<email>]`: chạy bộ đo `tests/chatbot-golden.vi.json` (47 câu) với model thật trên DB dev, báo tỉ lệ trả lời đúng / chuyển người sai / chuyển người đúng / từ chối đúng / thời gian trung bình, ghi chi tiết `data/chatbot-eval-*.json`.
 
 ## Regression bảo mật

@@ -281,7 +281,7 @@ Kế hoạch & lý do: `chatbot.md`. Hợp đồng API: `backend/docs/api/chatbo
 
 - [x] BE `modules/chatbot/*` (Codex SDK `@openai/codex-sdk`, đăng nhập ChatGPT — 2026-10-14 thay cho OpenAI Agents SDK): khớp câu mẫu trước (pg_trgm, không gọi AI), server gom ngữ cảnh (kho Q&A, tài liệu, danh mục tool, cộng đồng, thanh toán của chính mình, số liệu nền tảng) rồi gọi Codex 1 lượt trả JSON (trả lời + lạc đề/injection + chuyển người), guardrail ra (số tài khoản, giá không nguồn), SSE; Codex bị cô lập (CODEX_HOME riêng, tắt shell/plugin, read-only, không mạng, không secret)
 - [x] Chuyển Zalo = ticket nội bộ `source=chatbot` kèm transcript + Telegram + mã T-… cho khách; không đưa số tài khoản (thanh toán chỉ VietQR/SePay)
-- [x] Học từ chat (job `chatbot.learn` mỗi giờ): tin cậy cao + 👍 ⇒ bật ngay, còn lại chờ duyệt; thêm cách hỏi khác cho câu mẫu
+- [x] Học từ chat (job `chatbot.learn` mỗi giờ): mọi câu học được đều chờ admin duyệt (kể cả khi khách 👍); thêm cách hỏi khác cho câu mẫu
 - [x] Tri thức: 16 FAQ + tài liệu `prisma/chatbot-kb/` (lỗi tool, Ngân Lượng); nhập câu hỏi Zalo đã phân tích thành hàng chờ duyệt (`npm run chatbot:import-candidates`)
 - [x] Danh mục tool chuyển sang BE (`GET /api/tools`), trang `/tools` + bot dùng chung
 - [x] FE: widget nổi (chỉ khi đăng nhập, ẩn ở /admin), Admin > Hỗ trợ > Chatbot (kho mẫu, chờ duyệt, tài liệu, hội thoại, cài đặt)
