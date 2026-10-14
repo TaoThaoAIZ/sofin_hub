@@ -345,6 +345,27 @@ describe('chatbot', () => {
     });
   });
 
+  describe('bộ câu hỏi Zalo (tests/chatbot-zalo.vi.json)', () => {
+    it('hợp lệ: ID không trùng, outcome đúng, regex dịch được, phủ đủ 13 nhóm Zalo, không email', async () => {
+      const { readFileSync } = await import('node:fs');
+      const z = JSON.parse(readFileSync(new URL('./chatbot-zalo.vi.json', import.meta.url), 'utf8')) as {
+        patterns: Record<string, string>;
+        cases: { id: string; q: string; outcome: string; zalo: string; topic: string; must_not_match?: string[]; history?: string[] }[];
+      };
+      const ids = z.cases.map((x) => x.id);
+      assert.equal(new Set(ids).size, ids.length, 'ID trùng');
+      for (const x of z.cases) {
+        assert.ok(['answer', 'escalate', 'refuse', 'any'].includes(x.outcome), x.id);
+        assert.ok(x.q.trim() && x.topic && x.zalo, x.id);
+        assert.doesNotMatch([x.q, ...(x.history ?? [])].join(' '), /\S+@\S+\.\w+/, `${x.id}: không chép email khách`);
+        for (const r of x.must_not_match ?? []) new RegExp(r.startsWith('$') ? z.patterns[r.slice(1)]! : r, 'iu');
+      }
+      const groups = new Set(z.cases.map((x) => x.zalo.replace(/\s*\(\d+\)$/, '')));
+      for (const g of ['hỏi giá / combo có gì', 'nâng cấp / VIP / allinone', 'thanh toán / chuyển khoản', 'gia hạn / hết hạn gói', 'hoàn tiền / khiếu nại', 'khuyến mãi / km', 'lỗi chung / cần fix', 'tài khoản die / hết hạn / bị chặn', 'không tạo được / không chạy', 'cookie / session / đăng nhập', 'mạng / VPN / mất kết nối', 'hoàn tiền vì lỗi', 'không tải / không xuất được'])
+        assert.ok(groups.has(g), `thiếu nhóm Zalo "${g}"`);
+    });
+  });
+
   describe('dữ liệu nền', () => {
     it('ensureChatbotBaseline: nạp một lần theo version, không ghi đè câu admin đã sửa; câu "cần điền" chỉ là candidate và không bật được khi chưa điền', async () => {
       const b = await import('../src/modules/chatbot/chatbot.baseline.js');
