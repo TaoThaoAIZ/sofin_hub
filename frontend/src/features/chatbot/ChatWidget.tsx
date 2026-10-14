@@ -363,12 +363,11 @@ const LINK_CLS = 'rounded-md bg-brand/10 px-1 font-semibold text-brand hover:bg-
  */
 function Linkified({ text }: { text: string }) {
   const { t } = useTranslation('chatbot');
-  const parts = text.split(/(https:\/\/[^\s)]+|(?<![\w/])\/[a-z0-9][a-z0-9\-/]*)/gi);
-  const pageLabel = (path: string) => {
+  // Đường dẫn phải đứng riêng: trước không phải chữ/số/"/"/"." và sau không phải chữ (kể cả chữ có dấu) — "200.000đ/tháng" không phải link.
+  const parts = text.split(/(https:\/\/[^\s)]+|(?<![\p{L}\p{N}/.])\/[a-z0-9][a-z0-9\-/]*(?![\p{L}\p{N}]))/giu);
+  const pageOf = (path: string) =>
     // Tiền tố kết thúc bằng "/" khớp mọi trang con (/communities/abc); còn lại khớp đúng trang hoặc trang con của nó.
-    const hit = PAGE_LABELS.find(([prefix]) => (prefix.endsWith('/') ? path.startsWith(prefix) : path === prefix || path.startsWith(`${prefix}/`)));
-    return hit ? t(`pages.${hit[1]}`) : t('pages.fallback');
-  };
+    PAGE_LABELS.find(([prefix]) => (prefix.endsWith('/') ? path.startsWith(prefix) : path === prefix || path.startsWith(`${prefix}/`)));
   const hostLabel = (url: string) => {
     try {
       const host = new URL(url).hostname.replace(/^www\./, '');
@@ -386,11 +385,13 @@ function Linkified({ text }: { text: string }) {
               {hostLabel(p)}
             </a>
           );
-        if (/^\/[a-z0-9]/i.test(p)) {
+        const page = /^\/[a-z0-9]/i.test(p) ? pageOf(p.replace(/\/+$/, '')) : undefined;
+        if (page) {
+          // Chỉ trang có thật trên web mới thành link; đường dẫn lạ giữ nguyên chữ.
           const path = p.replace(/\/+$/, '');
           return (
             <Link key={i} to={path} title={path} className={LINK_CLS}>
-              {pageLabel(path)}
+              {t(`pages.${page[1]}`)}
             </Link>
           );
         }
