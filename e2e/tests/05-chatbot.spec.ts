@@ -82,6 +82,28 @@ test.describe('Chatbot hỗ trợ', () => {
     await expect(panel.getByRole('group', { name: 'Gợi ý trả lời nhanh' })).toHaveCount(0);
   });
 
+  test('TC-CHATBOT-008: nhắn liên tục 3 tin khi Tào đang trả lời => tin sau "chờ gửi", gộp thành 1 lượt, không mất tin', async ({ page }) => {
+    await uiLogin(page, 'member1@sofinhub.test');
+    const panel = await openWidget(page);
+    // Làm chậm lượt đầu để khách kịp gõ thêm khi bot đang xử lý; đếm số lượt gửi lên server.
+    const sent: string[] = [];
+    await page.route('**/chatbot/conversations/*/messages', async (route) => {
+      sent.push(String(route.request().postDataJSON()?.text ?? ''));
+      if (sent.length === 1) await new Promise((r) => setTimeout(r, 2500));
+      await route.continue();
+    });
+    await ask(panel, 'alo tào ơi');
+    await expect(panel.getByText('Tào đang trả lời…')).toBeVisible();
+    await ask(panel, 'cho hỏi chút');
+    await ask(panel, 'tool grok làm được gì');
+    await expect(panel.getByText(/chờ gửi/)).toHaveCount(2);
+    // Lượt 2 gộp 2 tin chờ => tổng 2 lượt gửi, đủ 3 tin của khách, không còn tin chờ.
+    await expect(panel.getByRole('link', { name: 'Mua ngay' }).first()).toBeVisible({ timeout: 15_000 });
+    await expect(panel.getByText(/chờ gửi/)).toHaveCount(0);
+    expect(sent).toEqual(['alo tào ơi', 'cho hỏi chút\ntool grok làm được gì']);
+    for (const t of ['alo tào ơi', 'cho hỏi chút', 'tool grok làm được gì']) await expect(panel.getByText(t, { exact: true })).toBeVisible();
+  });
+
   test('TC-CHATBOT-006: admin xem trang Chatbot (kho mẫu, chờ duyệt, cài đặt)', async ({ page }) => {
     await uiLogin(page, 'admin@sofinhub.test');
     await page.goto('/admin/support/chatbot');

@@ -61,6 +61,8 @@ describe('chatbot', () => {
     assert.equal((await ADM('PATCH', '/settings', { enabled: false })).status, 200);
     const r = await c.call('POST', '/chatbot/conversations', { token: u.token });
     assert.equal(r.status, 503);
+    assert.equal(r.body.error.code, 'CHATBOT_UNAVAILABLE');
+    assert.match(r.body.error.message, /tạm tắt/, 'khách thấy câu thông báo, không thấy mã lỗi');
     assert.equal((await c.call('GET', '/chatbot/status', { token: u.token })).body.data.available, false);
     assert.equal((await ADM('PATCH', '/settings', { enabled: true })).status, 200);
     assert.equal((await c.call('POST', '/chatbot/conversations', { token: u.token })).status, 201);
@@ -342,6 +344,36 @@ describe('chatbot', () => {
         ['ok bạn', 'dạ vâng ạ cảm ơn bạn nhiều lắm nha'],
       ];
       for (const [question, answer] of bad) assert.ok(candidateRejectReason({ question, answer }), `phải loại: ${question}`);
+    });
+  });
+
+  describe('khách nhắn liên tục', () => {
+    it('2 tin gửi cùng lúc trên 1 hội thoại => 1 tin xử lý, tin kia 409 CHATBOT_BUSY (không gọi AI song song); xong thì nhả khóa', async () => {
+      const u = await c.registerUser('cbburst');
+      const conv = await start(u);
+      fake.setFakeDelay(400);
+      const send = (text: string) => c.call('POST', `/chatbot/conversations/${conv}/messages`, { token: u.token, body: { text } });
+      const [a, b] = await Promise.all([send('tool veo làm được gì'), send('tool grok làm được gì')]);
+      assert.deepEqual([a.status, b.status].sort(), [200, 409]);
+      const busy = a.status === 409 ? a : b;
+      assert.equal(busy.body.error.code, 'CHATBOT_BUSY', JSON.stringify(busy.body));
+      assert.match(busy.body.error.message, /đang trả lời tin trước/);
+      assert.equal(await prisma.chatbotMessage.count({ where: { conversationId: conv, role: 'user' } }), 1, 'tin bị chặn không được lưu');
+      fake.setFakeDelay(0);
+      assert.equal((await send('tool grok làm được gì')).status, 200, 'xong lượt trước thì gửi tiếp được');
+      // Hội thoại khác của cùng khách không bị khóa chung.
+      const other = await start(u);
+      fake.setFakeDelay(300);
+      const [x, y] = await Promise.all([send('tool veo làm được gì'), c.call('POST', `/chatbot/conversations/${other}/messages`, { token: u.token, body: { text: 'tool veo làm được gì' } })]);
+      assert.deepEqual([x.status, y.status], [200, 200]);
+    });
+
+    it('widget gộp nhiều tin liên tiếp thành 1 lượt (mỗi tin 1 dòng) => 1 câu trả lời', async () => {
+      const u = await c.registerUser('cbmulti');
+      const conv = await start(u);
+      const d = await say(u, conv, 'alo\ncho hỏi chút\ntool grok làm được gì vậy');
+      assert.ok(d.tools.some((t) => t.id === 'tool-grok-automation'), JSON.stringify(d.tools));
+      assert.equal(await prisma.chatbotMessage.count({ where: { conversationId: conv } }), 2);
     });
   });
 

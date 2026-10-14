@@ -57,16 +57,18 @@ Khi câu hỏi chưa đủ rõ (khóa học chủ đề nào, tool nào…), bot
 | 12 | Dữ liệu Zalo nhập nguyên văn, chất lượng thấp | Từ chối 33 câu cũ; viết lại 8 chủ đề thành câu mẫu sạch + 4 câu chờ điền; lọc chặt + `--dry-run` cho lần nhập sau |
 | 13 | Câu học được tự bật khi khách 👍 | Bỏ tự bật: **mọi** câu học được đều chờ admin duyệt (tag "khách 👍" để ưu tiên); bỏ 2 cài đặt ngưỡng/tự học |
 | 14 | Giá "200.000đ/tháng" bị biến thành link "trang này" dẫn tới `/th` | Đường dẫn phải đứng riêng (không dính chữ có dấu); chỉ trang có thật mới thành link; link markdown `[Tên khóa học](/communities/...)` hiện đúng tên |
-| 15 | Bộ Zalo: hỏi \"thanh toán bằng MoMo\" ⇒ bot trả đúng VietQR nhưng vẫn chuyển người (tạo ticket thừa) | Thêm câu mẫu MoMo/ví/thẻ ⇒ trả ngay (0,1s); dữ liệu nền v3 |
-| 16 | Khi chuyển người, câu trả lời lặp \"nhắn Zalo hỗ trợ\" 2 lần | Câu trả lời đã mời nhắn Zalo ⇒ chỉ thêm dòng \"Mã hỗ trợ của bạn: T-…\" |
+| 15 | Bộ Zalo: hỏi "thanh toán bằng MoMo" ⇒ bot trả đúng VietQR nhưng vẫn chuyển người (tạo ticket thừa) | Thêm câu mẫu MoMo/ví/thẻ ⇒ trả ngay (0,1s); dữ liệu nền v3 |
+| 16 | Khi chuyển người, câu trả lời lặp "nhắn Zalo hỗ trợ" 2 lần | Câu trả lời đã mời nhắn Zalo ⇒ chỉ thêm dòng "Mã hỗ trợ của bạn: T-…" |
+| 17 | Khách nhắn liên tục 3-4 tin khi Tào đang trả lời: widget khóa nút Gửi, Enter bị bỏ qua không báo gì; gọi API song song (2 tab) ⇒ nhiều lượt AI chạy cùng lúc trên 1 hội thoại, trả lời lộn thứ tự | Widget cho gửi tiếp: tin mới hiện ngay nhãn "chờ gửi", Tào trả lời xong thì **gộp cả cụm thành 1 lượt** (mỗi tin 1 dòng, ≤ maxChars) ⇒ 1 câu trả lời, ít tốn lượt gọi AI; lỗi thì trả chữ về ô nhập, không mất tin. Backend **khóa theo hội thoại** (Redis/bộ nhớ, chạy đúng khi nhiều instance) ⇒ lượt song song nhận 409 `CHATBOT_BUSY` |
+| 18 | Lỗi có sẵn: chatbot tắt ⇒ khách thấy chữ "CHATBOT_UNAVAILABLE" thay vì câu thông báo (đảo tham số mã lỗi/nội dung) | Sửa thứ tự tham số; test kiểm cả mã lỗi lẫn câu hiện cho khách |
 
 ## 5. Kết quả kiểm thử
 
 | Loại | Kết quả |
 |---|---|
-| Test backend (`npm test`) | **646/646 PASS** (32 test chatbot, thêm: hỏi lại + gợi ý trả lời nhanh, thêm: dữ liệu nền, chặn bật câu chưa điền, lọc Zalo, hỏi STK → câu mẫu VietQR; cùng các test cũ: luồng, guardrail, chuyển Zalo, học, phân quyền admin, tài khoản ChatGPT, ngữ cảnh RAG, chống spam ticket, hết hạn mức) |
+| Test backend (`npm test`) | **649/649 PASS** (35 test chatbot, thêm: khách nhắn liên tục/khóa hội thoại 409, gộp nhiều tin, file bộ Zalo hợp lệ, hỏi lại + gợi ý trả lời nhanh, thêm: dữ liệu nền, chặn bật câu chưa điền, lọc Zalo, hỏi STK → câu mẫu VietQR; cùng các test cũ: luồng, guardrail, chuyển Zalo, học, phân quyền admin, tài khoản ChatGPT, ngữ cảnh RAG, chống spam ticket, hết hạn mức) |
 | Typecheck BE/FE, build FE, lint | Sạch (lint chỉ còn cảnh báo cũ, không thuộc chatbot) |
-| E2E Playwright (`e2e/tests/05-chatbot.spec.ts`, model giả) | **7/7 PASS** (widget, câu mẫu, thẻ tool + nhãn trang, từ chối, chuyển người, hỏi lại chủ đề + bấm gợi ý, trang admin) |
+| E2E Playwright (`e2e/tests/05-chatbot.spec.ts`, model giả) | **8/8 PASS** (widget, câu mẫu, thẻ tool + nhãn trang, từ chối, chuyển người, hỏi lại chủ đề + bấm gợi ý, nhắn liên tục 3 tin ⇒ chờ gửi + gộp 1 lượt, trang admin) |
 | Bộ câu hỏi thật từ Zalo — 92 case, 13 nhóm (`tests/chatbot-zalo.vi.json`, model thật, 2026-10-14) | Lần 1: **89/92** (trả lời đúng 96%, chuyển người sai 4%, chuyển người đúng 100%, từ chối đúng 100%, hỏi lại kèm gợi ý 100%, ~12,7s/câu). 3 case trượt: 2 do điều kiện test quá chặt (bot hỏi lại là đúng), 1 lỗi thật (hỏi MoMo ⇒ chuyển người thừa) — đã sửa; chạy lại 5 case liên quan: **5/5** |
 | Bộ đo chất lượng 49 câu (model thật) | 46/47 lần chạy đầy đủ (câu trượt do điều kiện kiểm tra — đã sửa); 2 câu mới về khóa học (c01, c02): 2/2 |
 | Regression bảo mật 34 case (model thật) | Lần chạy đầy đủ: **34/34 PASS** — rò rỉ câu trả lời 0, rò rỉ ngữ cảnh 0, DB đổi trái phép 0 |

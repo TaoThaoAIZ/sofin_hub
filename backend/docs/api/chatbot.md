@@ -26,6 +26,10 @@ AI = **Codex SDK** (`@openai/codex-sdk`) đăng nhập bằng **tài khoản Cha
 
 ## Luồng một tin nhắn
 
+**Khách nhắn liên tục / gửi khi Tào đang trả lời** (2026-10-14):
+- Widget không khóa ô nhập: tin gửi trong lúc chờ vào hàng chờ (hiện ngay, nhãn "chờ gửi"); trả lời xong thì gộp cả hàng chờ thành **1 lượt** (`text` = các tin nối bằng xuống dòng, tối đa `maxInputChars`/lượt, dư thì sang lượt sau) ⇒ bot trả lời 1 lần cho cả cụm (giống khách Zalo gõ 3-4 dòng ngắn). Lỗi ⇒ trả các tin chưa gửi về ô nhập. "Cuộc mới" xóa hàng chờ.
+- Backend khóa theo hội thoại (`shared().kv.setNx('chatbot:busy:<id>')`, Redis khi có `REDIS_URL` ⇒ đúng cả nhiều instance; TTL = `CHATBOT_TIMEOUT_MS` + 30s phòng tiến trình chết; nhả trong `finally`, chỉ nhả khóa của chính mình). Lượt thứ 2 đến khi đang xử lý ⇒ **409 `CHATBOT_BUSY`** (JSON, trước khi mở stream; tin bị chặn KHÔNG lưu). Hội thoại khác của cùng khách không bị khóa chung. Giới hạn chung vẫn là 12 tin/phút (`RATE_LIMIT_CHATBOT_PER_MIN`) và `dailyMessagesPerUser`/ngày.
+
 1. Kiểm tra: chatbot bật + Codex đã đăng nhập (503), độ dài ≤ `maxInputChars` (400), hội thoại thuộc người gọi (404) và chưa `closed` (409), hạn mức `dailyMessagesPerUser` trong 24h (429).
 2. Lưu tin khách; tin có SĐT/email/dãy số dài bị đánh dấu `redacted` (không dùng để học).
 3. **Khớp câu mẫu**: `similarity` (pg_trgm) giữa câu khách (đã gập dấu) và `question`/`variants` của Q&A `active`. ≥ `directThreshold` ⇒ trả **nguyên văn** câu admin, `answerSource=qa_direct`, `hitCount++`, **không gọi AI**.

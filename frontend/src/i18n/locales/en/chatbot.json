@@ -44,5 +44,6 @@
     "fallback": "this page",
     "explore": "Explore courses"
   },
-  "quickReplies": "Quick replies"
+  "quickReplies": "Quick replies",
+  "queued": "queued — Tào will answer right after the current reply"
 }

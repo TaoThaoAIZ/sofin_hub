@@ -92,38 +92,88 @@ function ChatSession({
 
   const errText = (e: unknown) => (e instanceof ApiError || e instanceof Error ? e.message : t('error'));
 
+  // Ref: vòng gửi hàng chờ (drain) chạy qua nhiều lần render — đọc state trực tiếp sẽ thấy giá trị cũ và tạo nhầm hội thoại mới.
+  const convRef = useRef(conversation);
+  useEffect(() => {
+    convRef.current = conversation;
+  }, [conversation]);
+
   async function ensureConversation(): Promise<ChatConversation> {
-    if (conversation && conversation.status !== 'closed') return conversation;
+    const cur = convRef.current;
+    if (cur && cur.status !== 'closed') return cur;
     const r = await startConversation();
+    convRef.current = r.conversation;
     setConversation(r.conversation);
     setMessages([]);
     return r.conversation;
   }
 
+  /**
+   * Khách nhắn liên tục (kiểu Zalo: 3-4 tin ngắn liền nhau) trong lúc Tào đang trả lời: tin mới vào hàng chờ (hiện ngay, nhãn "chờ gửi"),
+   * trả lời xong thì GỘP cả hàng chờ thành 1 lượt (mỗi tin 1 dòng, tối đa maxChars/lượt) — bot trả lời một lần cho cả cụm, không gọi AI
+   * song song trên cùng hội thoại (backend cũng chặn bằng khóa theo hội thoại, 409 CHATBOT_BUSY).
+   */
+  const busyRef = useRef(false);
+  const queueRef = useRef<string[]>([]);
+  const [queued, setQueued] = useState<string[]>([]);
+
+  /** Lấy từ đầu hàng chờ các tin gộp được trong maxChars (ít nhất 1 tin). */
+  function takeBatch(): string[] {
+    const q = queueRef.current;
+    const batch: string[] = [];
+    let len = 0;
+    while (q.length && (batch.length === 0 || len + 1 + q[0]!.length <= maxChars)) {
+      len += (batch.length ? 1 : 0) + q[0]!.length;
+      batch.push(q.shift()!);
+    }
+    setQueued([...q]);
+    return batch;
+  }
+
   /** Gửi ô nhập, hoặc `preset` khi bấm một gợi ý trả lời nhanh (ô nhập giữ nguyên). */
-  async function send(e?: FormEvent, preset?: string) {
+  function send(e?: FormEvent, preset?: string) {
     e?.preventDefault();
     const text = (preset ?? draft).trim();
-    if (!text || pending) return;
+    if (!text) return;
     setError(null);
     if (preset === undefined) setDraft('');
-    setPending({ user: text, reply: '' });
+    queueRef.current.push(text.slice(0, maxChars));
+    setQueued([...queueRef.current]);
+    if (!busyRef.current) void drain();
+  }
+
+  async function drain() {
+    busyRef.current = true;
     try {
-      const conv = await ensureConversation();
-      const done = await sendChatMessage(conv.id, text, {
-        onDelta: (d) => setPending((p) => (p ? { ...p, reply: p.reply + d } : p)),
-        onReplace: (r) => setPending((p) => (p ? { ...p, reply: r } : p)),
-      });
-      const userMsg: Bubble = { id: `local-${done.message.id}`, role: 'user', content: text, answerSource: null, feedback: 0, createdAt: done.message.createdAt };
-      setMessages((m) => [...m, userMsg, { ...done.message, tools: done.tools, suggestions: done.suggestions }]);
-      setConversation(done.conversation);
-      if (done.handoff) setHandoff(done.handoff);
-      void qc.invalidateQueries({ queryKey: chatbotKeys.current });
-    } catch (err) {
-      setError(errText(err));
-      if (preset === undefined) setDraft(text);
+      while (queueRef.current.length) {
+        const parts = takeBatch();
+        const text = parts.join('\n');
+        setPending({ user: text, reply: '' });
+        try {
+          const conv = await ensureConversation();
+          const done = await sendChatMessage(conv.id, text, {
+            onDelta: (d) => setPending((p) => (p ? { ...p, reply: p.reply + d } : p)),
+            onReplace: (r) => setPending((p) => (p ? { ...p, reply: r } : p)),
+          });
+          const userMsgs: Bubble[] = parts.map((content, i) => ({ id: `local-${done.message.id}-${i}`, role: 'user', content, answerSource: null, feedback: 0, createdAt: done.message.createdAt }));
+          setMessages((m) => [...m, ...userMsgs, { ...done.message, tools: done.tools, suggestions: done.suggestions }]);
+          convRef.current = done.conversation;
+          setConversation(done.conversation);
+          if (done.handoff) setHandoff(done.handoff);
+          void qc.invalidateQueries({ queryKey: chatbotKeys.current });
+        } catch (err) {
+          // Lỗi: trả các tin chưa gửi (lượt này + hàng chờ còn lại) về ô nhập để khách gửi lại, không mất chữ.
+          setError(errText(err));
+          const rest = [...parts, ...queueRef.current];
+          queueRef.current = [];
+          setQueued([]);
+          setDraft((d) => [...rest, d].filter(Boolean).join('\n').slice(0, maxChars));
+        } finally {
+          setPending(null);
+        }
+      }
     } finally {
-      setPending(null);
+      busyRef.current = false;
     }
   }
 
@@ -151,6 +201,8 @@ function ChatSession({
   }
 
   function newChat() {
+    queueRef.current = [];
+    setQueued([]);
     setConversation(null);
     setMessages([]);
     setHandoff(null);
@@ -223,10 +275,18 @@ function ChatSession({
         ))}
         {pending && (
           <>
-            <MessageBubble m={{ id: 'p-user', role: 'user', content: pending.user, answerSource: null, feedback: 0, createdAt: '' }} />
+            {pending.user.split('\n').map((line, i) => (
+              <MessageBubble key={`p-user-${i}`} m={{ id: `p-user-${i}`, role: 'user', content: line, answerSource: null, feedback: 0, createdAt: '' }} />
+            ))}
             <MessageBubble m={{ id: 'p-bot', role: 'assistant', content: pending.reply || t('typing'), answerSource: null, feedback: 0, createdAt: '' }} streaming />
           </>
         )}
+        {queued.map((q, i) => (
+          <div key={`q-${i}`} className="flex flex-col items-end gap-0.5 opacity-70">
+            <MessageBubble m={{ id: `q-${i}`, role: 'user', content: q, answerSource: null, feedback: 0, createdAt: '' }} />
+            <span className="pr-1 text-[11px] text-stone-500">{t('queued')}</span>
+          </div>
+        ))}
       </div>
 
       {ticketCode && (
@@ -277,7 +337,7 @@ function ChatSession({
         />
         <button
           type="submit"
-          disabled={!draft.trim() || Boolean(pending)}
+          disabled={!draft.trim()}
           aria-label={t('send')}
           className="bg-brand-gradient shadow-brand-chip grid size-10 flex-none place-items-center rounded-2xl text-white disabled:opacity-50"
         >

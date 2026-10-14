@@ -13,6 +13,8 @@ import type { AnswerOutput } from './chatbot.prompt.js';
  */
 let replyOverride: ((userText: string) => string) | null = null;
 let learnOverride: ((transcript: string) => unknown) | null = null;
+/** Độ trễ giả lập mỗi lượt trả lời (test khách gửi liên tục khi bot đang xử lý). */
+let answerDelayMs = 0;
 export const fakeCalls: { kind: 'answer' | 'learn'; input: string }[] = [];
 
 export function setFakeReply(fn: ((userText: string) => string) | null) {
@@ -21,7 +23,11 @@ export function setFakeReply(fn: ((userText: string) => string) | null) {
 export function setFakeLearn(fn: ((transcript: string) => unknown) | null) {
   learnOverride = fn;
 }
+export function setFakeDelay(ms: number) {
+  answerDelayMs = ms;
+}
 export function resetFake() {
+  answerDelayMs = 0;
   replyOverride = null;
   learnOverride = null;
   fakeCalls.length = 0;
@@ -61,6 +67,7 @@ function answer(message: string, c: KnowledgeContext): AnswerOutput {
 
 export class FakeChatModel implements ChatLlm {
   async complete<T>(req: LlmRequest<T>): Promise<{ output: T; usage: LlmUsage }> {
+    if (answerDelayMs && req.kind === 'answer') await new Promise((r) => setTimeout(r, answerDelayMs));
     if (req.kind === 'learn') {
       const transcript = String(req.hint ?? '');
       fakeCalls.push({ kind: 'learn', input: transcript });

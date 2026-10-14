@@ -1,8 +1,10 @@
+import { randomUUID } from 'node:crypto';
 import { prisma } from '../../db/prisma.js';
+import { shared } from '../../infra/shared.js';
 import type { ChatbotMessage, Prisma } from '../../generated/prisma/client.js';
 import { HttpError } from '../../utils/http-error.js';
 import { TOOLS } from '../tools/tools.catalog.js';
-import { chatbotAvailable, chatbotSettings } from './chatbot.config.js';
+import { chatbotAvailable, chatbotSettings, type ChatbotSettings } from './chatbot.config.js';
 import { conversationRepository } from './chatbot.conversations.js';
 import { checkOutput, type OutputViolation } from './chatbot.guardrails.js';
 import { containsPii } from './chatbot.pii.js';
@@ -97,7 +99,7 @@ function contextTrace(context: KnowledgeContext, toolIds: string[], prompt: stri
 }
 
 function assertAvailable() {
-  if (!chatbotAvailable()) throw new HttpError(503, 'Trợ lý hỗ trợ đang tạm tắt, bạn vui lòng nhắn Zalo hoặc gửi biểu mẫu Liên hệ', 'CHATBOT_UNAVAILABLE');
+  if (!chatbotAvailable()) throw new HttpError(503, 'CHATBOT_UNAVAILABLE', 'Trợ lý hỗ trợ đang tạm tắt, bạn vui lòng nhắn Zalo hoặc gửi biểu mẫu Liên hệ');
 }
 
 async function viewerOf(userId: string) {
@@ -113,6 +115,93 @@ async function ownedConversation(id: string, userId: string) {
 }
 
 const convView = (c: { id: string; status: string; ticketCode: string | null }) => ({ id: c.id, status: c.status, ticketCode: c.ticketCode });
+
+/** Thời gian giữ khóa tối đa (phòng tiến trình chết giữa chừng): lâu hơn timeout gọi Codex. */
+const LOCK_TTL_MS = env.CHATBOT_TIMEOUT_MS + 30_000;
+
+/**
+ * Khóa 1 lượt trả lời cho mỗi hội thoại (Redis khi có REDIS_URL => đúng cả khi chạy nhiều instance; không có thì trong bộ nhớ).
+ * Đang có lượt khác => 409 CHATBOT_BUSY (widget không gửi song song — nó gộp tin nhắn liên tiếp vào 1 lượt; lỗi này chỉ gặp khi 2 tab/gọi API trực tiếp).
+ */
+async function lockConversation(conversationId: string): Promise<() => Promise<void>> {
+  const key = `chatbot:busy:${conversationId}`;
+  const token = randomUUID();
+  if (!(await shared().kv.setNx(key, token, LOCK_TTL_MS))) {
+    throw new HttpError(409, 'CHATBOT_BUSY', 'Tào đang trả lời tin trước, bạn đợi chút rồi gửi tiếp nha');
+  }
+  return async () => {
+    if ((await shared().kv.get(key)) === token) await shared().kv.del(key);
+  };
+}
+
+type OwnedConversation = Awaited<ReturnType<typeof ownedConversation>>;
+
+/** B2-B4 của một lượt (đã qua kiểm tra + đang giữ khóa hội thoại). */
+async function answerTurn(userId: string, conv: OwnedConversation, text: string, s: ChatbotSettings, emit: (e: ChatEvent) => void): Promise<DoneData> {
+  const viewer = await viewerOf(userId);
+  await conversationRepository.addMessage(conv.id, { role: 'user', content: text, redacted: containsPii(text) });
+
+  const finish = async (
+    content: string,
+    answerSource: 'qa_direct' | 'agent' | 'refusal' | 'handoff' | 'error',
+    extra: { matchedQaId?: string | null; toolCalls?: Prisma.InputJsonValue; usage?: { tokensIn: number; tokensOut: number }; handoff?: HandoffResult | null; tools?: ToolCard[]; suggestions?: string[] } = {},
+  ): Promise<DoneData> => {
+    const msg = await conversationRepository.addMessage(
+      conv.id,
+      { role: 'assistant', content, answerSource, matchedQaId: extra.matchedQaId ?? null, ...(extra.toolCalls !== undefined ? { toolCalls: extra.toolCalls } : {}) },
+      extra.usage,
+    );
+    const fresh = (await conversationRepository.findById(conv.id)) ?? conv;
+    const done: DoneData = { message: messageView(msg), conversation: convView(fresh), handoff: extra.handoff ?? null, tools: extra.tools ?? [], suggestions: extra.suggestions ?? [] };
+    emit({ event: 'done', data: done });
+    return done;
+  };
+
+  // B2: khớp trực tiếp câu hỏi mẫu.
+  const [top] = await chatbotRepository.matchQa(text, { limit: 1, order: 'similarity' });
+  if (top && top.similarity >= s.directThreshold) {
+    void chatbotRepository.recordHit(top.id);
+    emit({ event: 'delta', data: { text: top.answer } });
+    return finish(top.answer, 'qa_direct', { matchedQaId: top.id, toolCalls: [{ name: 'qa_direct', ids: [top.id] }] });
+  }
+
+  // B3: gom ngữ cảnh + gọi Codex (1 lượt, JSON).
+  const history = (await conversationRepository.recentMessages(conv.id, s.maxHistory + 1)).slice(0, -1).map((m) => ({ role: m.role, content: m.content }));
+  const ctx: ChatContext = { userId, conversationId: conv.id, viewer };
+  try {
+    const context = await gatherContext(ctx, text, history.filter((m) => m.role === 'user').map((m) => m.content));
+    const prompt = buildAnswerPrompt(s, { firstName: viewer.firstName, history, message: text, context });
+    const { output, usage } = await chatLlm().complete({ kind: 'answer', prompt, schema: answerSchema, hint: { message: text, context }, model: s.model || undefined });
+    const toolCalls = contextTrace(context, output.toolIds, prompt);
+    const matchedQaId = context.sampleAnswers.some((q) => q.id === output.usedSampleId) ? output.usedSampleId : null;
+
+    if (!output.onTopic || output.injection) {
+      emit({ event: 'delta', data: { text: s.refusalText } });
+      return finish(s.refusalText, 'refusal', { usage, toolCalls });
+    }
+    let reply = output.reply.trim();
+    const sources = sourcesOf(context, text);
+    const violation = checkOutput(reply, sources);
+    if (violation) reply = SAFE_TEXT[violation];
+    let handoff: HandoffResult | null = null;
+    if (output.handoff) {
+      handoff = await handoffToZalo(ctx, { reason: output.handoffReason || text, category: output.handoffCategory });
+      // Câu trả lời đã mời nhắn Zalo => chỉ thêm mã (tránh lặp "nhắn Zalo hỗ trợ" 2 lần); chưa có => thêm câu hướng dẫn đầy đủ.
+      const code = `Mã hỗ trợ của bạn: ${handoff.ticketCode} (gửi kèm khi nhắn Zalo nha)`;
+      reply = !reply ? handoff.message : /zalo/i.test(reply) ? `${reply}\n${code}` : `${reply}\n${handoff.message}`;
+    }
+    if (!reply) reply = 'dạ Tào chưa có thông tin chính xác ạ, bạn nhắn Zalo hỗ trợ để được giúp nha';
+    emit({ event: 'delta', data: { text: reply } });
+    // Gợi ý chỉ đi kèm câu hỏi lại bình thường: không kèm khi đã chuyển người hoặc câu trả lời bị guardrail thay.
+    const suggestions = handoff || violation ? [] : cleanSuggestions(output.suggestions, sources);
+    return finish(reply, handoff ? 'handoff' : 'agent', { matchedQaId, toolCalls, usage, handoff, tools: toolCards(output.toolIds), suggestions });
+  } catch (e) {
+    console.error('[chatbot] gọi Codex lỗi:', e instanceof Error ? e.message : e);
+    const text2 = e instanceof LlmQuotaError ? QUOTA_TEXT : e instanceof LlmBusyError ? BUSY_TEXT : ERROR_TEXT;
+    emit({ event: 'delta', data: { text: text2 } });
+    return finish(text2, 'error');
+  }
+}
 
 export const chatbotService = {
   /** Trạng thái widget: có bật không + link Zalo (để hiện nút ngay cả khi chưa chat). */
@@ -149,68 +238,12 @@ export const chatbotService = {
         throw HttpError.tooMany('Bạn đã hỏi rất nhiều hôm nay, vui lòng thử lại sau hoặc nhắn Zalo hỗ trợ');
       }
     }
-    const viewer = await viewerOf(userId);
-    await conversationRepository.addMessage(conv.id, { role: 'user', content: text, redacted: containsPii(text) });
-
-    const finish = async (
-      content: string,
-      answerSource: 'qa_direct' | 'agent' | 'refusal' | 'handoff' | 'error',
-      extra: { matchedQaId?: string | null; toolCalls?: Prisma.InputJsonValue; usage?: { tokensIn: number; tokensOut: number }; handoff?: HandoffResult | null; tools?: ToolCard[]; suggestions?: string[] } = {},
-    ): Promise<DoneData> => {
-      const msg = await conversationRepository.addMessage(
-        conv.id,
-        { role: 'assistant', content, answerSource, matchedQaId: extra.matchedQaId ?? null, ...(extra.toolCalls !== undefined ? { toolCalls: extra.toolCalls } : {}) },
-        extra.usage,
-      );
-      const fresh = (await conversationRepository.findById(conv.id)) ?? conv;
-      const done: DoneData = { message: messageView(msg), conversation: convView(fresh), handoff: extra.handoff ?? null, tools: extra.tools ?? [], suggestions: extra.suggestions ?? [] };
-      emit({ event: 'done', data: done });
-      return done;
-    };
-
-    // B2: khớp trực tiếp câu hỏi mẫu.
-    const [top] = await chatbotRepository.matchQa(text, { limit: 1, order: 'similarity' });
-    if (top && top.similarity >= s.directThreshold) {
-      void chatbotRepository.recordHit(top.id);
-      emit({ event: 'delta', data: { text: top.answer } });
-      return finish(top.answer, 'qa_direct', { matchedQaId: top.id, toolCalls: [{ name: 'qa_direct', ids: [top.id] }] });
-    }
-
-    // B3: gom ngữ cảnh + gọi Codex (1 lượt, JSON).
-    const history = (await conversationRepository.recentMessages(conv.id, s.maxHistory + 1)).slice(0, -1).map((m) => ({ role: m.role, content: m.content }));
-    const ctx: ChatContext = { userId, conversationId: conv.id, viewer };
+    // Khóa theo hội thoại: khách bấm gửi liên tục / mở 2 tab => không gọi AI song song trên cùng hội thoại (lịch sử lẫn, trả lời lộn thứ tự).
+    const release = await lockConversation(conv.id);
     try {
-      const context = await gatherContext(ctx, text, history.filter((m) => m.role === 'user').map((m) => m.content));
-      const prompt = buildAnswerPrompt(s, { firstName: viewer.firstName, history, message: text, context });
-      const { output, usage } = await chatLlm().complete({ kind: 'answer', prompt, schema: answerSchema, hint: { message: text, context }, model: s.model || undefined });
-      const toolCalls = contextTrace(context, output.toolIds, prompt);
-      const matchedQaId = context.sampleAnswers.some((q) => q.id === output.usedSampleId) ? output.usedSampleId : null;
-
-      if (!output.onTopic || output.injection) {
-        emit({ event: 'delta', data: { text: s.refusalText } });
-        return finish(s.refusalText, 'refusal', { usage, toolCalls });
-      }
-      let reply = output.reply.trim();
-      const sources = sourcesOf(context, text);
-      const violation = checkOutput(reply, sources);
-      if (violation) reply = SAFE_TEXT[violation];
-      let handoff: HandoffResult | null = null;
-      if (output.handoff) {
-        handoff = await handoffToZalo(ctx, { reason: output.handoffReason || text, category: output.handoffCategory });
-        // Câu trả lời đã mời nhắn Zalo => chỉ thêm mã (tránh lặp "nhắn Zalo hỗ trợ" 2 lần); chưa có => thêm câu hướng dẫn đầy đủ.
-        const code = `Mã hỗ trợ của bạn: ${handoff.ticketCode} (gửi kèm khi nhắn Zalo nha)`;
-        reply = !reply ? handoff.message : /zalo/i.test(reply) ? `${reply}\n${code}` : `${reply}\n${handoff.message}`;
-      }
-      if (!reply) reply = 'dạ Tào chưa có thông tin chính xác ạ, bạn nhắn Zalo hỗ trợ để được giúp nha';
-      emit({ event: 'delta', data: { text: reply } });
-      // Gợi ý chỉ đi kèm câu hỏi lại bình thường: không kèm khi đã chuyển người hoặc câu trả lời bị guardrail thay.
-      const suggestions = handoff || violation ? [] : cleanSuggestions(output.suggestions, sources);
-      return finish(reply, handoff ? 'handoff' : 'agent', { matchedQaId, toolCalls, usage, handoff, tools: toolCards(output.toolIds), suggestions });
-    } catch (e) {
-      console.error('[chatbot] gọi Codex lỗi:', e instanceof Error ? e.message : e);
-      const text2 = e instanceof LlmQuotaError ? QUOTA_TEXT : e instanceof LlmBusyError ? BUSY_TEXT : ERROR_TEXT;
-      emit({ event: 'delta', data: { text: text2 } });
-      return finish(text2, 'error');
+      return await answerTurn(userId, conv, text, s, emit);
+    } finally {
+      await release();
     }
   },
 
