@@ -4,7 +4,7 @@ import { requireAuth } from '../../middlewares/auth.js';
 import { writeRateLimit } from '../../middlewares/rate-limit.js';
 import { HttpError } from '../../utils/http-error.js';
 import { startSse } from '../chatbot/chatbot.routes.js';
-import { communityBotAdminService, documentBody, patchDocumentBody, patchQaBody, patchSettingsBody, qaBody, qaQuery, conversationsQuery } from './community-bot.admin.js';
+import { communityBotAdminService, documentBody, personaPreviewBody, patchDocumentBody, patchQaBody, patchSettingsBody, qaBody, qaQuery, conversationsQuery } from './community-bot.admin.js';
 import { communityBotService, type CommunityChatEvent } from './community-bot.service.js';
 
 /**
@@ -83,6 +83,11 @@ const body = (req: { body?: unknown }) => req.body ?? {};
 communityBotRouter.get(`${B}/settings`, requireAuth, async (req, res) => {
   res.json({ data: await communityBotAdminService.getSettings(req.userId!, p(req.params.id)) });
 });
+/** Xem trước khối nhân cách (admin trở lên; không lưu). */
+communityBotRouter.post(`${B}/persona-preview`, requireAuth, writeRateLimit('general'), async (req, res) => {
+  res.json({ data: await communityBotAdminService.previewPersona(req.userId!, p(req.params.id), personaPreviewBody.parse(req.body ?? {})) });
+});
+
 communityBotRouter.patch(`${B}/settings`, requireAuth, writeRateLimit('general'), async (req, res) => {
   res.json({ data: await communityBotAdminService.updateSettings(req.userId!, p(req.params.id), patchSettingsBody.parse(body(req))) });
 });

@@ -54,7 +54,10 @@ Bot chỉ đọc dữ liệu của cộng đồng đó, theo quyền của chín
 - Văn bản thuần, không markdown đậm/nghiêng.
 - `handoff=true` ⇒ đề nghị gửi câu hỏi cho chủ.
 
-Persona mẫu (`chatbot.persona.ts` `PERSONA_PRESETS`): `mentor`, `buddy`, `coach`, `concise`. `custom` = `CommunityBot.customPersona` (validate `personaSchema`).
+Persona mẫu (`chatbot.persona.ts` `PERSONA_PRESETS`): `mentor`, `buddy`, `coach`, `concise`, `polite` (Trợ lý lễ phép, em – anh/chị), `expert` (Chuyên gia chuẩn mực). Khóa cũ giữ nguyên, chỉ thêm mới. `custom` = `CommunityBot.customPersona` (validate `personaSchema`).
+
+`personaSchema`: `label, identity, selfPronoun, userPronoun, tone, formality (casual|friendly|polite|formal), verbosity (short|medium|detailed), emoji (none|light|lively), particles, clarify, smallTalk, doList[≤8], avoidList[≤8], styleExamples[≤8]`. Trường mới đều có default => `customPersona` lưu từ bản cũ vẫn đọc được (GET `/settings` trả đủ trường). `renderPersona` dịch các nút chọn thành chỉ dẫn cụ thể (số câu, từ đệm, số emoji…), bảng ví dụ bỏ cột "tránh" khi không có.
+Nhân cách tự viết được lọc bằng `moderate()` (như tin nhắn khách) khi lưu và khi xem trước ⇒ 400 `PERSONA_REJECTED` `details.field` (vd chứa "bỏ qua mọi quy tắc").
 
 ## Endpoint thành viên
 
@@ -96,6 +99,7 @@ Admin trở lên; bật/tắt bot chỉ chủ.
 | Method | Path | Ghi chú |
 |---|---|---|
 | GET | `/settings` | `{settings, isPro, canToggle, presets[], stats:{qa, documents, conversations7d, handoffs7d}}` |
+| POST | `/persona-preview` | `{ personaKey, customPersona?, botName? }` ⇒ `{ text }` = khối "Giọng nói" bot sẽ nhận (không lưu). Admin trở lên; nội dung bị cấm ⇒ 400 `PERSONA_REJECTED` |
 | PATCH | `/settings` | `enabled, botName, welcomeText, personaKey, customPersona, memberPersonaKeys, extraInstructions, freeDailyMessages, vipDailyMessages` (strict). `enabled` do người khác chủ gửi ⇒ 403; bật khi không Pro ⇒ 403 `COMMUNITY_NOT_PRO`; chọn `custom` khi chưa có `customPersona` ⇒ 400 |
 | GET/POST | `/qa` | `?status=active\|candidate…`; POST `{question, answer, variants?}` ⇒ active |
 | PATCH/DELETE | `/qa/:qid` | Sửa / duyệt (`status:'active'`) / từ chối (`'rejected'`) / lưu trữ; câu khác cộng đồng ⇒ 404 |

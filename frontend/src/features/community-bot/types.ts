@@ -57,14 +57,21 @@ export interface StyleExample {
   tooCurt: string;
 }
 
+/** Khớp personaSchema (backend chatbot.persona.ts). */
 export interface Persona {
   label: string;
+  identity: string;
   selfPronoun: string;
   userPronoun: string;
   tone: string;
-  emoji: 'none' | 'light';
+  formality: 'casual' | 'friendly' | 'polite' | 'formal';
+  verbosity: 'short' | 'medium' | 'detailed';
+  emoji: 'none' | 'light' | 'lively';
+  particles: string;
   clarify: string;
   smallTalk: string;
+  doList: string[];
+  avoidList: string[];
   styleExamples: StyleExample[];
 }
 

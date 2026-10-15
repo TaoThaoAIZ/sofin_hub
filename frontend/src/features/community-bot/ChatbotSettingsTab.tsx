@@ -3,7 +3,7 @@ import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../components/ui/Button';
 import { ErrorLine, errorText, INPUT_CLASS } from '../communities/components/Modal';
-import { createBotDoc, createBotQa, deleteBotQa, fetchBotConversationDetail, patchBotDoc, patchBotQa, patchBotSettings } from './api';
+import { createBotDoc, createBotQa, deleteBotQa, fetchBotConversationDetail, patchBotDoc, patchBotQa, patchBotSettings, previewBotPersona } from './api';
 import { botKeys, useBotConversations, useBotDocs, useBotQa, useBotSettings } from './queries';
 import type { BotSettings, Persona, StyleExample } from './types';
 
@@ -29,7 +29,22 @@ export function ChatbotSettingsTab({ communityId }: { communityId: string }) {
 }
 
 const SECTION = 'glass flex flex-col gap-4 rounded-[26px] p-6';
-const BLANK_PERSONA: Persona = { label: '', selfPronoun: 'mình', userPronoun: 'bạn', tone: '', emoji: 'none', clarify: '', smallTalk: '', styleExamples: [] };
+const BLANK_PERSONA: Persona = {
+  label: '',
+  identity: '',
+  selfPronoun: 'mình',
+  userPronoun: 'bạn',
+  tone: '',
+  formality: 'friendly',
+  verbosity: 'medium',
+  emoji: 'none',
+  particles: '',
+  clarify: '',
+  smallTalk: '',
+  doList: [],
+  avoidList: [],
+  styleExamples: [],
+};
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
@@ -54,6 +69,25 @@ function SettingsForm({ communityId, view }: { communityId: string; view: NonNul
     setS((o) => ({ ...o, [k]: v }));
   };
   const usesCustom = s.personaKey === 'custom' || s.memberPersonaKeys.includes('custom');
+  const [preview, setPreview] = useState<{ text: string } | { error: string } | null>(null);
+  const selectedPreset = view.presets.find((p) => p.key === s.personaKey);
+  /** Chép nhân cách mẫu sang ô "Tự tạo" để sửa tiếp (không phải viết từ đầu). */
+  const customizeFrom = (key: string) => {
+    const p = view.presets.find((x) => x.key === key);
+    if (!p) return;
+    const { key: _k, ...rest } = p;
+    setSaved(false);
+    setCustom({ ...BLANK_PERSONA, ...rest, label: t('customFrom', { label: p.label }), doList: [...p.doList], avoidList: [...p.avoidList], styleExamples: p.styleExamples.map((e) => ({ ...e })) });
+    set('personaKey', 'custom');
+  };
+  const showPreview = async () => {
+    setPreview(null);
+    try {
+      setPreview({ text: await previewBotPersona(communityId, { personaKey: s.personaKey, customPersona: s.personaKey === 'custom' ? custom : null, botName: s.botName }) });
+    } catch (e) {
+      setPreview({ error: errorText(e) });
+    }
+  };
   const options = [...view.presets.map((p) => ({ key: p.key, label: p.label, sample: p.styleExamples[0]?.good ?? p.tone })), { key: 'custom', label: t('custom'), sample: custom.label || t('customHint') }];
 
   async function save(patch: Partial<BotSettings>) {
@@ -124,6 +158,27 @@ function SettingsForm({ communityId, view }: { communityId: string; view: NonNul
             </button>
           ))}
         </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+          {selectedPreset && (
+            <button type="button" onClick={() => customizeFrom(selectedPreset.key)} className="rounded-xl border border-brand/40 px-3 py-1.5 font-semibold text-brand hover:bg-brand/5">
+              {t('customizeFrom', { label: selectedPreset.label })}
+            </button>
+          )}
+          <button type="button" onClick={() => void showPreview()} className="rounded-xl border border-stone-200 px-3 py-1.5 font-semibold text-stone-700 hover:bg-stone-50">
+            {t('previewPersona')}
+          </button>
+        </div>
+        {preview && (
+          <div className="mt-3 rounded-2xl border border-dashed border-brand/30 bg-white/70 p-3">
+            <div className="mb-1.5 flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold tracking-wide text-stone-500 uppercase">{t('previewTitle')}</span>
+              <button type="button" onClick={() => setPreview(null)} className="text-xs font-semibold text-stone-500 hover:text-stone-800">
+                {t('previewClose')}
+              </button>
+            </div>
+            {'text' in preview ? <pre className="m-0 max-h-80 overflow-auto font-sans text-[12.5px] leading-relaxed whitespace-pre-wrap text-stone-700">{preview.text}</pre> : <ErrorLine>{preview.error}</ErrorLine>}
+          </div>
+        )}
       </div>
 
       {usesCustom && <CustomPersonaForm value={custom} onChange={(p) => (setSaved(false), setCustom(p))} />}
@@ -164,13 +219,36 @@ function SettingsForm({ communityId, view }: { communityId: string; view: NonNul
   );
 }
 
+/** Nhiều dòng <-> danh sách (mỗi dòng 1 ý, tối đa 8 dòng, mỗi dòng ≤160 ký tự — khớp personaSchema). */
+const toLines = (v: string) => v.split('\n').map((x) => x.slice(0, 160)).slice(0, 8);
+const fromLines = (v: string[]) => v.join('\n');
+
 function CustomPersonaForm({ value, onChange }: { value: Persona; onChange: (p: Persona) => void }) {
   const { t } = useTranslation('community-bot-admin');
   const set = <K extends keyof Persona>(k: K, v: Persona[K]) => onChange({ ...value, [k]: v });
   const setEx = (i: number, patch: Partial<StyleExample>) => set('styleExamples', value.styleExamples.map((e, j) => (j === i ? { ...e, ...patch } : e)));
+  const choice = <K extends 'formality' | 'verbosity' | 'emoji'>(k: K, opts: Persona[K][]) => (
+    <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label={t(`p.${k}`)}>
+      {opts.map((o) => (
+        <button
+          key={o}
+          type="button"
+          role="radio"
+          aria-checked={value[k] === o}
+          onClick={() => set(k, o)}
+          className={`rounded-lg border px-2.5 py-1 text-xs font-semibold ${value[k] === o ? 'border-brand bg-brand/10 text-brand' : 'border-stone-200 bg-white text-stone-600 hover:border-brand/40'}`}
+        >
+          {t(`p.${k}_${o}`)}
+        </button>
+      ))}
+    </div>
+  );
   return (
     <div className="flex flex-col gap-4 rounded-2xl border border-[rgba(120,60,20,.1)] bg-white/60 p-4">
-      <div className="text-[15px] font-bold">{t('customTitle')}</div>
+      <div>
+        <div className="text-[15px] font-bold">{t('customTitle')}</div>
+        <p className="m-0 mt-0.5 text-xs text-stone-500">{t('customIntro')}</p>
+      </div>
       <div className="grid gap-4 sm:grid-cols-3">
         <Field label={t('pLabel')}>
           <input className={INPUT_CLASS} value={value.label} maxLength={60} onChange={(e) => set('label', e.target.value)} placeholder={t('pLabelPlaceholder')} />
@@ -182,20 +260,45 @@ function CustomPersonaForm({ value, onChange }: { value: Persona; onChange: (p: 
           <input className={INPUT_CLASS} value={value.userPronoun} maxLength={20} onChange={(e) => set('userPronoun', e.target.value)} />
         </Field>
       </div>
+      <Field label={t('p.identity')} hint={t('p.identityHint')}>
+        <input className={INPUT_CLASS} value={value.identity} maxLength={400} onChange={(e) => set('identity', e.target.value)} placeholder={t('p.identityPlaceholder')} />
+      </Field>
       <Field label={t('pTone')} hint={t('pToneHint')}>
         <textarea className={`${INPUT_CLASS} min-h-20 py-2`} value={value.tone} maxLength={1200} onChange={(e) => set('tone', e.target.value)} />
       </Field>
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div>
+          <div className="mb-1.5 text-[13.5px] font-semibold text-stone-800">{t('p.formality')}</div>
+          {choice('formality', ['casual', 'friendly', 'polite', 'formal'])}
+        </div>
+        <div>
+          <div className="mb-1.5 text-[13.5px] font-semibold text-stone-800">{t('p.verbosity')}</div>
+          {choice('verbosity', ['short', 'medium', 'detailed'])}
+        </div>
+        <div>
+          <div className="mb-1.5 text-[13.5px] font-semibold text-stone-800">{t('p.emoji')}</div>
+          {choice('emoji', ['none', 'light', 'lively'])}
+        </div>
+      </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label={t('pEmoji')}>
-          <select className={INPUT_CLASS} value={value.emoji} onChange={(e) => set('emoji', e.target.value as Persona['emoji'])}>
-            <option value="none">{t('emojiNone')}</option>
-            <option value="light">{t('emojiLight')}</option>
-          </select>
+        <Field label={t('p.particles')} hint={t('p.particlesHint')}>
+          <input className={INPUT_CLASS} value={value.particles} maxLength={80} onChange={(e) => set('particles', e.target.value)} placeholder="nha, nhé" />
         </Field>
         <Field label={t('pSmallTalk')}>
           <input className={INPUT_CLASS} value={value.smallTalk} maxLength={400} onChange={(e) => set('smallTalk', e.target.value)} />
         </Field>
       </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label={t('p.doList')} hint={t('p.listHint')}>
+          <textarea className={`${INPUT_CLASS} min-h-20 py-2`} value={fromLines(value.doList)} onChange={(e) => set('doList', toLines(e.target.value))} placeholder={t('p.doPlaceholder')} />
+        </Field>
+        <Field label={t('p.avoidList')} hint={t('p.listHint')}>
+          <textarea className={`${INPUT_CLASS} min-h-20 py-2`} value={fromLines(value.avoidList)} onChange={(e) => set('avoidList', toLines(e.target.value))} placeholder={t('p.avoidPlaceholder')} />
+        </Field>
+      </div>
+      <Field label={t('p.clarify')} hint={t('p.clarifyHint')}>
+        <input className={INPUT_CLASS} value={value.clarify} maxLength={400} onChange={(e) => set('clarify', e.target.value)} />
+      </Field>
       <div>
         <div className="mb-1 text-sm font-bold">{t('examples')}</div>
         <p className="m-0 mb-2 text-xs text-stone-500">{t('examplesHint')}</p>

@@ -4,7 +4,7 @@ import { prisma } from '../../db/prisma.js';
 import type { ChatbotQA, Prisma } from '../../generated/prisma/client.js';
 import { HttpError } from '../../utils/http-error.js';
 import { conversationRepository } from '../chatbot/chatbot.conversations.js';
-import { isPersonaKey, PERSONA_KEYS, PERSONA_PRESETS, PRESET_KEYS, personaSchema } from '../chatbot/chatbot.persona.js';
+import { isPersonaKey, PERSONA_KEYS, PERSONA_PRESETS, PRESET_KEYS, personaSchema, personaViolation, renderPersona, resolvePersona } from '../chatbot/chatbot.persona.js';
 import { chatbotRepository } from '../chatbot/chatbot.repository.js';
 import { messageView } from '../chatbot/chatbot.service.js';
 import { isCommunityOwner, requireRole } from '../permissions/policy.js';
@@ -93,7 +93,27 @@ async function qaOrThrow(communityId: string, id: string) {
   return q;
 }
 
+/** Nhân cách tự viết đi thẳng vào prompt => lọc như tin nhắn của khách (nội dung cấm, cố ghi đè luật). */
+function assertPersonaAllowed(p: z.infer<typeof personaSchema>) {
+  const field = personaViolation(p);
+  if (field) throw HttpError.coded(400, 'PERSONA_REJECTED', 'Nhân cách có nội dung không được phép (nội dung cấm hoặc yêu cầu bỏ qua quy tắc an toàn). Vui lòng sửa lại.', { field });
+}
+
+export const personaPreviewBody = z.object({ personaKey: z.enum(PERSONA_KEYS), customPersona: personaSchema.nullish(), botName: z.string().trim().max(40).optional() });
+
 export const communityBotAdminService = {
+  /** Xem trước khối "Giọng nói" bot sẽ nhận (chưa lưu) — để chủ thấy các lựa chọn được dịch thành chỉ dẫn thế nào. */
+  async previewPersona(userId: string, communityId: string, b: z.infer<typeof personaPreviewBody>) {
+    await requireRole(userId, communityId, 'admin');
+    if (b.personaKey === 'custom') {
+      if (!b.customPersona) throw HttpError.badRequest('Chưa có nhân cách tự tạo');
+      assertPersonaAllowed(b.customPersona);
+    }
+    const bot = await prisma.communityBot.findUnique({ where: { communityId }, select: { botName: true } });
+    const persona = resolvePersona(b.personaKey, b.customPersona);
+    return { text: renderPersona(persona, b.botName || bot?.botName || 'Trợ lý') };
+  },
+
   async getSettings(userId: string, communityId: string) {
     const role = await requireRole(userId, communityId, 'admin');
     const since = new Date(Date.now() - 7 * 24 * 3600_000);
@@ -111,7 +131,8 @@ export const communityBotAdminService = {
           botName: bot.botName,
           welcomeText: bot.welcomeText,
           personaKey: bot.personaKey,
-          customPersona: bot.customPersona,
+          // JSON cũ (trước khi có các trường mới) => điền default để form hiện đủ trường.
+          customPersona: bot.customPersona ? (personaSchema.safeParse(bot.customPersona).data ?? null) : null,
           memberPersonaKeys: bot.memberPersonaKeys,
           extraInstructions: bot.extraInstructions,
           freeDailyMessages: bot.freeDailyMessages,
@@ -140,6 +161,7 @@ export const communityBotAdminService = {
     const memberKeys = b.memberPersonaKeys ?? cur?.memberPersonaKeys ?? [];
     if ((personaKey === 'custom' || memberKeys.includes('custom')) && !custom) throw HttpError.badRequest('Chưa có nhân cách tự tạo — điền form nhân cách trước khi chọn "Tự tạo"');
     if (!isPersonaKey(personaKey)) throw HttpError.badRequest('Nhân cách không hợp lệ');
+    if (b.customPersona) assertPersonaAllowed(b.customPersona);
     const data = {
       ...b,
       ...(b.customPersona !== undefined ? { customPersona: (b.customPersona ?? undefined) as Prisma.InputJsonValue | undefined } : {}),

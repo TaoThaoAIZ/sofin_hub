@@ -10,6 +10,7 @@ import type {
   BotSettings,
   BotSettingsView,
   CommunityBotStatus,
+  Persona,
 } from './types';
 
 const B = (id: string) => `/communities/${encodeURIComponent(id)}/bot`;
@@ -43,6 +44,9 @@ export const handoffToOwner = (id: string, conversationId: string) =>
 
 // ---------------------------------------------------------------- chủ / admin cộng đồng
 export const fetchBotSettings = (id: string, signal?: AbortSignal) => apiGet<{ data: BotSettingsView }>(`${B(id)}/settings`, undefined, signal).then((r) => r.data);
+/** Khối "Giọng nói" bot sẽ nhận với nhân cách đang chọn / đang sửa (chưa lưu). */
+export const previewBotPersona = (id: string, body: { personaKey: string; customPersona?: Persona | null; botName?: string }) =>
+  apiPost<{ data: { text: string } }>(`${B(id)}/persona-preview`, body).then((r) => r.data.text);
 export const patchBotSettings = (id: string, body: Partial<BotSettings>) => apiPatch<{ data: BotSettingsView }>(`${B(id)}/settings`, body).then((r) => r.data);
 export const fetchBotQa = (id: string, status: string, signal?: AbortSignal) =>
   apiGet<{ data: BotQa[] }>(`${B(id)}/qa`, { status, limit: 100 }, signal).then((r) => r.data);
