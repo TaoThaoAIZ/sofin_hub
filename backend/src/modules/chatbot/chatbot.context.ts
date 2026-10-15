@@ -40,6 +40,8 @@ export interface KnowledgeContext {
   /** Thông tin CÔNG KHAI của cộng đồng khách đang xem (null = không ở trang cộng đồng / không xem được). */
   currentPage: { community: { name: string; link: string; description: string; instructor: string; promise: string | null; benefits: string[]; rules: string[]; price: string; members: number } } | null;
   myPayments: { community: string; amount: string; status: string; type: string; createdAt: string; transferContent?: string; refunded?: string }[] | null;
+  /** Cộng đồng CHÍNH khách đã tham gia (null = câu hỏi không hỏi về cộng đồng/khóa học của khách). */
+  myCommunities: { name: string; link: string; role: string; joinedAt: string }[] | null;
   platformFacts: Record<string, unknown>;
   /** ID nguồn đã đưa vào ngữ cảnh — KHÔNG đưa vào prompt; ghi vào ChatbotMessage.toolCalls để kiểm tra (chỉ câu mẫu active, tài liệu active). */
   sources: { qaIds: string[]; chunks: { id: string; documentId: string }[] };
@@ -81,6 +83,24 @@ async function myPayments(userId: string): Promise<KnowledgeContext['myPayments'
   }));
 }
 
+const ROLE_LABEL: Record<string, string> = { owner: 'chủ cộng đồng', admin: 'quản trị viên', mod: 'điều hành viên', member: 'thành viên' };
+
+/** Cộng đồng khách đang tham gia (mới tham gia trước), bỏ cộng đồng đã xóa / bị gỡ. */
+async function myCommunities(userId: string): Promise<NonNullable<KnowledgeContext['myCommunities']>> {
+  const rows = await prisma.enrollment.findMany({
+    where: { userId, community: { deletedAt: null, moderationStatus: 'active' } },
+    orderBy: { enrolledAt: 'desc' },
+    take: 20,
+    select: { role: true, enrolledAt: true, community: { select: { id: true, title: true } } },
+  });
+  return rows.map((e) => ({
+    name: e.community.title,
+    link: `/communities/${e.community.id}`,
+    role: ROLE_LABEL[e.role] ?? e.role,
+    joinedAt: e.enrolledAt.toISOString().slice(0, 10),
+  }));
+}
+
 function platformFacts(): Record<string, unknown> {
   const c = cfg();
   return {
@@ -104,6 +124,11 @@ function platformFacts(): Record<string, unknown> {
 /** Câu hỏi (hoặc lượt khách ngay trước) nhắc tới đơn/thanh toán => mới đưa giao dịch của khách vào ngữ cảnh. */
 const PAYMENT_TOPIC = /\b(don|thanh toan|chuyen khoan|hoan tien|giao dich|gia han|hoa don|bill|kich hoat|nap|tru tien|da tra|chua nhan|qr|vietqr|ma noi dung|goi thanh vien|huy goi|order|payment|refund|invoice)\b|sfh[a-z0-9]{4,}/;
 export const isPaymentTopic = (texts: string[]) => texts.some((t) => PAYMENT_TOPIC.test(normalizeText(t)));
+
+/** Khách hỏi về cộng đồng/khóa học CỦA MÌNH ("tôi đã tham gia cộng đồng nào", "khóa học của tôi") => đưa danh sách đã tham gia. */
+const MY_COMMUNITIES_TOPIC =
+  /\b(da|dang) (tham gia|dang ky)\b|\b(da|dang) (hoc|mua|vao|o) (nhung |cac )?(cong dong|khoa|lop|nhom)\b|\b(cong dong|khoa hoc|lop hoc|nhom|course|community)( nao)? (cua )?(toi|minh|em|tui)\b|\b(toi|minh|em|tui) (o|trong|thuoc) (nhung |cac )?(cong dong|khoa hoc|nhom)\b|\bmy (communities|courses)\b/;
+export const isMyCommunitiesTopic = (text: string) => MY_COMMUNITIES_TOPIC.test(normalizeText(text));
 
 /** Câu hỏi chung về khóa học/cộng đồng => đưa thêm cộng đồng nổi bật (tìm theo nguyên câu thường không khớp gì). */
 const CATALOG_TOPIC = /\b(khoa hoc|cong dong|lop hoc|hoc phi|dang ky hoc|course|community|courses)\b/;
@@ -181,7 +206,8 @@ async function pageCommunity(userId: string, communityId: string): Promise<Knowl
 export async function gatherContext(ctx: ChatContext, text: string, recentUserTexts: string[] = []): Promise<KnowledgeContext> {
   const wantPayments = isPaymentTopic([text, ...recentUserTexts.slice(-1)]);
   const wantCatalog = CATALOG_TOPIC.test(normalizeText(text));
-  const [qa, chunks, found, payments, cats] = await Promise.all([
+  const wantMine = isMyCommunitiesTopic(text);
+  const [qa, chunks, found, payments, cats, mine] = await Promise.all([
     chatbotRepository.matchQa(text, { limit: 5, order: 'blend' }),
     chatbotRepository.searchChunks(text, 4),
     searchService
@@ -195,13 +221,14 @@ export async function gatherContext(ctx: ChatContext, text: string, recentUserTe
       .catch(() => []),
     wantPayments ? myPayments(ctx.userId) : Promise.resolve(null),
     courseCategories().catch(() => []),
+    wantMine ? myCommunities(ctx.userId).catch(() => []) : Promise.resolve(null),
   ]);
   const currentPage = ctx.pageCommunityId ? await pageCommunity(ctx.userId, ctx.pageCommunityId).catch(() => null) : null;
   // Khách nhắc tên một chủ đề (thường do bấm gợi ý) => khóa học của chủ đề đó (có giá).
   // Hỏi chung về khóa học mà không khớp gì => KHÔNG liệt kê khóa học; đưa danh sách chủ đề để bot hỏi lại khách quan tâm chủ đề nào.
   const topic = found.length ? undefined : categoryIn([text], cats);
   const communities = topic ? await featuredCommunities(5, topic.key) : found;
-  const categories = !topic && !found.length && wantCatalog ? cats.map(({ name, courses }) => ({ name, courses })) : [];
+  const categories = !mine && !topic && !found.length && wantCatalog ? cats.map(({ name, courses }) => ({ name, courses })) : [];
   return {
     sampleAnswers: qa.map((q) => ({ id: q.id, question: q.question, answer: q.answer })),
     documents: chunks.map((c) => ({ document: c.documentTitle, section: c.heading, content: c.content })),
@@ -211,6 +238,7 @@ export async function gatherContext(ctx: ChatContext, text: string, recentUserTe
     categories,
     currentPage,
     myPayments: payments,
+    myCommunities: mine,
     platformFacts: platformFacts(),
   };
 }

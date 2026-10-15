@@ -11,7 +11,7 @@ import { moderate, moderationReply } from './chatbot.moderation.js';
 import { containsPii } from './chatbot.pii.js';
 import { chatbotRepository } from './chatbot.repository.js';
 import { env } from '../../config/env.js';
-import { gatherContext, handoffToZalo, sourcesOf, type ChatContext, type HandoffResult, type KnowledgeContext } from './chatbot.context.js';
+import { gatherContext, handoffToZalo, isMyCommunitiesTopic, sourcesOf, type ChatContext, type HandoffResult, type KnowledgeContext } from './chatbot.context.js';
 import { LlmBusyError, LlmQuotaError } from './chatbot.llm.js';
 import { chatLlm } from './chatbot.model.js';
 import { answerSchema, buildAnswerPrompt } from './chatbot.prompt.js';
@@ -96,6 +96,7 @@ function contextTrace(context: KnowledgeContext, toolIds: string[], prompt: stri
   if (context.communities.length) out.push({ name: 'communities', links: context.communities.map((c) => c.link) });
   if (context.categories.length) out.push({ name: 'categories', names: context.categories.map((c) => c.name) });
   if (context.myPayments !== null) out.push({ name: 'my_payments', count: context.myPayments.length });
+  if (context.myCommunities !== null) out.push({ name: 'my_communities', count: context.myCommunities.length });
   out.push({ name: 'platform_facts' });
   if (env.CHATBOT_TRACE_CONTEXT) out.push({ name: '_trace', prompt });
   return out as Prisma.InputJsonValue;
@@ -169,8 +170,8 @@ async function answerTurn(userId: string, conv: OwnedConversation, text: string,
     return finish(reply, 'refusal', { toolCalls: [{ name: 'moderation', category: mod.category }] });
   }
 
-  // B2: khớp trực tiếp câu hỏi mẫu.
-  const [top] = await chatbotRepository.matchQa(text, { limit: 1, order: 'similarity' });
+  // B2: khớp trực tiếp câu hỏi mẫu — trừ câu hỏi về dữ liệu của CHÍNH khách ("tôi đã tham gia cộng đồng nào"): câu mẫu là câu chung, dễ khớp nhầm "cách tham gia".
+  const [top] = isMyCommunitiesTopic(text) ? [] : await chatbotRepository.matchQa(text, { limit: 1, order: 'similarity' });
   if (top && top.similarity >= s.directThreshold) {
     void chatbotRepository.recordHit(top.id);
     emit({ event: 'delta', data: { text: top.answer } });

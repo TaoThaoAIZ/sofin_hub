@@ -371,6 +371,26 @@ describe('chatbot', () => {
       assert.equal((await send('khong-ton-tai')).status, 200, 'id lạ => bỏ qua, không lỗi');
     });
 
+    it('"tôi đã tham gia cộng đồng nào" => ngữ cảnh có đúng cộng đồng của CHÍNH khách; câu hỏi khác không kèm', async () => {
+      const { gatherContext, isMyCommunitiesTopic } = await import('../src/modules/chatbot/chatbot.context.js');
+      for (const q of ['tôi đã tham gia cộng đồng nào', 'khóa học của tôi', 'mình đang học những khóa nào', 'cộng đồng của mình']) assert.equal(isMyCommunitiesTopic(q), true, q);
+      for (const q of ['làm sao để tham gia cộng đồng', 'có những khóa học nào', 'tool veo làm được gì']) assert.equal(isMyCommunitiesTopic(q), false, q);
+      const u = await c.registerUser('cbmine');
+      const other = await c.registerUser('cbmine2');
+      await prisma.enrollment.create({ data: { userId: u.id, communityId: 'photo' } });
+      await prisma.enrollment.create({ data: { userId: other.id, communityId: 'yt' } });
+      const ctx = { userId: u.id, conversationId: 'x', viewer: { firstName: 'T', lastName: 'U', email: u.email } };
+      const mine = await gatherContext(ctx, 'tôi đã tham gia cộng đồng nào');
+      assert.deepEqual(mine.myCommunities?.map((m) => m.link), ['/communities/photo']);
+      assert.equal(mine.categories.length, 0, 'không hỏi lại chủ đề');
+      assert.equal((await gatherContext(ctx, 'tool veo làm được gì')).myCommunities, null);
+      const none = await gatherContext({ ...ctx, userId: (await c.registerUser('cbmine3')).id }, 'khóa học của tôi');
+      assert.deepEqual(none.myCommunities, []);
+      // Không trả câu mẫu "cách tham gia cộng đồng" cho câu hỏi về cộng đồng của chính khách.
+      const d = await say(u, await start(u), 'tôi đã tham gia cộng đồng nào');
+      assert.notEqual(d.message.answerSource, 'qa_direct');
+    });
+
     it('chuyển người: câu trả lời đã mời nhắn Zalo thì không nối thêm mã (mã hiện ở dải dưới widget)', async () => {
       const u = await c.registerUser('cbnodup');
       const conv = await start(u);
