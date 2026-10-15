@@ -324,7 +324,7 @@ export function ClassroomTab() {
               key={m.id}
               className={`glass flex flex-col overflow-hidden rounded-[20px] transition-transform hover:-translate-y-0.5`}
             >
-              <div className="relative h-[156px] overflow-hidden bg-[#110d0b]">
+              <div className="relative aspect-video w-full overflow-hidden bg-[#110d0b]">
                 <img src={thumb} alt={m.title} className="size-full object-cover" />
                 {canEdit && (
                   <button

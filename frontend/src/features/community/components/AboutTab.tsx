@@ -52,7 +52,7 @@ export function AboutTab() {
         <section className="rounded-[22px] border border-brand/15 bg-gradient-to-br from-[#fff3e8] to-[#ffe9d9] px-7 py-[22px]">
           <div className="max-w-[760px]">
             <div className="text-[22px] font-extrabold text-[#e8590c]">{course.title}</div>
-            <p className="mt-2.5 text-[15px] leading-[1.65] text-stone-700">{course.about}</p>
+            <p className="mt-2.5 text-[15px] leading-[1.65] text-stone-700 whitespace-pre-line break-words">{course.about}</p>
           </div>
         </section>
 

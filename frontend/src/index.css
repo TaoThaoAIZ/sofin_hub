@@ -1,8 +1,8 @@
 @import 'tailwindcss';
-@import '@fontsource-variable/plus-jakarta-sans';
+@import '@fontsource-variable/manrope';
 
 @theme {
-  --font-sans: 'Plus Jakarta Sans Variable', system-ui, sans-serif;
+  --font-sans: 'Manrope Variable', system-ui, sans-serif;
 
   /* Màu thương hiệu (lấy từ bản UI Liquid Glass) */
   --color-brand: #f26a1b;
