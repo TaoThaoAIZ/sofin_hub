@@ -46,6 +46,8 @@ describe('bài học: tải video dài (stream), slide, tài liệu', () => {
   const presign = (token: string, body: Record<string, unknown>) => c.call('POST', '/uploads/presign', { token, body });
   const put = (url: string, body: Buffer | ReadableStream, contentType: string, extra: RequestInit = {}) =>
     fetch(origin + url, { method: 'PUT', headers: { 'Content-Type': contentType }, body: body as never, ...extra });
+  /** Tệp đính kèm của bài học lưu URL tuyệt đối (FE gửi absoluteUrl). */
+  const abs = (url: string) => `http://localhost${url}`;
   const get = (url: string, token?: string, headers: Record<string, string> = {}) =>
     fetch(origin + url, { headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...headers } });
 
@@ -167,8 +169,9 @@ describe('bài học: tải video dài (stream), slide, tài liệu', () => {
     await doc('application/vnd.ms-excel', 'a.xls', OLE);
     await doc('text/csv', 'a.csv', Buffer.from('a,b\n1,2\n'));
     await doc('application/vnd.openxmlformats-officedocument.presentationml.slideshow', 'a.ppsx', ZIP);
-    const wrong = await presign(mod.token, { filename: 'a.doc', contentType: 'application/msword', size: 30, purpose: 'lesson_attachment', communityId: 'photo' });
-    assert.equal((await put(wrong.body.data.uploadUrl, Buffer.from('%PDF-1.7 not ole container at all'), 'application/msword')).status, 400);
+    const fakeDoc = Buffer.from('%PDF-1.7 not ole container at all');
+    const wrong = await presign(mod.token, { filename: 'a.doc', contentType: 'application/msword', size: fakeDoc.length, purpose: 'lesson_attachment', communityId: 'photo' });
+    assert.equal((await put(wrong.body.data.uploadUrl, fakeDoc, 'application/msword')).status, 400);
   });
 
   it('bài học lưu video webm tải lên + slide (kind=slide) cùng tệp đính kèm; thành viên thấy đủ', async () => {
@@ -187,8 +190,8 @@ describe('bài học: tải video dài (stream), slide, tài liệu', () => {
         body: 'ghi chú',
         videoUrl: video.fileUrl,
         attachments: [
-          { name: 's.pdf', url: slide.fileUrl, size: PDF.length, kind: 'slide' },
-          { name: 'tai-lieu.csv', url: '/api/files/' + 'a'.repeat(32) + '.csv', size: 10 },
+          { name: 's.pdf', url: abs(slide.fileUrl), size: PDF.length, kind: 'slide' },
+          { name: 'tai-lieu.csv', url: abs('/api/files/' + 'a'.repeat(32) + '.csv'), size: 10 },
         ],
       },
     });
@@ -199,7 +202,7 @@ describe('bài học: tải video dài (stream), slide, tài liệu', () => {
     // Video/slide ngoài whitelist đuôi bị từ chối.
     const badVideo = await c.call('POST', `/courses/photo/modules/${m.body.data.id}/lessons`, { token: mod.token, body: { title: 'x', type: 'video', durationMin: 1, body: '', videoUrl: '/api/files/' + 'b'.repeat(32) + '.avi' } });
     assert.equal(badVideo.status, 400);
-    const badKind = await c.call('POST', `/courses/photo/modules/${m.body.data.id}/lessons`, { token: mod.token, body: { title: 'x', type: 'text', durationMin: 1, body: 'y'.repeat(40), attachments: [{ name: 'a', url: slide.fileUrl, kind: 'evil' }] } });
+    const badKind = await c.call('POST', `/courses/photo/modules/${m.body.data.id}/lessons`, { token: mod.token, body: { title: 'x', type: 'text', durationMin: 1, body: 'y'.repeat(40), attachments: [{ name: 'a', url: abs(slide.fileUrl), kind: 'evil' }] } });
     assert.equal(badKind.status, 400);
   });
 });
