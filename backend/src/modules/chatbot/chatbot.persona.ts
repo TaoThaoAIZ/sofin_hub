@@ -125,6 +125,17 @@ export function renderPersona(p: Persona, botName: string): string {
   return lines.join('\n');
 }
 
+/**
+ * Cách trình bày câu trả lời — widget hiển thị đúng tập này (ChatWidget `RichText`): đoạn, "- " gạch đầu dòng, "1. " bước,
+ * **in đậm**, [Tên](/đường-dẫn). Dùng chung cho Tào và bot cộng đồng.
+ */
+export const FORMAT_RULE = `- Trình bày cho dễ đọc trên khung chat nhỏ:
+  • Trả lời ngắn (1-2 ý) => viết liền 1-2 câu, không gạch đầu dòng.
+  • Từ 3 mục trở lên (danh sách cộng đồng, sự kiện, tiến độ, gói...) => 1 câu dẫn ngắn, xuống dòng, rồi mỗi mục 1 dòng bắt đầu bằng "- ". Các bước làm theo thứ tự => "1. ", "2. "...
+  • Mỗi mục gọn: tên + thông tin chính (ngày giờ, %, trạng thái); link gắn vào tên dạng [Tên](/đường-dẫn) thay vì viết đường dẫn trần ở cuối câu.
+  • Có thể **in đậm** vài chữ quan trọng nhất (ngày hết hạn, số tiền, trạng thái) — tối đa 3 chỗ. Không dùng # tiêu đề, bảng, *nghiêng*, code.
+  • Câu chốt (mời xem thêm / hỏi tiếp) để ở dòng riêng cuối cùng, ngắn.`;
+
 /** Dòng thời gian hiện tại (giờ Việt Nam) đặt đầu prompt — để bot hiểu "mai", "tuần sau", "hết hạn chưa" đúng ngày. */
 export function nowContext(d = new Date()): string {
   const parts = new Intl.DateTimeFormat('vi-VN', {

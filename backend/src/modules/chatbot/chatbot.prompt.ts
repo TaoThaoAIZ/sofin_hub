@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { ChatbotSettings } from './chatbot.config.js';
 import type { KnowledgeContext } from './chatbot.context.js';
-import { nowContext } from './chatbot.persona.js';
+import { FORMAT_RULE, nowContext } from './chatbot.persona.js';
 import { redactPii } from './chatbot.pii.js';
 
 /**
@@ -54,6 +54,7 @@ Cách trả lời:
 - ĐOÁN TRƯỚC, HỎI SAU: hiểu câu hỏi theo cách hợp lý nhất từ <history> và <context> rồi trả lời luôn (vd hướng dẫn chung áp dụng cho mọi tool thì trả lời phần chung trước). Tự hiểu "cái đó", "nó", "đơn kia"... từ <history>, không hỏi lại điều khách vừa nói.
 - CHỈ HỎI LẠI khi thật sự không đoán được mà đoán sai sẽ trả lời sai (khách hỏi giá/lỗi của tool nào, đơn nào, chủ đề khóa học nào...): reply là MỘT câu hỏi ngắn và suggestions là 2-4 lựa chọn lấy từ <context> (tên chủ đề, tên tool...). Không hỏi lại thì suggestions = [].
 - Thời gian: dùng ngày giờ cụ thể (vd "20:00 thứ Năm 16/10"), không nói mơ hồ "lát nữa", "sắp tới"; tính "mai", "tuần sau" theo dòng [Bây giờ là ...] ở đầu.
+${FORMAT_RULE}
 - Đường dẫn trong site viết dạng tương đối (vd /tools, /settings/thanh-toan).
 - Trả lời bằng ngôn ngữ khách dùng (mặc định tiếng Việt). Chỉ trả về JSON đúng schema.`;
 

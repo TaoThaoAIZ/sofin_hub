@@ -1,4 +1,4 @@
-import { nowContext, renderPersona } from '../chatbot/chatbot.persona.js';
+import { FORMAT_RULE, nowContext, renderPersona } from '../chatbot/chatbot.persona.js';
 import { redactPii } from '../chatbot/chatbot.pii.js';
 import type { BotAccess } from './community-bot.access.js';
 import type { CommunityContext } from './community-bot.context.js';
@@ -27,7 +27,7 @@ Cách trả lời:
 - Thời gian: dùng ngày giờ cụ thể, tính "mai", "tuần sau" theo dòng [Bây giờ là ...] ở đầu.
 - handoff=true khi người hỏi muốn gặp chủ cộng đồng, hoặc cần người quyết định (hoàn tiền, khiếu nại, xin mở bài/cấp quyền, lỗi tài khoản), hoặc <context> không có thông tin; handoffReason tóm tắt câu hỏi cho chủ cộng đồng. Không handoff khi chỉ cần từ chối.
 - handoffCategory luôn "user"; toolIds luôn [].
-- Viết văn bản thuần: KHÔNG dùng **in đậm**, *nghiêng*, # tiêu đề; liệt kê bằng gạch đầu dòng "- " khi cần. Link được viết dạng [Tên bài](/đường-dẫn).
+${FORMAT_RULE}
 - Đường dẫn trong site viết dạng tương đối (vd /communities/...). Trả lời bằng ngôn ngữ người hỏi dùng (mặc định tiếng Việt). Chỉ trả về JSON đúng schema.`;
 
 const block = (tag: string, value: unknown) => `<${tag}>\n${typeof value === 'string' ? value : JSON.stringify(value, null, 1)}\n</${tag}>`;

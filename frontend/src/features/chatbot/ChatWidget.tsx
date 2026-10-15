@@ -326,11 +326,11 @@ export function MessageBubble({ m, onRate, streaming }: { m: Bubble; onRate?: (v
   return (
     <div className={`flex flex-col gap-1 ${mine ? 'items-end' : 'items-start'}`}>
       <div
-        className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-[14px] leading-relaxed break-words whitespace-pre-wrap ${
+        className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-[14px] leading-relaxed break-words ${mine ? 'whitespace-pre-wrap' : ''} ${
           mine ? 'bg-brand-gradient rounded-br-md text-white' : 'rounded-bl-md bg-white text-stone-800 shadow-[0_1px_4px_rgba(120,60,20,.08)]'
         } ${streaming ? 'opacity-90' : ''}`}
       >
-        {mine ? m.content : <Linkified text={m.content} />}
+        {mine ? m.content : <RichText text={m.content} />}
       </div>
       {!mine && onRate && !streaming && (
         <div className="flex gap-1 pl-1">
@@ -404,6 +404,89 @@ const PAGE_LABELS: [prefix: string, key: string][] = [
   ['/register', 'register'],
   ['/login', 'login'],
 ];
+
+type TextBlock = { kind: 'p' | 'ul' | 'ol'; lines: string[] };
+
+/** Tách câu trả lời thành khối: đoạn (dòng trống ngăn cách), gạch đầu dòng ("- ", "• "), bước ("1. "). */
+function toBlocks(text: string): TextBlock[] {
+  const blocks: TextBlock[] = [];
+  let cur: TextBlock | null = null;
+  for (const raw of text.replace(/\r/g, '').split('\n')) {
+    const line = raw.trim();
+    if (!line) {
+      cur = null;
+      continue;
+    }
+    const item = /^(?:([-•*])|(\d{1,2})[.)])\s+(.+)$/.exec(line);
+    const kind = item ? (item[1] ? 'ul' : 'ol') : 'p';
+    const content = item ? item[3]! : line;
+    if (!cur || cur.kind !== kind) {
+      cur = { kind, lines: [] };
+      blocks.push(cur);
+    }
+    cur.lines.push(content);
+  }
+  return blocks;
+}
+
+/**
+ * Câu trả lời của bot, trình bày theo đúng tập định dạng prompt cho phép (FORMAT_RULE ở backend): đoạn văn, danh sách
+ * gạch đầu dòng / đánh số, **in đậm**, link (Linkified). Đang stream mà "**" chưa đóng thì ẩn dấu đó cho đỡ nhấp nháy.
+ */
+function RichText({ text }: { text: string }) {
+  const blocks = toBlocks(text);
+  return (
+    <div className="flex flex-col gap-1.5">
+      {blocks.map((b, i) =>
+        b.kind === 'p' ? (
+          <p key={i}>
+            {b.lines.map((l, j) => (
+              <Fragment key={j}>
+                {j > 0 && <br />}
+                <Inline text={l} />
+              </Fragment>
+            ))}
+          </p>
+        ) : b.kind === 'ul' ? (
+          <ul key={i} className="flex flex-col gap-1">
+            {b.lines.map((l, j) => (
+              <li key={j} className="relative pl-3.5 before:absolute before:top-[0.62em] before:left-0.5 before:h-1.5 before:w-1.5 before:rounded-full before:bg-brand/70">
+                <Inline text={l} />
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <ol key={i} className="flex list-decimal flex-col gap-1 pl-5 marker:font-semibold marker:text-brand">
+            {b.lines.map((l, j) => (
+              <li key={j} className="pl-0.5">
+                <Inline text={l} />
+              </li>
+            ))}
+          </ol>
+        ),
+      )}
+    </div>
+  );
+}
+
+/** **in đậm** + link trong một dòng. */
+function Inline({ text }: { text: string }) {
+  const marks = text.split('**').length - 1;
+  const safe = marks % 2 ? text.slice(0, text.lastIndexOf('**')) + text.slice(text.lastIndexOf('**') + 2) : text;
+  return (
+    <>
+      {safe.split(/\*\*([^*\n]+?)\*\*/g).map((seg, i) =>
+        i % 2 ? (
+          <strong key={i} className="font-semibold text-stone-900">
+            <Linkified text={seg} />
+          </strong>
+        ) : (
+          <Linkified key={i} text={seg} />
+        ),
+      )}
+    </>
+  );
+}
 
 const LINK_CLS = 'rounded-md bg-brand/10 px-1 font-semibold text-brand hover:bg-brand/20';
 
