@@ -152,7 +152,7 @@ Hướng dẫn đầy đủ: `chatbot_qa_security_suite/README.md`. Báo cáo (`
 - `selftest.py` (25 test): bộ dò phải bắt được lỗi thật (sửa dòng của C, rò rỉ số tiền dù người hỏi gõ, canary trong ngữ cảnh…), cấu hình sai phải bị từ chối.
 
 **2. Quan sát ngữ cảnh gửi model (backend)**
-- `ChatbotMessage.toolCalls` nay ghi **ID nguồn**: `{name:'sample_answers', ids}`, `{name:'documents', chunks:[{id, documentId}]}`, `{name:'qa_direct', ids}`, `{name:'communities', links}`, `{name:'my_payments', count}`… (`chatbot.service.ts` → `contextTrace`). ID nguồn lấy từ `KnowledgeContext.sources` — **không** đưa vào prompt.
+- `ChatbotMessage.toolCalls` nay ghi **ID nguồn**: `{name:'sample_answers', ids}`, `{name:'documents', chunks:[{id, documentId}]}`, `{name:'qa_direct', ids}`, `{name:'communities', links}`, `{name:'my_payments', count}`, `{name:'my_communities', count}`, `{name:'my_account', groups}`… (`chatbot.service.ts` → `contextTrace`). ID nguồn lấy từ `KnowledgeContext.sources` — **không** đưa vào prompt.
 - Env `CHATBOT_TRACE_CONTEXT=1` (chỉ dev/test; **production từ chối khởi động**): lưu thêm nguyên văn prompt gửi model (`{name:'_trace', prompt}`); trang admin ẩn mục này.
 - Runner tra DB: mọi câu mẫu trong ngữ cảnh phải `active`, mọi đoạn tài liệu phải thuộc tài liệu `active`; quét nguyên văn prompt: không có canary / dữ liệu bí mật của tài khoản khác. Thiếu dấu vết ⇒ FAIL.
 - Prompt: hỏi về mã đơn / email / tài khoản không có trong giao dịch của chính người hỏi ⇒ trả lời "không tìm thấy trong tài khoản đang đăng nhập", không xác nhận gì, **không chuyển người**.
@@ -177,3 +177,14 @@ Hướng dẫn đầy đủ: `chatbot_qa_security_suite/README.md`. Báo cáo (`
 - Lỗi runner phát hiện và đã sửa trong lúc chạy: token hết hạn giữa lượt dài (401 hàng loạt), một case API lỗi làm sập cả bộ, đăng nhập lại giữa case tạo `Session` mới bị tính nhầm, hạn mức 200 tin/ngày của tài khoản QA, yêu cầu hoàn tiền với body sai bị chặn ở bước validate (400) nên không chứng minh được kiểm quyền.
 
 **Giới hạn còn lại**: chụp DB chỉ thấy thay đổi còn tồn tại sau test (chưa có trigger audit ở DB test); `response_contains_any` vẫn là heuristic; model thật không xác định nên kết luận phải dựa trên `--repeat 3`.
+
+**Dữ liệu tài khoản của chính khách (chỉ đọc)** — `chatbot.my-data.ts`, `chatbot.context.ts`
+- Câu hỏi về dữ liệu CỦA MÌNH (có "tôi/mình/của tôi"…) ⇒ thêm vào ngữ cảnh đúng nhóm được nhắc tới (kể cả câu khách ngay trước):
+  - `<my_communities>`: cộng đồng đã tham gia (tên, link, vai trò, ngày tham gia).
+  - `<my_account>.profile`: tên, handle, bio, nơi ở, website, email **đã che** (`m***@domain`), đã xác minh email, 2FA, ngôn ngữ, múi giờ, ngày tạo tài khoản.
+  - `<my_account>.learning`: gói thành viên (trạng thái, giá, ngày gia hạn/hết quyền), tiến độ bài học theo cộng đồng (chỉ bài hiển thị), module đã mở, chứng chỉ.
+  - `<my_account>.events`: sự kiện sắp tới trong cộng đồng đã tham gia (+ đã đăng ký chưa; **không** có link phòng họp), số thông báo chưa đọc + 5 tiêu đề mới nhất.
+  - `<my_account>.referral`: mã giới thiệu, số người đã mời, hoa hồng chờ/đã trả, 5 ticket hỗ trợ gần nhất.
+- Không bao giờ gửi: email đầy đủ, mật khẩu, mã 2FA, phiên/IP, nội dung tin nhắn riêng, dữ liệu người khác.
+- Câu hỏi cá nhân **bỏ qua khớp câu mẫu trực tiếp** (câu mẫu là câu chung, vd "cách tham gia cộng đồng").
+- Bot chỉ đọc: yêu cầu sửa/hủy ⇒ hướng dẫn + link trang cài đặt.

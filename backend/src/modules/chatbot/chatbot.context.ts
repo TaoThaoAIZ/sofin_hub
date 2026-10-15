@@ -5,6 +5,7 @@ import { normalizeText } from '../search/search.text.js';
 import { cfg } from '../settings/settings.service.js';
 import { addMessage, createTicket, OPEN_STATUSES, ticketCode } from '../support/tickets.core.js';
 import { TOOLS } from '../tools/tools.catalog.js';
+import { accountGroups, myAccount } from './chatbot.my-data.js';
 import { chatbotSettings } from './chatbot.config.js';
 import { conversationRepository } from './chatbot.conversations.js';
 import { chatbotRepository } from './chatbot.repository.js';
@@ -42,6 +43,8 @@ export interface KnowledgeContext {
   myPayments: { community: string; amount: string; status: string; type: string; createdAt: string; transferContent?: string; refunded?: string }[] | null;
   /** Cộng đồng CHÍNH khách đã tham gia (null = câu hỏi không hỏi về cộng đồng/khóa học của khách). */
   myCommunities: { name: string; link: string; role: string; joinedAt: string }[] | null;
+  /** Tài khoản của CHÍNH khách (hồ sơ / gói & học tập / sự kiện & thông báo / giới thiệu & ticket) — chỉ nhóm câu hỏi nhắc tới; null = không kèm. */
+  myAccount: Awaited<ReturnType<typeof myAccount>>;
   platformFacts: Record<string, unknown>;
   /** ID nguồn đã đưa vào ngữ cảnh — KHÔNG đưa vào prompt; ghi vào ChatbotMessage.toolCalls để kiểm tra (chỉ câu mẫu active, tài liệu active). */
   sources: { qaIds: string[]; chunks: { id: string; documentId: string }[] };
@@ -129,6 +132,8 @@ export const isPaymentTopic = (texts: string[]) => texts.some((t) => PAYMENT_TOP
 const MY_COMMUNITIES_TOPIC =
   /\b(da|dang) (tham gia|dang ky)\b|\b(da|dang) (hoc|mua|vao|o) (nhung |cac )?(cong dong|khoa|lop|nhom)\b|\b(cong dong|khoa hoc|lop hoc|nhom|course|community)( nao)? (cua )?(toi|minh|em|tui)\b|\b(toi|minh|em|tui) (o|trong|thuoc) (nhung |cac )?(cong dong|khoa hoc|nhom)\b|\bmy (communities|courses)\b/;
 export const isMyCommunitiesTopic = (text: string) => MY_COMMUNITIES_TOPIC.test(normalizeText(text));
+/** Câu hỏi về dữ liệu của CHÍNH khách => không trả câu mẫu (câu mẫu là câu chung, dễ khớp nhầm "cách làm"). */
+export const isPersonalTopic = (text: string) => isMyCommunitiesTopic(text) || accountGroups(text).length > 0;
 
 /** Câu hỏi chung về khóa học/cộng đồng => đưa thêm cộng đồng nổi bật (tìm theo nguyên câu thường không khớp gì). */
 const CATALOG_TOPIC = /\b(khoa hoc|cong dong|lop hoc|hoc phi|dang ky hoc|course|community|courses)\b/;
@@ -207,7 +212,9 @@ export async function gatherContext(ctx: ChatContext, text: string, recentUserTe
   const wantPayments = isPaymentTopic([text, ...recentUserTexts.slice(-1)]);
   const wantCatalog = CATALOG_TOPIC.test(normalizeText(text));
   const wantMine = isMyCommunitiesTopic(text);
-  const [qa, chunks, found, payments, cats, mine] = await Promise.all([
+  // Nhóm dữ liệu tài khoản: theo câu hiện tại + câu khách ngay trước (câu nối tiếp "còn cái kia thì sao").
+  const groups = [...new Set([text, ...recentUserTexts.slice(-1)].flatMap(accountGroups))];
+  const [qa, chunks, found, payments, cats, mine, account] = await Promise.all([
     chatbotRepository.matchQa(text, { limit: 5, order: 'blend' }),
     chatbotRepository.searchChunks(text, 4),
     searchService
@@ -222,6 +229,7 @@ export async function gatherContext(ctx: ChatContext, text: string, recentUserTe
     wantPayments ? myPayments(ctx.userId) : Promise.resolve(null),
     courseCategories().catch(() => []),
     wantMine ? myCommunities(ctx.userId).catch(() => []) : Promise.resolve(null),
+    myAccount(ctx.userId, groups),
   ]);
   const currentPage = ctx.pageCommunityId ? await pageCommunity(ctx.userId, ctx.pageCommunityId).catch(() => null) : null;
   // Khách nhắc tên một chủ đề (thường do bấm gợi ý) => khóa học của chủ đề đó (có giá).
@@ -239,6 +247,7 @@ export async function gatherContext(ctx: ChatContext, text: string, recentUserTe
     currentPage,
     myPayments: payments,
     myCommunities: mine,
+    myAccount: account,
     platformFacts: platformFacts(),
   };
 }

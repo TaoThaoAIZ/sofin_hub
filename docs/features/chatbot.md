@@ -28,6 +28,10 @@ Kịch bản test thủ công. Thiết kế: `chatbot.md` (gốc repo). API: `ba
 | 10 | Bấm "Gặp người hỗ trợ" (hoặc "Nhắn Zalo hỗ trợ" nếu admin đã nhập link) | Hiện "Mã hỗ trợ của bạn: T-…"; Admin > Hỗ trợ > Ticket có ticket mới kèm ghi chú nội bộ chứa đoạn chat; link Zalo mở tab mới |
 | 11 | Đóng khung, mở lại | Hội thoại cũ còn nguyên (trong 24h); "Cuộc mới" bắt đầu hội thoại trống |
 | 12 | Gửi tin dài hơn 1000 ký tự | Không gửi được (ô nhập giới hạn) / lỗi 400 |
+| 13 | Đang ở `/communities/yt/community`, hỏi "người hướng dẫn ở đây là ai" / "giá bao nhiêu" | Trả lời theo cộng đồng đang xem (Trần Minh Tùng, 300.000đ/tháng); không tạo ticket |
+| 14 | Hỏi "tôi đã tham gia cộng đồng nào" | Liệt kê đúng các cộng đồng của `member1`, kèm link + "Cộng đồng của tôi" (không trả câu "cách tham gia") |
+| 15 | Hỏi "tôi bật 2FA chưa" / "gói của mình khi nào gia hạn" / "tôi học được bao nhiêu %" / "mình có sự kiện nào sắp tới" / "mã giới thiệu của tôi" | Trả đúng dữ liệu của chính mình, kèm link trang liên quan; email chỉ hiện dạng che `m***@…` |
+| 16 | Hỏi "đổi tên hiển thị giúp tôi" / "hủy gói giúp tôi" | Tào **không** tự làm; hướng dẫn + link trang cài đặt để tự đổi |
 
 ## Quản trị (Admin > Hỗ trợ > Chatbot)
 

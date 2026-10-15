@@ -391,6 +391,58 @@ describe('chatbot', () => {
       assert.notEqual(d.message.answerSource, 'qa_direct');
     });
 
+    it('dữ liệu tài khoản của CHÍNH khách: chỉ nhóm câu hỏi nhắc tới, email đã che, không có dữ liệu người khác / link phòng họp', async () => {
+      const { accountGroups } = await import('../src/modules/chatbot/chatbot.my-data.js');
+      const { gatherContext } = await import('../src/modules/chatbot/chatbot.context.js');
+      const cases: [string, string[]][] = [
+        ['tôi đã bật 2FA chưa', ['profile']],
+        ['email của mình đã xác minh chưa', ['profile']],
+        ['gói của tôi bao giờ hết hạn', ['learning']],
+        ['tôi học được bao nhiêu bài rồi', ['learning']],
+        ['mình có sự kiện nào sắp tới không', ['events']],
+        ['tôi có thông báo gì mới', ['events']],
+        ['mã giới thiệu của tôi là gì', ['referral']],
+        ['ticket T-2042 của tôi sao rồi', ['referral']],
+        ['làm sao bật 2FA', []],
+        ['có những khóa học nào', []],
+      ];
+      for (const [q, g] of cases) assert.deepEqual(accountGroups(q), g, q);
+
+      const u = await c.registerUser('cbacct');
+      const other = await c.registerUser('cbacct2');
+      await prisma.enrollment.create({ data: { userId: u.id, communityId: 'photo' } });
+      const startAt = new Date(Date.now() + 3 * 864e5);
+      await prisma.communityEvent.create({ data: { communityId: 'photo', hostId: other.id, title: 'Live chụp đêm', startAt, timezone: 'Asia/Ho_Chi_Minh', meetingLink: 'https://meet.example/SECRET_ROOM' } });
+      await prisma.communityEvent.create({ data: { communityId: 'yt', hostId: other.id, title: 'SỰ_KIỆN_NGƯỜI_KHÁC', startAt, timezone: 'Asia/Ho_Chi_Minh' } });
+      await prisma.notification.create({ data: { userId: u.id, type: 'system', title: 'Chào mừng bạn', body: '' } });
+      await prisma.notification.create({ data: { userId: other.id, type: 'system', title: 'THÔNG_BÁO_NGƯỜI_KHÁC', body: '' } });
+      await prisma.supportTicket.create({ data: { subject: 'Không vào được lớp', requesterId: u.id, requesterName: 'T', requesterEmail: u.email } });
+      const ctx = { userId: u.id, conversationId: 'x', viewer: { firstName: 'T', lastName: 'U', email: u.email } };
+
+      assert.equal((await gatherContext(ctx, 'tool veo làm được gì')).myAccount, null, 'câu hỏi khác => không kèm');
+      const prof = await gatherContext(ctx, 'tôi đã bật 2FA chưa');
+      assert.deepEqual(Object.keys(prof.myAccount ?? {}), ['profile']);
+      const pj = JSON.stringify(prof.myAccount);
+      assert.ok(!pj.includes(u.email), 'không gửi nguyên email');
+      assert.match(pj, /"twoFactorEnabled":false/);
+
+      const ev = JSON.stringify((await gatherContext(ctx, 'mình có sự kiện hay thông báo nào không')).myAccount);
+      assert.match(ev, /Live chụp đêm/);
+      assert.match(ev, /"unreadNotifications":1/);
+      assert.doesNotMatch(ev, /SECRET_ROOM|SỰ_KIỆN_NGƯỜI_KHÁC|THÔNG_BÁO_NGƯỜI_KHÁC/);
+
+      const ref = JSON.stringify((await gatherContext(ctx, 'ticket hỗ trợ của tôi sao rồi')).myAccount);
+      assert.match(ref, /Không vào được lớp/);
+      assert.match(ref, /"peopleInvited":0/);
+
+      const learn = (await gatherContext(ctx, 'tiến độ học của tôi')).myAccount as { learning: { progress: { community: string }[] } };
+      assert.ok(Array.isArray(learn.learning.progress));
+
+      // Câu hỏi về dữ liệu của chính khách không bị trả câu mẫu chung.
+      const d = await say(u, await start(u), 'tôi đã bật 2FA chưa');
+      assert.notEqual(d.message.answerSource, 'qa_direct');
+    });
+
     it('chuyển người: câu trả lời đã mời nhắn Zalo thì không nối thêm mã (mã hiện ở dải dưới widget)', async () => {
       const u = await c.registerUser('cbnodup');
       const conv = await start(u);

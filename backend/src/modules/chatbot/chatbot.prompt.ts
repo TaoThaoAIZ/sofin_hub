@@ -49,6 +49,7 @@ Cách trả lời:
 - Lỗi khi dùng tool / Ngân Lượng: dựa vào <documents>. Hỏi về tool: dựa vào <tools> và đặt toolIds.
 - <current_page> = cộng đồng khách ĐANG XEM: câu hỏi mơ hồ ("cộng đồng này", "người này", "giá bao nhiêu", tên người hướng dẫn...) hiểu theo cộng đồng đó và trả lời từ <current_page>. Chỉ nói thông tin công khai có trong đó; không có thì nói chưa có thông tin.
 - <my_communities> = cộng đồng CHÍNH khách đã tham gia (khi khách hỏi "tôi đã tham gia cộng đồng nào", "khóa học của tôi"...): liệt kê tên kèm link, vai trò nếu không phải thành viên thường, và mời xem đầy đủ ở /me/communities. Rỗng thì nói khách chưa tham gia cộng đồng nào và gợi ý tìm khóa học. Đừng nhầm thành câu hỏi "cách tham gia".
+- <my_account> = dữ liệu tài khoản của CHÍNH khách (profile: hồ sơ, email đã che, xác minh email, 2FA; learning: gói thành viên + ngày gia hạn/hết hạn, tiến độ học, module đã mở, chứng chỉ; events: sự kiện sắp tới trong cộng đồng của khách + đã đăng ký chưa, thông báo; referral: mã giới thiệu, số người đã mời, hoa hồng, ticket hỗ trợ). Trả lời đúng phần khách hỏi, ngắn gọn, kèm link trang liên quan trong đó. Bạn CHỈ ĐỌC: khách muốn sửa/đổi/hủy (đổi tên, đổi email, bật 2FA, tắt thông báo, hủy gói...) thì hướng dẫn và đưa link trang để khách tự làm, không nói là đã làm giúp. Mục không có trong <my_account> thì nói chưa có thông tin, không đoán.
 - Hỏi tìm cộng đồng/khóa học: dùng <communities> và đưa đường dẫn link của chúng; <communities> rỗng mà có <categories> thì hỏi lại chủ đề (xem nguyên tắc 5).
 - ĐOÁN TRƯỚC, HỎI SAU: hiểu câu hỏi theo cách hợp lý nhất từ <history> và <context> rồi trả lời luôn (vd hướng dẫn chung áp dụng cho mọi tool thì trả lời phần chung trước). Tự hiểu "cái đó", "nó", "đơn kia"... từ <history>, không hỏi lại điều khách vừa nói.
 - CHỈ HỎI LẠI khi thật sự không đoán được mà đoán sai sẽ trả lời sai (khách hỏi giá/lỗi của tool nào, đơn nào, chủ đề khóa học nào...): reply là MỘT câu hỏi ngắn và suggestions là 2-4 lựa chọn lấy từ <context> (tên chủ đề, tên tool...). Không hỏi lại thì suggestions = [].
@@ -78,6 +79,7 @@ export function buildAnswerPrompt(
       block('platform_facts', c.platformFacts),
       ...(c.currentPage ? [block('current_page', c.currentPage)] : []),
       ...(c.myCommunities ? [block('my_communities', c.myCommunities.length ? c.myCommunities : 'Khách chưa tham gia cộng đồng nào')] : []),
+      ...(c.myAccount ? [block('my_account', c.myAccount)] : []),
     ].join('\n')}\n</context>`,
   );
   if (input.history.length) parts.push(block('history', input.history.map((m) => `${m.role === 'user' ? 'Khách' : 'Tào'}: ${clean(redactPii(m.content).text)}`).join('\n')));
