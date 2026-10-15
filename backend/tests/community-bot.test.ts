@@ -252,6 +252,15 @@ describe('chatbot cộng đồng', () => {
       await say(member, id, conv2, 'hôm 13/10 có ai đăng gì không');
       assert.match((await lastTrace(conv2)).prompt, /Cuối tuần này cả nhóm đi chụp ở đâu/);
 
+      // Hỏi bài có ảnh => bài có ảnh (cũ, không khớp chữ) vẫn vào ngữ cảnh, đánh dấu hasImage (không gửi link ảnh cho model).
+      await db.prisma.post.create({ data: { communityId: id, authorId: member.id, content: 'ANH_CANARY bộ ảnh hoàng hôn Đà Nẵng', imageUrl: 'https://images.example/IMG_URL_CANARY.jpg', createdAt: new Date(Date.UTC(2026, 8, 1)) } });
+      const conv3 = await start(member, id);
+      await say(member, id, conv3, 'có bài viết nào post cả ảnh trong cộng đồng không');
+      const p3 = (await lastTrace(conv3)).prompt;
+      assert.match(p3, /"content": "ANH_CANARY[^"]*",[\s\S]{0,200}"hasImage": true/);
+      assert.doesNotMatch(p3, /IMG_URL_CANARY/, 'không gửi link ảnh cho model');
+      assert.match(p3, /KHÔNG được nói "mình đã chuyển/);
+
       const { mentionedDays } = await import('../src/modules/community-bot/community-bot.context.js');
       const [d] = mentionedDays('ngày 13/10', new Date('2026-10-15T05:00:00Z'));
       assert.equal(d!.from.toISOString(), '2026-10-12T17:00:00.000Z', 'đầu ngày 13/10 giờ VN');

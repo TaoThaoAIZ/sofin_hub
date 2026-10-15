@@ -496,7 +496,7 @@ const LINK_CLS = 'rounded-md bg-brand/10 px-1 font-semibold text-brand hover:bg-
  */
 function Linkified({ text }: { text: string }) {
   const { t } = useTranslation('chatbot');
-  const segments = text.split(/(\[[^\]\n]{1,120}\]\((?:\/[a-z0-9][a-z0-9\-/]*|https:\/\/[^\s)]+)\))/gi);
+  const segments = text.split(/(\[[^\]\n]{1,120}\]\((?:\/[a-z0-9][a-z0-9\-/]*(?:\?[\w\-=&%.]+)?|https:\/\/[^\s)]+)\))/gi);
   return (
     <>
       {segments.map((seg, i) => {
@@ -511,14 +511,18 @@ function Linkified({ text }: { text: string }) {
 /** `label` (từ link markdown) thay cho tên trang / tên miền; đường dẫn không hợp lệ thì chỉ hiện `label` dạng chữ. */
 function PlainLinks({ text, label, t }: { text: string; label?: string; t: (k: string) => string }) {
   // Đường dẫn phải đứng riêng: trước không phải chữ/số/"/"/"." và sau không phải chữ (kể cả chữ có dấu) — "200.000đ/tháng" không phải link.
-  const parts = text.split(/(https:\/\/[^\s)]+|(?<![\p{L}\p{N}/.])\/[a-z0-9][a-z0-9\-/]*(?![\p{L}\p{N}]))/giu);
+  const parts = text.split(/(https:\/\/[^\s)]+|(?<![\p{L}\p{N}/.])\/[a-z0-9][a-z0-9\-/]*(?:\?[\w\-=&%.]+)?(?![\p{L}\p{N}]))/giu);
   if (label !== undefined && parts.length !== 3) return <>{label}</>;
-  const pageOf = (path: string): [string, string] | undefined =>
+  const pageOf = (full: string): [string, string] | undefined => {
+    const [path = '', query = ''] = full.split('?');
+    // Bài đăng trên bảng tin (/communities/:id/community?post=…) => "bài đăng".
+    if (/^\/communities\/[^/]+\/community$/.test(path) && /(^|&)post=/.test(query)) return [full, 'post'];
     // Bài học trong lớp học (/communities/:id/community/lop-hoc/:lessonId) => "bài học" (bot cộng đồng hay đưa link bài).
-    /^\/communities\/[^/]+\/community\/lop-hoc\/[^/]+$/.test(path)
+    return /^\/communities\/[^/]+\/community\/lop-hoc\/[^/]+$/.test(path)
       ? [path, 'lesson']
       : // Tiền tố kết thúc bằng "/" khớp mọi trang con (/communities/abc); còn lại khớp đúng trang hoặc trang con của nó.
         PAGE_LABELS.find(([prefix]) => (prefix.endsWith('/') ? path.startsWith(prefix) : path === prefix || path.startsWith(`${prefix}/`)));
+  };
   const hostLabel = (url: string) => {
     try {
       const host = new URL(url).hostname.replace(/^www\./, '');

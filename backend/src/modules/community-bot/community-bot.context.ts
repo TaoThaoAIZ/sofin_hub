@@ -42,6 +42,8 @@ export interface PostView {
   createdAt: string;
   category: string;
   pinned: boolean;
+  /** Bài có ảnh đính kèm (không gửi link ảnh cho model). */
+  hasImage: boolean;
   likes: number;
   comments: number;
   link: string;
@@ -105,6 +107,8 @@ async function searchPosts(communityId: string, tsq: string, limit: number) {
 
 /** Câu hỏi về bình chọn / vote => đưa thêm các bài có bình chọn gần nhất (tìm theo chữ dễ trượt vì bài thường không có chữ "vote"). */
 const POLL_TOPIC = /\b(vote|binh chon|bau chon|poll|khao sat|phieu|lua chon nhieu nhat)\b/;
+/** Câu hỏi về bài có ảnh / đính kèm ảnh => đưa thêm các bài có ảnh gần nhất ("ảnh" đứng riêng dễ nhầm với "anh" nên chỉ bắt cụm từ). */
+const IMAGE_TOPIC = /\b(kem anh|co anh|ca anh|dinh kem|dang anh|post anh|up anh|hinh anh|buc anh|tam anh|image|photo)\b/;
 const CATEGORY_LABEL: Record<string, string> = { general: 'Thảo luận chung', qa: 'Hỏi đáp', case_study: 'Case study', announcement: 'Thông báo' };
 /** Số bài đăng tối đa trong ngữ cảnh (giữ prompt gọn). */
 const MAX_POSTS = 8;
@@ -136,7 +140,7 @@ async function postViews(communityId: string, ids: string[]): Promise<PostView[]
   const [rows, tally, voters] = await Promise.all([
     prisma.post.findMany({
       where: { id: { in: ids }, communityId, removedAt: null, hidden: false },
-      select: { id: true, content: true, category: true, pinned: true, likesCount: true, commentsCount: true, createdAt: true, poll: true, author: { select: { firstName: true, lastName: true, deletedAt: true } } },
+      select: { id: true, content: true, category: true, pinned: true, imageUrl: true, likesCount: true, commentsCount: true, createdAt: true, poll: true, author: { select: { firstName: true, lastName: true, deletedAt: true } } },
     }),
     prisma.pollVote.groupBy({ by: ['postId', 'optionId'], where: { postId: { in: ids } }, _count: { _all: true } }),
     prisma.pollVote.groupBy({ by: ['postId', 'userId'], where: { postId: { in: ids } } }),
@@ -169,6 +173,7 @@ async function postViews(communityId: string, ids: string[]): Promise<PostView[]
       createdAt: vnTime(p.createdAt),
       category: CATEGORY_LABEL[p.category] ?? p.category,
       pinned: p.pinned,
+      hasImage: Boolean(p.imageUrl),
       likes: p.likesCount,
       comments: p.commentsCount,
       link: `/communities/${communityId}/community?post=${p.id}`,
@@ -179,23 +184,26 @@ async function postViews(communityId: string, ids: string[]): Promise<PostView[]
 
 /**
  * Bài đăng cho ngữ cảnh — gộp nhiều nguồn vì tìm theo chữ dễ trượt với câu hỏi dài / hỏi theo ngày / hỏi về bình chọn.
- * Ưu tiên: bài đăng đúng ngày được nhắc → bài có bình chọn (khi hỏi về vote) → bài khớp chữ → bài ghim → bài mới nhất.
+ * Ưu tiên: bài đăng đúng ngày được nhắc → bài có bình chọn (khi hỏi về vote) → bài có ảnh (khi hỏi về ảnh) → bài khớp chữ → bài ghim → bài mới nhất.
  */
 async function relevantPostIds(communityId: string, text: string, tsq: string | null): Promise<string[]> {
   const live = { communityId, removedAt: null, hidden: false } as const;
   const days = mentionedDays(text);
-  const wantPolls = POLL_TOPIC.test(normalizeText(text));
+  const norm = normalizeText(text);
+  const wantPolls = POLL_TOPIC.test(norm);
+  const wantImages = IMAGE_TOPIC.test(norm);
   const ids = (rows: { id: string }[]) => rows.map((r) => r.id);
-  const [byDate, polls, search, pinned, recent] = await Promise.all([
+  const [byDate, polls, images, search, pinned, recent] = await Promise.all([
     days.length
       ? prisma.post.findMany({ where: { ...live, OR: days.map((d) => ({ createdAt: { gte: d.from, lt: d.to } })) }, orderBy: { createdAt: 'desc' }, take: 5, select: { id: true } }).then(ids)
       : Promise.resolve([]),
     wantPolls ? prisma.post.findMany({ where: { ...live, poll: { not: Prisma.AnyNull } }, orderBy: { createdAt: 'desc' }, take: 3, select: { id: true } }).then(ids) : Promise.resolve([]),
+    wantImages ? prisma.post.findMany({ where: { ...live, imageUrl: { not: null } }, orderBy: { createdAt: 'desc' }, take: 3, select: { id: true } }).then(ids) : Promise.resolve([]),
     tsq ? searchPosts(communityId, tsq, 4) : Promise.resolve([]),
     prisma.post.findMany({ where: { ...live, pinned: true }, orderBy: { createdAt: 'desc' }, take: 5, select: { id: true } }).then(ids),
     prisma.post.findMany({ where: live, orderBy: { createdAt: 'desc' }, take: 3, select: { id: true } }).then(ids),
   ]);
-  return [...new Set([...byDate, ...polls, ...search, ...pinned, ...recent])].slice(0, MAX_POSTS);
+  return [...new Set([...byDate, ...polls, ...images, ...search, ...pinned, ...recent])].slice(0, MAX_POSTS);
 }
 
 export async function gatherCommunityContext(

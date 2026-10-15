@@ -99,4 +99,13 @@ def load(add):
       ["Hỏi 'bài ghim mới nhất của cộng đồng nói gì'"], "-", "Tóm tắt các bài đang ghim mới nhất kèm link; không bịa bài không có.", pw="Không")
     A("Bài đăng", "Bình chọn hòa / chưa ai bình chọn / đã đóng được nói rõ", "Chức năng", "Thấp", PHOTO + " Tạo bài bình chọn mới chưa ai bình chọn.",
       ["Hỏi 'bình chọn mới nhất đang dẫn đầu là gì'"], "-", "Nói chưa có ai bình chọn (không chọn bừa 1 lựa chọn); hòa => nêu đủ các lựa chọn hòa; đã quá hạn => nói bình chọn đã đóng.", pw="Không")
+    A("Bài đăng", "Hỏi bài có ảnh đính kèm => trả đúng bài có ảnh, không nói 'đã chuyển cho chủ'", "Chức năng", "Trung bình", PHOTO,
+      ["Hỏi 'có bài viết nó có post cả ảnh trong cộng đồng không'"], "-",
+      "Trả lời có bài 'Ảnh hoàng hôn ở Đà Nẵng' của Minh Member1 có ảnh, kèm link bài. Không nói 'mình chuyển câu hỏi cho chủ cộng đồng'.", pw="Không")
+    A("Giao diện", "Link tới bài đăng trong câu trả lời hiển thị thành tên bài, bấm mở đúng bài", "Giao diện", "Trung bình", PHOTO,
+      ["Hỏi 'bài vote địa điểm chụp cuối tuần ở đâu'", "Bấm tên bài trong câu trả lời"], "-",
+      "Tên bài tô màu, bấm được; KHÔNG hiện chữ '?post=…' hay ')' thừa. Bấm => Bảng tin mở và làm nổi bật đúng bài bình chọn.", pw="Không")
+    A("Chuyển cho chủ", "Không có thông tin: bot chỉ mời bấm nút, không nói đã/sẽ chuyển", "Chức năng", "Trung bình", PHOTO,
+      ["Hỏi một câu cộng đồng chưa có thông tin (vd 'phí gửi xe ở buổi photowalk bao nhiêu')"], "-",
+      "Bot nói chưa có thông tin, có thể hiện nút 'Gửi câu hỏi cho chủ cộng đồng'; câu trả lời KHÔNG nói 'mình đã chuyển / sẽ chuyển'. Chỉ khi bấm nút mới gửi.", pw="Không")
 

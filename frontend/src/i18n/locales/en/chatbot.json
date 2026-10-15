@@ -43,7 +43,8 @@
     "login": "Log in",
     "fallback": "this page",
     "explore": "Explore courses",
-    "lesson": "lesson"
+    "lesson": "lesson",
+    "post": "post"
   },
   "quickReplies": "Quick replies",
   "queued": "queued — Tào will answer right after the current reply",
