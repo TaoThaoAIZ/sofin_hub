@@ -838,7 +838,9 @@
     "listTitle": "People you invited",
     "listEmpty": "Nobody has joined through your link yet.",
     "statusPaid": "Paid",
-    "statusNone": "Not paid"
+    "statusNone": "Not paid",
+    "tabCommunity": "In this community",
+    "tabPlatform": "SofinHub platform referral"
   },
   "onboarding": {
     "title": "Start your journey",

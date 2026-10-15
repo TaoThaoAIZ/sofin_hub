@@ -838,7 +838,9 @@
     "listTitle": "Người bạn đã mời",
     "listEmpty": "Chưa có ai đăng ký qua link của bạn.",
     "statusPaid": "Đã thanh toán",
-    "statusNone": "Chưa thanh toán"
+    "statusNone": "Chưa thanh toán",
+    "tabCommunity": "Trong cộng đồng này",
+    "tabPlatform": "Giới thiệu nền tảng SofinHub"
   },
   "onboarding": {
     "title": "Bắt đầu hành trình của bạn",

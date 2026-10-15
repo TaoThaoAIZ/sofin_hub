@@ -128,4 +128,7 @@ def load(add):
       "Các định dạng trên tải lên thành công (tối đa 25MB mỗi tệp); .exe bị từ chối với danh sách định dạng được hỗ trợ. Trình duyệt trả type rỗng cho .csv/.ppsx/.mov vẫn nhận nhờ suy từ đuôi tệp.")
     A("Video, slide, tài liệu bài học", "Quyền: chỉ mod/owner tải video/slide; mỗi bài tối đa 30 tệp (gồm slide)", "Bảo mật", "Trung bình", ENV,
       ["Học viên gọi POST /api/uploads/presign purpose=lesson_video hoặc lesson_slide", "Mod lưu bài có 31 tệp"], "-", "403 cho học viên; lưu 31 tệp báo 'Tối đa 30 tệp (gồm cả slide)'.", pw="Không")
+    A("Video, slide, tài liệu bài học", "Xem thử video ngay trong form sau khi tải lên; bấm tên slide/tài liệu để mở xem", "Chức năng", "Cao", ENV + " Đăng nhập owner/mod.",
+      ["Thêm bài học, tải video từ máy lên", "Quan sát khung dưới nút tải", "Dán link YouTube/Vimeo vào ô link", "Tải một slide và một tài liệu, bấm vào tên của chúng"], "-",
+      "Video tải lên hiện khung phát 16:9 (có điều khiển, tua được) kèm dòng 'Xem thử'; link YouTube/Vimeo hiện khung nhúng; bấm tên slide/tài liệu mở file trong tab mới (URL ký, không bị 401). Mở thẳng link /api/files/... trên thanh địa chỉ không có đăng nhập sẽ báo cần đăng nhập — đúng thiết kế vì file riêng tư.", pw="Một phần")
 

@@ -6,6 +6,8 @@ import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { ApiError, apiGet, apiPut } from '../../../lib/api';
 import { formatCents, formatDate } from '../../../lib/datetime';
 import { useAuth } from '../../auth/AuthContext';
+import { ToastProvider } from '../../admin/components/overlay';
+import { ReferralTab as PlatformReferral } from '../../settings/tabs/ReferralTab';
 import { errText, ErrorNote, ghostBtn, primaryBtn } from './contentUi';
 
 interface ReferredRow {
@@ -43,8 +45,8 @@ async function copyText(text: string): Promise<boolean> {
   }
 }
 
-/** Chương trình giới thiệu của cộng đồng: chủ đặt % hoa hồng; thành viên lấy link riêng, theo dõi người đã mời + hoa hồng. */
-export function CommunityReferralTab() {
+/** Chương trình giới thiệu của CỘNG ĐỒNG này: chủ đặt % hoa hồng; thành viên lấy link riêng, theo dõi người đã mời + hoa hồng. */
+function CommunityProgram() {
   const { t } = useTranslation('community');
   const { id: communityId = '' } = useParams();
   const { accessToken } = useAuth();
@@ -202,6 +204,45 @@ function Kpi({ label, value, note }: { label: string; value: string; note?: stri
       <div className="text-[12.5px] text-stone-500">{label}</div>
       <div className="mt-1 text-[22px] font-extrabold tabular-nums">{value}</div>
       {note && <div className="mt-0.5 text-[11.5px] text-stone-400">{note}</div>}
+    </div>
+  );
+}
+
+/**
+ * Trang "Giới thiệu & hoa hồng" trong cộng đồng. Hai chương trình:
+ *  - "Trong cộng đồng này": hoa hồng khi người được mời thanh toán gói của cộng đồng (owner đặt %);
+ *  - "Giới thiệu nền tảng": mời người mở cộng đồng / tham gia cộng đồng trả phí trên SofinHub (trước đây nằm ở Cài đặt).
+ */
+export function CommunityReferralTab() {
+  const { t } = useTranslation('community');
+  const [view, setView] = useState<'community' | 'platform'>('community');
+  const tabs = [
+    { key: 'community', label: t('referral.tabCommunity') },
+    { key: 'platform', label: t('referral.tabPlatform') },
+  ] as const;
+  return (
+    <div className="flex flex-col gap-4">
+      <div role="tablist" aria-label={t('referral.title')} className="inline-flex w-fit gap-1 rounded-2xl border border-[#ece5df] bg-[#f5f2ef] p-1">
+        {tabs.map((tb) => (
+          <button
+            key={tb.key}
+            type="button"
+            role="tab"
+            aria-selected={view === tb.key}
+            onClick={() => setView(tb.key)}
+            className={`h-10 rounded-xl px-4 text-[14px] font-semibold ${view === tb.key ? 'bg-white text-brand shadow-[0_1px_4px_rgba(0,0,0,.08)]' : 'text-stone-500 hover:text-stone-800'}`}
+          >
+            {tb.label}
+          </button>
+        ))}
+      </div>
+      {view === 'community' ? (
+        <CommunityProgram />
+      ) : (
+        <ToastProvider>
+          <PlatformReferral />
+        </ToastProvider>
+      )}
     </div>
   );
 }

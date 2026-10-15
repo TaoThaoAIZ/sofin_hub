@@ -29,7 +29,6 @@ import { MyCommunitiesPage } from './pages/MyCommunitiesPage';
 import { CommunitiesTab } from './features/settings/tabs/CommunitiesTab';
 import { NotifyTab } from './features/settings/tabs/NotifyTab';
 import { ProfileTab } from './features/settings/tabs/ProfileTab';
-import { ReferralTab } from './features/settings/tabs/ReferralTab';
 import { SecurityTab } from './features/settings/tabs/SecurityTab';
 import { VerifyEmailPage } from './pages/VerifyEmailPage';
 import { HomePage } from './pages/HomePage';
@@ -97,7 +96,7 @@ export default function App() {
           <Route path="bao-mat" element={<SecurityTab />} />
           <Route path="thanh-toan" element={<BillingTab />} />
           <Route path="cong-dong" element={<CommunitiesTab />} />
-          <Route path="gioi-thieu" element={<ReferralTab />} />
+          <Route path="gioi-thieu" element={<Navigate to="/me/communities" replace />} />
         </Route>
         <Route path="/users/:id" element={<ProfilePage />} />
         <Route path="/me/communities" element={<MyCommunitiesPage />} />

@@ -14,7 +14,7 @@ export function CourseCard({ course, view }: { course: Course; view: ViewMode })
 
   return (
     <article
-      className={`glass flex overflow-hidden rounded-3xl p-2 transition duration-200 hover:-translate-y-[3px] hover:shadow-card-hover ${
+      className={`glass relative flex cursor-pointer overflow-hidden rounded-3xl p-2 transition duration-200 hover:-translate-y-[3px] hover:shadow-card-hover ${
         list ? 'flex-row' : 'flex-col'
       }`}
     >
@@ -68,7 +68,8 @@ export function CourseCard({ course, view }: { course: Course; view: ViewMode })
             <ButtonLink
               to={`/courses/${course.id}`}
               aria-label={t('list.view', { title: course.title })}
-              className="size-[38px] rounded-full"
+              // Stretched link: ::after phủ cả thẻ (thẻ là phần tử `relative`) nên bấm bất kỳ đâu trên thẻ đều vào trang chi tiết; nút vẫn là liên kết thật cho bàn phím/trình đọc màn hình.
+              className="size-[38px] rounded-full after:absolute after:inset-0 after:z-10 after:rounded-3xl after:content-['']"
             >
               <ArrowRightIcon size={16} />
             </ButtonLink>
