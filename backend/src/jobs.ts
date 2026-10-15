@@ -2,6 +2,7 @@ import type { Job } from './infra/scheduler.js';
 import { runEventRemindersOnce } from './modules/events/events.reminders.js';
 import { purgeUnverifiedUsers } from './modules/auth/unverified.js';
 import { paymentsService } from './modules/payments/payments.service.js';
+import { communityReferralService } from './modules/referrals/community-referral.service.js';
 import { referralsService } from './modules/referrals/referrals.service.js';
 
 /**
@@ -23,7 +24,7 @@ export function allJobs(): Job[] {
     // Thu phí gói hosting Pro: phát hóa đơn chuyển khoản khi sắp hết dùng thử/hết kỳ; quá hạn không trả ⇒ hạ về gói Khởi đầu.
     { name: 'payments.hostingBilling', intervalMs: 15 * 60_000, run: () => paymentsService.processHostingBilling(new Date()) },
     // Hoa hồng giới thiệu còn thiếu (hook sau commit bị mất do process chết). Idempotent theo sourceRef.
-    { name: 'referrals.reconcile', intervalMs: 10 * 60_000, run: () => referralsService.reconcileCommissions(new Date()) },
+    { name: 'referrals.reconcile', intervalMs: 10 * 60_000, run: async () => ({ ...(await referralsService.reconcileCommissions(new Date())), community: await communityReferralService.reconcile(new Date()) }) },
     // Nhắc lịch sự kiện cho người đã RSVP (còn <= 1 giờ).
     { name: 'events.reminders', intervalMs: 60_000, run: () => runEventRemindersOnce() },
     // Dọn tài khoản đăng ký dở (chưa nhập OTP) quá 7 ngày để không chiếm email.

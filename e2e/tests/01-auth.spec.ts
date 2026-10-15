@@ -95,26 +95,24 @@ test.describe('Tài khoản & Xác thực', () => {
     await expect(page.getByText('Vui lòng nhập họ')).toBeVisible();
   });
 
-  test('TC-AUTH-008: Không thể tick đồng ý khi chưa cuộn hết Điều khoản sử dụng', async ({ page }) => {
+  test('TC-AUTH-008: Tick được ô đồng ý ngay, không cần mở/đọc Điều khoản sử dụng', async ({ page }) => {
     const user = uniqueUser('gate-terms');
     await page.goto('/register');
     await fillRegisterForm(page, user);
-    await expect(page.getByRole('checkbox')).toBeDisabled();
-    await page.getByRole('link', { name: 'Điều khoản sử dụng' }).click();
-    await expect(page).toHaveURL(/\/terms$/);
-    // Chưa cuộn tới cuối -> quay lại register, checkbox vẫn phải bị khóa
-    await page.getByRole('link', { name: 'Quay lại đăng ký' }).click();
-    await expect(page.getByRole('checkbox')).toBeDisabled();
+    await expect(page.getByRole('checkbox')).toBeEnabled();
+    await page.getByRole('checkbox').check();
+    await expect(page.getByRole('checkbox')).toBeChecked();
+    await expect(page.getByRole('button', { name: 'Đăng ký ngay' })).toBeEnabled();
   });
 
-  test('TC-AUTH-009: Không thể tick đồng ý khi chưa cuộn hết Chính sách bảo mật', async ({ page }) => {
+  test('TC-AUTH-009: Mở Chính sách bảo mật rồi quay lại: bản nháp form và ô đồng ý vẫn dùng được', async ({ page }) => {
     const user = uniqueUser('gate-privacy');
     await page.goto('/register');
     await fillRegisterForm(page, user);
     await page.getByRole('link', { name: 'Chính sách bảo mật' }).click();
     await expect(page).toHaveURL(/\/privacy$/);
     await page.getByRole('link', { name: 'Quay lại đăng ký' }).click();
-    await expect(page.getByRole('checkbox')).toBeDisabled();
+    await expect(page.getByRole('checkbox')).toBeEnabled();
   });
 
   test('TC-AUTH-010: Không cho đăng ký khi chưa tick đồng ý điều khoản', async ({ page }) => {

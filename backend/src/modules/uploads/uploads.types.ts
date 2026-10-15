@@ -8,6 +8,8 @@ export const UPLOAD_PURPOSES = [
   'lesson_attachment',
   'message_attachment',
   'community_media',
+  'lesson_video',
+  'lesson_slide',
 ] as const;
 export type UploadPurpose = (typeof UPLOAD_PURPOSES)[number];
 
@@ -43,13 +45,27 @@ export const DOC_TYPES: Record<string, string> = {
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
   'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
+  'application/vnd.openxmlformats-officedocument.presentationml.slideshow': 'ppsx',
+  // Office bản cũ (OLE2): .doc / .ppt / .xls
+  'application/msword': 'doc',
+  'application/vnd.ms-powerpoint': 'ppt',
+  'application/vnd.ms-excel': 'xls',
   'text/plain': 'txt',
+  'text/csv': 'csv',
 };
 export const VIDEO_TYPES: Record<string, string> = { 'video/mp4': 'mp4' };
+/** Video bài học: thêm webm/mov (trình duyệt phát được; mov chỉ khi mã hóa H.264). */
+export const LESSON_VIDEO_TYPES: Record<string, string> = { 'video/mp4': 'mp4', 'video/webm': 'webm', 'video/quicktime': 'mov' };
+export const SLIDE_TYPES: Record<string, string> = {
+  'application/pdf': 'pdf',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
+  'application/vnd.openxmlformats-officedocument.presentationml.slideshow': 'ppsx',
+  'application/vnd.ms-powerpoint': 'ppt',
+};
 
 /** Đuôi → Content-Type khi phục vụ file (không tin gì từ tên file người dùng). */
 export const EXT_TO_TYPE: Record<string, string> = Object.fromEntries(
-  Object.entries({ ...IMAGE_TYPES, ...DOC_TYPES, ...VIDEO_TYPES }).map(([type, ext]) => [ext, type]),
+  Object.entries({ ...IMAGE_TYPES, ...DOC_TYPES, ...LESSON_VIDEO_TYPES }).map(([type, ext]) => [ext, type]),
 );
 
 export interface PurposeRule {
@@ -69,6 +85,10 @@ export function purposeRule(purpose: UploadPurpose): PurposeRule {
       return { types: IMAGE_TYPES, maxBytes: env.UPLOAD_MAX_COVER_MB * MB };
     case 'community_media':
       return { types: { ...IMAGE_TYPES, ...VIDEO_TYPES }, maxBytes: file };
+    case 'lesson_video':
+      return { types: LESSON_VIDEO_TYPES, maxBytes: env.UPLOAD_MAX_VIDEO_MB * MB };
+    case 'lesson_slide':
+      return { types: SLIDE_TYPES, maxBytes: env.UPLOAD_MAX_SLIDE_MB * MB };
     case 'post_file':
     case 'lesson_attachment':
       return { types: { ...DOC_TYPES, ...VIDEO_TYPES }, maxBytes: file };
@@ -76,6 +96,13 @@ export function purposeRule(purpose: UploadPurpose): PurposeRule {
       return { types: { ...IMAGE_TYPES, ...DOC_TYPES }, maxBytes: file };
   }
 }
+
+/** Mục đích upload dạng STREAM (không nạp cả file vào RAM): video dài, slide lớn. Bắt buộc có Content-Length. */
+export const STREAMED_PURPOSES: readonly UploadPurpose[] = ['lesson_video', 'lesson_slide'];
+export const isStreamedPurpose = (p: UploadPurpose) => STREAMED_PURPOSES.includes(p);
+/** Mục đích gắn với một cộng đồng (mod+ mới được upload; thành viên cộng đồng mới được xem). */
+export const COMMUNITY_PURPOSES: readonly UploadPurpose[] = ['lesson_attachment', 'lesson_video', 'lesson_slide'];
+export const isCommunityPurpose = (p: UploadPurpose) => COMMUNITY_PURPOSES.includes(p);
 
 export const KEY_PATTERN = /^[a-f0-9]{32}\.[a-z0-9]{2,5}$/;
 export const FILE_URL_PREFIX = '/api/files/';

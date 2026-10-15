@@ -21,7 +21,7 @@ interface CommissionRow {
   createdAt: string;
   referrer: Person | null;
   referred: Person | null;
-  kind: 'member' | 'creator';
+  kind: 'member' | 'creator' | 'community';
   community: { id: string; name: string | null } | null;
   sourceRef: string;
   baseCents: number;
@@ -77,7 +77,7 @@ export function ReferralTxView() {
     { key: 'date', label: t('referrals.colDate'), w: 1.1, render: (x) => <MutedCell>{formatDateTime(x.createdAt)}</MutedCell> },
     { key: 'referrer', label: t('referrals.colReferrer'), w: 1.6, render: (x) => personCell(x.referrer) },
     { key: 'referred', label: t('referrals.colReferred'), w: 1.6, render: (x) => personCell(x.referred) },
-    { key: 'kind', label: t('referrals.colKind'), w: 1, render: (x) => <TextCell>{x.kind === 'creator' ? t('referrals.kindCreator') : t('referrals.kindMember')}</TextCell> },
+    { key: 'kind', label: t('referrals.colKind'), w: 1, render: (x) => <TextCell>{x.kind === 'creator' ? t('referrals.kindCreator') : x.kind === 'community' ? t('referrals.kindCommunity') : t('referrals.kindMember')}</TextCell> },
     { key: 'comm', label: t('common.community'), w: 1.2, render: (x) => <TextCell>{x.community?.name ?? '—'}</TextCell> },
     { key: 'base', label: t('referrals.colBase'), w: 0.9, render: (x) => <NumCell>{formatCents(x.baseCents)}</NumCell> },
     { key: 'rate', label: t('referrals.colRate'), w: 0.6, render: (x) => <MutedCell>{pct(x.rateBps)}</MutedCell> },
@@ -139,7 +139,7 @@ export function ReferralTxView() {
           title={t('referrals.tableCommissions')}
           columns={commissionCols}
           filters={[
-            { key: 'kind', label: t('referrals.colKind'), value: ts.f.kind, options: [{ value: 'member', label: t('referrals.kindMember') }, { value: 'creator', label: t('referrals.kindCreator') }], onChange: ts.setFilter('kind') },
+            { key: 'kind', label: t('referrals.colKind'), value: ts.f.kind, options: [{ value: 'member', label: t('referrals.kindMember') }, { value: 'creator', label: t('referrals.kindCreator') }, { value: 'community', label: t('referrals.kindCommunity') }], onChange: ts.setFilter('kind') },
             { key: 'status', label: t('common.status'), value: ts.f.status, options: (['pending', 'paid', 'void'] as const).map((value) => ({ value, label: t(`referrals.status.${value}`) })), onChange: ts.setFilter('status') },
           ]}
           onClearFilters={ts.clear}

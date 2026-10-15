@@ -13,6 +13,8 @@ const NAV_ICONS = {
   members: 'group',
   leaderboard: 'leaderboard',
   about: 'info',
+  tools: 'handyman',
+  referral: 'redeem',
 };
 
 export interface CommunityNavItem {
@@ -31,6 +33,8 @@ export const COMMUNITY_NAV_ITEMS: CommunityNavItem[] = [
   { key: 'members', to: 'thanh-vien', labelKey: 'sidebar.nav.members', icon: 'members' },
   { key: 'leaderboard', to: 'xep-hang', labelKey: 'sidebar.nav.leaderboard', icon: 'leaderboard' },
   { key: 'about', to: 'gioi-thieu', labelKey: 'sidebar.nav.about', icon: 'about' },
+  { key: 'referral', to: 'chuong-trinh-gioi-thieu', labelKey: 'sidebar.nav.referral', icon: 'referral' },
+  { key: 'tools', to: 'cong-cu', labelKey: 'sidebar.nav.tools', icon: 'tools' },
 ];
 
 export function CommunitySidebar({ courseTitle }: { courseTitle: string }) {

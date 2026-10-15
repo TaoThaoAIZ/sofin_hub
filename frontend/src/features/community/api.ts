@@ -14,7 +14,11 @@ import type {
   LessonInput,
   ModuleAccessMember,
   ModuleInput,
+  Onboarding,
   PostQuery,
+  QuizAttemptResult,
+  QuizInput,
+  QuizView,
   PostShare,
   Report,
   ReportAction,
@@ -176,6 +180,16 @@ export const reorderLessons = (cid: string, courseId: string, moduleId: string, 
 // Theo id bài học (duy nhất toàn cục, hoạt động trên mọi khóa trong cộng đồng)
 export const fetchLesson = (cid: string, lessonId: string, token: string, signal?: AbortSignal) =>
   apiGet<{ data: LessonDetail }>(`/communities/${cid}/lessons/${lessonId}`, undefined, signal, { token }).then(D);
+export const fetchOnboarding = (cid: string, token: string, signal?: AbortSignal) =>
+  apiGet<{ data: Onboarding }>(`/communities/${cid}/onboarding`, undefined, signal, { token }).then(D);
+export const markOnboarding = (cid: string, step: 'video' | 'app', token: string) =>
+  apiPost<{ data: Onboarding }>(`/communities/${cid}/onboarding/${step}`, undefined, { token }).then(D);
+export const fetchQuiz = (cid: string, lessonId: string, token: string, signal?: AbortSignal) =>
+  apiGet<{ data: QuizView }>(`/communities/${cid}/lessons/${lessonId}/quiz`, undefined, signal, { token }).then(D);
+export const putQuiz = (cid: string, lessonId: string, body: QuizInput, token: string) =>
+  apiPut<{ data: unknown }>(`/communities/${cid}/lessons/${lessonId}/quiz`, body, { token }).then(D);
+export const attemptQuiz = (cid: string, lessonId: string, answers: Array<number | null>, token: string) =>
+  apiPost<{ data: QuizAttemptResult }>(`/communities/${cid}/lessons/${lessonId}/quiz/attempt`, { answers }, { token }).then(D);
 export const toggleLessonComplete = (cid: string, lessonId: string, token: string) =>
   apiPost<{ data: { completed: boolean } }>(`/communities/${cid}/lessons/${lessonId}/complete`, undefined, { token }).then(D);
 export const updateLesson = (cid: string, lessonId: string, body: Partial<LessonInput>, token: string) =>

@@ -21,15 +21,18 @@
     "unsupported": "Unsupported file type. Accepted: {{types}}",
     "labels": {
       "images": "JPG, PNG, WEBP, GIF images",
-      "files": "PDF, ZIP, DOCX, XLSX, PPTX, TXT, MP4",
-      "message": "images, PDF, ZIP, DOCX, XLSX, PPTX, TXT",
-      "media": "JPG, PNG, WEBP, GIF images or MP4 video"
+      "files": "PDF, ZIP, DOCX, XLSX, PPTX, PPT, DOC, XLS, CSV, TXT, MP4",
+      "message": "images, PDF, ZIP, DOCX, XLSX, PPTX, PPT, DOC, XLS, CSV, TXT",
+      "media": "JPG, PNG, WEBP, GIF images or MP4 video",
+      "video": "MP4, WEBM or MOV video",
+      "slides": "PDF, PPT, PPTX or PPSX"
     },
     "failedStatus": "File upload failed ({{status}})",
     "failed": "File upload failed, please try again",
-    "quota": "You have used up your storage allowance (200MB).",
+    "quota": "You have used up your storage allowance.",
     "tooLargeLimit": "The file exceeds the allowed size limit.",
-    "forbidden": "You don't have permission to upload this file."
+    "forbidden": "You don't have permission to upload this file.",
+    "cancelled": "Upload cancelled"
   },
   "certVerify": {
     "title": "Verify certificate",

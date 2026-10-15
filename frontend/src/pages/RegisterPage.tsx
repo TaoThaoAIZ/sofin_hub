@@ -2,12 +2,13 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
-import { FieldError, FieldHint } from '../components/ui/FieldMessage';
+import { FieldError } from '../components/ui/FieldMessage';
 import { FormField } from '../components/ui/FormField';
 import { ApiError } from '../lib/api';
 import { useAuth } from '../features/auth/AuthContext';
 import { SOCIAL_LOGIN_ENABLED, SocialButtons } from '../features/auth/SocialButtons';
 import { hasReadPrivacy, hasReadTerms } from '../features/auth/legalConsent';
+import { CONTACT_EMAIL } from '../features/auth/contact';
 import { readReferralCode } from '../features/referral/storage';
 import { validateEmail, validateNewPassword, validateRequired } from '../features/auth/validation';
 
@@ -67,7 +68,6 @@ export function RegisterPage() {
   const [agreed, setAgreed] = useState(draft.agreed ?? false);
   const [termsRead, setTermsRead] = useState(false);
   const [privacyRead, setPrivacyRead] = useState(false);
-  const bothRead = termsRead && privacyRead;
 
   // Đọc lại trạng thái "đã đọc" mỗi khi quay về trang này (vd. sau khi xem xong /terms, /privacy).
   useEffect(() => {
@@ -89,11 +89,7 @@ export function RegisterPage() {
       lastName: validateRequired(lastName, t('register.lastNameLabel')) ?? undefined,
       email: validateEmail(email) ?? undefined,
       password: validateNewPassword(password) ?? undefined,
-      agree: !bothRead
-        ? t('register.readFirst')
-        : !agreed
-          ? t('register.mustAgree')
-          : undefined,
+      agree: !agreed ? t('register.mustAgree') : undefined,
     };
     setFieldErrors(errors);
     if (errors.firstName || errors.lastName || errors.email || errors.password || errors.agree) return;
@@ -205,16 +201,15 @@ export function RegisterPage() {
           />
 
           <div>
-            <label className={`flex items-start gap-3 text-sm ${bothRead ? 'cursor-pointer text-stone-700' : 'cursor-not-allowed text-stone-400'}`}>
+            <label className="flex cursor-pointer items-start gap-3 text-sm text-stone-700">
               <input
                 type="checkbox"
                 checked={agreed}
-                disabled={!bothRead}
                 onChange={(e) => {
                   setAgreed(e.target.checked);
                   clearFieldError('agree');
                 }}
-                className="mt-0.5 size-4 flex-none accent-brand disabled:opacity-50"
+                className="mt-0.5 size-4 flex-none accent-brand"
               />
               <span>
                 {t('register.agreePrefix')}{' '}
@@ -229,7 +224,6 @@ export function RegisterPage() {
                 {privacyRead && ' ✓'}{t('register.agreeSuffix')}
               </span>
             </label>
-            {!bothRead && <FieldHint indent>{t('register.readHint')}</FieldHint>}
             {fieldErrors.agree && <FieldError indent>{fieldErrors.agree}</FieldError>}
           </div>
 
@@ -271,6 +265,13 @@ export function RegisterPage() {
           </Link>
           <span className="hidden h-px flex-1 bg-[rgba(120,60,20,.14)] sm:block" />
         </div>
+
+        <p className="m-0 text-center text-sm text-stone-600">
+          {t('contact.label')}{' '}
+          <a href={`mailto:${CONTACT_EMAIL}`} className="font-semibold text-brand underline">
+            {CONTACT_EMAIL}
+          </a>
+        </p>
       </div>
     </div>
   );

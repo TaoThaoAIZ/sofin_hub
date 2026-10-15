@@ -26,6 +26,9 @@ import { adminBatch3Router } from './modules/admin/admin-b3.routes.js';
 import { maintenanceGuard, platformRouter } from './modules/platform/platform.routes.js';
 import { moderationRouter } from './modules/moderation/moderation.routes.js';
 import { myCommunitiesRouter } from './modules/my-communities/my-communities.routes.js';
+import { onboardingRouter } from './modules/onboarding/onboarding.routes.js';
+import { quizRouter } from './modules/quiz/quiz.routes.js';
+import { communityReferralRouter } from './modules/referrals/community-referral.routes.js';
 
 export const apiRouter = Router();
 
@@ -44,6 +47,9 @@ apiRouter.use('/', metaRouter);
 apiRouter.use('/', postsRouter);
 apiRouter.use('/', moderationRouter);
 apiRouter.use('/', classroomRouter);
+apiRouter.use('/', quizRouter);
+apiRouter.use('/', onboardingRouter);
+apiRouter.use('/', communityReferralRouter);
 apiRouter.use('/', eventsRouter);
 apiRouter.use('/', communityRouter);
 apiRouter.use('/', paymentsRouter);

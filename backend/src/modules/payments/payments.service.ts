@@ -21,6 +21,7 @@ import {
   type StoredCard,
 } from './payments.repository.js';
 import { cfg } from '../settings/settings.service.js';
+import { communityReferralService } from '../referrals/community-referral.service.js';
 import { referralsService } from '../referrals/referrals.service.js';
 import { refundStatuses } from './payments.cards.js';
 import type { PaymentMethodInput } from './payments.schema.js';
@@ -222,6 +223,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
         periodEnd: periodEnd.toISOString(),
       });
       after.push(() => referralsService.onPaymentSucceeded(final!)); // hoa hồng giới thiệu (cô lập lỗi, sau commit)
+      after.push(() => communityReferralService.onPaymentSucceeded(final!)); // hoa hồng giới thiệu của cộng đồng (% do chủ đặt)
       after.push(() => announcePaid(final!)); // báo admin/owner (không bao giờ ném lỗi)
       later(after, {
         userId: intent.userId,
@@ -257,6 +259,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
     const final = await ops.transition(intent.id, ['succeeded'], { invoiceNumber });
     const title = (await ops.moduleTitles([moduleId])).get(moduleId) ?? 'module';
     after.push(() => referralsService.onPaymentSucceeded(final!));
+    after.push(() => communityReferralService.onPaymentSucceeded(final!));
     after.push(() => announcePaid(final!));
     later(after, {
       userId: intent.userId,
@@ -339,6 +342,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
     const invoiceNumber = await ops.nextInvoiceNumber(at.getUTCFullYear());
     const final = await ops.transition(intent.id, ['succeeded'], { invoiceNumber, periodStart: start.toISOString(), periodEnd: end.toISOString() });
     after.push(() => referralsService.onPaymentSucceeded(final!));
+    after.push(() => communityReferralService.onPaymentSucceeded(final!));
     after.push(() => announcePaid(final!));
     later(after, {
       userId: intent.userId,

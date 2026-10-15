@@ -5,6 +5,7 @@ import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
 import { ApiError } from '../lib/api';
 import { useAuth } from '../features/auth/AuthContext';
+import { CONTACT_EMAIL } from '../features/auth/contact';
 import { SOCIAL_LOGIN_ENABLED, SocialButtons } from '../features/auth/SocialButtons';
 import { validateEmail, validateLoginPassword } from '../features/auth/validation';
 
@@ -202,6 +203,13 @@ export function LoginPage() {
             {t('login.register')}
           </Link>
         </div>
+
+        <p className="m-0 text-center text-sm text-stone-600">
+          {t('contact.label')}{' '}
+          <a href={`mailto:${CONTACT_EMAIL}`} className="font-semibold text-brand underline">
+            {CONTACT_EMAIL}
+          </a>
+        </p>
       </div>
     </div>
   );

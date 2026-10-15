@@ -1,14 +1,15 @@
 import { randomBytes } from 'node:crypto';
+import { Transform, type Readable } from 'node:stream';
 import { env } from '../../config/env.js';
 import { HttpError } from '../../utils/http-error.js';
 import { catalogService } from '../catalog/catalog.service.js';
 import { isPlatformAdmin, requireRole } from '../permissions/policy.js';
 import { prismaUploadRepository, type UploadRepository } from './uploads.repository.js';
 import type { PresignInput } from './uploads.schema.js';
-import { storage as defaultStorage, type StorageProvider } from './uploads.storage.js';
+import { storage as defaultStorage, type ByteRange, type StorageProvider } from './uploads.storage.js';
 import { consumeTicket, isTicketUsed, verifyUploadTicket, type UploadTicket } from './uploads.ticket.js';
 import { isReferencedByLiveMessage } from './uploads.access.js';
-import { EXT_TO_TYPE, FILE_URL_PREFIX, IMAGE_TYPES, KEY_PATTERN, purposeRule, type UploadRecord } from './uploads.types.js';
+import { EXT_TO_TYPE, FILE_URL_PREFIX, IMAGE_TYPES, KEY_PATTERN, isCommunityPurpose, isStreamedPurpose, purposeRule, type UploadRecord } from './uploads.types.js';
 
 const MB = 1024 * 1024;
 const baseType = (ct: string) => ct.split(';')[0]!.trim().toLowerCase();
@@ -31,10 +32,19 @@ export function matchesMagic(contentType: string, b: Buffer): boolean {
     case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
     case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
     case 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
+    case 'application/vnd.openxmlformats-officedocument.presentationml.slideshow':
       return starts([0x50, 0x4b]);
+    case 'application/msword':
+    case 'application/vnd.ms-powerpoint':
+    case 'application/vnd.ms-excel':
+      return starts([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]); // OLE2 compound file
     case 'video/mp4':
-      return starts([0x66, 0x74, 0x79, 0x70], 4);
+    case 'video/quicktime':
+      return starts([0x66, 0x74, 0x79, 0x70], 4); // "ftyp"
+    case 'video/webm':
+      return starts([0x1a, 0x45, 0xdf, 0xa3]); // EBML
     case 'text/plain':
+    case 'text/csv':
       return !b.includes(0); // văn bản thuần không chứa byte NUL
     default:
       return false;
@@ -42,6 +52,7 @@ export function matchesMagic(contentType: string, b: Buffer): boolean {
 }
 
 export function createUploadService(repo: UploadRepository = prismaUploadRepository, storage: StorageProvider = defaultStorage) {
+  /** Kích thước thật của file (để tính Range) mà không mở stream. */
   const usedBytes = (userId: string) => repo.usedBytes(userId, env.UPLOAD_TICKET_TTL_SEC * 1000);
 
   return {
@@ -53,9 +64,13 @@ export function createUploadService(repo: UploadRepository = prismaUploadReposit
       if (input.size > rule.maxBytes) {
         throw HttpError.badRequest(`File quá lớn, tối đa ${Math.round((rule.maxBytes / MB) * 10) / 10}MB cho mục đích này`);
       }
-      if (input.purpose === 'lesson_attachment' && input.communityId) {
-        await catalogService.getById(input.communityId); // 404 nếu khóa học không tồn tại
-        await requireRole(userId, input.communityId, 'mod');
+      if (isCommunityPurpose(input.purpose)) {
+        // Video/slide phục vụ theo quyền thành viên của cộng đồng nên BẮT BUỘC gắn cộng đồng; lesson_attachment cũ vẫn cho phép thiếu.
+        if (!input.communityId && input.purpose !== 'lesson_attachment') throw HttpError.badRequest('Thiếu cộng đồng cho file bài học');
+        if (input.communityId) {
+          await catalogService.getById(input.communityId); // 404 nếu khóa học không tồn tại
+          await requireRole(userId, input.communityId, 'mod');
+        }
       }
       if ((await usedBytes(userId)) + input.size > env.UPLOAD_USER_QUOTA_MB * MB) {
         throw new HttpError(413, 'QUOTA_EXCEEDED', `Bạn đã vượt hạn mức lưu trữ ${env.UPLOAD_USER_QUOTA_MB}MB, hãy xóa bớt file cũ`);
@@ -70,8 +85,8 @@ export function createUploadService(repo: UploadRepository = prismaUploadReposit
         contentType,
         size: input.size,
         purpose: input.purpose,
-        // Chỉ lesson_attachment được kiểm tra khóa học tồn tại; mục đích khác không lưu communityId (tránh vi phạm FK).
-        communityId: input.purpose === 'lesson_attachment' ? input.communityId : undefined,
+        // Chỉ file bài học được kiểm tra cộng đồng tồn tại; mục đích khác không lưu communityId (tránh vi phạm FK).
+        communityId: isCommunityPurpose(input.purpose) ? input.communityId : undefined,
         status: 'pending',
         createdAt: new Date().toISOString(),
       };
@@ -114,8 +129,49 @@ export function createUploadService(repo: UploadRepository = prismaUploadReposit
       return { key: record.key, fileUrl: storage.publicUrl(record.key), size: data.length, contentType: ticket.ct };
     },
 
-    /** Mở file để phục vụ; contentType suy từ đuôi (đã whitelist), không tin tên file người dùng. */
-    async open(key: string, opts: { includeRemoved?: boolean } = {}) {
+    /**
+     * Bước 2 (dạng STREAM) cho video/slide lớn: kiểm magic bytes ở khúc đầu, đếm byte (vượt vé hoặc lệch Content-Length thì hủy),
+     * ghi thẳng xuống kho không qua RAM. Lỗi thì hủy yêu cầu upload và dọn file dở.
+     */
+    async completeStream(ticket: UploadTicket, record: UploadRecord, body: Readable, contentLength: number) {
+      let seen = 0;
+      let head = Buffer.alloc(0);
+      let checked = false;
+      const guard = new Transform({
+        transform(chunk: Buffer, _enc, cb) {
+          seen += chunk.length;
+          if (seen > ticket.ms) return cb(new HttpError(413, 'PAYLOAD_TOO_LARGE', 'File vượt quá dung lượng đã khai báo'));
+          if (!checked) {
+            head = Buffer.concat([head, chunk]).subarray(0, 64);
+            if (head.length >= 12 || seen >= contentLength) {
+              if (!matchesMagic(ticket.ct, head)) return cb(HttpError.badRequest('Nội dung file không khớp với loại file khai báo'));
+              checked = true;
+            }
+          }
+          cb(null, chunk);
+        },
+        flush(cb) {
+          if (seen === 0) return cb(HttpError.badRequest('File rỗng'));
+          if (seen !== contentLength) return cb(HttpError.badRequest('Dữ liệu nhận được không khớp Content-Length (tải lên bị gián đoạn)'));
+          if (!checked && !matchesMagic(ticket.ct, head)) return cb(HttpError.badRequest('Nội dung file không khớp với loại file khai báo'));
+          cb();
+        },
+      });
+      try {
+        body.on('error', (e) => guard.destroy(e));
+        body.pipe(guard);
+        await storage.putStream(record.key, guard, { contentType: ticket.ct, size: contentLength });
+        await repo.update(record.key, { status: 'uploaded', size: seen });
+      } catch (e) {
+        await storage.delete(record.key).catch(() => undefined);
+        await repo.delete(record.key);
+        throw e;
+      }
+      return { key: record.key, fileUrl: storage.publicUrl(record.key), size: seen, contentType: ticket.ct };
+    },
+
+    /** Mở file để phục vụ; contentType suy từ đuôi (đã whitelist), không tin tên file người dùng. `range` = Range request (video tua được). */
+    async open(key: string, opts: { includeRemoved?: boolean; range?: ByteRange } = {}) {
       if (!KEY_PATTERN.test(key)) return null;
       const contentType = EXT_TO_TYPE[key.split('.')[1]!];
       if (!contentType) return null;
@@ -123,7 +179,7 @@ export function createUploadService(repo: UploadRepository = prismaUploadReposit
       // Không có bản ghi Upload (hoặc chưa PUT xong) thì KHÔNG phục vụ, dù file có tồn tại trên đĩa.
       if (!rec || rec.status !== 'uploaded') return null;
       if (rec.removed && !opts.includeRemoved) return null; // file bị admin gỡ: chỉ admin tải được
-      const f = await storage.getStream(key);
+      const f = await storage.getStream(key, opts.range);
       if (!f) return null;
       return { ...f, contentType, isImage: contentType in IMAGE_TYPES, filename: rec.filename, record: rec };
     },

@@ -4,9 +4,10 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { useAuth } from '../../auth/AuthContext';
 import { useCommunityDetail } from '../../courses/queries';
-import { usePost, usePostsFeed } from '../queries';
+import { useOnboarding, usePost, usePostsFeed } from '../queries';
 import { categoryLabel, POST_CATEGORIES, type PostCategory } from '../types';
 import { CommunityRightSidebar } from './CommunityRightSidebar';
+import { OnboardingCard } from './OnboardingCard';
 import { errText, ErrorNote, ghostBtn, ToastHost } from './contentUi';
 import { CATEGORY_META, PostCard } from './PostCard';
 import { PostComposer } from './PostComposer';
@@ -35,6 +36,8 @@ export function FeedTab() {
   const [category, setCategory] = useState<PostCategory | undefined>(undefined);
   const [sort, setSort] = useState<'latest' | 'popular'>('latest');
   const viewerRole = course?.viewerRole;
+  const onboarding = useOnboarding(courseId);
+  const showOnboarding = !!onboarding.data && !onboarding.data.completed;
 
   const posts = usePostsFeed(courseId, { category, sort, tag });
   const list = useMemo(() => posts.data?.pages.flatMap((pg) => pg.data) ?? [], [posts.data]);
@@ -67,6 +70,18 @@ export function FeedTab() {
       <div className="flex flex-col gap-4">
         <PostComposer courseId={courseId} />
 
+        {showOnboarding && onboarding.data && (
+          <OnboardingCard
+            communityId={courseId}
+            data={onboarding.data}
+            onExplore={() => {
+              setSort('popular');
+              document.getElementById('community-feed-filters')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}
+          />
+        )}
+
+        {!showOnboarding && (
         <div className="relative min-h-[210px] overflow-hidden rounded-[24px] border border-brand/15 bg-gradient-to-br from-[#fff6ef] to-[#ffe6d4] p-6">
           <img
             src="/images/community-welcome-art.webp"
@@ -98,8 +113,9 @@ export function FeedTab() {
             </div>
           </div>
         </div>
+        )}
 
-        <div className="flex flex-wrap gap-2">
+        <div id="community-feed-filters" className="flex flex-wrap gap-2">
           {FILTERS.map((f) => {
             const active = f.key === 'trending' ? sort === 'popular' : sort === 'latest' && (f.key === 'all' ? !category : category === f.key);
             return (

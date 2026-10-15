@@ -21,15 +21,18 @@
     "unsupported": "Loại tệp không được hỗ trợ. Chỉ nhận: {{types}}",
     "labels": {
       "images": "ảnh JPG, PNG, WEBP, GIF",
-      "files": "PDF, ZIP, DOCX, XLSX, PPTX, TXT, MP4",
-      "message": "ảnh, PDF, ZIP, DOCX, XLSX, PPTX, TXT",
-      "media": "ảnh JPG, PNG, WEBP, GIF hoặc video MP4"
+      "files": "PDF, ZIP, DOCX, XLSX, PPTX, PPT, DOC, XLS, CSV, TXT, MP4",
+      "message": "ảnh, PDF, ZIP, DOCX, XLSX, PPTX, PPT, DOC, XLS, CSV, TXT",
+      "media": "ảnh JPG, PNG, WEBP, GIF hoặc video MP4",
+      "video": "video MP4, WEBM hoặc MOV",
+      "slides": "PDF, PPT, PPTX hoặc PPSX"
     },
     "failedStatus": "Tải tệp lên thất bại ({{status}})",
     "failed": "Tải tệp lên thất bại, vui lòng thử lại",
-    "quota": "Bạn đã dùng hết dung lượng lưu trữ cho phép (200MB).",
+    "quota": "Bạn đã dùng hết dung lượng lưu trữ cho phép.",
     "tooLargeLimit": "Tệp quá lớn so với giới hạn cho phép.",
-    "forbidden": "Bạn không có quyền tải tệp này lên."
+    "forbidden": "Bạn không có quyền tải tệp này lên.",
+    "cancelled": "Đã hủy tải lên"
   },
   "certVerify": {
     "title": "Xác minh chứng nhận",

@@ -203,15 +203,14 @@ add(M, MN, "Đăng ký", "Để trống trường họ tên",
     "Chức năng", "Trung bình", DONE, "-",
     ["Vào trang Đăng ký", "Để trống họ tên, điền các trường còn lại hợp lệ", "Bấm Đăng ký"],
     "Họ tên: (trống)", "Hiển thị lỗi bắt buộc nhập họ tên, không submit được")
-add(M, MN, "Đồng ý điều khoản", "Không thể tick đồng ý khi chưa cuộn hết Điều khoản sử dụng",
-    "Chức năng", "Cao", DONE, "Đang ở bước đọc điều khoản trong luồng đăng ký",
-    ["Mở trang Điều khoản sử dụng trong luồng đăng ký", "Không cuộn tới cuối trang",
-     "Thử tick vào ô đồng ý"],
-    "-", "Ô tick đồng ý bị vô hiệu hóa (disabled) cho tới khi cuộn hết nội dung")
-add(M, MN, "Đồng ý điều khoản", "Không thể tick đồng ý khi chưa cuộn hết Chính sách bảo mật",
-    "Chức năng", "Cao", DONE, "Đang ở bước đọc chính sách trong luồng đăng ký",
-    ["Mở trang Chính sách bảo mật", "Không cuộn tới cuối trang", "Thử tick vào ô đồng ý"],
-    "-", "Ô tick đồng ý bị vô hiệu hóa cho tới khi cuộn hết nội dung")
+add(M, MN, "Đồng ý điều khoản", "Tick được ô đồng ý ngay, không cần mở/đọc Điều khoản sử dụng",
+    "Chức năng", "Cao", DONE, "Đang ở trang Đăng ký",
+    ["Điền thông tin hợp lệ", "Tick ô đồng ý mà không bấm vào link Điều khoản/Chính sách nào"],
+    "-", "Ô tick đồng ý dùng được ngay (không bị disabled), nút Đăng ký bật; link Điều khoản và Chính sách vẫn mở được")
+add(M, MN, "Đồng ý điều khoản", "Mở Chính sách bảo mật rồi quay lại: bản nháp form giữ nguyên, ô đồng ý vẫn dùng được",
+    "Chức năng", "Trung bình", DONE, "Đã điền một phần form đăng ký",
+    ["Bấm link Chính sách bảo mật", "Bấm Quay lại đăng ký"],
+    "-", "Dữ liệu đã nhập còn nguyên; ô đồng ý không bị khóa")
 add(M, MN, "Đồng ý điều khoản", "Không cho đăng ký khi chưa tick đồng ý điều khoản",
     "Chức năng", "Cao", DONE, "-",
     ["Điền đầy đủ thông tin đăng ký hợp lệ", "Không tick đồng ý điều khoản", "Bấm Đăng ký"],
@@ -1285,7 +1284,7 @@ STILL_PLAN_OLD_COUNT = sum(1 for _r in rows if _r[6] == PLAN)
 # Nạp testcase mới từ qa/cases_*.py (mỗi file có hàm load(add)).
 CASE_MODULES = ["cases_auth", "cases_community", "cases_content", "cases_classroom",
                 "cases_payments", "cases_comms", "cases_platform", "cases_admin", "cases_admin2", "cases_admin3",
-                "cases_audit_secx", "cases_audit_money", "cases_audit_game", "cases_audit_infra", "cases_audit_perf", "cases_audit_split", "cases_wizard", "cases_settings", "cases_bank_transfer", "cases_tools", "cases_hosting_referral"]
+                "cases_audit_secx", "cases_audit_money", "cases_audit_game", "cases_audit_infra", "cases_audit_perf", "cases_audit_split", "cases_wizard", "cases_settings", "cases_bank_transfer", "cases_tools", "cases_hosting_referral", "cases_community_extras"]
 for _m in CASE_MODULES:
     try:
         _mod = importlib.import_module(_m)

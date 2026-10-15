@@ -14,7 +14,7 @@ export const referralsQuery = pageQuery.extend({
   view: z.enum(['commissions', 'referrals']).default('commissions'),
   /** Tìm theo tên/email của người giới thiệu hoặc người được giới thiệu, hoặc mã giới thiệu. */
   q: z.string().trim().max(100).optional(),
-  kind: z.enum(['member', 'creator']).optional(),
+  kind: z.enum(['member', 'creator', 'community']).optional(),
   status: z.enum(['pending', 'paid', 'void']).optional(),
 });
 

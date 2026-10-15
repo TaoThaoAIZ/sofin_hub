@@ -8,17 +8,19 @@ import type { SocialProvider } from './types';
  * xong việc backend đặt cookie phiên rồi chuyển về /oauth/callback.
  */
 /**
- * TẠM ẨN (xem docs/TODO-SOCIAL-LOGIN.md): chưa có khoá Google/Facebook. Bật lại bằng VITE_SOCIAL_LOGIN=1 (frontend/.env) rồi build lại;
- * code backend và trang /oauth/callback vẫn giữ nguyên.
+ * Google: BẬT mặc định (tắt bằng VITE_SOCIAL_LOGIN=0 khi build). Cần backend có GOOGLE_CLIENT_ID/SECRET + OAUTH_REDIRECT_BASE (xem docs/TODO-SOCIAL-LOGIN.md);
+ * thiếu khoá thì backend chuyển về /oauth/callback với lỗi `not_configured`.
+ * Facebook vẫn ẩn cho tới khi có app: bật bằng VITE_FACEBOOK_LOGIN=1.
  */
-export const SOCIAL_LOGIN_ENABLED = import.meta.env.VITE_SOCIAL_LOGIN === '1';
+export const SOCIAL_LOGIN_ENABLED = import.meta.env.VITE_SOCIAL_LOGIN !== '0';
+const FACEBOOK_ENABLED = import.meta.env.VITE_FACEBOOK_LOGIN === '1';
 
 export function SocialButtons() {
   if (!SOCIAL_LOGIN_ENABLED) return null;
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className={FACEBOOK_ENABLED ? 'grid grid-cols-2 gap-3' : 'grid grid-cols-1 gap-3'}>
       <SocialButton provider="google" label="Google" />
-      <SocialButton provider="facebook" label="Facebook" />
+      {FACEBOOK_ENABLED && <SocialButton provider="facebook" label="Facebook" />}
     </div>
   );
 }

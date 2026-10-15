@@ -53,7 +53,7 @@ export async function isReferencedByLiveMessage(key: string): Promise<boolean> {
  * Ai được xem file riêng tư?
  *  - chủ file (người upload) và Platform Admin: luôn được;
  *  - message_attachment: 2 người của cuộc trò chuyện chứa tin nhắn còn sống (thu hồi -> hết quyền);
- *  - lesson_attachment: thành viên của khóa học gắn với file;
+ *  - lesson_attachment / lesson_video / lesson_slide: thành viên của khóa học gắn với file;
  *  - post_file: thành viên của ít nhất một cộng đồng mà chủ file cũng là thành viên.
  */
 export async function canReadPrivateFile(userId: string, rec: UploadRecord): Promise<boolean> {
@@ -64,6 +64,8 @@ export async function canReadPrivateFile(userId: string, rec: UploadRecord): Pro
     case 'message_attachment':
       return inLiveMessageOf(userId, rec.key);
     case 'lesson_attachment':
+    case 'lesson_video':
+    case 'lesson_slide':
       return !!rec.communityId && (await getRole(userId, rec.communityId)) !== null;
     case 'post_file': {
       const [mine, theirs] = await Promise.all([enrollmentService.listByUser(userId), enrollmentService.listByUser(rec.ownerId)]);

@@ -589,7 +589,9 @@ export const adminPaymentsService = {
     const gate = Prisma.sql`((p."amountCents"::bigint * ${r.gatewayFeeBp} + 5000) / 10000) + ${r.gatewayFeeFixedCents}`;
     const [all, inRange, payouts, owned] = await Promise.all([
       prisma.$queryRaw<{ id: string; net: bigint }[]>(Prisma.sql`
-        SELECT c."ownerId" AS id, COALESCE(SUM(p."amountCents" - p."refundedCents" - (${comm}) - (${gate})), 0)::bigint AS net
+        SELECT c."ownerId" AS id, COALESCE(SUM(p."amountCents" - p."refundedCents" - (${comm}) - (${gate})), 0)::bigint
+               - COALESCE((SELECT SUM(rc."amountCents") FROM "ReferralCommission" rc JOIN "Course" c2 ON c2."id" = rc."communityId"
+                           WHERE c2."ownerId" = c."ownerId" AND rc."kind" = 'community' AND rc."status" <> 'void'), 0)::bigint AS net
         FROM "Payment" p JOIN "Course" c ON c."id" = p."courseId"
         WHERE c."ownerId" IS NOT NULL AND p."kind" <> 'hosting' AND p."status" IN ('succeeded', 'refunded') GROUP BY c."ownerId"`),
       prisma.$queryRaw<{ id: string; gross: bigint; refunds: bigint; platform: bigint; gateway: bigint }[]>(Prisma.sql`
@@ -607,17 +609,19 @@ export const adminPaymentsService = {
     const policy = payoutPolicy();
     const perCourse = await prisma.$queryRaw<{ owner: string; net: bigint; eligible: bigint; requested: bigint }[]>(Prisma.sql`
       SELECT c."ownerId" AS owner,
-             COALESCE(SUM(t."n"), 0)::bigint AS net,
-             COALESCE(SUM(t."n") FILTER (WHERE t."n" < 0 OR t."at" <= ${policy.eligibleBefore.toISOString()}::timestamp), 0)::bigint AS eligible,
+             COALESCE(SUM(t."n"), 0)::bigint - ref."total" AS net,
+             COALESCE(SUM(t."n") FILTER (WHERE t."n" < 0 OR t."at" <= ${policy.eligibleBefore.toISOString()}::timestamp), 0)::bigint - ref."total" AS eligible,
              COALESCE((SELECT SUM(po."amountCents") FROM "Payout" po WHERE po."courseId" = c."id" AND po."status" <> 'rejected'), 0)::bigint AS requested
       FROM "Course" c
+      CROSS JOIN LATERAL (SELECT COALESCE(SUM(rc."amountCents"), 0)::bigint AS "total" FROM "ReferralCommission" rc
+                          WHERE rc."communityId" = c."id" AND rc."kind" = 'community' AND rc."status" <> 'void') ref
       JOIN LATERAL (
         SELECT COALESCE(p."confirmedAt", p."createdAt") AS "at",
                (p."amountCents" - p."refundedCents" - (${comm}) - (${gate}))::bigint AS "n"
         FROM "Payment" p WHERE p."courseId" = c."id" AND p."kind" <> 'hosting' AND p."status" IN ('succeeded', 'refunded')
       ) t ON true
       WHERE c."ownerId" IS NOT NULL
-      GROUP BY c."ownerId", c."id"`);
+      GROUP BY c."ownerId", c."id", ref."total"`);
     const bal = new Map<string, { withdrawableCents: number; heldCents: number; reserveCents: number; debtCents: number }>();
     for (const x of perCourse) {
       const v = balanceView({ net: Number(x.net), eligible: Number(x.eligible), requested: Number(x.requested) }, policy.reservePct);

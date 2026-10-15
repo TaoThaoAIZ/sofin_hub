@@ -136,6 +136,8 @@ export interface RevenueTotals {
   platformCommissionCents: number;
   gatewayFeeCents: number;
   netCents: number;
+  /** Hoa hồng giới thiệu của cộng đồng (% do chủ đặt) đã trừ khỏi phần creator nhận. */
+  referralCommissionCents: number;
 }
 
 /** Gói hosting ở dạng tối thiểu cho thu phí (đơn vị tiền = đồng, chỉ VND thu được qua chuyển khoản). */
@@ -874,11 +876,17 @@ function makeOps(db: Db): PaymentsOps {
                COALESCE(SUM((("amountCents"::bigint * ${rates.gatewayFeeBp} + 5000) / 10000) + ${rates.gatewayFeeFixedCents}), 0)::bigint AS fee
         FROM "Payment"
         WHERE "courseId" = ${communityId} AND "kind" <> 'hosting' AND "status" IN ('succeeded', 'refunded') ${from} ${to}`;
+      const cFrom = range.from ? Prisma.sql`AND "createdAt" >= ${ts(range.from)}` : Prisma.empty;
+      const cTo = range.to ? Prisma.sql`AND "createdAt" <= ${ts(range.to)}` : Prisma.empty;
+      const [rc] = await db.$queryRaw<{ total: bigint }[]>`
+        SELECT COALESCE(SUM("amountCents"), 0)::bigint AS total FROM "ReferralCommission"
+        WHERE "communityId" = ${communityId} AND "kind" = 'community' AND "status" <> 'void' ${cFrom} ${cTo}`;
       const gross = num(r?.gross);
       const refunds = num(r?.refunds);
       const commission = num(r?.commission);
       const fee = num(r?.fee);
-      return { grossCents: gross, refundsCents: refunds, platformCommissionCents: commission, gatewayFeeCents: fee, netCents: gross - refunds - commission - fee };
+      const referral = num(rc?.total);
+      return { grossCents: gross, refundsCents: refunds, platformCommissionCents: commission, gatewayFeeCents: fee, referralCommissionCents: referral, netCents: gross - refunds - commission - fee - referral };
     },
     async balance(communityId, rates, policy) {
       // `n` = net của từng giao dịch (đã trừ hoàn tiền, hoa hồng trên phần giữ lại, phí cổng). Giao dịch đủ điều kiện rút khi đã qua
@@ -895,8 +903,13 @@ function makeOps(db: Db): PaymentsOps {
                    - ((("amountCents"::bigint * ${rates.gatewayFeeBp} + 5000) / 10000) + ${rates.gatewayFeeFixedCents}))::bigint AS "n"
           FROM "Payment" WHERE "courseId" = ${communityId} AND "kind" <> 'hosting' AND "status" IN ('succeeded', 'refunded')
         ) t`;
-      const net = num(r?.net);
-      return { net, requested: num(r?.requested), eligible: policy ? num(r?.eligible) : net };
+      // Hoa hồng giới thiệu của cộng đồng là khoản phải trả cho người mời, lấy từ phần creator nhận: trừ ngay (không chờ holding period).
+      const [rc] = await db.$queryRaw<{ total: bigint }[]>`
+        SELECT COALESCE(SUM("amountCents"), 0)::bigint AS total FROM "ReferralCommission"
+        WHERE "communityId" = ${communityId} AND "kind" = 'community' AND "status" <> 'void'`;
+      const referral = num(rc?.total);
+      const net = num(r?.net) - referral;
+      return { net, requested: num(r?.requested), eligible: policy ? num(r?.eligible) - referral : net };
     },
     async addLedgerEntry(e) {
       await db.ownerBalanceLedger.create({

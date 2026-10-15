@@ -132,6 +132,46 @@
     "prev": "Previous lesson",
     "next": "Next lesson",
     "toClassroom": "Back to classroom",
-    "loadingShort": "Loading…"
+    "loadingShort": "Loading…",
+    "slides": "Lecture slides"
+  },
+  "quiz": {
+    "loading": "Loading quiz…",
+    "title": "Lesson quiz",
+    "passRule": "{{n}} questions · pass mark {{pct}}%",
+    "alreadyPassed": "You already passed this quiz (best score {{best}}%).",
+    "correct": "Correct",
+    "wrong": "Wrong",
+    "submit": "Submit",
+    "submitting": "Grading…",
+    "retry": "Try again",
+    "answerAll": "Answer every question to submit.",
+    "score": "Score: {{pct}}% ({{ok}}/{{total}} correct)",
+    "passed": "Passed",
+    "failed": "Not passed (need at least {{need}}%)",
+    "passedHint": "You passed! Press \"Complete\" above to mark the lesson done.",
+    "needPass": "You need at least {{pct}}% on the quiz to complete this lesson."
+  },
+  "quizEditor": {
+    "title": "Lesson quiz",
+    "optional": "(optional)",
+    "rule": "With questions, learners must reach the pass mark to complete the lesson. Saving clears previous attempts; lessons already completed stay completed. Remove every question and save to delete the quiz.",
+    "passLabel": "Pass mark",
+    "question": "Question {{n}}",
+    "optionPh": "Option {{n}}",
+    "markCorrect": "Mark option {{n}} as the correct answer",
+    "removeQuestion": "Remove question {{n}}",
+    "removeOption": "Remove option {{n}}",
+    "addOption": "Add option",
+    "addQuestion": "Add question",
+    "correctHint": "Select the round button next to the correct option.",
+    "save": "Save quiz",
+    "saving": "Saving…",
+    "saved": "Quiz saved",
+    "removed": "Quiz removed from this lesson",
+    "passErr": "Pass mark must be a whole number from 1 to 100",
+    "errText": "Question {{n}}: enter the question text",
+    "errOption": "Question {{n}}: options cannot be empty",
+    "errDup": "Question {{n}}: options must be different"
   }
 }

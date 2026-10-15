@@ -1,11 +1,12 @@
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
-import { useUpload } from '../../uploads/useUpload';
+import { acceptFor, useUpload } from '../../uploads/useUpload';
 import { useCreateLesson, useUpdateLesson } from '../queries';
 import type { ClassroomLesson, LessonAttachment } from '../types';
 import { absoluteUrl, errText, ErrorNote, FieldLabel, inputCls } from './contentUi';
 import { shellGhostBtn, shellPrimaryBtn, ShellBody, ShellFooter, Toggle } from './ModalShell';
+import { QuizEditor } from './QuizEditor';
 
 type LessonType = 'video' | 'text' | 'file';
 
@@ -16,7 +17,10 @@ export const lessonHasContent = (l: Pick<ClassroomLesson, 'type' | 'videoUrl' | 
 /** Số ký tự tối thiểu của nội dung bài viết (khớp điều kiện xuất bản khóa học). */
 export const TEXT_MIN = 30;
 
-const isUploadedVideo = (u: string) => /\/api\/files\/[a-f0-9]{32}\.mp4$/i.test(u.trim());
+const isUploadedVideo = (u: string) => /\/api\/files\/[a-f0-9]{32}\.(?:mp4|webm|mov)$/i.test(u.trim());
+
+/** Tối đa tệp (gồm cả slide) cho một bài — khớp BE. */
+const MAX_FILES = 30;
 
 const TYPE_ICON: Record<LessonType, string> = { video: 'smart_display', text: 'article', file: 'attach_file' };
 
@@ -46,15 +50,21 @@ export function LessonEditor({
   const { t } = useTranslation('community');
   const create = useCreateLesson(communityId, courseId);
   const update = useUpdateLesson(communityId);
-  const { upload, uploading, error: uploadError } = useUpload();
+  const { upload, uploading, progress, error: uploadError } = useUpload();
   const fileRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLInputElement>(null);
+  const slideRef = useRef<HTMLInputElement>(null);
+  // Đang tải loại nào (để hiện thanh tiến độ đúng khung) + nút hủy.
+  const [busy, setBusy] = useState<'video' | 'slide' | 'file' | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
   const [title, setTitle] = useState(lesson?.title ?? '');
   const [type, setType] = useState<LessonType>(lesson?.type ?? 'video');
   const [duration, setDuration] = useState(String(lesson?.durationMin ?? 10));
   const [body, setBody] = useState(lesson?.body ?? '');
   const [videoUrl, setVideoUrl] = useState(lesson?.videoUrl ?? '');
-  const [attachments, setAttachments] = useState<LessonAttachment[]>(lesson?.attachments ?? []);
+  // Slide bài giảng và tệp đính kèm thường cùng nằm trong `attachments` ở BE (slide có kind = 'slide'); ở form tách thành hai danh sách.
+  const [slides, setSlides] = useState<LessonAttachment[]>((lesson?.attachments ?? []).filter((a) => a.kind === 'slide'));
+  const [attachments, setAttachments] = useState<LessonAttachment[]>((lesson?.attachments ?? []).filter((a) => a.kind !== 'slide'));
   const [isPreview, setIsPreview] = useState(lesson?.isPreview ?? defaultPreview);
   const [localErr, setLocalErr] = useState<string | null>(null);
   const [bodyErr, setBodyErr] = useState<string | null>(null);
@@ -78,10 +88,12 @@ export function LessonEditor({
     setBodyErr(null);
     const url = videoUrl.trim();
     const done = { onSuccess: () => onSaved() };
+    const all: LessonAttachment[] = [...slides.map((s) => ({ ...s, kind: 'slide' as const })), ...attachments.map(({ kind: _k, ...a }) => a)];
+    if (all.length > MAX_FILES) return setLocalErr(t('editor.lesson.tooManyFiles', { max: MAX_FILES }));
     if (lesson) {
-      update.mutate({ lessonId: lesson.id, body: { title: title.trim(), type, durationMin: dur, body, videoUrl: type === 'video' && url ? url : null, attachments, isPreview } }, done);
+      update.mutate({ lessonId: lesson.id, body: { title: title.trim(), type, durationMin: dur, body, videoUrl: type === 'video' && url ? url : null, attachments: all, isPreview } }, done);
     } else {
-      create.mutate({ moduleId, body: { title: title.trim(), type, durationMin: dur, body, ...(type === 'video' && url ? { videoUrl: url } : {}), attachments, isPreview } }, done);
+      create.mutate({ moduleId, body: { title: title.trim(), type, durationMin: dur, body, ...(type === 'video' && url ? { videoUrl: url } : {}), attachments: all, isPreview } }, done);
     }
   };
 
@@ -121,17 +133,22 @@ export function LessonEditor({
             <input
               ref={videoRef}
               type="file"
-              accept="video/mp4"
+              accept={acceptFor('lesson_video')}
               hidden
               onChange={async (e) => {
                 const f = e.target.files?.[0];
                 e.target.value = '';
                 if (!f) return;
+                const ac = new AbortController();
+                abortRef.current = ac;
+                setBusy('video');
                 try {
-                  const up = await upload(f, { purpose: 'lesson_attachment', courseId: communityId });
+                  const up = await upload(f, { purpose: 'lesson_video', courseId: communityId, signal: ac.signal });
                   setVideoUrl(absoluteUrl(up.url));
                 } catch {
                   /* lỗi hiển thị qua uploadError */
+                } finally {
+                  setBusy(null);
                 }
               }}
             />
@@ -139,8 +156,9 @@ export function LessonEditor({
             <div className="text-sm font-bold">{t('modWizard.lesson.videoDrop')}</div>
             <div className="text-xs text-stone-500">{t('modWizard.lesson.videoHint')}</div>
             <button type="button" onClick={() => videoRef.current?.click()} disabled={uploading} className="mt-2 h-9 rounded-xl border border-[#fdba74] bg-white px-4 text-[13px] font-bold text-[#e8590c] disabled:opacity-60">
-              {uploading ? t('courseForm.uploading') : t('editor.lesson.uploadVideo')}
+              {uploading && busy === 'video' ? t('courseForm.uploading') : t('editor.lesson.uploadVideo')}
             </button>
+            {busy === 'video' && <UploadProgress pct={progress} onCancel={() => abortRef.current?.abort()} />}
             {isUploadedVideo(videoUrl) && <div className="mt-1 text-xs font-semibold text-green-700">{t('editor.lesson.videoUploaded')}</div>}
             <input value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="https://" aria-label={t('editor.lesson.videoAria')} className={`${inputCls} mt-2 max-w-[420px] text-center`} />
           </div>
@@ -151,28 +169,34 @@ export function LessonEditor({
             <input
               ref={fileRef}
               type="file"
+              accept={acceptFor('lesson_attachment').replace(/,\.(mp4|m4v|webm|mov)/g, '')}
               hidden
               onChange={async (e) => {
                 const f = e.target.files?.[0];
                 e.target.value = '';
                 if (!f) return;
+                const ac = new AbortController();
+                abortRef.current = ac;
+                setBusy('file');
                 try {
-                  const up = await upload(f, { purpose: 'lesson_attachment', courseId: communityId });
+                  const up = await upload(f, { purpose: 'lesson_attachment', courseId: communityId, signal: ac.signal });
                   setAttachments((cur) => [...cur, { name: up.name, url: absoluteUrl(up.url), size: up.size }]);
                 } catch {
                   /* lỗi hiển thị qua uploadError */
+                } finally {
+                  setBusy(null);
                 }
               }}
             />
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
-              disabled={uploading || attachments.length >= 20}
+              disabled={uploading || attachments.length + slides.length >= MAX_FILES}
               className="flex items-center gap-3 rounded-xl border-[1.5px] border-dashed border-[#fdba74] bg-[#fff9f4] px-4 py-3.5 text-left disabled:opacity-60"
             >
               <MaterialIcon name="attach_file" size={26} color="#e8590c" />
               <span className="min-w-0 flex-1">
-                <span className="block text-sm font-bold">{uploading ? t('courseForm.uploading') : t('modWizard.lesson.fileDrop')}</span>
+                <span className="block text-sm font-bold">{uploading && busy === 'file' ? t('courseForm.uploading') : t('modWizard.lesson.fileDrop')}</span>
                 <span className="block text-xs text-stone-500">{t('modWizard.lesson.fileHint')}</span>
               </span>
               <span className="text-[13px] font-bold text-[#e8590c]">{t('modWizard.lesson.chooseFile')}</span>
@@ -188,6 +212,54 @@ export function LessonEditor({
             ))}
           </div>
         )}
+
+        <div className="flex flex-col gap-2">
+          <input
+            ref={slideRef}
+            type="file"
+            accept={acceptFor('lesson_slide')}
+            hidden
+            onChange={async (e) => {
+              const f = e.target.files?.[0];
+              e.target.value = '';
+              if (!f) return;
+              const ac = new AbortController();
+              abortRef.current = ac;
+              setBusy('slide');
+              try {
+                const up = await upload(f, { purpose: 'lesson_slide', courseId: communityId, signal: ac.signal });
+                setSlides((cur) => [...cur, { name: up.name, url: absoluteUrl(up.url), size: up.size, kind: 'slide' }]);
+              } catch {
+                /* lỗi hiển thị qua uploadError */
+              } finally {
+                setBusy(null);
+              }
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => slideRef.current?.click()}
+            disabled={uploading || attachments.length + slides.length >= MAX_FILES}
+            className="flex items-center gap-3 rounded-xl border-[1.5px] border-dashed border-[#fdba74] bg-[#fff9f4] px-4 py-3.5 text-left disabled:opacity-60"
+          >
+            <MaterialIcon name="slideshow" size={26} color="#e8590c" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-bold">{uploading && busy === 'slide' ? t('courseForm.uploading') : t('editor.lesson.slideDrop')}</span>
+              <span className="block text-xs text-stone-500">{t('editor.lesson.slideHint')}</span>
+            </span>
+            <span className="text-[13px] font-bold text-[#e8590c]">{t('modWizard.lesson.chooseFile')}</span>
+          </button>
+          {busy === 'slide' && <UploadProgress pct={progress} onCancel={() => abortRef.current?.abort()} />}
+          {slides.map((a, i) => (
+            <div key={a.url + i} className="flex items-center gap-2 rounded-lg bg-stone-50 px-3 py-1.5 text-[13px]">
+              <MaterialIcon name="slideshow" size={16} />
+              <span className="min-w-0 flex-1 truncate">{a.name}</span>
+              <button type="button" aria-label={t('modWizard.lesson.removeFile', { name: a.name })} onClick={() => setSlides(slides.filter((_, j) => j !== i))} className="text-stone-400 hover:text-red-600">
+                <MaterialIcon name="close" size={16} />
+              </button>
+            </div>
+          ))}
+        </div>
 
         <div>
           <FieldLabel required={type === 'text'}>{type === 'text' ? t('modWizard.lesson.text') : t('modWizard.lesson.note')}</FieldLabel>
@@ -215,6 +287,11 @@ export function LessonEditor({
           </span>
           <Toggle on={isPreview} />
         </button>
+        {lesson ? (
+          <QuizEditor communityId={communityId} lessonId={lesson.id} />
+        ) : (
+          <p className="m-0 rounded-xl bg-[#faf7f4] px-3.5 py-2.5 text-[12.5px] text-stone-500">{t('editor.lesson.quizAfterSave')}</p>
+        )}
         <p className="m-0 text-[12px] text-stone-500"><span className="text-red-600">*</span> {t('modWizard.requiredHint')}</p>
         <ErrorNote message={err ?? uploadError} />
       </ShellBody>
@@ -228,5 +305,21 @@ export function LessonEditor({
         </button>
       </ShellFooter>
     </>
+  );
+}
+
+/** Thanh tiến độ tải lên + nút hủy (video dài có thể mất nhiều phút). */
+function UploadProgress({ pct, onCancel }: { pct: number; onCancel: () => void }) {
+  const { t } = useTranslation('community');
+  return (
+    <div className="flex w-full max-w-[420px] items-center gap-2.5" role="status" aria-live="polite">
+      <div className="h-2 flex-1 overflow-hidden rounded-full bg-[rgba(120,60,20,.12)]" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+        <div className="h-full rounded-full bg-brand transition-[width]" style={{ width: `${pct}%` }} />
+      </div>
+      <span className="w-10 text-right text-[12px] font-semibold tabular-nums">{pct}%</span>
+      <button type="button" onClick={onCancel} className="text-[12.5px] font-semibold text-stone-500 underline hover:text-red-600">
+        {t('editor.lesson.cancelUpload')}
+      </button>
+    </div>
   );
 }

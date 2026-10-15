@@ -4,6 +4,7 @@ import { MaterialIcon } from '../components/ui/MaterialIcon';
 import { ApiError } from '../lib/api';
 import { classroomPath, lessonPath } from '../lib/paths';
 import { fileKeyOf, useFileUrl } from '../lib/files';
+import { QuizPanel } from '../features/community/components/QuizPanel';
 import { errText, ErrorNote, ghostBtn, primaryBtn, safeUrl, toast, ToastHost } from '../features/community/components/contentUi';
 import { useCourseList, useLesson, useLessons, useProgress, useToggleLessonComplete } from '../features/community/queries';
 
@@ -85,7 +86,11 @@ export function LessonPage() {
 
   const l = lesson.data;
   const embed = isSafeEmbed(l.embedUrl) ? l.embedUrl! : null;
+  const slideFiles = (l.attachments ?? []).filter((a) => a.kind === 'slide');
+  const docFiles = (l.attachments ?? []).filter((a) => a.kind !== 'slide');
   const pct = progress.data?.percent ?? 0;
+  // Bài có trắc nghiệm bắt buộc: chưa đạt thì chưa được đánh dấu hoàn thành (bỏ đánh dấu thì vẫn được).
+  const quizBlocks = !!l.quiz?.required && !l.quiz.passed && !l.completed;
 
   const onToggle = () =>
     toggle.mutate(l.id, {
@@ -155,8 +160,9 @@ export function LessonPage() {
               <button
                 type="button"
                 onClick={onToggle}
-                disabled={toggle.isPending}
-                className={l.completed ? ghostBtn : primaryBtn}
+                disabled={toggle.isPending || quizBlocks}
+                title={quizBlocks ? t('quiz.needPass', { pct: l.quiz?.passPercent }) : undefined}
+                className={`${l.completed ? ghostBtn : primaryBtn} disabled:cursor-not-allowed disabled:opacity-60`}
               >
                 <MaterialIcon name={l.completed ? 'undo' : 'check_circle'} size={19} color={l.completed ? undefined : '#fff'} />
                 {toggle.isPending ? t('lesson.saving') : l.completed ? t('lesson.uncomplete') : t('lesson.complete')}
@@ -169,11 +175,29 @@ export function LessonPage() {
             )}
             {l.body && <div className="mt-4 text-[14.5px] leading-[1.7] break-words whitespace-pre-wrap text-stone-800">{l.body}</div>}
 
-            {l.attachments && l.attachments.length > 0 && (
+            {l.quiz && <QuizPanel communityId={communityId} lessonId={l.id} />}
+            {quizBlocks && <p className="mt-2 mb-0 text-[12.5px] text-stone-500">{t('quiz.needPass', { pct: l.quiz?.passPercent })}</p>}
+
+            {slideFiles.length > 0 && (
+              <div className="mt-5">
+                <div className="mb-2 flex items-center gap-1.5 text-[13.5px] font-bold">
+                  <MaterialIcon name="slideshow" size={18} color="#f26a1b" /> {t('lesson.slides')}
+                </div>
+                <ul className="m-0 flex list-none flex-col gap-2 p-0">
+                  {slideFiles.map((a) => (
+                    <li key={a.url}>
+                      <LessonAttachmentLink a={a} />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {docFiles.length > 0 && (
               <div className="mt-5">
                 <div className="mb-2 text-[13.5px] font-bold">{t('lesson.attachments')}</div>
                 <ul className="m-0 flex list-none flex-col gap-2 p-0">
-                  {l.attachments.map((a) => (
+                  {docFiles.map((a) => (
                     <li key={a.url}>
                       <LessonAttachmentLink a={a} />
                     </li>

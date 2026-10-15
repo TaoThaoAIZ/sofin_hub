@@ -275,6 +275,7 @@ export function createReferralsService() {
       await isolate('voidForPayment', async () => {
         await repo.voidPendingBySource(`payment:${paymentId}`);
         await repo.voidPendingBySource(`hosting:${paymentId}`); // hóa đơn hosting được hoàn tiền
+        await repo.voidPendingBySource(`cpayment:${paymentId}`); // hoa hồng giới thiệu của cộng đồng
       });
     },
 

@@ -4,6 +4,8 @@ export interface LessonAttachment {
   name: string;
   url: string;
   size?: number;
+  /** 'slide' = slide bài giảng; bỏ trống = tệp đính kèm thường. */
+  kind?: 'slide';
 }
 
 export interface ClassroomLesson {
@@ -93,6 +95,8 @@ export interface ClassroomLessonDetail extends ClassroomLessonView {
   /** Bài trước/sau đang khóa với người xem (FE vô hiệu hóa nút điều hướng). */
   prevLessonLocked: boolean;
   nextLessonLocked: boolean;
+  /** Trắc nghiệm của bài (null = không có). `required` = người xem phải đạt điểm mới hoàn thành được bài (mod+ không bị bắt buộc). */
+  quiz: { questionCount: number; passPercent: number; passed: boolean; required: boolean } | null;
 }
 
 export interface ClassroomProgress {

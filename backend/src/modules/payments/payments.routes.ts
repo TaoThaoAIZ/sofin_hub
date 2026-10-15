@@ -1,3 +1,4 @@
+import { communityReferralService } from '../referrals/community-referral.service.js';
 import { Router } from 'express';
 import { optionalAuth, requireAuth, requireVerifiedEmail } from '../../middlewares/auth.js';
 import { HttpError } from '../../utils/http-error.js';
@@ -30,6 +31,8 @@ const id = (v: unknown) => v as string;
 paymentsRouter.post('/courses/:id/checkout', requireAuth, requireVerifiedEmail, async (req, res) => {
   const body = createCheckoutBody.parse(req.body);
   const key = req.header('idempotency-key')?.trim().slice(0, 200) || undefined;
+  // Link giới thiệu của cộng đồng (?cref=): ghi nhận người mời TRƯỚC khi có thanh toán (bỏ qua êm nếu không hợp lệ).
+  await communityReferralService.attribute(req.userId!, id(req.params.id), body.referralCode);
   res.status(201).json({ data: await paymentsService.checkout(id(req.params.id), req.userId!, body.method, key, { interval: body.interval }) });
 });
 

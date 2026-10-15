@@ -41,9 +41,9 @@ export function toEmbedUrl(raw: string): string | null {
   return null;
 }
 
-const UPLOADED_FILE_RE = /^(?:https?:\/\/[^/?#]+)?\/api\/files\/([a-f0-9]{32}\.mp4)$/i;
+const UPLOADED_FILE_RE = /^(?:https?:\/\/[^/?#]+)?\/api\/files\/([a-f0-9]{32}\.(?:mp4|webm|mov))$/i;
 
-/** Video do người dùng tải lên (POST /uploads/presign, mp4): trả đường dẫn nội bộ `/api/files/<key>`; null nếu không phải. */
+/** Video do người dùng tải lên (POST /uploads/presign: mp4/webm/mov): trả đường dẫn nội bộ `/api/files/<key>`; null nếu không phải. */
 export function uploadedVideoPath(raw: string): string | null {
   const m = UPLOADED_FILE_RE.exec(raw.trim());
   return m ? `/api/files/${m[1]!.toLowerCase()}` : null;
@@ -59,7 +59,7 @@ const videoUrl = z
   .string()
   .trim()
   .max(500, 'Đường dẫn quá dài')
-  .refine((v) => toEmbedUrl(v) !== null || uploadedVideoPath(v) !== null, 'Chỉ chấp nhận link video YouTube hoặc Vimeo hợp lệ, hoặc video mp4 tải lên');
+  .refine((v) => toEmbedUrl(v) !== null || uploadedVideoPath(v) !== null, 'Chỉ chấp nhận link video YouTube hoặc Vimeo hợp lệ, hoặc video tải lên (mp4, webm, mov)');
 
 const level = z.number().int('Cấp độ phải là số nguyên').min(1, 'Cấp độ từ 1 đến 9').max(9, 'Cấp độ từ 1 đến 9');
 
@@ -69,6 +69,8 @@ const attachment = z.object({
   name: z.string().trim().min(1, 'Tên tệp không được trống').max(200),
   url: httpUrl,
   size: z.number().int().min(0).max(5_000_000_000).optional(),
+  /** 'slide' = slide bài giảng (hiện ở mục riêng); bỏ trống = tệp đính kèm thường. */
+  kind: z.enum(['slide']).optional(),
 });
 
 const accessMode = z.enum(['all', 'level', 'paid', 'selected']);
@@ -114,7 +116,7 @@ const lessonFields = {
   durationMin: z.number().int('Thời lượng phải là số nguyên').min(0).max(1000),
   body: z.string().max(50_000, 'Nội dung tối đa 50.000 ký tự'),
   videoUrl,
-  attachments: z.array(attachment).max(20, 'Tối đa 20 tệp đính kèm'),
+  attachments: z.array(attachment).max(30, 'Tối đa 30 tệp đính kèm (gồm cả slide)'),
   isPreview: z.boolean(),
 };
 

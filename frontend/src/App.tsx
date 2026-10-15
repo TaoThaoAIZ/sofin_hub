@@ -1,3 +1,4 @@
+import { CommunityReferralTab } from './features/community/components/CommunityReferralTab';
 import { lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, Route, Routes, useParams } from 'react-router-dom';
@@ -37,7 +38,7 @@ import { NotFoundPage } from './pages/NotFoundPage';
 import { PrivacyPage } from './pages/PrivacyPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { TermsPage } from './pages/TermsPage';
-import { ToolsPage } from './pages/ToolsPage';
+import { ToolsContent, ToolsPage } from './pages/ToolsPage';
 import { CertificateVerifyPage } from './pages/CertificateVerifyPage';
 import { LessonPage } from './pages/LessonPage';
 import { VerifyOtpPage } from './pages/VerifyOtpPage';
@@ -83,6 +84,8 @@ export default function App() {
           <Route path="thanh-vien" element={<MembersTab />} />
           <Route path="xep-hang" element={<LeaderboardTab />} />
           <Route path="gioi-thieu" element={<AboutTab />} />
+          <Route path="cong-cu" element={<ToolsContent />} />
+          <Route path="chuong-trinh-gioi-thieu" element={<CommunityReferralTab />} />
           <Route path="doanh-thu" element={<RevenuePage />} />
         </Route>
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />

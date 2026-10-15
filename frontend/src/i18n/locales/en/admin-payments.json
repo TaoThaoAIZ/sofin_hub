@@ -358,6 +358,7 @@
       "pending": "Pending",
       "paid": "Paid",
       "void": "Void"
-    }
+    },
+    "kindCommunity": "Community referral"
   }
 }

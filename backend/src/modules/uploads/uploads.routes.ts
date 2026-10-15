@@ -2,8 +2,31 @@ import express, { Router, type Request, type Response } from 'express';
 import { requireAuth } from '../../middlewares/auth.js';
 import { HttpError } from '../../utils/http-error.js';
 import { authenticateAccessToken } from '../auth/tokens.js';
-import { canReadPrivateFile, signFileUrl, verifyFileUrl } from './uploads.access.js';
-import { FILE_URL_PREFIX, isPublicPurpose } from './uploads.types.js';
+import { FILE_URL_TTL_SEC, canReadPrivateFile, signFileUrl, verifyFileUrl } from './uploads.access.js';
+
+/** URL ký cho video bài học sống lâu hơn (video dài: tua/đệm tiếp sau vài phút vẫn phải còn hiệu lực). */
+const VIDEO_URL_TTL_SEC = 4 * 3600;
+
+/** `Range: bytes=a-b | a- | -n` (một đoạn) → khoảng byte hợp lệ trong file `size`; null = không có/không hỗ trợ Range; 'invalid' = không thỏa. */
+export function parseRange(header: string | undefined, size: number): { start: number; end: number } | null | 'invalid' {
+  if (!header) return null;
+  const m = /^bytes=(\d*)-(\d*)$/.exec(header.trim());
+  if (!m || (m[1] === '' && m[2] === '')) return null;
+  let start: number;
+  let end: number;
+  if (m[1] === '') {
+    const n = Number(m[2]);
+    if (n <= 0) return 'invalid';
+    start = Math.max(0, size - n);
+    end = size - 1;
+  } else {
+    start = Number(m[1]);
+    end = m[2] === '' ? size - 1 : Math.min(Number(m[2]), size - 1);
+  }
+  if (!Number.isFinite(start) || !Number.isFinite(end) || start >= size || start > end) return 'invalid';
+  return { start, end };
+}
+import { FILE_URL_PREFIX, isPublicPurpose, isStreamedPurpose } from './uploads.types.js';
 import { presignSchema } from './uploads.schema.js';
 import { uploadService } from './uploads.service.js';
 
@@ -30,6 +53,12 @@ uploadsRouter.put('/uploads/:key', async (req, res) => {
   const token = typeof req.query.token === 'string' ? req.query.token : undefined;
   const len = req.headers['content-length'] ? Number(req.headers['content-length']) : undefined;
   const { ticket, record } = await uploadService.authorizePut(req.params.key as string, token, req.headers['content-type'], len);
+  if (isStreamedPurpose(record.purpose)) {
+    // Video dài / slide lớn: ghi thẳng xuống kho dạng stream (không nạp vào RAM); bắt buộc có Content-Length để biết đủ/thiếu.
+    if (!len || len <= 0) throw new HttpError(411, 'LENGTH_REQUIRED', 'Thiếu Content-Length cho file tải lên');
+    res.json({ data: await uploadService.completeStream(ticket, record, req, len) });
+    return;
+  }
   const body = await readRawBody(req, res, ticket.ms);
   res.json({ data: await uploadService.completePut(ticket, record, body) });
 });
@@ -58,10 +87,22 @@ uploadsRouter.get('/files/:key', async (req, res) => {
     if (!userId) throw HttpError.unauthorized('Cần đăng nhập hoặc URL ký còn hạn để xem file này');
     if (!(await canReadPrivateFile(userId, rec))) throw HttpError.forbidden('Bạn không có quyền xem file này');
   }
-  const f = await uploadService.open(key);
+  const range = parseRange(req.headers.range, rec.size);
+  if (range === 'invalid') {
+    res.status(416).setHeader('Content-Range', `bytes */${rec.size}`).end();
+    return;
+  }
+  const f = await uploadService.open(key, range ? { range } : {});
   if (!f) throw HttpError.notFound('Không tìm thấy file');
   res.setHeader('Content-Type', f.contentType);
-  res.setHeader('Content-Length', String(f.size));
+  res.setHeader('Accept-Ranges', 'bytes');
+  if (range) {
+    res.status(206);
+    res.setHeader('Content-Range', `bytes ${range.start}-${range.end}/${f.size}`);
+    res.setHeader('Content-Length', String(range.end - range.start + 1));
+  } else {
+    res.setHeader('Content-Length', String(f.size));
+  }
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
   // helmet mặc định đặt CORP same-origin, sẽ chặn FE khác origin nhúng ảnh.
@@ -85,5 +126,5 @@ uploadsRouter.post('/files/:key/url', requireAuth, async (req, res) => {
   }
   if (!(await canReadPrivateFile(req.userId!, rec))) throw HttpError.forbidden('Bạn không có quyền xem file này');
   res.setHeader('Cache-Control', 'private, no-store');
-  res.json({ data: signFileUrl(key, req.userId!) });
+  res.json({ data: signFileUrl(key, req.userId!, rec.purpose === 'lesson_video' ? VIDEO_URL_TTL_SEC : FILE_URL_TTL_SEC) });
 });
