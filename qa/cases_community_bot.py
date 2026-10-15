@@ -86,3 +86,17 @@ def load(add):
     A("Giao diện", "Nhắn liên tục + nhiều người cùng lúc: tin 'chờ gửi' và 'Đang có N người hỏi trước bạn'", "Giao diện", "Trung bình", VIP,
       ["Gõ liên tục 3 tin khi bot đang trả lời", "(Khi máy chủ đông) quan sát bong bóng trả lời"], "-",
       "2 tin sau hiện nhãn 'chờ gửi' và được trả lời gộp 1 lượt; khi phải xếp hàng, bong bóng hiện 'Đang có N người hỏi trước bạn, chờ chút nhé…' rồi chuyển thành câu trả lời.", pw="Không")
+
+    # ---------------------------------------------------------------- Bài đăng & bình chọn (15/10/2026)
+    PHOTO = BASE + f" Đăng nhập member1@sofinhub.test / {PW}, mở /communities/photo/community, mở trợ lý 'Trợ lý Nhiếp ảnh'."
+    A("Bài đăng", "Hỏi kết quả bình chọn bằng câu không trùng chữ với bài => trả đúng lựa chọn dẫn đầu + số phiếu", "Chức năng", "Cao", PHOTO,
+      ["Hỏi 'có bài vote trong cộng đồng vào ngày 13/10 về địa điểm chụp cuối tuần. nơi nào có lượt vote cao nhất'"], "-",
+      "Trả lời: Phố cổ Hà Nội dẫn đầu (2 phiếu, 67%), 3 người đã bình chọn, bình chọn còn mở, kèm link bài. Không đề nghị chuyển cho chủ cộng đồng.", pw="Không")
+    A("Bài đăng", "Hỏi theo ngày đăng => liệt kê đúng các bài ngày đó", "Chức năng", "Trung bình", PHOTO,
+      ["Hỏi 'hôm 13/10 có ai đăng gì không'"], "13/10",
+      "Liệt kê các bài đăng ngày 13/10/2026 (giờ, tác giả, link); không có bài ngày khác; bài bị ẩn / bị gỡ không xuất hiện.", pw="Không")
+    A("Bài đăng", "Hỏi bài ghim / thông báo mới nhất => trả từ các bài đang ghim", "Chức năng", "Trung bình", PHOTO,
+      ["Hỏi 'bài ghim mới nhất của cộng đồng nói gì'"], "-", "Tóm tắt các bài đang ghim mới nhất kèm link; không bịa bài không có.", pw="Không")
+    A("Bài đăng", "Bình chọn hòa / chưa ai bình chọn / đã đóng được nói rõ", "Chức năng", "Thấp", PHOTO + " Tạo bài bình chọn mới chưa ai bình chọn.",
+      ["Hỏi 'bình chọn mới nhất đang dẫn đầu là gì'"], "-", "Nói chưa có ai bình chọn (không chọn bừa 1 lựa chọn); hòa => nêu đủ các lựa chọn hòa; đã quá hạn => nói bình chọn đã đóng.", pw="Không")
+

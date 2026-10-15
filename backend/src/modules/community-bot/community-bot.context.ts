@@ -1,8 +1,10 @@
 import { prisma } from '../../db/prisma.js';
+import { Prisma } from '../../generated/prisma/client.js';
 import { learningCourseRepository } from '../classroom/learning-courses.repository.js';
 import { classroomService } from '../classroom/classroom.service.js';
 import type { LessonAccess } from '../classroom/classroom.types.js';
 import { isPaymentTopic } from '../chatbot/chatbot.context.js';
+import { normalizeText } from '../search/search.text.js';
 import { chatbotRepository, queryTerms } from '../chatbot/chatbot.repository.js';
 import type { BotAccess } from './community-bot.access.js';
 
@@ -25,12 +27,34 @@ export interface CommunityContext {
   documents: { document: string; section: string; content: string }[];
   lessons: { title: string; module: string; link: string; status: 'open' | 'locked'; content?: string; howToUnlock?: string }[];
   curriculum: { module: string; lessons: number; locked: boolean; howToUnlock?: string }[];
-  posts: { excerpt: string; author: string; createdAt: string }[];
+  /** Bài đăng liên quan: bài ghim, bài khớp câu hỏi / ngày nhắc tới / bình chọn, bài mới nhất — kèm kết quả bình chọn nếu có. */
+  posts: PostView[];
   events: { title: string; startAt: string; description: string; cancelled: boolean }[];
   /** Gói của CHÍNH người hỏi trong cộng đồng này — chỉ khi câu hỏi nói về thanh toán (null = không kèm). */
   mySubscription: { status: string; renewsAt: string; cancelAtPeriodEnd: boolean } | null;
   /** ID nguồn — KHÔNG đưa vào prompt; ghi vào toolCalls để kiểm tra rò rỉ. */
   sources: { qaIds: string[]; chunkIds: string[]; lessonIds: string[]; lockedLessonIds: string[]; postIds: string[]; eventIds: string[] };
+}
+
+export interface PostView {
+  content: string;
+  author: string;
+  createdAt: string;
+  category: string;
+  pinned: boolean;
+  likes: number;
+  comments: number;
+  link: string;
+  poll?: {
+    question: string;
+    multiple: boolean;
+    closesAt: string | null;
+    closed: boolean;
+    voters: number;
+    options: { text: string; votes: number; percent: number }[];
+    /** Lựa chọn nhiều phiếu nhất (nhiều mục = đang hòa); [] = chưa ai bình chọn. */
+    leading: string[];
+  };
 }
 
 const vnd = (n: number) => `${Math.round(n).toLocaleString('vi-VN')}đ`;
@@ -70,14 +94,108 @@ async function searchLessons(communityId: string, tsq: string, limit: number) {
 }
 
 async function searchPosts(communityId: string, tsq: string, limit: number) {
-  return prisma.$queryRaw<{ id: string; content: string; createdAt: Date; authorName: string }[]>`
-    SELECT p."id", p."content", p."createdAt",
-           CASE WHEN u."deletedAt" IS NULL THEN u."firstName" || ' ' || u."lastName" ELSE 'Thành viên đã xóa' END AS "authorName"
-    FROM "Post" p JOIN "User" u ON u."id" = p."authorId"
+  const rows = await prisma.$queryRaw<{ id: string }[]>`
+    SELECT p."id" FROM "Post" p
     WHERE p."courseId" = ${communityId} AND p."removedAt" IS NULL AND p."hidden" = false
       AND p."searchVector" @@ to_tsquery('simple', ${tsq})
     ORDER BY ts_rank(p."searchVector", to_tsquery('simple', ${tsq})) DESC, p."createdAt" DESC
     LIMIT ${limit}`;
+  return rows.map((r) => r.id);
+}
+
+/** Câu hỏi về bình chọn / vote => đưa thêm các bài có bình chọn gần nhất (tìm theo chữ dễ trượt vì bài thường không có chữ "vote"). */
+const POLL_TOPIC = /\b(vote|binh chon|bau chon|poll|khao sat|phieu|lua chon nhieu nhat)\b/;
+const CATEGORY_LABEL: Record<string, string> = { general: 'Thảo luận chung', qa: 'Hỏi đáp', case_study: 'Case study', announcement: 'Thông báo' };
+/** Số bài đăng tối đa trong ngữ cảnh (giữ prompt gọn). */
+const MAX_POSTS = 8;
+const VN_OFFSET_MS = 7 * 3600_000;
+
+/** Ngày được nhắc trong câu hỏi ("13/10", "ngày 13/10/2026") => khoảng [đầu ngày, cuối ngày) theo giờ Việt Nam. Tối đa 2 ngày. */
+export function mentionedDays(text: string, now = new Date()): { from: Date; to: Date }[] {
+  const out: { from: Date; to: Date }[] = [];
+  for (const m of text.matchAll(/(?<!\d)(\d{1,2})[/-](\d{1,2})(?:[/-](\d{4}))?(?!\d)/g)) {
+    const d = Number(m[1]);
+    const mo = Number(m[2]);
+    if (d < 1 || d > 31 || mo < 1 || mo > 12) continue;
+    const vnNow = new Date(now.getTime() + VN_OFFSET_MS);
+    let y = m[3] ? Number(m[3]) : vnNow.getUTCFullYear();
+    // Không ghi năm mà ngày nằm sau hôm nay => hiểu là năm trước ("13/12" hỏi vào tháng 1).
+    if (!m[3] && Date.UTC(y, mo - 1, d) > vnNow.getTime()) y -= 1;
+    const from = new Date(Date.UTC(y, mo - 1, d) - VN_OFFSET_MS);
+    out.push({ from, to: new Date(from.getTime() + 24 * 3600_000) });
+    if (out.length >= 2) break;
+  }
+  return out;
+}
+
+type PollDef = { question?: string; options?: { id: string; text: string }[]; multiple?: boolean; closesAt?: string };
+
+/** Dựng PostView (kèm kết quả bình chọn) cho các bài theo đúng thứ tự `ids`. */
+async function postViews(communityId: string, ids: string[]): Promise<PostView[]> {
+  if (!ids.length) return [];
+  const [rows, tally, voters] = await Promise.all([
+    prisma.post.findMany({
+      where: { id: { in: ids }, communityId, removedAt: null, hidden: false },
+      select: { id: true, content: true, category: true, pinned: true, likesCount: true, commentsCount: true, createdAt: true, poll: true, author: { select: { firstName: true, lastName: true, deletedAt: true } } },
+    }),
+    prisma.pollVote.groupBy({ by: ['postId', 'optionId'], where: { postId: { in: ids } }, _count: { _all: true } }),
+    prisma.pollVote.groupBy({ by: ['postId', 'userId'], where: { postId: { in: ids } } }),
+  ]);
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  const now = Date.now();
+  return ids.flatMap((id): PostView[] => {
+    const p = byId.get(id);
+    if (!p) return [];
+    const def = p.poll as PollDef | null;
+    let poll: PostView['poll'];
+    if (def?.options?.length) {
+      const votes = (optionId: string) => tally.find((t) => t.postId === id && t.optionId === optionId)?._count._all ?? 0;
+      const total = voters.filter((v) => v.postId === id).length;
+      const options = def.options.map((o) => ({ text: o.text, votes: votes(o.id), percent: total ? Math.round((votes(o.id) / total) * 100) : 0 }));
+      const max = Math.max(0, ...options.map((o) => o.votes));
+      poll = {
+        question: def.question ?? '',
+        multiple: Boolean(def.multiple),
+        closesAt: def.closesAt ? vnTime(new Date(def.closesAt)) : null,
+        closed: Boolean(def.closesAt && new Date(def.closesAt).getTime() <= now),
+        voters: total,
+        options,
+        leading: max > 0 ? options.filter((o) => o.votes === max).map((o) => o.text) : [],
+      };
+    }
+    return [{
+      content: clip(p.content.trim(), 600),
+      author: p.author.deletedAt ? 'Thành viên đã xóa' : `${p.author.firstName} ${p.author.lastName}`.trim(),
+      createdAt: vnTime(p.createdAt),
+      category: CATEGORY_LABEL[p.category] ?? p.category,
+      pinned: p.pinned,
+      likes: p.likesCount,
+      comments: p.commentsCount,
+      link: `/communities/${communityId}/community?post=${p.id}`,
+      ...(poll ? { poll } : {}),
+    }];
+  });
+}
+
+/**
+ * Bài đăng cho ngữ cảnh — gộp nhiều nguồn vì tìm theo chữ dễ trượt với câu hỏi dài / hỏi theo ngày / hỏi về bình chọn.
+ * Ưu tiên: bài đăng đúng ngày được nhắc → bài có bình chọn (khi hỏi về vote) → bài khớp chữ → bài ghim → bài mới nhất.
+ */
+async function relevantPostIds(communityId: string, text: string, tsq: string | null): Promise<string[]> {
+  const live = { communityId, removedAt: null, hidden: false } as const;
+  const days = mentionedDays(text);
+  const wantPolls = POLL_TOPIC.test(normalizeText(text));
+  const ids = (rows: { id: string }[]) => rows.map((r) => r.id);
+  const [byDate, polls, search, pinned, recent] = await Promise.all([
+    days.length
+      ? prisma.post.findMany({ where: { ...live, OR: days.map((d) => ({ createdAt: { gte: d.from, lt: d.to } })) }, orderBy: { createdAt: 'desc' }, take: 5, select: { id: true } }).then(ids)
+      : Promise.resolve([]),
+    wantPolls ? prisma.post.findMany({ where: { ...live, poll: { not: Prisma.AnyNull } }, orderBy: { createdAt: 'desc' }, take: 3, select: { id: true } }).then(ids) : Promise.resolve([]),
+    tsq ? searchPosts(communityId, tsq, 4) : Promise.resolve([]),
+    prisma.post.findMany({ where: { ...live, pinned: true }, orderBy: { createdAt: 'desc' }, take: 5, select: { id: true } }).then(ids),
+    prisma.post.findMany({ where: live, orderBy: { createdAt: 'desc' }, take: 3, select: { id: true } }).then(ids),
+  ]);
+  return [...new Set([...byDate, ...polls, ...search, ...pinned, ...recent])].slice(0, MAX_POSTS);
 }
 
 export async function gatherCommunityContext(
@@ -97,7 +215,7 @@ export async function gatherCommunityContext(
     chatbotRepository.matchQa(text, { limit: 5, order: 'blend', communityId }),
     chatbotRepository.searchChunks(text, 4, communityId),
     tsq ? searchLessons(communityId, tsq, 5) : Promise.resolve([]),
-    tsq ? searchPosts(communityId, tsq, 3) : Promise.resolve([]),
+    relevantPostIds(communityId, text, tsq).then((ids) => postViews(communityId, ids).then((views) => ({ ids, views }))),
     prisma.communityEvent.findMany({
       where: { communityId, removedAt: null, startAt: { gte: now } },
       orderBy: { startAt: 'asc' },
@@ -152,7 +270,7 @@ export async function gatherCommunityContext(
   }));
 
   const eventRows = [...matchedEvents, ...upcoming.filter((e) => !matchedEvents.some((m) => m.id === e.id))].slice(0, 6);
-  sources.postIds = postHits.map((p) => p.id);
+  sources.postIds = postHits.ids;
   sources.eventIds = eventRows.map((e) => e.id);
 
   const rules = Array.isArray(community.rules) ? (community.rules as { title?: unknown; body?: unknown }[]) : [];
@@ -170,7 +288,7 @@ export async function gatherCommunityContext(
     documents: chunks.map((c) => ({ document: c.documentTitle, section: c.heading, content: c.content })),
     lessons,
     curriculum,
-    posts: postHits.map((p) => ({ excerpt: clip(p.content.trim(), 400), author: p.authorName, createdAt: vnTime(p.createdAt) })),
+    posts: postHits.views,
     events: eventRows.map((e) => ({ title: e.title, startAt: vnTime(e.startAt), description: clip(e.description, 300), cancelled: Boolean(e.cancelledAt) })),
     mySubscription: sub ? { status: sub.status, renewsAt: vnTime(sub.currentPeriodEnd), cancelAtPeriodEnd: sub.cancelAtPeriodEnd } : null,
     sources,

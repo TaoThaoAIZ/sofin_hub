@@ -134,3 +134,8 @@ Job `chatbot.learn` xử lý cả hội thoại của cộng đồng. Câu học
 |---|---|
 | `tests/community-bot.test.ts` (8, model giả) | Gói Pro/quyền bật; 2 mức (402, 429, đổi nhân cách, hết hạn gói ⇒ về thường, mod VIP); **không rò rỉ bài khóa / nháp / ẩn** (dò `_trace`); cô lập Q&A và hội thoại giữa cộng đồng ↔ cộng đồng ↔ Tào; chuyển chủ (DM / thông báo); nhân cách tự tạo, tài liệu riêng, học ⇒ chủ duyệt |
 | `e2e/tests/06-community-bot.spec.ts` (4) | VIP đổi nhân cách + câu mẫu + gửi cho chủ; thành viên thường bị khóa nhân cách; cộng đồng không bật bot vẫn có Tào; tab cài đặt |
+
+**Bài đăng trong ngữ cảnh** (`community-bot.context.ts` `relevantPostIds` + `postViews`, tối đa 8 bài, chỉ bài không ẩn / không bị gỡ):
+gộp theo thứ tự ưu tiên — bài đăng đúng NGÀY được nhắc trong câu hỏi (`mentionedDays`: "13/10", "13/10/2026", giờ VN; ngày ở tương lai => năm trước) → bài có bình chọn (khi hỏi "vote / bình chọn / khảo sát…") → bài khớp chữ (full-text) → bài đang ghim → bài mới nhất.
+Mỗi bài: `content` (≤600 ký tự), tác giả, thời gian, mục, `pinned`, like/bình luận, `link`; bài có bình chọn kèm `poll { question, options[{text, votes, percent}], voters, leading[], multiple, closesAt, closed }` (`leading` nhiều mục = đang hòa, [] = chưa ai bình chọn).
+

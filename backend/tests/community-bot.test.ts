@@ -221,6 +221,45 @@ describe('chatbot cộng đồng', () => {
     });
   });
 
+  describe('bài đăng & bình chọn trên bảng tin', () => {
+    it('hỏi về vote (không trùng chữ với bài) => ngữ cảnh có bài bình chọn + số phiếu + lựa chọn dẫn đầu; hỏi theo ngày => đúng bài ngày đó; bài ghim luôn có; bài ẩn không bao giờ có', async () => {
+      const id = await community(owner);
+      await join_(member, id);
+      await enable(owner, id);
+      const voters = await Promise.all([1, 2, 3].map((i) => c.registerUser(`cbvote${i}`)));
+      const day = new Date(Date.UTC(2026, 9, 13, 3)); // 10:00 13/10/2026 giờ VN
+      const poll = { question: 'Địa điểm chụp cuối tuần?', options: [{ id: 'o1', text: 'Phố cổ Hà Nội' }, { id: 'o2', text: 'Bãi biển Mỹ Khê' }, { id: 'o3', text: 'Đồi chè Mộc Châu' }], multiple: false, closesAt: '2026-11-12T09:00:22.000Z' };
+      const pollPost = await db.prisma.post.create({ data: { communityId: id, authorId: member.id, content: 'Cuối tuần này cả nhóm đi chụp ở đâu? Bình chọn giúp mình nhé.', poll, createdAt: day } });
+      await db.prisma.pollVote.createMany({ data: [{ postId: pollPost.id, userId: voters[0]!.id, optionId: 'o1' }, { postId: pollPost.id, userId: voters[1]!.id, optionId: 'o1' }, { postId: pollPost.id, userId: voters[2]!.id, optionId: 'o2' }] });
+      await db.prisma.post.create({ data: { communityId: id, authorId: owner.id, content: 'GHIM_CANARY nội quy cộng đồng', pinned: true, category: 'announcement' } });
+      await db.prisma.post.create({ data: { communityId: id, authorId: owner.id, content: 'AN_CANARY bài bị ẩn ngày 13/10', hidden: true, createdAt: day } });
+      // Nhiều bài mới hơn có chữ "chụp", "cộng đồng" để đẩy bài bình chọn khỏi top tìm theo chữ.
+      for (let i = 0; i < 6; i++) await db.prisma.post.create({ data: { communityId: id, authorId: owner.id, content: `Mẹo chụp ảnh số ${i} cho cộng đồng — chụp ngược sáng, chụp đêm` } });
+
+      const conv = await start(member, id);
+      await say(member, id, conv, 'có bài vote trong cộng đồng vào ngày 13/10 về địa điểm chụp cuối tuần. nơi nào có lượt vote cao nhất');
+      const { prompt, sources } = await lastTrace(conv);
+      assert.match(prompt, /Cuối tuần này cả nhóm đi chụp ở đâu/);
+      assert.match(prompt, /"leading": \[\n?\s*"Phố cổ Hà Nội"/);
+      assert.match(prompt, /"text": "Phố cổ Hà Nội",\n?\s*"votes": 2,\n?\s*"percent": 67/);
+      assert.match(prompt, /"voters": 3/);
+      assert.match(prompt, /GHIM_CANARY/, 'bài ghim luôn có trong ngữ cảnh');
+      assert.doesNotMatch(prompt, /AN_CANARY/, 'bài ẩn không bao giờ vào ngữ cảnh');
+      assert.ok((sources as unknown as { postIds: string[] } | undefined)?.postIds?.includes(pollPost.id) ?? prompt.includes(pollPost.id));
+
+      // Hỏi theo ngày, không nhắc gì tới nội dung bài.
+      const conv2 = await start(member, id);
+      await say(member, id, conv2, 'hôm 13/10 có ai đăng gì không');
+      assert.match((await lastTrace(conv2)).prompt, /Cuối tuần này cả nhóm đi chụp ở đâu/);
+
+      const { mentionedDays } = await import('../src/modules/community-bot/community-bot.context.js');
+      const [d] = mentionedDays('ngày 13/10', new Date('2026-10-15T05:00:00Z'));
+      assert.equal(d!.from.toISOString(), '2026-10-12T17:00:00.000Z', 'đầu ngày 13/10 giờ VN');
+      assert.equal(mentionedDays('ngày 13/12', new Date('2026-01-05T05:00:00Z'))[0]!.from.getUTCFullYear(), 2025, 'ngày ở tương lai => năm trước');
+      assert.deepEqual(mentionedDays('tỷ lệ 45/60 và 3/4', new Date('2026-10-15T05:00:00Z')).length, 1, '45/60 không phải ngày');
+    });
+  });
+
   describe('cô lập dữ liệu', () => {
     it('Q&A của cộng đồng A không dùng ở B hay bot Tào; hội thoại bot cộng đồng tách khỏi Tào', async () => {
       const a = await community(owner);
