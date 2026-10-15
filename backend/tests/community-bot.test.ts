@@ -306,6 +306,15 @@ describe('chatbot cộng đồng', () => {
       assert.match(pv.body.data.text, /tự xưng "em", gọi người hỏi là "anh\/chị"/);
       assert.match(pv.body.data.text, /Mức trang trọng: Lễ phép/);
       assert.match(pv.body.data.text, /Từ đệm được dùng: ạ, nhé ạ/);
+      assert.match(pv.body.data.text, /Tính cách cốt lõi .*: lễ phép, chu đáo/);
+      assert.match(pv.body.data.text, /Cách xử lý tình huống:\n- Giải thích kiến thức/);
+      assert.match(pv.body.data.text, /Câu hỏi tra cứu .* luôn trả lời thẳng/, 'cách dạy không áp cho câu tra cứu');
+      assert.doesNotMatch(pv.body.data.text, /chăm sóc khách hàng chuyên nghiệp/, '"Hợp với" chỉ cho chủ đọc, không vào prompt');
+      for (const p of presets as unknown as { key: string; traits: string[]; playbook: Record<string, string>; bestFor: string }[]) {
+        assert.ok(p.traits.length >= 3 && p.traits.length <= 5, `${p.key}: 3-5 nét tính cách`);
+        assert.ok(Object.values(p.playbook).every(Boolean), `${p.key}: đủ 9 tình huống`);
+        assert.ok(p.bestFor, p.key);
+      }
       assert.equal((await api(member, 'POST', id, '/persona-preview', { personaKey: 'mentor' })).status, 403);
 
       const custom = { label: 'Cô Lan', identity: 'Cô giáo dạy vẽ', selfPronoun: 'cô', userPronoun: 'em', tone: 'Nhẹ nhàng', formality: 'friendly', verbosity: 'short', emoji: 'lively', particles: 'nha', doList: ['Khen nét vẽ cụ thể'], avoidList: ['Không chê thẳng'] };

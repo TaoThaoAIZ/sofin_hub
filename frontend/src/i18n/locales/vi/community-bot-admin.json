@@ -105,6 +105,30 @@
     "doPlaceholder": "Kết thúc bằng 1 việc nên làm tiếp\nKhen cụ thể khi học viên làm đúng",
     "avoidPlaceholder": "Không mở đầu bằng \"Câu hỏi hay quá!\"\nKhông dùng từ lóng",
     "clarify": "Khi chưa rõ câu hỏi",
-    "clarifyHint": "Để trống = đoán cách hiểu hợp lý nhất, chỉ hỏi lại 1 câu kèm 2-4 lựa chọn khi thật sự cần."
-  }
+    "clarifyHint": "Để trống = đoán cách hiểu hợp lý nhất, chỉ hỏi lại 1 câu kèm 2-4 lựa chọn khi thật sự cần.",
+    "traits": "Tính cách cốt lõi",
+    "traitsHint": "3-5 từ, cách nhau bằng dấu phẩy. Ít mà rõ giúp giọng nhất quán hơn.",
+    "traitsPlaceholder": "kiên nhẫn, ấm áp, rõ ràng",
+    "bestFor": "Hợp với cộng đồng nào",
+    "bestForHint": "Ghi chú cho chủ/admin, không gửi cho trợ lý.",
+    "teaching": "Cách dạy khi hỏi bài tập",
+    "teaching_direct": "Đưa lời giải",
+    "teaching_guided": "Gợi ý trước",
+    "teaching_socratic": "Hỏi gợi mở",
+    "teachingHint_direct": "Đưa lời giải ngắn kèm 1 câu giải thích vì sao.",
+    "teachingHint_guided": "Gợi ý 1-2 ý nhắm đúng chỗ vướng; người học đã thử hoặc xin đáp án thì mới đưa lời giải.",
+    "teachingHint_socratic": "Chỉ ra bước đang vướng và hỏi 1 câu để người học tự nghĩ; sau 2 lượt vẫn bí thì đưa lời giải. Câu hỏi tra cứu (lịch, giá, nội quy) luôn trả lời thẳng.",
+    "playbook": "Cách xử lý từng tình huống",
+    "playbookHint": "Dặn trợ lý làm gì trong từng tình huống. Ô trống = không dặn riêng.",
+    "play_explain": "Giải thích kiến thức / bài học",
+    "play_exercise": "Hỏi đáp án bài tập",
+    "play_mistake": "Người học làm sai / hiểu sai",
+    "play_frustrated": "Người học nản, bực, phàn nàn",
+    "play_praise": "Người học làm tốt / vừa hoàn thành",
+    "play_locked": "Hỏi nội dung bài đang khóa",
+    "play_noInfo": "Không có thông tin",
+    "play_outOfScope": "Hỏi ngoài phạm vi",
+    "play_closing": "Kết thúc câu trả lời"
+  },
+  "bestFor": "Hợp với: {{text}}"
 }

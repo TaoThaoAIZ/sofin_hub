@@ -105,6 +105,30 @@
     "doPlaceholder": "End with one next step\nPraise specifically when the learner gets it right",
     "avoidPlaceholder": "Don't open with \"Great question!\"\nNo slang",
     "clarify": "When the question is unclear",
-    "clarifyHint": "Empty = guess the most reasonable meaning; ask one question with 2-4 options only when really needed."
-  }
+    "clarifyHint": "Empty = guess the most reasonable meaning; ask one question with 2-4 options only when really needed.",
+    "traits": "Core traits",
+    "traitsHint": "3-5 words, comma separated. Fewer, clearer traits keep the voice consistent.",
+    "traitsPlaceholder": "patient, warm, clear",
+    "bestFor": "Best for which community",
+    "bestForHint": "A note for owners/admins, not sent to the assistant.",
+    "teaching": "How to handle exercises",
+    "teaching_direct": "Give the solution",
+    "teaching_guided": "Hint first",
+    "teaching_socratic": "Ask guiding questions",
+    "teachingHint_direct": "Give a short solution plus one sentence on why.",
+    "teachingHint_guided": "Give 1-2 targeted hints; give the solution once the learner has tried or asks for it.",
+    "teachingHint_socratic": "Point to the step they are stuck on and ask one question; give the solution after 2 rounds. Look-up questions (schedule, price, rules) are always answered directly.",
+    "playbook": "How to handle each situation",
+    "playbookHint": "Tell the assistant what to do in each situation. Empty = no specific instruction.",
+    "play_explain": "Explaining a concept / lesson",
+    "play_exercise": "Asked for an exercise answer",
+    "play_mistake": "Learner made a mistake",
+    "play_frustrated": "Learner is frustrated / complaining",
+    "play_praise": "Learner did well / just finished",
+    "play_locked": "Asked about a locked lesson",
+    "play_noInfo": "No information available",
+    "play_outOfScope": "Out-of-scope question",
+    "play_closing": "Ending the answer"
+  },
+  "bestFor": "Best for: {{text}}"
 }

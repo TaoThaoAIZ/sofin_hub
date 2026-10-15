@@ -58,18 +58,26 @@ export interface StyleExample {
 }
 
 /** Khớp personaSchema (backend chatbot.persona.ts). */
+export const PLAYBOOK_KEYS = ['explain', 'exercise', 'mistake', 'frustrated', 'praise', 'locked', 'noInfo', 'outOfScope', 'closing'] as const;
+export type PlaybookKey = (typeof PLAYBOOK_KEYS)[number];
+
 export interface Persona {
   label: string;
+  /** Hợp với cộng đồng nào — chỉ hiện cho chủ, không vào prompt. */
+  bestFor: string;
   identity: string;
+  traits: string[];
   selfPronoun: string;
   userPronoun: string;
   tone: string;
   formality: 'casual' | 'friendly' | 'polite' | 'formal';
   verbosity: 'short' | 'medium' | 'detailed';
   emoji: 'none' | 'light' | 'lively';
+  teaching: 'direct' | 'guided' | 'socratic';
   particles: string;
   clarify: string;
   smallTalk: string;
+  playbook: Record<PlaybookKey, string>;
   doList: string[];
   avoidList: string[];
   styleExamples: StyleExample[];
