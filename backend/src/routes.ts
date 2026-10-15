@@ -30,6 +30,7 @@ import { toolsRouter } from './modules/tools/tools.routes.js';
 import { adminChatbotRouter } from './modules/chatbot/admin-chatbot.routes.js';
 import { chatbotRouter } from './modules/chatbot/chatbot.routes.js';
 import { communityBotRouter } from './modules/community-bot/community-bot.routes.js';
+import { greetingsRouter } from './modules/community-greetings/greetings.routes.js';
 
 export const apiRouter = Router();
 
@@ -45,6 +46,7 @@ apiRouter.use('/', supportRouter);
 apiRouter.use('/', toolsRouter);
 apiRouter.use('/', chatbotRouter);
 apiRouter.use('/', communityBotRouter);
+apiRouter.use('/', greetingsRouter);
 apiRouter.use('/', ticketsRouter);
 apiRouter.use('/courses', catalogRouter);
 apiRouter.use('/', metaRouter);

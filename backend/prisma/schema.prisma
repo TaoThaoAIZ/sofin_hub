@@ -398,20 +398,20 @@ model User {
   updatedAt          DateTime   @updatedAt
 
   sessions             Session[]
-  referralCode         ReferralCode?            @relation("ReferralCodeOwner")
-  referralsMade        Referral[]               @relation("ReferralReferrer")
-  referredBy           Referral?                @relation("ReferralReferred")
-  commissionsEarned    ReferralCommission[]     @relation("CommissionReferrer")
-  commissionsCaused    ReferralCommission[]     @relation("CommissionReferred")
+  referralCode         ReferralCode?               @relation("ReferralCodeOwner")
+  referralsMade        Referral[]                  @relation("ReferralReferrer")
+  referredBy           Referral?                   @relation("ReferralReferred")
+  commissionsEarned    ReferralCommission[]        @relation("CommissionReferrer")
+  commissionsCaused    ReferralCommission[]        @relation("CommissionReferred")
   oneTimeTokens        OneTimeToken[]
   emailOtps            EmailOtp[]
   socialAccounts       SocialAccount[]
-  ownedCommunities     Community[]              @relation("CourseOwner")
+  ownedCommunities     Community[]                 @relation("CourseOwner")
   enrollments          Enrollment[]
-  bansReceived         CommunityBan[]           @relation("BanTarget")
-  bansIssued           CommunityBan[]           @relation("BanIssuer")
-  joinRequests         JoinRequest[]            @relation("JoinRequester")
-  joinRequestsDecided  JoinRequest[]            @relation("JoinDecider")
+  bansReceived         CommunityBan[]              @relation("BanTarget")
+  bansIssued           CommunityBan[]              @relation("BanIssuer")
+  joinRequests         JoinRequest[]               @relation("JoinRequester")
+  joinRequestsDecided  JoinRequest[]               @relation("JoinDecider")
   invitesCreated       Invite[]
   reviews              Review[]
   posts                Post[]
@@ -427,32 +427,35 @@ model User {
   certificates         Certificate[]
   notifications        Notification[]
   notificationPrefs    NotificationPreference?
-  conversationsAsA     Conversation[]           @relation("ConversationUserA")
-  conversationsAsB     Conversation[]           @relation("ConversationUserB")
+  conversationsAsA     Conversation[]              @relation("ConversationUserA")
+  conversationsAsB     Conversation[]              @relation("ConversationUserB")
   messagesSent         Message[]
-  blocksMade           UserBlock[]              @relation("Blocker")
-  blocksReceived       UserBlock[]              @relation("BlockTarget")
-  reportsFiled         Report[]                 @relation("ReportReporter")
-  reportsAgainst       Report[]                 @relation("ReportTargetUser")
-  reportsResolved      Report[]                 @relation("ReportResolver")
-  reportsAssigned      Report[]                 @relation("ReportAssignee")
+  blocksMade           UserBlock[]                 @relation("Blocker")
+  blocksReceived       UserBlock[]                 @relation("BlockTarget")
+  reportsFiled         Report[]                    @relation("ReportReporter")
+  reportsAgainst       Report[]                    @relation("ReportTargetUser")
+  reportsResolved      Report[]                    @relation("ReportResolver")
+  reportsAssigned      Report[]                    @relation("ReportAssignee")
   reportEvents         ReportEvent[]
-  auditLogs            AdminAuditLog[]          @relation("AuditActor")
+  auditLogs            AdminAuditLog[]             @relation("AuditActor")
   payments             Payment[]
   paymentCards         PaymentCard[]
   payoutAccountsOwned  PayoutAccount[]
   subscriptions        Subscription[]
-  refundRequests       RefundRequest[]          @relation("RefundRequester")
-  refundsResolved      RefundRequest[]          @relation("RefundResolver")
+  refundRequests       RefundRequest[]             @relation("RefundRequester")
+  refundsResolved      RefundRequest[]             @relation("RefundResolver")
   payouts              Payout[]
   chargebacks          Chargeback[]
   idempotencyKeys      IdempotencyKey[]
   uploads              Upload[]
-  ticketsRequested     SupportTicket[]          @relation("TicketRequester")
-  ticketsAssigned      SupportTicket[]          @relation("TicketAssignee")
-  adminAccount         AdminAccount?            @relation("AdminAccountUser")
+  ticketsRequested     SupportTicket[]             @relation("TicketRequester")
+  ticketsAssigned      SupportTicket[]             @relation("TicketAssignee")
+  adminAccount         AdminAccount?               @relation("AdminAccountUser")
   chatbotConversations ChatbotConversation[]
   botPersonaPrefs      CommunityBotMemberPref[]
+  welcomesSeen         CommunityWelcomeSeen[]
+  announcements        CommunityAnnouncement[]
+  announcementsSeen    CommunityAnnouncementSeen[]
   /// Cột GENERATED ALWAYS (họ tên đã gập dấu).
   searchVector         Unsupported("tsvector")?
 
@@ -635,6 +638,10 @@ model Community {
   /// Chatbot riêng của cộng đồng (chatbot.md): cấu hình + kho Q&A/tài liệu/hội thoại có communityId.
   bot               CommunityBot?
   botMemberPrefs    CommunityBotMemberPref[]
+  /// Lời chào thành viên mới + thông báo popup của chủ (docs/features/community-greetings.md).
+  welcome           CommunityWelcome?
+  welcomesSeen      CommunityWelcomeSeen[]
+  announcements     CommunityAnnouncement[]
   chatbotQas        ChatbotQA[]
   chatbotDocuments  ChatbotDocument[]
   chatbotConvs      ChatbotConversation[]
@@ -2106,5 +2113,65 @@ model CommunityBotMemberPref {
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([communityId, userId])
+  @@index([userId])
+}
+
+/// Lời chào tự động hiện (popup) cho thành viên MỚI tham gia — mỗi người mỗi cộng đồng đúng 1 lần.
+model CommunityWelcome {
+  communityId  String    @id @map("courseId")
+  enabled      Boolean   @default(false)
+  /// Nội dung; biến {ten} = tên thành viên, {cong_dong} = tên cộng đồng.
+  message      String    @default("")
+  /// Lần bật gần nhất: chỉ người tham gia TỪ lúc này mới thấy (thành viên cũ không bị hiện khi chủ bật tính năng).
+  enabledSince DateTime?
+  updatedById  String?
+  updatedAt    DateTime  @updatedAt
+
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+}
+
+/// Đã hiện lời chào. Không gắn với Enrollment => rời cộng đồng rồi tham gia lại cũng không hiện nữa.
+model CommunityWelcomeSeen {
+  userId      String
+  communityId String   @map("courseId")
+  seenAt      DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@id([userId, communityId])
+  @@index([communityId])
+}
+
+/// Thông báo popup của chủ/admin cộng đồng — chỉ hiện ở trang của cộng đồng đó; mỗi thành viên thấy 1 lần. Chỉ bản active mới nhất được hiện.
+model CommunityAnnouncement {
+  id          String   @id @default(uuid())
+  communityId String   @map("courseId")
+  authorId    String
+  title       String
+  body        String
+  /// Nút "Xem" (đường dẫn trong site /... hoặc https://...), null = không có nút.
+  link        String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  community Community                   @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  author    User                        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  seen      CommunityAnnouncementSeen[]
+
+  @@index([communityId, active, createdAt])
+  @@index([authorId])
+}
+
+model CommunityAnnouncementSeen {
+  announcementId String
+  userId         String
+  seenAt         DateTime @default(now())
+
+  announcement CommunityAnnouncement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([announcementId, userId])
   @@index([userId])
 }

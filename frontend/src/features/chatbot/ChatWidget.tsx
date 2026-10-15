@@ -433,7 +433,7 @@ function toBlocks(text: string): TextBlock[] {
  * Câu trả lời của bot, trình bày theo đúng tập định dạng prompt cho phép (FORMAT_RULE ở backend): đoạn văn, danh sách
  * gạch đầu dòng / đánh số, **in đậm**, link (Linkified). Đang stream mà "**" chưa đóng thì ẩn dấu đó cho đỡ nhấp nháy.
  */
-function RichText({ text }: { text: string }) {
+export function RichText({ text }: { text: string }) {
   const blocks = toBlocks(text);
   return (
     <div className="flex flex-col gap-1.5">

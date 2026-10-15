@@ -14,12 +14,14 @@ import { CourseManager } from '../features/community/components/CourseManager';
 import { ToastHost } from '../features/community/components/contentUi';
 import { useCommunityDetail } from '../features/courses/queries';
 import { ChatbotSettingsTab } from '../features/community-bot/ChatbotSettingsTab';
+import { GreetingsSettingsTab } from '../features/community-greetings/GreetingsSettingsTab';
 
-type TabKey = 'general' | 'courses' | 'chatbot' | 'requests' | 'invites' | 'bans' | 'danger';
+type TabKey = 'general' | 'courses' | 'greetings' | 'chatbot' | 'requests' | 'invites' | 'bans' | 'danger';
 
 const TABS: { key: TabKey; icon: string }[] = [
   { key: 'general', icon: 'tune' },
   { key: 'courses', icon: 'school' },
+  { key: 'greetings', icon: 'campaign' },
   { key: 'chatbot', icon: 'smart_toy' },
   { key: 'requests', icon: 'how_to_reg' },
   { key: 'invites', icon: 'link' },
@@ -111,6 +113,7 @@ export function CommunitySettingsPage() {
                 <CourseManager communityId={id} isAdmin={isAtLeast(role, 'admin')} />
               </div>
             )}
+            {activeTab === 'greetings' && <GreetingsSettingsTab communityId={id} communityTitle={course.title} />}
             {activeTab === 'chatbot' && <ChatbotSettingsTab communityId={id} />}
             {activeTab === 'requests' && <JoinRequestsTab courseId={id} isPrivate={course.visibility === 'private'} />}
             {activeTab === 'invites' && <InvitesTab courseId={id} />}
