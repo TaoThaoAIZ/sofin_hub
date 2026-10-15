@@ -9,7 +9,11 @@ import { chatbotService, type ChatEvent } from './chatbot.service.js';
 export const chatbotRouter = Router();
 const p = (v: string | string[] | undefined) => String(v);
 
-const messageBody = z.object({ text: z.string().min(1, 'Vui lòng nhập nội dung').max(4000) });
+const messageBody = z.object({
+  text: z.string().min(1, 'Vui lòng nhập nội dung').max(4000),
+  /** Cộng đồng khách đang xem (widget lấy từ URL) — chỉ thêm thông tin CÔNG KHAI của cộng đồng đó vào ngữ cảnh. */
+  pageCommunityId: z.string().trim().min(1).max(100).optional(),
+});
 const feedbackBody = z.object({ value: z.union([z.literal(-1), z.literal(0), z.literal(1)]) });
 
 chatbotRouter.get('/chatbot/status', requireAuth, (_req, res) => {
@@ -29,10 +33,11 @@ chatbotRouter.post('/chatbot/conversations', requireAuth, writeRateLimit('genera
  * ngược lại trả JSON `{ data: DoneData }` khi xong. Lỗi xảy ra TRƯỚC khi bắt đầu stream (503/400/404/409/429) trả JSON lỗi như thường.
  */
 chatbotRouter.post('/chatbot/conversations/:id/messages', requireAuth, writeRateLimit('chatbot'), async (req, res, next) => {
-  const { text } = messageBody.parse(req.body ?? {});
+  const { text, pageCommunityId } = messageBody.parse(req.body ?? {});
+  const opts = pageCommunityId ? { pageCommunityId } : {};
   const wantsStream = (req.get('accept') ?? '').includes('text/event-stream');
   if (!wantsStream) {
-    res.json({ data: await chatbotService.sendMessage(req.userId!, p(req.params.id), text, () => undefined) });
+    res.json({ data: await chatbotService.sendMessage(req.userId!, p(req.params.id), text, () => undefined, opts) });
     return;
   }
   let started = false;
@@ -43,7 +48,7 @@ chatbotRouter.post('/chatbot/conversations/:id/messages', requireAuth, writeRate
     res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
   };
   try {
-    await chatbotService.sendMessage(req.userId!, p(req.params.id), text, (e: ChatEvent) => write(e.event, e.data));
+    await chatbotService.sendMessage(req.userId!, p(req.params.id), text, (e: ChatEvent) => write(e.event, e.data), opts);
     if (!res.writableEnded) res.end();
   } catch (e) {
     if (!started) return next(e);

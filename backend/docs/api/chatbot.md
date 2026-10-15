@@ -47,7 +47,7 @@ AI = **Codex SDK** (`@openai/codex-sdk`) đăng nhập bằng **tài khoản Cha
 | GET | `/chatbot/status` | — | `{ available, zaloSupportUrl, maxInputChars }` | 401 |
 | GET | `/chatbot/conversations/current` | — | `{ conversation, messages[] }` hoặc `null` (không có hội thoại open/handed_off nhắn trong 24h) | 401 |
 | POST | `/chatbot/conversations` | — | 201 `{ conversation, messages: [] }` | 401, 503 |
-| POST | `/chatbot/conversations/:id/messages` | `{ text }` | xem dưới | 400, 401, 404, 409, 429, 503 |
+| POST | `/chatbot/conversations/:id/messages` | `{ text, pageCommunityId? }` — `pageCommunityId` = cộng đồng khách đang xem (widget lấy từ URL `/communities/:id…`): thêm khối `<current_page>` chỉ gồm thông tin CÔNG KHAI (tên, mô tả, người hướng dẫn, lợi ích, tên nội quy, giá, số thành viên); cộng đồng riêng tư chỉ khi khách là thành viên; nháp/khóa/id lạ ⇒ bỏ qua | xem dưới | 400, 401, 404, 409, 429, 503 |
 | POST | `/chatbot/conversations/:id/handoff` | — | `{ handoff, conversation, message \| null }` | 404 |
 | POST | `/chatbot/messages/:id/feedback` | `{ value: -1 \| 0 \| 1 }` | `Message` | 400, 404 (không phải tin bot của mình) |
 

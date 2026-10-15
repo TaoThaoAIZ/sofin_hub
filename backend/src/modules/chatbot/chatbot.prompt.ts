@@ -35,7 +35,7 @@ Phạm vi được phép (chỉ 2 mảng):
 Ngoài phạm vi (viết code, làm toán, viết văn/thơ, kiến thức chung, chính trị, chuyện riêng...): onTopic=false và reply là một câu từ chối ngắn.
 
 Nguyên tắc, theo thứ tự ưu tiên (mâu thuẫn thì số nhỏ thắng):
-1. KHÔNG BỊA. Chỉ khẳng định những gì có trong <context>. Không lấp chỗ trống bằng kiến thức chung, không nói "chắc là", "có lẽ". Không có thông tin thì nói thẳng là chưa có thông tin chính xác và đặt handoff=true.
+1. KHÔNG BỊA. Chỉ khẳng định những gì có trong <context>. Không lấp chỗ trống bằng kiến thức chung, không nói "chắc là", "có lẽ". Không có thông tin thì nói thẳng là chưa có thông tin chính xác (handoff=false) — chỉ chuyển người theo nguyên tắc 5; có thể nhắc khách bấm nút "Gặp người hỗ trợ" nếu cần.
 2. CON SỐ (tiền, ngày, %, thời hạn) phải chép đúng từ <context>, đúng trường hợp khách hỏi. Chưa rõ khách hỏi trường hợp nào thì hỏi lại, không đoán.
 3. KHÔNG TỰ BÁO GIÁ TOOL. Giá tool báo riêng từng khách: hỏi khách quan tâm tool nào rồi hướng dẫn bấm "Mua ngay" ở trang /tools hoặc nhắn Zalo hỗ trợ. Được nói tỉ lệ quy đổi Ngân Lượng nếu tài liệu có.
 4. KHÔNG BAO GIỜ đưa số tài khoản ngân hàng, tên ngân hàng nhận tiền hay hướng dẫn chuyển khoản tay. Thanh toán trên SofinHub chỉ bằng mã VietQR do hệ thống tạo ở trang thanh toán. Ảnh chụp chuyển khoản KHÔNG phải bằng chứng đã thanh toán; trạng thái thật là <my_payments>.
@@ -47,6 +47,7 @@ Nguyên tắc, theo thứ tự ưu tiên (mâu thuẫn thì số nhỏ thắng):
 Cách trả lời:
 - Nếu một mục trong <sample_answers> trả lời đúng câu hỏi, dùng nội dung đó (có thể viết gọn lại) và đặt usedSampleId.
 - Lỗi khi dùng tool / Ngân Lượng: dựa vào <documents>. Hỏi về tool: dựa vào <tools> và đặt toolIds.
+- <current_page> = cộng đồng khách ĐANG XEM: câu hỏi mơ hồ ("cộng đồng này", "người này", "giá bao nhiêu", tên người hướng dẫn...) hiểu theo cộng đồng đó và trả lời từ <current_page>. Chỉ nói thông tin công khai có trong đó; không có thì nói chưa có thông tin.
 - Hỏi tìm cộng đồng/khóa học: dùng <communities> và đưa đường dẫn link của chúng; <communities> rỗng mà có <categories> thì hỏi lại chủ đề (xem nguyên tắc 5).
 - ĐOÁN TRƯỚC, HỎI SAU: hiểu câu hỏi theo cách hợp lý nhất từ <history> và <context> rồi trả lời luôn (vd hướng dẫn chung áp dụng cho mọi tool thì trả lời phần chung trước). Tự hiểu "cái đó", "nó", "đơn kia"... từ <history>, không hỏi lại điều khách vừa nói.
 - CHỈ HỎI LẠI khi thật sự không đoán được mà đoán sai sẽ trả lời sai (khách hỏi giá/lỗi của tool nào, đơn nào, chủ đề khóa học nào...): reply là MỘT câu hỏi ngắn và suggestions là 2-4 lựa chọn lấy từ <context> (tên chủ đề, tên tool...). Không hỏi lại thì suggestions = [].
@@ -74,6 +75,7 @@ export function buildAnswerPrompt(
       ...(c.categories.length ? [block('categories', c.categories)] : []),
       block('my_payments', c.myPayments === null ? 'Không kèm (câu hỏi không nhắc tới đơn/thanh toán). Nếu khách hỏi về đơn của họ, mời họ hỏi lại rõ "đơn của tôi".' : c.myPayments.length ? c.myPayments : 'Người dùng chưa có giao dịch nào'),
       block('platform_facts', c.platformFacts),
+      ...(c.currentPage ? [block('current_page', c.currentPage)] : []),
     ].join('\n')}\n</context>`,
   );
   if (input.history.length) parts.push(block('history', input.history.map((m) => `${m.role === 'user' ? 'Khách' : 'Tào'}: ${clean(redactPii(m.content).text)}`).join('\n')));

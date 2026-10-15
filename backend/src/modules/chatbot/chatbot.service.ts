@@ -140,7 +140,7 @@ export async function lockConversation(conversationId: string): Promise<() => Pr
 type OwnedConversation = Awaited<ReturnType<typeof ownedConversation>>;
 
 /** B2-B4 của một lượt (đã qua kiểm tra + đang giữ khóa hội thoại). */
-async function answerTurn(userId: string, conv: OwnedConversation, text: string, s: ChatbotSettings, emit: (e: ChatEvent) => void): Promise<DoneData> {
+async function answerTurn(userId: string, conv: OwnedConversation, text: string, s: ChatbotSettings, emit: (e: ChatEvent) => void, pageCommunityId?: string): Promise<DoneData> {
   const viewer = await viewerOf(userId);
   await conversationRepository.addMessage(conv.id, { role: 'user', content: text, redacted: containsPii(text) });
 
@@ -179,7 +179,7 @@ async function answerTurn(userId: string, conv: OwnedConversation, text: string,
 
   // B3: gom ngữ cảnh + gọi Codex (1 lượt, JSON).
   const history = (await conversationRepository.recentMessages(conv.id, s.maxHistory + 1)).slice(0, -1).map((m) => ({ role: m.role, content: m.content }));
-  const ctx: ChatContext = { userId, conversationId: conv.id, viewer };
+  const ctx: ChatContext = { userId, conversationId: conv.id, viewer, ...(pageCommunityId ? { pageCommunityId } : {}) };
   try {
     const context = await gatherContext(ctx, text, history.filter((m) => m.role === 'user').map((m) => m.content));
     const prompt = buildAnswerPrompt(s, { firstName: viewer.firstName, history, message: text, context });
@@ -198,9 +198,8 @@ async function answerTurn(userId: string, conv: OwnedConversation, text: string,
     let handoff: HandoffResult | null = null;
     if (output.handoff) {
       handoff = await handoffToZalo(ctx, { reason: output.handoffReason || text, category: output.handoffCategory });
-      // Câu trả lời đã mời nhắn Zalo => chỉ thêm mã (tránh lặp "nhắn Zalo hỗ trợ" 2 lần); chưa có => thêm câu hướng dẫn đầy đủ.
-      const code = `Mã hỗ trợ của bạn: ${handoff.ticketCode} (gửi kèm khi nhắn Zalo nha)`;
-      reply = !reply ? handoff.message : /zalo/i.test(reply) ? `${reply}\n${code}` : `${reply}\n${handoff.message}`;
+      // Câu trả lời đã mời nhắn Zalo => không nối thêm (mã hỗ trợ hiện ở dải dưới khung chat); chưa có => nối câu hướng dẫn kèm mã.
+      reply = !reply ? handoff.message : /zalo/i.test(reply) ? reply : `${reply}\n${handoff.message}`;
     }
     if (!reply) reply = 'dạ Tào chưa có thông tin chính xác ạ, bạn nhắn Zalo hỗ trợ để được giúp nha';
     emit({ event: 'delta', data: { text: reply } });
@@ -236,7 +235,7 @@ export const chatbotService = {
     return { conversation: convView(c), messages: messages.map(messageView) };
   },
 
-  async sendMessage(userId: string, conversationId: string, rawText: string, emit: (e: ChatEvent) => void): Promise<DoneData> {
+  async sendMessage(userId: string, conversationId: string, rawText: string, emit: (e: ChatEvent) => void, opts: { pageCommunityId?: string } = {}): Promise<DoneData> {
     assertAvailable();
     const s = chatbotSettings();
     const text = rawText.trim();
@@ -253,7 +252,7 @@ export const chatbotService = {
     // Khóa theo hội thoại: khách bấm gửi liên tục / mở 2 tab => không gọi AI song song trên cùng hội thoại (lịch sử lẫn, trả lời lộn thứ tự).
     const release = await lockConversation(conv.id);
     try {
-      return await answerTurn(userId, conv, text, s, emit);
+      return await answerTurn(userId, conv, text, s, emit, opts.pageCommunityId);
     } finally {
       await release();
     }

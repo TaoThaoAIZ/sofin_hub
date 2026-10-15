@@ -75,6 +75,13 @@ function ChatSession({
 }) {
   const { t } = useTranslation('chatbot');
   const qc = useQueryClient();
+  // Cộng đồng khách đang xem (/communities/:id/...) — gửi kèm để Tào hiểu "cộng đồng này", "người hướng dẫn này".
+  const { pathname } = useLocation();
+  const pageCommunityId = /^\/communities\/([^/]+)/.exec(pathname)?.[1];
+  const pageRef = useRef(pageCommunityId);
+  useEffect(() => {
+    pageRef.current = pageCommunityId && pageCommunityId !== 'new' ? pageCommunityId : undefined;
+  }, [pageCommunityId]);
   const [conversation, setConversation] = useState<ChatConversation | null>(initial?.conversation ?? null);
   const [messages, setMessages] = useState<Bubble[]>(initial?.messages ?? []);
   const [draft, setDraft] = useState('');
@@ -113,7 +120,7 @@ function ChatSession({
     maxChars,
     async (text, parts, h) => {
       const conv = await ensureConversation();
-      const done = await sendChatMessage(conv.id, text, h);
+      const done = await sendChatMessage(conv.id, text, h, pageRef.current);
       const userMsgs: Bubble[] = parts.map((content, i) => ({ id: `local-${done.message.id}-${i}`, role: 'user', content, answerSource: null, feedback: 0, createdAt: done.message.createdAt }));
       setMessages((m) => [...m, ...userMsgs, { ...done.message, tools: done.tools, suggestions: done.suggestions }]);
       convRef.current = done.conversation;

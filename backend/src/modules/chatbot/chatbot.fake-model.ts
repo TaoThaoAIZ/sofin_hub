@@ -14,6 +14,11 @@ import type { AnswerOutput } from './chatbot.prompt.js';
  * Test ép câu trả lời bằng setFakeReply(), ép kết quả học bằng setFakeLearn().
  */
 let replyOverride: ((userText: string) => string) | null = null;
+/** Câu trả lời của nhánh chuyển người (test nối mã hỗ trợ). */
+let handoffReply: string | null = null;
+export function setFakeHandoffReply(text: string | null) {
+  handoffReply = text;
+}
 let learnOverride: ((transcript: string) => unknown) | null = null;
 /** Độ trễ giả lập mỗi lượt trả lời (test khách gửi liên tục khi bot đang xử lý). */
 let answerDelayMs = env.CHATBOT_FAKE_DELAY_MS;
@@ -29,6 +34,7 @@ export function setFakeDelay(ms: number) {
   answerDelayMs = ms;
 }
 export function resetFake() {
+  handoffReply = null;
   answerDelayMs = env.CHATBOT_FAKE_DELAY_MS;
   replyOverride = null;
   learnOverride = null;
@@ -44,7 +50,7 @@ function answer(message: string, c: KnowledgeContext): AnswerOutput {
   if (/bo qua|ignore|system prompt/.test(t)) return { ...base, injection: true, reply: 'dạ Tào chỉ hỗ trợ về SofinHub thôi ạ' };
   if (replyOverride) return { ...base, reply: replyOverride(message) };
   if (/gap nhan vien|gap nguoi|zalo|hoan tien|khieu nai/.test(t)) {
-    return { ...base, handoff: true, handoffCategory: /hoan tien/.test(t) ? 'payment' : 'user', handoffReason: message.slice(0, 200), reply: 'dạ để Tào chuyển người hỗ trợ cho bạn nha' };
+    return { ...base, handoff: true, handoffCategory: /hoan tien/.test(t) ? 'payment' : 'user', handoffReason: message.slice(0, 200), reply: handoffReply ?? 'dạ để Tào chuyển người hỗ trợ cho bạn nha' };
   }
   if (/don cua toi|thanh toan cua toi|nhan tien chua|giao dich cua toi/.test(t)) {
     const p = c.myPayments?.[0];

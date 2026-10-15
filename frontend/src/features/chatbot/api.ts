@@ -12,10 +12,11 @@ export type { StreamHandlers } from './useMessageQueue';
 import type { StreamHandlers } from './useMessageQueue';
 
 /** Gửi tin và nhận trả lời dạng stream. Resolve với tin đã lưu (sự kiện `done`); sự kiện `error` => ném lỗi. */
-export async function sendChatMessage(conversationId: string, text: string, h: StreamHandlers): Promise<DoneData> {
+/** `pageCommunityId`: cộng đồng khách đang xem (theo URL) — bot dùng thông tin công khai của cộng đồng đó để hiểu "cộng đồng này", "người này". */
+export async function sendChatMessage(conversationId: string, text: string, h: StreamHandlers, pageCommunityId?: string): Promise<DoneData> {
   let done: DoneData | null = null;
   let failure: string | null = null;
-  await apiPostStream(`/chatbot/conversations/${conversationId}/messages`, { text }, (event, data) => {
+  await apiPostStream(`/chatbot/conversations/${conversationId}/messages`, { text, ...(pageCommunityId ? { pageCommunityId } : {}) }, (event, data) => {
     if (event === 'delta') h.onDelta((data as { text: string }).text);
     else if (event === 'replace') h.onReplace((data as { text: string }).text);
     else if (event === 'queued') h.onQueued?.((data as { ahead: number }).ahead);

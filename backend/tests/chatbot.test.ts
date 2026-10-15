@@ -347,6 +347,45 @@ describe('chatbot', () => {
     });
   });
 
+  describe('ngữ cảnh trang đang xem', () => {
+    it('đang ở trang cộng đồng => prompt có thông tin CÔNG KHAI của cộng đồng đó; cộng đồng riêng tư chưa tham gia => không có', async () => {
+      const u = await c.registerUser('cbpage');
+      const pub = `pg-pub-${Date.now().toString(36)}`;
+      const priv = `pg-priv-${Date.now().toString(36)}`;
+      const base = { description: 'Học làm YouTube', category: 'tech' as never, thumbnail: '/x.webp', instructorRole: 'Giảng viên', priceCents: 0, pricing: 'free' as const };
+      await prisma.community.create({ data: { ...base, id: pub, title: 'Kiếm tiền với YouTube (test)', instructorName: 'Trần Minh Tùng' } });
+      await prisma.community.create({ data: { ...base, id: priv, title: 'Nhóm kín', instructorName: 'NGUOI_KIN_CANARY', visibility: 'private' } });
+      const conv = await start(u);
+      const send = (pageCommunityId: string) => c.call('POST', `/chatbot/conversations/${conv}/messages`, { token: u.token, body: { text: 'người hướng dẫn ở đây là ai', pageCommunityId } });
+      const trace = async (id: string) => {
+        const m = await prisma.chatbotMessage.findUniqueOrThrow({ where: { id } });
+        return ((m.toolCalls ?? []) as { name: string; prompt?: string }[]).find((x) => x.name === '_trace')?.prompt ?? '';
+      };
+      const r1 = await send(pub);
+      assert.equal(r1.status, 200);
+      const p1 = await trace(r1.body.data.message.id);
+      assert.match(p1, /<current_page>\n\{/);
+      assert.match(p1, /Trần Minh Tùng/);
+      const r2 = await send(priv);
+      assert.doesNotMatch(await trace(r2.body.data.message.id), /NGUOI_KIN_CANARY|<current_page>\n\{/);
+      assert.equal((await send('khong-ton-tai')).status, 200, 'id lạ => bỏ qua, không lỗi');
+    });
+
+    it('chuyển người: câu trả lời đã mời nhắn Zalo thì không nối thêm mã (mã hiện ở dải dưới widget)', async () => {
+      const u = await c.registerUser('cbnodup');
+      const conv = await start(u);
+      fake.setFakeHandoffReply('dạ bạn bấm "Nhắn Zalo hỗ trợ" để gặp người hỗ trợ nha');
+      const d = await say(u, conv, 'mình muốn khiếu nại dịch vụ');
+      assert.ok(d.handoff);
+      assert.equal(d.message.content, 'dạ bạn bấm "Nhắn Zalo hỗ trợ" để gặp người hỗ trợ nha', 'không nối thêm câu/mã (mã ở dải dưới widget)');
+      // Câu trả lời chưa nhắc Zalo => nối câu hướng dẫn kèm mã (đúng 1 lần).
+      const u2 = await c.registerUser('cbnodup2');
+      fake.setFakeHandoffReply(null);
+      const d2 = await say(u2, await start(u2), 'mình muốn khiếu nại dịch vụ');
+      assert.equal((d2.message.content.match(new RegExp(d2.handoff!.ticketCode, 'g')) ?? []).length, 1);
+    });
+  });
+
   describe('tuân thủ chính sách ChatGPT', () => {
     it('nội dung bị cấm: từ chối tại chỗ, KHÔNG gửi sang model; câu thường (kể cả cường điệu) không bị chặn nhầm', async () => {
       const u = await c.registerUser('cbpolicy');

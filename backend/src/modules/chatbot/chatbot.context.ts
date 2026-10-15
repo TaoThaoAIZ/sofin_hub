@@ -18,6 +18,8 @@ export interface ChatContext {
   userId: string;
   conversationId: string;
   viewer: { firstName: string; lastName: string; email: string };
+  /** Cộng đồng khách đang xem (widget gửi theo URL /communities/:id...) — để hiểu "người này", "cộng đồng này". */
+  pageCommunityId?: string;
 }
 
 export interface HandoffResult {
@@ -35,6 +37,8 @@ export interface KnowledgeContext {
   /** Chủ đề khóa học đang có (chỉ khi khách hỏi chung về khóa học mà chưa nói chủ đề) — để bot hỏi lại + gợi ý. */
   categories: { name: string; courses: number }[];
   /** null = không đưa vào ngữ cảnh (câu hỏi không liên quan đơn/thanh toán) — giảm dữ liệu cá nhân gửi sang ChatGPT. */
+  /** Thông tin CÔNG KHAI của cộng đồng khách đang xem (null = không ở trang cộng đồng / không xem được). */
+  currentPage: { community: { name: string; link: string; description: string; instructor: string; promise: string | null; benefits: string[]; rules: string[]; price: string; members: number } } | null;
   myPayments: { community: string; amount: string; status: string; type: string; createdAt: string; transferContent?: string; refunded?: string }[] | null;
   platformFacts: Record<string, unknown>;
   /** ID nguồn đã đưa vào ngữ cảnh — KHÔNG đưa vào prompt; ghi vào ChatbotMessage.toolCalls để kiểm tra (chỉ câu mẫu active, tài liệu active). */
@@ -144,6 +148,33 @@ async function featuredCommunities(limit: number, category?: string): Promise<Kn
 }
 
 /**
+ * Thông tin CÔNG KHAI (như trang giới thiệu) của cộng đồng khách đang xem: tên, mô tả, người hướng dẫn, lợi ích, nội quy, giá, số thành
+ * viên. Không có bài học / bài đăng / danh sách thành viên. Cộng đồng riêng tư chỉ khi khách là thành viên; nháp / bị gỡ / bị khóa => null.
+ */
+async function pageCommunity(userId: string, communityId: string): Promise<KnowledgeContext['currentPage']> {
+  const c = await prisma.community.findFirst({
+    where: { id: communityId, deletedAt: null, locked: false, moderationStatus: 'active' },
+    select: { id: true, title: true, description: true, instructorName: true, instructorRole: true, promise: true, benefits: true, rules: true, visibility: true, pricing: true, priceCents: true, priceAnnualCents: true, _count: { select: { enrollments: true } } },
+  });
+  if (!c) return null;
+  if (c.visibility !== 'public' && !(await prisma.enrollment.findUnique({ where: { userId_communityId: { userId, communityId } }, select: { userId: true } }))) return null;
+  const rules = Array.isArray(c.rules) ? (c.rules as { title?: unknown }[]).map((r) => String(r.title ?? '')).filter(Boolean).slice(0, 10) : [];
+  return {
+    community: {
+      name: c.title,
+      link: `/communities/${c.id}`,
+      description: c.description.slice(0, 800),
+      instructor: [c.instructorName, c.instructorRole].filter(Boolean).join(' — '),
+      promise: c.promise,
+      benefits: c.benefits.slice(0, 8),
+      rules,
+      price: c.pricing === 'free' || c.priceCents === 0 ? 'Miễn phí' : `${vnd(c.priceCents)}/tháng${c.priceAnnualCents ? ` hoặc ${vnd(c.priceAnnualCents)}/năm` : ''}`,
+      members: c._count.enrollments,
+    },
+  };
+}
+
+/**
  * Gom ngữ cảnh cho câu hỏi `text` (truy vấn song song, mỗi phần có giới hạn kích thước). `recentUserTexts` = các tin khách gần
  * nhất (để câu nối tiếp như "còn đơn kia thì sao" vẫn nhận ra chủ đề thanh toán).
  */
@@ -165,6 +196,7 @@ export async function gatherContext(ctx: ChatContext, text: string, recentUserTe
     wantPayments ? myPayments(ctx.userId) : Promise.resolve(null),
     courseCategories().catch(() => []),
   ]);
+  const currentPage = ctx.pageCommunityId ? await pageCommunity(ctx.userId, ctx.pageCommunityId).catch(() => null) : null;
   // Khách nhắc tên một chủ đề (thường do bấm gợi ý) => khóa học của chủ đề đó (có giá).
   // Hỏi chung về khóa học mà không khớp gì => KHÔNG liệt kê khóa học; đưa danh sách chủ đề để bot hỏi lại khách quan tâm chủ đề nào.
   const topic = found.length ? undefined : categoryIn([text], cats);
@@ -177,6 +209,7 @@ export async function gatherContext(ctx: ChatContext, text: string, recentUserTe
     tools: TOOLS.map(toolView),
     communities,
     categories,
+    currentPage,
     myPayments: payments,
     platformFacts: platformFacts(),
   };
