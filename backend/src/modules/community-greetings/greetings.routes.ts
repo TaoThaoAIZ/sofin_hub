@@ -24,6 +24,11 @@ greetingsRouter.post(`${G}/announcements/:aid/seen`, requireAuth, writeRateLimit
   res.json({ data: await svc.markAnnouncementSeen(req.userId!, p(req.params.id), p(req.params.aid)) });
 });
 
+/** Bài đang ghim + giới hạn (mod trở lên). Bỏ ghim dùng POST /posts/:postId/pin. */
+greetingsRouter.get('/courses/:id/pins', requireAuth, async (req, res) => {
+  res.json({ data: await svc.pins(req.userId!, p(req.params.id)) });
+});
+
 // ------------------------------------------------------------------ admin cộng đồng trở lên
 greetingsRouter.get(`${G}/settings`, requireAuth, async (req, res) => {
   res.json({ data: await svc.settings(req.userId!, p(req.params.id)) });

@@ -27,3 +27,11 @@ Module: `backend/src/modules/community-greetings/` · Bảng: `CommunityWelcome`
 | PATCH | `/greetings/announcements/:aid` | `{ active }` | Bỏ ghim / ghim lại bài trên Bảng tin (ai đã xem rồi không thấy lại) |
 
 Nội dung hiển thị bằng `RichText` của widget chat: xuống dòng, `- ` gạch đầu dòng, `1. ` bước, `**in đậm**`, link `/trang` hoặc `https://`. Không render HTML.
+
+## Giới hạn ghim (tối đa 5 bài / cộng đồng)
+- `MAX_PINNED_POSTS = 5` (posts.service) — tính MỌI bài đang ghim của cộng đồng (mọi mục). Ghim kiểm tra trong transaction có `pg_advisory_xact_lock` theo cộng đồng => ghim song song không vượt.
+- Vượt giới hạn => **409 `PIN_LIMIT`** `details: { limit: 5 }` ở: `POST /posts/:postId/pin` (ghim), `POST /greetings/announcements` (đăng — kiểm trước, không tạo bài), `PATCH /greetings/announcements/:aid {active:true}` (ghim lại). FE bắt mã này và mở hộp **Quản lý bài ghim**; bỏ ghim bớt xong bấm lại thao tác vừa bị chặn.
+
+| Method | Path | Mô tả |
+|---|---|---|
+| GET | `/api/communities/:id/pins` | Mod trở lên. `{ limit, pins: [{ id, title, category, popup, seenCount, author, createdAt, link }] }` (mới -> cũ). `popup` = đang hiện popup (bài "Thông báo" có thông báo active). Bỏ ghim: `POST /posts/:postId/pin`. |

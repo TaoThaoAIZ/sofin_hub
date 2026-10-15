@@ -4,7 +4,8 @@ import { HttpError } from '../../utils/http-error.js';
 import { catalogService } from '../catalog/catalog.service.js';
 import { enrollmentService } from '../enrollments/enrollments.service.js';
 import { requireRole } from '../permissions/policy.js';
-import { postsService } from '../posts/posts.service.js';
+import { MAX_PINNED_POSTS, postsService } from '../posts/posts.service.js';
+import { splitPost } from './announcement-sync.js';
 
 /**
  * Lời chào thành viên mới + thông báo popup của chủ cộng đồng (docs/features/community-greetings.md).
@@ -68,7 +69,39 @@ const announcementSelect = { id: true, communityId: true, title: true, body: tru
 /** Thông báo còn hiệu lực: đang bật + bài gốc còn ghim, không bị ẩn/gỡ. */
 const LIVE = { active: true, post: { pinned: true, hidden: false, removedAt: null } } as const;
 
+const pinLimitError = () =>
+  new HttpError(409, 'PIN_LIMIT', `Cộng đồng đã ghim đủ ${MAX_PINNED_POSTS} bài. Bỏ ghim bớt một bài để ghim bài mới.`, { limit: MAX_PINNED_POSTS });
+
+const CATEGORY_LABEL: Record<string, string> = { general: 'Thảo luận chung', qa: 'Hỏi đáp', case_study: 'Case study', announcement: 'Thông báo' };
+
 export const greetingsService = {
+  /** Bài đang ghim (hộp "Quản lý ghim"; mod trở lên — cùng quyền ghim/bỏ ghim). Bài "Thông báo" kèm số người đã xem popup. */
+  async pins(userId: string, communityId: string) {
+    await requireRole(userId, communityId, 'mod');
+    const rows = await prisma.post.findMany({
+      where: { communityId, pinned: true },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true, content: true, category: true, createdAt: true, hidden: true,
+        author: { select: userSelect },
+        announcement: { select: { active: true, _count: { select: { seen: true } } } },
+      },
+    });
+    return {
+      limit: MAX_PINNED_POSTS,
+      pins: rows.map((p) => ({
+        id: p.id,
+        title: splitPost(p.content).title || '—',
+        category: CATEGORY_LABEL[p.category] ?? p.category,
+        popup: p.announcement?.active === true && !p.hidden,
+        seenCount: p.announcement?._count.seen ?? null,
+        author: nameOf(p.author),
+        createdAt: p.createdAt.toISOString(),
+        link: postLink(communityId, p.id),
+      })),
+    };
+  },
+
   /** Popup cần hiện cho người đang xem trang cộng đồng. Người ngoài / cộng đồng bị khóa => không có gì. */
   async pending(userId: string, communityId: string) {
     const none = { welcome: null, announcements: [] };
@@ -170,9 +203,16 @@ export const greetingsService = {
    */
   async publishAnnouncement(userId: string, communityId: string, input: z.infer<typeof announcementBody>) {
     await requireRole(userId, communityId, 'admin');
+    // Đủ bài ghim => báo trước khi đăng (FE mở "Quản lý ghim"), tránh để lại bài không ghim.
+    if ((await prisma.post.count({ where: { communityId, pinned: true } })) >= MAX_PINNED_POSTS) throw pinLimitError();
     // Bảng tin hiển thị chữ thuần => bỏ dấu **in đậm** trong bài (popup vẫn giữ in đậm).
     const post = await postsService.create(communityId, userId, `${input.title}\n\n${input.body.replace(/\*\*([^*\n]+?)\*\*/g, '$1')}`, 'Thông báo', []);
-    await postsService.togglePin(post.id);
+    try {
+      await postsService.togglePin(post.id);
+    } catch (e) {
+      await prisma.post.delete({ where: { id: post.id } }); // vừa có người ghim chen vào => không để lại bài lẻ
+      throw e;
+    }
     // Giữ đúng tiêu đề / nội dung chủ nhập (không tách lại từ bài) + nút link riêng nếu có.
     await prisma.communityAnnouncement.update({ where: { postId: post.id }, data: { title: input.title, body: input.body, link: input.link ?? null } });
     return this.settings(userId, communityId);

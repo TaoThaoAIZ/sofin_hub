@@ -45,6 +45,8 @@ export interface PostsRepository {
   /** Xóa bài; bình luận, like, phiếu bình chọn xóa theo (CASCADE). */
   delete(postId: string): Promise<void>;
   setPinned(postId: string, pinned: boolean): Promise<void>;
+  /** Ghim nếu cộng đồng còn dưới `limit` bài ghim (khóa theo cộng đồng => ghim song song không vượt). false = đã đủ. */
+  pinWithLimit(postId: string, communityId: string, limit: number): Promise<boolean>;
   setHidden(postId: string, hidden: boolean): Promise<void>;
   isLiked(postId: string, userId: string): Promise<boolean>;
   /** Trong số các bài đã cho, những bài userId đang thích. */
@@ -207,6 +209,16 @@ export const postsRepository: PostsRepository = {
 
   async setPinned(postId, pinned) {
     await prisma.post.updateMany({ where: { id: postId }, data: { pinned } });
+  },
+
+  async pinWithLimit(postId, communityId, limit) {
+    return prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`post-pin:${communityId}`}))`;
+      const pinned = await tx.post.count({ where: { communityId, pinned: true, id: { not: postId } } });
+      if (pinned >= limit) return false;
+      await tx.post.updateMany({ where: { id: postId }, data: { pinned: true } });
+      return true;
+    });
   },
 
   async setHidden(postId, hidden) {

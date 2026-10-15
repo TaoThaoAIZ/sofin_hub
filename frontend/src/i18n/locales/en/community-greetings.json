@@ -32,7 +32,7 @@
   "annLink": "\"View details\" button (optional)",
   "annLinkHint": "A site path (starting with /) or https://…",
   "publish": "Publish",
-  "publishHint": "New announcements are added at the end; other pinned announcements stay.",
+  "publishHint": "Up to 5 pinned posts per community; new announcements are added at the end and other pinned posts stay.",
   "history": "Published",
   "active": "Pinned",
   "inactive": "Unpinned",
@@ -43,5 +43,19 @@
   "slides": "Switch announcement",
   "prev": "Previous",
   "next": "Next",
-  "viewPost": "View post"
+  "viewPost": "View post",
+  "pins": {
+    "title": "Manage pinned posts",
+    "count": "{{n}}/{{limit}} pinned",
+    "limitHint": "This community already has {{limit}} pinned posts. Unpin one below to pin a new one.",
+    "empty": "No pinned posts yet.",
+    "popup": "Showing as popup · seen by {{seen}}",
+    "unpin": "Unpin",
+    "cancel": "Cancel",
+    "done": "Done",
+    "retry": "Pin this post",
+    "retryPublish": "Publish announcement",
+    "retryPin": "Pin again",
+    "manage": "Manage pins"
+  }
 }

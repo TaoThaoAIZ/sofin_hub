@@ -103,6 +103,7 @@
     "other": "Other reason"
   },
   "feed": {
+    "managePins": "Manage pins",
     "all": "All",
     "trending": "Trending",
     "welcome": "Welcome back, {{name}}!",

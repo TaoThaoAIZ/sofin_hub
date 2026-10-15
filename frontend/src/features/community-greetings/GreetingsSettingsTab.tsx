@@ -6,7 +6,8 @@ import { Button } from '../../components/ui/Button';
 import { useAuth } from '../auth/AuthContext';
 import { RichText } from '../chatbot/ChatWidget';
 import { ErrorLine, errorText, INPUT_CLASS } from '../communities/components/Modal';
-import { greetingKeys, publishAnnouncement, saveWelcome, setAnnouncementActive, useGreetingSettings, type GreetingSettings } from './api';
+import { greetingKeys, isPinLimit, publishAnnouncement, saveWelcome, setAnnouncementActive, useGreetingSettings, type GreetingSettings } from './api';
+import { PinManagerModal } from './PinManagerModal';
 
 /** Tab "Lời chào & thông báo" trong Cài đặt cộng đồng (admin trở lên). */
 export function GreetingsSettingsTab({ communityId, communityTitle }: { communityId: string; communityTitle: string }) {
@@ -39,14 +40,16 @@ function useSave(communityId: string) {
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const run = async (fn: () => Promise<GreetingSettings>) => {
+  /** `onPinLimit`: đã đủ bài ghim (409 PIN_LIMIT) => mở hộp Quản lý ghim thay vì hiện lỗi. */
+  const run = async (fn: () => Promise<GreetingSettings>, onPinLimit?: () => void) => {
     setBusy(true);
     setErr(null);
     try {
       qc.setQueryData(greetingKeys.settings(communityId), await fn());
       return true;
     } catch (e) {
-      setErr(errorText(e));
+      if (onPinLimit && isPinLimit(e)) onPinLimit();
+      else setErr(errorText(e));
       return false;
     } finally {
       setBusy(false);
@@ -116,20 +119,36 @@ function AnnouncementSection({ communityId, data }: { communityId: string; data:
   const [body, setBody] = useState('');
   const [link, setLink] = useState('');
   const { busy, err, run } = useSave(communityId);
+  const qc = useQueryClient();
+  // Hộp Quản lý ghim: `retry` = thao tác vừa bị chặn vì đủ bài ghim (đăng / ghim lại), null = mở từ nút "Quản lý ghim".
+  const [pins, setPins] = useState<null | { retry?: () => Promise<unknown>; label?: string }>(null);
   const fmt = (iso: string) => new Date(iso).toLocaleString(i18n.language === 'en' ? 'en-US' : 'vi-VN', { dateStyle: 'medium', timeStyle: 'short' });
 
+  const clearForm = () => {
+    setTitle('');
+    setBody('');
+    setLink('');
+  };
+  const doPublish = () => publishAnnouncement(communityId, { title: title.trim(), body: body.trim(), link: link.trim() || null });
   const publish = () =>
-    void run(() => publishAnnouncement(communityId, { title: title.trim(), body: body.trim(), link: link.trim() || null })).then((ok) => {
-      if (!ok) return;
-      setTitle('');
-      setBody('');
-      setLink('');
-    });
+    void run(doPublish, () =>
+      setPins({ label: t('pins.retryPublish'), retry: () => doPublish().then((next) => (qc.setQueryData(greetingKeys.settings(communityId), next), clearForm())) }),
+    ).then((ok) => ok && clearForm());
+  const togglePopup = (id: string, active: boolean) => {
+    const fn = () => setAnnouncementActive(communityId, id, active);
+    void run(fn, () => setPins({ label: t('pins.retryPin'), retry: () => fn().then((next) => qc.setQueryData(greetingKeys.settings(communityId), next)) }));
+  };
 
   return (
     <section className={SECTION}>
-      <h2 className="m-0 text-lg font-extrabold">{t('announceTitle')}</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="m-0 text-lg font-extrabold">{t('announceTitle')}</h2>
+        <button type="button" onClick={() => setPins({})} className="flex h-9 items-center gap-1.5 rounded-xl border border-[rgba(120,60,20,.15)] px-3 text-sm font-semibold text-stone-700 hover:bg-stone-50">
+          {t('pins.manage')}
+        </button>
+      </div>
       <p className="m-0 text-sm text-stone-600">{t('announceIntro')}</p>
+      {pins && <PinManagerModal communityId={communityId} onClose={() => setPins(null)} onRetry={pins.retry} retryLabel={pins.label} />}
       <Field label={t('annTitle')}>
         <input className={INPUT_CLASS} value={title} maxLength={120} onChange={(e) => setTitle(e.target.value)} placeholder={t('annTitlePlaceholder')} />
       </Field>
@@ -180,7 +199,7 @@ function AnnouncementSection({ communityId, data }: { communityId: string; data:
               <button
                 type="button"
                 disabled={busy}
-                onClick={() => void run(() => setAnnouncementActive(communityId, a.id, !a.active))}
+                onClick={() => togglePopup(a.id, !a.active)}
                 className="h-8 rounded-lg border border-[rgba(120,60,20,.15)] px-3 text-xs font-semibold text-stone-700 hover:bg-stone-50 disabled:opacity-60"
               >
                 {a.active ? t('takeDown') : t('reshow')}

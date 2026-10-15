@@ -74,3 +74,27 @@ export const usePendingGreetings = (id: string) => {
 
 export const useGreetingSettings = (id: string) =>
   useQuery({ queryKey: greetingKeys.settings(id), queryFn: ({ signal }) => apiGet<{ data: GreetingSettings }>(`${G(id)}/settings`, undefined, signal).then((r) => r.data) });
+
+// ------------------------------------------------------------------ quản lý ghim (tối đa `limit` bài / cộng đồng)
+export interface PinnedPost {
+  id: string;
+  title: string;
+  category: string;
+  /** Bài "Thông báo" => đang hiện popup cho thành viên. */
+  popup: boolean;
+  seenCount: number | null;
+  author: string;
+  createdAt: string;
+  link: string;
+}
+export const pinKeys = { list: (id: string) => ['community-pins', id] as const };
+export const usePins = (id: string, enabled = true) =>
+  useQuery({
+    queryKey: pinKeys.list(id),
+    queryFn: ({ signal }) => apiGet<{ data: { limit: number; pins: PinnedPost[] } }>(`/communities/${encodeURIComponent(id)}/pins`, undefined, signal).then((r) => r.data),
+    enabled,
+  });
+/** Bật/tắt ghim (dùng để bỏ ghim trong hộp Quản lý ghim). */
+export const togglePostPin = (postId: string) => apiPost<{ data: { pinned: boolean } }>(`/posts/${postId}/pin`).then((r) => r.data);
+/** Lỗi 409 PIN_LIMIT (đã đủ bài ghim) => mở hộp Quản lý ghim thay vì báo lỗi. */
+export const isPinLimit = (e: unknown) => typeof e === 'object' && e !== null && (e as { code?: string }).code === 'PIN_LIMIT';

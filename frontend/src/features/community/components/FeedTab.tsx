@@ -7,8 +7,9 @@ import { useCommunityDetail } from '../../courses/queries';
 import { usePost, usePostsFeed } from '../queries';
 import { categoryLabel, POST_CATEGORIES, type PostCategory } from '../types';
 import { CommunityRightSidebar } from './CommunityRightSidebar';
-import { errText, ErrorNote, ghostBtn, ToastHost } from './contentUi';
+import { errText, ErrorNote, ghostBtn, isModPlus, ToastHost } from './contentUi';
 import { CATEGORY_META, PostCard } from './PostCard';
+import { PinManagerModal } from '../../community-greetings/PinManagerModal';
 import { PostComposer } from './PostComposer';
 
 // Tên icon + màu chuyên mục: xem CATEGORY_META trong PostCard.tsx (lấy từ file thiết kế gốc).
@@ -35,6 +36,7 @@ export function FeedTab() {
   const [category, setCategory] = useState<PostCategory | undefined>(undefined);
   const [sort, setSort] = useState<'latest' | 'popular'>('latest');
   const viewerRole = course?.viewerRole;
+  const [managePins, setManagePins] = useState(false);
 
   const posts = usePostsFeed(courseId, { category, sort, tag });
   const list = useMemo(() => posts.data?.pages.flatMap((pg) => pg.data) ?? [], [posts.data]);
@@ -100,6 +102,17 @@ export function FeedTab() {
         </div>
 
         <div className="flex flex-wrap gap-2">
+          {isModPlus(viewerRole) && (
+            <button
+              type="button"
+              onClick={() => setManagePins(true)}
+              className="glass-chip order-last ml-auto flex h-10 items-center gap-1.5 rounded-xl px-4 text-[13.5px] font-semibold whitespace-nowrap text-stone-900"
+            >
+              <MaterialIcon name="push_pin" size={17} color="#f26a1b" />
+              {t('feed.managePins')}
+            </button>
+          )}
+          {managePins && <PinManagerModal communityId={courseId} onClose={() => setManagePins(false)} />}
           {FILTERS.map((f) => {
             const active = f.key === 'trending' ? sort === 'popular' : sort === 'latest' && (f.key === 'all' ? !category : category === f.key);
             return (

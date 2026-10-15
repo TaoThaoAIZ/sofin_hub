@@ -17,4 +17,14 @@ Chủ / admin cộng đồng: **Cài đặt > Lời chào & thông báo**. API: 
 | 11 | `owner` bấm "Bỏ ghim" trong Cài đặt | Bài trên Bảng tin bỏ ghim; ai chưa xem cũng không còn thấy |
 | 12 | `member1` gọi PUT `/greetings/welcome` | 403 |
 
-Ghim bài: không giới hạn số bài ghim; popup chỉ lấy tối đa 10 thông báo chưa xem mới nhất mỗi lần.
+## Giới hạn ghim (tối đa 5 bài / cộng đồng)
+
+| # | Thao tác | Kết quả mong đợi |
+|---|---|---|
+| 13 | `owner` ở `photo` (đủ 5 bài ghim) mở menu ⋯ một bài chưa ghim → "Ghim bài" | Mở hộp "Quản lý bài ghim — Đang ghim 5/5", nhắc bỏ ghim bớt; nút "Ghim bài này" bị khóa |
+| 14 | Bấm "Bỏ ghim" một bài trong hộp | Còn 4/5, nút "Ghim bài này" bật; bấm => hộp đóng, bài được ghim, Bảng tin cập nhật |
+| 15 | Đủ 5 bài, vào Cài đặt > Lời chào & thông báo, đăng thông báo mới | Mở hộp Quản lý ghim (không báo lỗi); bỏ ghim bớt rồi bấm "Đăng thông báo" => đăng + ghim |
+| 16 | Nút "Quản lý ghim" trên Bảng tin (mod trở lên) / trong Cài đặt | Mở hộp xem / bỏ ghim; bài "Thông báo" đang hiện popup có nhãn "Đang hiện popup · x người đã xem" |
+| 17 | `member1` gọi GET `/communities/photo/pins` | 403 |
+
+Popup chỉ lấy tối đa 10 thông báo chưa xem mới nhất mỗi lần.

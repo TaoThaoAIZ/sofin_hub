@@ -32,7 +32,7 @@
   "annLink": "Nút \"Xem chi tiết\" (không bắt buộc)",
   "annLinkHint": "Đường dẫn trong site (bắt đầu bằng /) hoặc https://…",
   "publish": "Đăng thông báo",
-  "publishHint": "Thông báo mới thêm vào cuối; các thông báo đang ghim khác vẫn giữ.",
+  "publishHint": "Mỗi cộng đồng ghim tối đa 5 bài; thông báo mới thêm vào cuối, các bài đang ghim khác vẫn giữ.",
   "history": "Đã đăng",
   "active": "Đang ghim",
   "inactive": "Đã bỏ ghim",
@@ -43,5 +43,19 @@
   "slides": "Chuyển thông báo",
   "prev": "Trước",
   "next": "Tiếp",
-  "viewPost": "Xem bài"
+  "viewPost": "Xem bài",
+  "pins": {
+    "title": "Quản lý bài ghim",
+    "count": "Đang ghim {{n}}/{{limit}} bài",
+    "limitHint": "Cộng đồng đã ghim đủ {{limit}} bài. Bỏ ghim một bài bên dưới để ghim bài mới.",
+    "empty": "Chưa có bài nào được ghim.",
+    "popup": "Đang hiện popup · {{seen}} người đã xem",
+    "unpin": "Bỏ ghim",
+    "cancel": "Hủy",
+    "done": "Xong",
+    "retry": "Ghim bài này",
+    "retryPublish": "Đăng thông báo",
+    "retryPin": "Ghim lại",
+    "manage": "Quản lý ghim"
+  }
 }

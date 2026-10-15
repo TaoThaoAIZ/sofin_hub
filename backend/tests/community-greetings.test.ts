@@ -138,4 +138,47 @@ describe('lời chào + thông báo cộng đồng', () => {
     const s = await api(admin, 'GET', id, '/settings');
     assert.equal(s.body.data.announcements.find((a: { title: string }) => a.title === 'Cũ').seenCount, 1);
   });
+
+  it('tối đa 5 bài ghim / cộng đồng: ghim thứ 6 hoặc đăng thông báo khi đã đủ => 409 PIN_LIMIT; bỏ ghim bớt rồi ghim được; Quản lý ghim (mod trở lên)', async () => {
+    const id = await community();
+    const m = await c.registerUser('grpin');
+    await join(m, id);
+    const mk = (content: string, category: 'general' | 'announcement' = 'general') => db.prisma.post.create({ data: { communityId: id, authorId: owner.id, content, category } });
+    const pin = (postId: string) => c.call('POST', `/posts/${postId}/pin`, { token: owner.token });
+    const posts = [];
+    for (let i = 1; i <= 6; i++) posts.push(await mk(`Bài ${i}`, i === 1 ? 'announcement' : 'general'));
+    for (const p of posts.slice(0, 5)) assert.equal((await pin(p.id)).status, 200);
+
+    const sixth = await pin(posts[5]!.id);
+    assert.equal(sixth.status, 409);
+    assert.equal(sixth.body.error.code, 'PIN_LIMIT');
+    assert.equal(sixth.body.error.details.limit, 5);
+    assert.equal((await db.prisma.post.findUniqueOrThrow({ where: { id: posts[5]!.id } })).pinned, false);
+
+    const before = await db.prisma.post.count({ where: { communityId: id } });
+    const ann = await api(owner, 'POST', id, '/announcements', { title: 'Mới', body: 'x' });
+    assert.equal(ann.status, 409);
+    assert.equal(ann.body.error.code, 'PIN_LIMIT');
+    assert.equal(await db.prisma.post.count({ where: { communityId: id } }), before, 'không để lại bài lẻ');
+
+    const list = await c.call('GET', `/communities/${id}/pins`, { token: owner.token });
+    assert.equal(list.status, 200);
+    assert.equal(list.body.data.limit, 5);
+    assert.deepEqual(list.body.data.pins.map((p: { title: string; popup: boolean }) => [p.title, p.popup]).sort(), [['Bài 1', true], ['Bài 2', false], ['Bài 3', false], ['Bài 4', false], ['Bài 5', false]]);
+    assert.equal((await c.call('GET', `/communities/${id}/pins`, { token: m.token })).status, 403, 'thành viên thường không quản lý ghim');
+
+    // Bỏ ghim 1 bài (toggle) => ghim bài mới / đăng thông báo được.
+    assert.equal((await pin(posts[1]!.id)).status, 200);
+    assert.equal((await pin(posts[5]!.id)).status, 200);
+    assert.equal((await pin(posts[2]!.id)).status, 200);
+    assert.equal((await api(owner, 'POST', id, '/announcements', { title: 'Mới', body: 'x' })).status, 201);
+    assert.equal(await db.prisma.post.count({ where: { communityId: id, pinned: true } }), 5);
+
+    // Ghim lại thông báo trong Cài đặt cũng tính giới hạn.
+    const first = (await api(owner, 'GET', id, '/settings')).body.data.announcements.find((a: { title: string }) => a.title === 'Bài 1');
+    assert.equal((await pin(posts[0]!.id)).status, 200, 'bỏ ghim Bài 1 => còn 4');
+    assert.equal((await api(owner, 'PATCH', id, `/announcements/${first.id}`, { active: true })).status, 200, 'ghim lại => 5');
+    const again = await pin(posts[1]!.id);
+    assert.equal(again.body.error?.code, 'PIN_LIMIT', 'đủ 5 => không ghim thêm');
+  });
 });
