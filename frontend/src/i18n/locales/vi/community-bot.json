@@ -19,5 +19,8 @@
   "openMessages": "Mở Tin nhắn",
   "notifiedOwner": "Chủ cộng đồng tắt nhận tin nhắn riêng, đã gửi thông báo cho chủ cộng đồng.",
   "placeholder": "Nhập câu hỏi…",
-  "send": "Gửi"
+  "send": "Gửi",
+  "queuePosition_zero": "Bạn là người tiếp theo, chờ chút nhé…",
+  "queuePosition_one": "Đang có {{count}} người hỏi trước bạn, chờ chút nhé…",
+  "queuePosition_other": "Đang có {{count}} người hỏi trước bạn, chờ chút nhé…"
 }

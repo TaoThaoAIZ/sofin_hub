@@ -8,6 +8,7 @@ import { checkOutput, type OutputViolation } from '../chatbot/chatbot.guardrails
 import { codexLoggedIn, LlmBusyError, LlmQuotaError } from '../chatbot/chatbot.llm.js';
 import { chatLlm } from '../chatbot/chatbot.model.js';
 import { isPersonaKey, PERSONA_PRESETS, PRESET_KEYS, resolvePersona } from '../chatbot/chatbot.persona.js';
+import { moderate, moderationReply } from '../chatbot/chatbot.moderation.js';
 import { containsPii } from '../chatbot/chatbot.pii.js';
 import { answerSchema } from '../chatbot/chatbot.prompt.js';
 import { chatbotRepository } from '../chatbot/chatbot.repository.js';
@@ -27,6 +28,7 @@ import { buildCommunityPrompt } from './community-bot.prompt.js';
 export type CommunityChatEvent =
   | { event: 'delta'; data: { text: string } }
   | { event: 'replace'; data: { text: string } }
+  | { event: 'queued'; data: { ahead: number } }
   | { event: 'done'; data: CommunityDoneData };
 
 export interface QuotaView {
@@ -122,6 +124,14 @@ async function answerTurn(a: BotAccess, userId: string, conv: { id: string; stat
     return done;
   };
 
+  // Nội dung bị cấm (chính sách ChatGPT): từ chối tại chỗ, KHÔNG gửi sang ChatGPT (chatbot.moderation.ts).
+  const mod = moderate(text);
+  if (mod.blocked && mod.category) {
+    const reply = mod.category === 'jailbreak' ? t.refusal : moderationReply(mod.category, a.persona.selfPronoun, a.persona.userPronoun);
+    emit({ event: 'delta', data: { text: reply } });
+    return finish(reply, 'refusal', { toolCalls: [{ name: 'moderation', category: mod.category }] });
+  }
+
   // Khớp trực tiếp câu mẫu của CỘNG ĐỒNG NÀY (không gọi AI).
   const [top] = await chatbotRepository.matchQa(text, { limit: 1, order: 'similarity', communityId });
   if (top && top.similarity >= s.directThreshold) {
@@ -134,7 +144,7 @@ async function answerTurn(a: BotAccess, userId: string, conv: { id: string; stat
   try {
     const context = await gatherCommunityContext(a, { userId, communityId, text, recentUserTexts: history.filter((m) => m.role === 'user').map((m) => m.content) });
     const prompt = buildCommunityPrompt(a, { firstName: viewer.firstName, history, message: text, context });
-    const { output, usage } = await chatLlm().complete({ kind: 'answer', prompt, schema: answerSchema, hint: { message: text, community: context }, model: s.model || undefined });
+    const { output, usage } = await chatLlm().complete({ kind: 'answer', prompt, schema: answerSchema, hint: { message: text, community: context }, model: s.model || undefined, onQueued: (ahead) => emit({ event: 'queued', data: { ahead } }) });
     const toolCalls = contextTrace(a, context, prompt);
     const matchedQaId = context.sampleAnswers.some((q) => q.id === output.usedSampleId) ? output.usedSampleId : null;
 

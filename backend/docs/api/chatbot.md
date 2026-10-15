@@ -12,7 +12,9 @@ AI = **Codex SDK** (`@openai/codex-sdk`) đăng nhập bằng **tài khoản Cha
 |---|---|
 | `CHATBOT_CODEX_HOME` | CODEX_HOME riêng của bot (mặc định `data/codex-home`), tách khỏi `~/.codex` của người vận hành. Server tự ghi `config.toml` tối giản; token nằm ở `auth.json` sau `npm run chatbot:codex-login` (`-- --device-auth` khi không có trình duyệt, `-- status` để kiểm tra). Chưa đăng nhập ⇒ `/chatbot/*` trả 503 `CHATBOT_UNAVAILABLE`, job học bỏ qua. |
 | `CHATBOT_CODEX_PATH` | Đường dẫn file thực thi codex (bỏ trống = bản đi kèm SDK). |
-| `CHATBOT_MAX_CONCURRENCY` | Số lượt Codex song song (mặc định 3); chờ quá 20s ⇒ trả câu "đang bận" (`answerSource=error`). |
+| `CHATBOT_MAX_CONCURRENCY` | Số lượt gọi AI song song TRONG 1 TIẾN TRÌNH, chung cho bot Tào + mọi bot cộng đồng + job học (mặc định 3, hàng đợi `chatbot.limiter.ts` bọc mọi model trong `chatLlm()`). Giữ ≤ 3 với tài khoản ChatGPT cá nhân (vượt => log cảnh báo `SAFE_CHATGPT_CONCURRENCY`). |
+| `CHATBOT_QUEUE_WAIT_MS` | Chờ tối đa trong hàng (mặc định 60000). Lượt phải xếp hàng nhận SSE `event: queued {ahead}` (số lượt đứng trước, cập nhật khi hàng dịch); quá hạn ⇒ câu "đang bận" (`answerSource=error`). Câu khớp câu mẫu không xếp hàng. |
+| `CHATBOT_FAKE_DELAY_MS` | CHỈ dev/test: độ trễ mỗi lượt của model giả (script đo tải `npm run chatbot:load`). |
 | `CHATBOT_TIMEOUT_MS` | Thời gian tối đa mỗi lượt (mặc định 90000). |
 | `CHATBOT_FAKE_MODEL=1` | Model giả, không gọi ChatGPT (dev/test/E2E). **Production từ chối khởi động** nếu bật. |
 | `RATE_LIMIT_CHATBOT_PER_MIN` | Hạn mức gửi tin mỗi người/phút (mặc định 12). |

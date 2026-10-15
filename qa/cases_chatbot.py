@@ -30,8 +30,8 @@ def load(add):
     A("Widget", "Đóng rồi mở lại giữ hội thoại; 'Cuộc mới' bắt đầu hội thoại trống", "Chức năng", "Trung bình", BASE,
       ["Hỏi 1 câu", "Đóng khung (X hoặc Esc)", "Mở lại", "Bấm 'Cuộc mới'"], "-",
       "Mở lại thấy đủ tin cũ (hội thoại nhắn trong 24h); 'Cuộc mới' xóa khung, tin tiếp theo thuộc hội thoại mới.")
-    A("Widget", "Enter gửi, Shift+Enter xuống dòng; nút Gửi khóa khi ô trống/đang trả lời", "Giao diện", "Thấp", BASE,
-      ["Gõ chữ, Shift+Enter, gõ tiếp, Enter"], "-", "Tin gửi đi có xuống dòng; trong lúc bot trả lời nút Gửi mờ.")
+    A("Widget", "Enter gửi, Shift+Enter xuống dòng; nút Gửi khóa khi ô trống", "Giao diện", "Thấp", BASE,
+      ["Gõ chữ, Shift+Enter, gõ tiếp, Enter"], "-", "Tin gửi đi có xuống dòng; ô trống thì nút Gửi mờ. Trong lúc bot trả lời VẪN gửi được (tin vào hàng 'chờ gửi' — xem case nhắn liên tục).")
 
     # ---------------------------------------------------------------- Trả lời
     A("Trả lời", "Câu khớp câu hỏi mẫu => trả nguyên văn câu admin, không gọi AI", "Chức năng", "Cao", BASE,
@@ -108,13 +108,13 @@ def load(add):
       "support@ vào được đủ tab; finance@ không thấy mục Chatbot, API trả 403.")
 
     # ---------------------------------------------------------------- Hạ tầng
-    A("Hạ tầng", "Codex chưa đăng nhập ChatGPT: chatbot tắt nhưng app vẫn chạy; admin thấy cảnh báo", "Phi chức năng", "Trung bình", "CHATBOT_CODEX_HOME trỏ tới thư mục chưa đăng nhập, KHÔNG có CHATBOT_FAKE_MODEL.",
+    A("Hạ tầng", "Codex chưa đăng nhập ChatGPT: chatbot tắt nhưng app vẫn chạy; admin thấy cảnh báo", "Tích hợp", "Trung bình", "CHATBOT_CODEX_HOME trỏ tới thư mục chưa đăng nhập, KHÔNG có CHATBOT_FAKE_MODEL.",
       ["GET /api/chatbot/status", "POST /api/chatbot/conversations"], "-", "status.available=false; tạo hội thoại 503; Admin > Chatbot hiện dải đỏ 'chưa đăng nhập ChatGPT (Codex)'.", pw="Không")
     A("Hạ tầng", "CHATBOT_FAKE_MODEL=1 khi production => từ chối khởi động", "Bảo mật", "Cao", "Máy dev.",
       ["NODE_ENV=production CHATBOT_FAKE_MODEL=1 (cùng các secret hợp lệ) chạy backend"], "-", "Thoát ngay với lỗi 'CHATBOT_FAKE_MODEL không được bật khi production'.", pw="Không")
     A("Hạ tầng", "Danh mục tool dùng chung: GET /api/tools khớp trang /tools", "Chức năng", "Trung bình", "Backend :4000 chạy.",
       ["GET http://localhost:4000/api/tools", "Mở /tools"], "-", "API trả 7 tool + 4 danh mục; trang /tools hiển thị đúng 7 tool đó (đọc từ API, có trạng thái đang tải/lỗi + Thử lại).")
-    A("Chất lượng", "Bộ đo 60 câu với model thật (tỉ lệ trả lời đúng, chuyển người sai)", "Phi chức năng", "Trung bình", REAL,
+    A("Chất lượng", "Bộ đo 60 câu với model thật (tỉ lệ trả lời đúng, chuyển người sai)", "Chức năng", "Trung bình", REAL,
       ["Chạy npm run chatbot:eval"], "backend/tests/chatbot-golden.vi.json", "In từng case ✓/✗ và tổng kết: tỉ lệ trả lời đúng, chuyển người sai, chuyển người đúng, từ chối đúng, thời gian trung bình; ghi data/chatbot-eval-*.json.", pw="Không")
     A("Tài khoản ChatGPT", "Đăng nhập ChatGPT bằng mã thiết bị trên trang admin (không popup)", "Chức năng", "Cao", ADMIN.replace("mở Admin > Hỗ trợ > Chatbot (/admin/support/chatbot).", "mở /admin/support/chatbot?tab=settings."),
       ["Ở thẻ 'Tài khoản ChatGPT của chatbot' bấm 'Đăng nhập tài khoản ChatGPT'", "Bấm Copy ở link và mã", "Mở link trên máy/trình duyệt khác, đăng nhập ChatGPT, nhập mã", "Quay lại trang admin, chờ vài giây"], "-",
@@ -122,4 +122,21 @@ def load(add):
     A("Tài khoản ChatGPT", "Đăng xuất / hủy mã đang chờ; chỉ Super Admin", "Bảo mật", "Cao", ADMIN + " Có thêm tài khoản support@sofinhub.test.",
       ["Bấm 'Đăng nhập…' rồi 'Hủy'", "Bấm 'Đăng xuất', xác nhận", "Đăng nhập support@, mở tab Cài đặt của Chatbot", "support@ gọi GET /api/admin/system/chatbot-account"], "-",
       "Hủy: link/mã biến mất. Đăng xuất: thẻ 'Chưa đăng nhập', dải đỏ cảnh báo, widget người dùng biến mất (API 503). support@ thấy 'Chỉ Super Admin…', API 403. Không lúc nào API trả access/refresh token.", pw="Một phần")
+
+    # ---------------------------------------------------------------- Bổ sung 14-15/10/2026 (thêm CUỐI để giữ mã TC)
+    A("Trả lời", "Hỏi chung 'có những khóa học nào' => hỏi lại chủ đề kèm nút gợi ý; bấm gợi ý => khóa học của chủ đề", "Chức năng", "Cao", BASE,
+      ["Hỏi 'bên mình có những khóa học nào'", "Bấm 1 nút gợi ý chủ đề"], "-",
+      "Bot KHÔNG liệt kê học phí, hỏi bạn quan tâm chủ đề nào + link 'Khám phá khóa học' (/explore); 2-4 nút gợi ý dưới tin; bấm => gửi luôn, bot giới thiệu khóa học của chủ đề kèm link; các nút biến mất.")
+    A("Widget", "Nhắn liên tục 3 tin khi Tào đang trả lời => 'chờ gửi', gộp thành 1 lượt, không mất tin", "Chức năng", "Cao", BASE,
+      ["Gửi 'alo tào ơi'", "Trong lúc bot đang trả lời gửi tiếp 'cho hỏi chút', 'tool grok làm được gì'"], "-",
+      "2 tin sau hiện ngay nhãn 'chờ gửi'; trả lời xong tin đầu thì gửi 1 lượt gồm 2 tin (mỗi tin 1 dòng) và nhận 1 câu trả lời (thẻ Tool Grok); đủ 3 tin của khách.")
+    A("Hạ tầng", "2 tab cùng gửi trên 1 hội thoại => tab sau báo 'đang trả lời tin trước' (409 CHATBOT_BUSY)", "Bảo mật", "Trung bình", BASE,
+      ["Gửi đồng thời 2 request POST /api/chatbot/conversations/<id>/messages cùng hội thoại"], "-", "1 request 200; request kia 409 CHATBOT_BUSY 'Tào đang trả lời tin trước…'; tin bị chặn không được lưu.", pw="Không")
+    A("Tải", "10 / 25 / 50 người hỏi cùng lúc (mô phỏng độ trễ Codex ~9s)", "Hiệu năng", "Cao", "Máy dev, DB đã seed. KHÔNG cần ChatGPT (model giả có độ trễ).",
+      ["cd backend", "CHATBOT_FAKE_MODEL=1 CHATBOT_FAKE_DELAY_MS=9000 npm run chatbot:load -- --users=10", "Lặp với --users=25, --users=50, và --users=50 --concurrency=6"], "-",
+      "Bảng kết quả: số được trả lời / báo 'đang bận' / lỗi khác (phải = 0), số phải xếp hàng, thời gian chờ p50/p95, song song cao nhất (≤ CHATBOT_MAX_CONCURRENCY). Đối chiếu bảng kết quả trong chatbot.md mục 9.", pw="Không")
+    A("Tải", "Đang đông: widget báo vị trí hàng đợi thay vì im lặng", "Giao diện", "Trung bình", BASE + " Backend CHATBOT_FAKE_MODEL=1 CHATBOT_FAKE_DELAY_MS=15000 CHATBOT_MAX_CONCURRENCY=1.",
+      ["Mở 3 tab (3 tài khoản khác nhau), hỏi cùng lúc"], "-", "Tab chờ hiện 'Bạn là người tiếp theo…' / 'Đang có 1 người hỏi trước bạn…' rồi chuyển thành câu trả lời; không tab nào lỗi.", pw="Không")
+    A("Tải", "Câu khớp câu mẫu vẫn trả lời ngay khi hàng đợi AI đầy", "Hiệu năng", "Trung bình", BASE + " Backend như case trên, đang có người chờ.",
+      ["Hỏi 'quên mật khẩu thì làm sao' ở tab thứ 4"], "-", "Trả lời ngay (< 1s) bằng câu mẫu, không phải xếp hàng.", pw="Không")
 

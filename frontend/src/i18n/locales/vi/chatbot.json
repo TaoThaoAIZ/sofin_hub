@@ -46,5 +46,8 @@
     "lesson": "bài học"
   },
   "quickReplies": "Gợi ý trả lời nhanh",
-  "queued": "chờ gửi — Tào trả lời xong tin trước sẽ trả lời luôn"
+  "queued": "chờ gửi — Tào trả lời xong tin trước sẽ trả lời luôn",
+  "queuePosition_zero": "Bạn là người tiếp theo, chờ chút nhé…",
+  "queuePosition_one": "Đang có {{count}} người hỏi trước bạn, chờ chút nhé…",
+  "queuePosition_other": "Đang có {{count}} người hỏi trước bạn, chờ chút nhé…"
 }

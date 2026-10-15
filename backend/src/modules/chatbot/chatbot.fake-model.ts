@@ -1,3 +1,4 @@
+import { env } from '../../config/env.js';
 import { normalizeText } from '../search/search.text.js';
 import type { CommunityContext } from '../community-bot/community-bot.context.js';
 import type { KnowledgeContext } from './chatbot.context.js';
@@ -15,7 +16,7 @@ import type { AnswerOutput } from './chatbot.prompt.js';
 let replyOverride: ((userText: string) => string) | null = null;
 let learnOverride: ((transcript: string) => unknown) | null = null;
 /** Độ trễ giả lập mỗi lượt trả lời (test khách gửi liên tục khi bot đang xử lý). */
-let answerDelayMs = 0;
+let answerDelayMs = env.CHATBOT_FAKE_DELAY_MS;
 export const fakeCalls: { kind: 'answer' | 'learn'; input: string }[] = [];
 
 export function setFakeReply(fn: ((userText: string) => string) | null) {
@@ -28,7 +29,7 @@ export function setFakeDelay(ms: number) {
   answerDelayMs = ms;
 }
 export function resetFake() {
-  answerDelayMs = 0;
+  answerDelayMs = env.CHATBOT_FAKE_DELAY_MS;
   replyOverride = null;
   learnOverride = null;
   fakeCalls.length = 0;

@@ -244,3 +244,58 @@ Làm đủ 7 bước của mục 5.
 - Chưa có bộ đo chất lượng riêng cho bot cộng đồng với model thật; mới thử tay 4 câu.
 - Các rủi ro ở mục 7 vẫn còn nguyên: hạn mức ChatGPT dùng chung, gói Pro đang là mô phỏng, quyền riêng tư, chưa đọc được video/file.
 
+## 9. Nhiều người dùng cùng lúc + tuân thủ chính sách ChatGPT (2026-10-15)
+
+### Hành vi khi đông người
+- Mỗi máy chủ chạy tối đa `CHATBOT_MAX_CONCURRENCY` (mặc định **3**) lượt gọi ChatGPT cùng lúc. Con số này dùng **chung** cho bot Tào, mọi bot cộng đồng và job học.
+- Lượt vượt quá sẽ **xếp hàng** (thứ tự đến trước, đi trước). Widget báo "Bạn là người tiếp theo…" / "Đang có N người hỏi trước bạn, chờ chút nhé…".
+- Chờ quá 60 giây (`CHATBOT_QUEUE_WAIT_MS`) thì nhận câu "nhiều người hỏi cùng lúc". Không có lỗi 5xx và không mất tin.
+- Câu khớp câu mẫu **không** xếp hàng: trả lời ngay kể cả khi hàng đợi đầy.
+- Giới hạn chung vẫn giữ: 12 tin/phút/người, số tin/ngày theo bot / mức thành viên, khóa theo hội thoại.
+
+### Kết quả đo
+
+Dùng model giả có độ trễ 9 giây/câu (sát Codex thật), chạy bằng `npm run chatbot:load`:
+
+| Cấu hình | 10 người | 25 người | 50 người |
+|---|---|---|---|
+| 3 song song (mặc định) | 10/10 được trả lời; chờ p50 18s, lâu nhất 36s | 21 trả lời, 4 "đang bận"; p50 36s, lâu nhất 64s | 21 trả lời, 29 "đang bận" |
+| 6 song song | — | — | 42 trả lời, 8 "đang bận" |
+| 10 song song | — | — | 50/50 trả lời; p50 28s, lâu nhất 46s |
+
+Bot cộng đồng, 25 người, 3 song song: 21 trả lời, 4 "đang bận" (giống Tào vì dùng chung hàng đợi). Mọi lần chạy: 0 lỗi khác; số lượt song song không lần nào vượt giới hạn.
+
+**Kết luận:**
+- Cấu hình hiện tại phục vụ tốt khoảng **≤ 20 người hỏi cùng một lúc**. Đây là số người gửi trong cùng vài giây, không phải số người đang online.
+- Muốn phục vụ 50 người cùng lúc cần khoảng 10 lượt song song. **Không nên** làm việc đó trên tài khoản ChatGPT cá nhân (xem bên dưới) → khi cần quy mô này thì chuyển sang API key / gói doanh nghiệp.
+
+### Tuân thủ chính sách ChatGPT
+
+Bot chạy bằng **một** tài khoản ChatGPT dùng chung cho mọi khách và mọi cộng đồng. Tài khoản bị gắn cờ hoặc khóa thì mọi bot cùng ngừng.
+
+1. **Lọc nội dung bị cấm ngay tại server** (`chatbot.moderation.ts`), **không gửi sang ChatGPT**:
+   - Các nhóm bị chặn: tự hại, tình dục liên quan trẻ vị thành niên, nội dung tình dục, chế tạo vũ khí / chất nổ, ma túy, mã độc / hack tài khoản / lừa đảo, đe dọa bạo lực, jailbreak trắng trợn.
+   - Trả lời tại chỗ theo xưng hô của nhân cách.
+   - Riêng tự hại: trả lời quan tâm, khuyên liên hệ người thân / cấp cứu **115**.
+   - Đã kiểm để không chặn nhầm câu thường như "chậm muốn chết luôn", "bom tấn điện ảnh", "khóa học cho học sinh".
+2. **Che thông tin cá nhân** (SĐT, email, dãy số dài) trong nội dung gửi sang ChatGPT. Tin gốc vẫn lưu DB và được đánh dấu `redacted`.
+3. **Không lách giới hạn:**
+   - Không xoay vòng nhiều tài khoản, không thử lại dồn dập.
+   - Hết hạn mức thì tự tạm dừng 5 phút.
+   - Số lượt song song giữ ≤ 3; đặt cao hơn thì backend ghi cảnh báo.
+   - Mỗi người dùng có giới hạn tin/phút và tin/ngày.
+4. **Rủi ro còn lại (OPEN_DECISIONS A18):** dùng đăng nhập ChatGPT cá nhân để chạy dịch vụ công khai vốn đã có rủi ro điều khoản. Khuyến nghị chuyển sang **OpenAI API key** trước khi mở rộng cho nhiều cộng đồng hoặc đông người dùng. Code chỉ cần thay lớp `chatbot.llm.ts`, phần còn lại giữ nguyên.
+
+### Test
+- `tests/chatbot-load.test.ts` (5 test):
+  - 50 người cùng lúc: tất cả được trả lời, không vượt giới hạn song song, mỗi hội thoại đúng 1 hỏi + 1 đáp.
+  - Quá tải: người đến sau nhận "đang bận", không có 5xx.
+  - SSE báo vị trí hàng đợi.
+  - Câu mẫu không bị kẹt hàng.
+  - Bot cộng đồng + Tào dùng chung hàng đợi, số tin/ngày đếm đúng khi gửi đồng thời.
+- Test chính sách:
+  - `chatbot.test.ts`: tin bị cấm không tới model; câu cường điệu không bị chặn nhầm; prompt đã che SĐT/email.
+  - `community-bot.test.ts`: từ chối theo xưng hô của nhân cách.
+- Kết quả: test backend **665/665**, E2E **12/12**, lint 0 lỗi.
+- Test case QA: sinh lại `SofinHub_TestCases.xlsx`. Module BOT có 42 case (thêm hỏi lại chủ đề, nhắn liên tục, 2 tab, tải 10/25/50, vị trí hàng đợi, câu mẫu khi đông). Module mới **CBOT** có 21 case.
+

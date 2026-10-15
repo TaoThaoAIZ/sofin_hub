@@ -1,4 +1,5 @@
 import { nowContext, renderPersona } from '../chatbot/chatbot.persona.js';
+import { redactPii } from '../chatbot/chatbot.pii.js';
 import type { BotAccess } from './community-bot.access.js';
 import type { CommunityContext } from './community-bot.context.js';
 
@@ -52,7 +53,8 @@ export function buildCommunityPrompt(
       block('my_subscription', c.mySubscription ?? 'Không kèm (câu hỏi không nhắc tới thanh toán/gói).'),
     ].join('\n')}\n</context>`,
   );
-  if (input.history.length) parts.push(block('history', input.history.map((m) => `${m.role === 'user' ? 'Thành viên' : a.bot.botName}: ${clean(m.content)}`).join('\n')));
-  parts.push(block('customer_message', clean(input.message)));
+  if (input.history.length) parts.push(block('history', input.history.map((m) => `${m.role === 'user' ? 'Thành viên' : a.bot.botName}: ${clean(redactPii(m.content).text)}`).join('\n')));
+  // Che SĐT/email/dãy số dài trước khi gửi sang ChatGPT (tin gốc vẫn lưu DB, đánh dấu redacted).
+  parts.push(block('customer_message', clean(redactPii(input.message).text)));
   return parts.join('\n\n');
 }

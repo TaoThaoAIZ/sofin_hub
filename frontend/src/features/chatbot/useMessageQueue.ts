@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 export interface StreamHandlers {
   onDelta: (text: string) => void;
   onReplace: (text: string) => void;
+  /** Đang xếp hàng chờ lượt trả lời (nhiều người hỏi cùng lúc): ahead = số người đứng trước. */
+  onQueued?: (ahead: number) => void;
 }
 
 /** Gửi 1 lượt (các tin gộp `parts`, nối bằng xuống dòng = `text`) lên server; ném lỗi nếu thất bại. */
@@ -18,7 +20,7 @@ export function useMessageQueue(maxChars: number, deliver: Deliver, onError: (er
   const busyRef = useRef(false);
   const queueRef = useRef<string[]>([]);
   const [queued, setQueued] = useState<string[]>([]);
-  const [pending, setPending] = useState<{ user: string; reply: string } | null>(null);
+  const [pending, setPending] = useState<{ user: string; reply: string; ahead?: number } | null>(null);
   // Vòng drain chạy qua nhiều lần render: luôn gọi bản deliver/onError mới nhất.
   const deliverRef = useRef(deliver);
   const onErrorRef = useRef(onError);
@@ -51,6 +53,7 @@ export function useMessageQueue(maxChars: number, deliver: Deliver, onError: (er
           await deliverRef.current(text, parts, {
             onDelta: (d) => setPending((p) => (p ? { ...p, reply: p.reply + d } : p)),
             onReplace: (r) => setPending((p) => (p ? { ...p, reply: r } : p)),
+            onQueued: (ahead) => setPending((p) => (p ? { ...p, ahead } : p)),
           });
         } catch (err) {
           const unsent = [...parts, ...queueRef.current];

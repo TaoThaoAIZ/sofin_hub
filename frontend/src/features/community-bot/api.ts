@@ -26,6 +26,7 @@ export async function sendBotMessage(id: string, conversationId: string, text: s
   await apiPostStream(`${B(id)}/conversations/${conversationId}/messages`, { text }, (event, data) => {
     if (event === 'delta') h.onDelta((data as { text: string }).text);
     else if (event === 'replace') h.onReplace((data as { text: string }).text);
+    else if (event === 'queued') h.onQueued?.((data as { ahead: number }).ahead);
     else if (event === 'done') done = data as BotDoneData;
     else if (event === 'error') failure = (data as { message?: string }).message ?? 'error';
   });

@@ -243,7 +243,7 @@ function ChatSession({
             {pending.user.split('\n').map((line, i) => (
               <MessageBubble key={`p-user-${i}`} m={{ id: `p-user-${i}`, role: 'user', content: line, answerSource: null, feedback: 0, createdAt: '' }} />
             ))}
-            <MessageBubble m={{ id: 'p-bot', role: 'assistant', content: pending.reply || t('typing'), answerSource: null, feedback: 0, createdAt: '' }} streaming />
+            <MessageBubble m={{ id: 'p-bot', role: 'assistant', content: pending.reply || (pending.ahead !== undefined ? t('queuePosition', { count: pending.ahead }) : t('typing')), answerSource: null, feedback: 0, createdAt: '' }} streaming />
           </>
         )}
         {queued.map((q, i) => (

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { ChatbotSettings } from './chatbot.config.js';
 import type { KnowledgeContext } from './chatbot.context.js';
 import { nowContext } from './chatbot.persona.js';
+import { redactPii } from './chatbot.pii.js';
 
 /**
  * Prompt cho Codex (một lượt, trả JSON). Phần LUẬT CỨNG (chuyển thể từ bot-cskh/app/persona/SYSTEM_RULES.md) admin không sửa được;
@@ -75,8 +76,9 @@ export function buildAnswerPrompt(
       block('platform_facts', c.platformFacts),
     ].join('\n')}\n</context>`,
   );
-  if (input.history.length) parts.push(block('history', input.history.map((m) => `${m.role === 'user' ? 'Khách' : 'Tào'}: ${clean(m.content)}`).join('\n')));
-  parts.push(block('customer_message', clean(input.message)));
+  if (input.history.length) parts.push(block('history', input.history.map((m) => `${m.role === 'user' ? 'Khách' : 'Tào'}: ${clean(redactPii(m.content).text)}`).join('\n')));
+  // Che SĐT/email/dãy số dài trước khi gửi sang ChatGPT (tin gốc vẫn lưu DB, đánh dấu redacted).
+  parts.push(block('customer_message', clean(redactPii(input.message).text)));
   return parts.join('\n\n');
 }
 

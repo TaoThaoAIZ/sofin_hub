@@ -8,10 +8,8 @@ export const fetchCurrentConversation = (signal?: AbortSignal) =>
 
 export const startConversation = () => apiPost<{ data: ConversationState }>('/chatbot/conversations').then((r) => r.data);
 
-export interface StreamHandlers {
-  onDelta: (text: string) => void;
-  onReplace: (text: string) => void;
-}
+export type { StreamHandlers } from './useMessageQueue';
+import type { StreamHandlers } from './useMessageQueue';
 
 /** Gửi tin và nhận trả lời dạng stream. Resolve với tin đã lưu (sự kiện `done`); sự kiện `error` => ném lỗi. */
 export async function sendChatMessage(conversationId: string, text: string, h: StreamHandlers): Promise<DoneData> {
@@ -20,6 +18,7 @@ export async function sendChatMessage(conversationId: string, text: string, h: S
   await apiPostStream(`/chatbot/conversations/${conversationId}/messages`, { text }, (event, data) => {
     if (event === 'delta') h.onDelta((data as { text: string }).text);
     else if (event === 'replace') h.onReplace((data as { text: string }).text);
+    else if (event === 'queued') h.onQueued?.((data as { ahead: number }).ahead);
     else if (event === 'done') done = data as DoneData;
     else if (event === 'error') failure = (data as { message?: string }).message ?? 'error';
   });

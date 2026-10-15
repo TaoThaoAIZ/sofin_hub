@@ -7,6 +7,7 @@ import { TOOLS } from '../tools/tools.catalog.js';
 import { chatbotAvailable, chatbotSettings, type ChatbotSettings } from './chatbot.config.js';
 import { conversationRepository } from './chatbot.conversations.js';
 import { checkOutput, type OutputViolation } from './chatbot.guardrails.js';
+import { moderate, moderationReply } from './chatbot.moderation.js';
 import { containsPii } from './chatbot.pii.js';
 import { chatbotRepository } from './chatbot.repository.js';
 import { env } from '../../config/env.js';
@@ -26,6 +27,8 @@ import { answerSchema, buildAnswerPrompt } from './chatbot.prompt.js';
 export type ChatEvent =
   | { event: 'delta'; data: { text: string } }
   | { event: 'replace'; data: { text: string } }
+  /** Đang xếp hàng chờ lượt gọi AI (nhiều người hỏi cùng lúc): ahead = số lượt đứng trước. */
+  | { event: 'queued'; data: { ahead: number } }
   | { event: 'done'; data: DoneData };
 
 export interface DoneData {
@@ -157,6 +160,15 @@ async function answerTurn(userId: string, conv: OwnedConversation, text: string,
     return done;
   };
 
+  // Nội dung bị cấm (chính sách ChatGPT): từ chối tại chỗ, KHÔNG gửi sang ChatGPT (chatbot.moderation.ts).
+  const mod = moderate(text);
+  if (mod.blocked && mod.category) {
+    // Jailbreak => câu từ chối chuẩn của bot (giống luật injection); loại khác => câu riêng (tự hại: hướng tới trợ giúp).
+    const reply = mod.category === 'jailbreak' ? s.refusalText : moderationReply(mod.category, 'Tào', 'bạn');
+    emit({ event: 'delta', data: { text: reply } });
+    return finish(reply, 'refusal', { toolCalls: [{ name: 'moderation', category: mod.category }] });
+  }
+
   // B2: khớp trực tiếp câu hỏi mẫu.
   const [top] = await chatbotRepository.matchQa(text, { limit: 1, order: 'similarity' });
   if (top && top.similarity >= s.directThreshold) {
@@ -171,7 +183,7 @@ async function answerTurn(userId: string, conv: OwnedConversation, text: string,
   try {
     const context = await gatherContext(ctx, text, history.filter((m) => m.role === 'user').map((m) => m.content));
     const prompt = buildAnswerPrompt(s, { firstName: viewer.firstName, history, message: text, context });
-    const { output, usage } = await chatLlm().complete({ kind: 'answer', prompt, schema: answerSchema, hint: { message: text, context }, model: s.model || undefined });
+    const { output, usage } = await chatLlm().complete({ kind: 'answer', prompt, schema: answerSchema, hint: { message: text, context }, model: s.model || undefined, onQueued: (ahead) => emit({ event: 'queued', data: { ahead } }) });
     const toolCalls = contextTrace(context, output.toolIds, prompt);
     const matchedQaId = context.sampleAnswers.some((q) => q.id === output.usedSampleId) ? output.usedSampleId : null;
 

@@ -19,5 +19,8 @@
   "openMessages": "Open Messages",
   "notifiedOwner": "The owner has turned off direct messages; a notification was sent instead.",
   "placeholder": "Ask a question…",
-  "send": "Send"
+  "send": "Send",
+  "queuePosition_zero": "You're next, one moment…",
+  "queuePosition_one": "{{count}} people ahead of you, one moment…",
+  "queuePosition_other": "{{count}} people ahead of you, one moment…"
 }

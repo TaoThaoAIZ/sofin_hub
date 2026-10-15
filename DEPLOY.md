@@ -56,7 +56,8 @@ Dữ liệu nghiệp vụ (tài khoản, khóa học, ghi danh, phiên đăng nh
    | `RUN_MIGRATIONS` | Tùy chọn | `1` = container tự chạy `prisma migrate deploy` trước khi start (xem 1.3). |
    | `CHATBOT_CODEX_HOME` | Nên | Thư mục CODEX_HOME riêng của chatbot (mặc định `data/codex-home`; trên server nên trỏ vào **ổ đĩa bền** vì chứa token đăng nhập ChatGPT). Đăng nhập 1 lần: Admin > Hỗ trợ > Chatbot > Cài đặt > "Tài khoản ChatGPT của chatbot" (Super Admin, copy link + mã), hoặc `npm run chatbot:codex-login` trong container. Chưa đăng nhập → chatbot tắt (`/api/chatbot/*` trả 503), app vẫn chạy. |
    | `CHATBOT_TRACE_CONTEXT` | **PHẢI ĐỂ TRỐNG khi production** | `1` = lưu nguyên văn prompt gửi model (chỉ cho bộ regression QA). Bật khi production → app **từ chối khởi động**. |
-   | `CHATBOT_MAX_CONCURRENCY` / `CHATBOT_TIMEOUT_MS` | Không | `3` / `90000`: số tiến trình `codex` chạy song song và thời gian tối đa mỗi lượt. Hạn mức dùng của tài khoản ChatGPT là giới hạn thật. |
+   | `CHATBOT_MAX_CONCURRENCY` / `CHATBOT_TIMEOUT_MS` | Không | `3` / `90000`: số tiến trình `codex` chạy song song (chung cho bot Tào + mọi bot cộng đồng) và thời gian tối đa mỗi lượt. **Giữ ≤ 3 với tài khoản ChatGPT cá nhân** (quá => log cảnh báo): tải tự động cao dễ chạm hạn mức và có rủi ro vi phạm điều khoản / bị khóa tài khoản. Cần phục vụ đông người => chuyển sang API key. |
+   | `CHATBOT_QUEUE_WAIT_MS` | Không | `60000`: thời gian tối đa 1 lượt chờ trong hàng (widget hiện "Đang có N người hỏi trước bạn"); quá => câu "nhiều người hỏi cùng lúc". |
    | `CHATBOT_FAKE_MODEL` | **PHẢI ĐỂ TRỐNG khi production** | `1` = chatbot dùng model giả (dev/test/E2E). Bật khi production → app **từ chối khởi động**. |
    | `ENABLE_DEV_OUTBOX` | **PHẢI ĐỂ TRỐNG khi production** | Mở `GET /api/dev/outbox` (không cần đăng nhập, lộ nguyên văn mọi email gồm link đặt lại mật khẩu). Bật khi production → app **từ chối khởi động**. Chỉ dùng ở máy dev (`backend/.env`) và test. |
 

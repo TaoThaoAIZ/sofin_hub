@@ -31,6 +31,7 @@
     "chatbot:import-kb": "cross-env NODE_ENV=development tsx prisma/import-chatbot-kb.ts",
     "chatbot:import-candidates": "cross-env NODE_ENV=development tsx prisma/import-chatbot-candidates.ts",
     "chatbot:codex-login": "cross-env NODE_ENV=development tsx prisma/chatbot-codex-login.ts",
+    "chatbot:load": "cross-env NODE_ENV=development tsx prisma/chatbot-load.ts",
     "chatbot:eval": "cross-env NODE_ENV=development tsx prisma/chatbot-eval.ts",
     "chatbot:qa-fixture": "cross-env NODE_ENV=development tsx prisma/chatbot-qa-fixture.ts"
   },

@@ -117,8 +117,12 @@ const schema = z.object({
     .transform((v) => resolve(v)),
   /** Đường dẫn tới file thực thi codex (bỏ trống = bản đi kèm @openai/codex-sdk). */
   CHATBOT_CODEX_PATH: z.string().optional().transform((v) => v?.trim() || undefined),
-  /** Số lượt Codex chạy song song tối đa (mỗi lượt là 1 tiến trình); chờ quá 20s => 503 bận. */
+  /** Số lượt gọi AI chạy song song tối đa trong 1 tiến trình (mỗi lượt Codex là 1 tiến trình con ~8-12s); vượt thì xếp hàng. */
   CHATBOT_MAX_CONCURRENCY: z.coerce.number().int().min(1).max(20).default(3),
+  /** Thời gian tối đa 1 lượt chờ trong hàng (ms); quá => khách nhận câu "nhiều người hỏi cùng lúc". Widget hiện vị trí hàng đợi. */
+  CHATBOT_QUEUE_WAIT_MS: z.coerce.number().int().min(1_000).max(300_000).default(60_000),
+  /** CHỈ dev/test: độ trễ giả lập mỗi lượt của model giả (ms) — script đo tải mô phỏng độ trễ thật của Codex. */
+  CHATBOT_FAKE_DELAY_MS: z.coerce.number().int().min(0).max(60_000).default(0),
   /** Thời gian tối đa một lượt trả lời (ms). */
   CHATBOT_TIMEOUT_MS: z.coerce.number().int().min(5_000).max(300_000).default(90_000),
   /** =1: lưu nguyên văn prompt gửi model vào ChatbotMessage.toolCalls (`_trace`) để bộ regression dò canary. CHỈ dev/test. */

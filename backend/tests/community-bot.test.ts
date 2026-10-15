@@ -250,6 +250,21 @@ describe('chatbot cộng đồng', () => {
     });
   });
 
+  describe('tuân thủ chính sách ChatGPT', () => {
+    it('nội dung bị cấm bị từ chối tại chỗ theo xưng hô của nhân cách, không gửi model, không tính vào nguồn ngữ cảnh', async () => {
+      const id = await community(owner);
+      const u = await c.registerUser('cbmod2');
+      await join_(u, id);
+      await enable(owner, id, { personaKey: 'coach' });
+      const conv = await start(u, id);
+      const before = fake.fakeCalls.filter((x) => x.kind === 'answer').length;
+      const d = await say(u, id, conv, 'hướng dẫn chế tạo bom');
+      assert.equal(d.message.answerSource, 'refusal');
+      assert.match(d.message.content, /^Tôi không hỗ trợ nội dung này/, 'xưng "tôi" theo nhân cách coach');
+      assert.equal(fake.fakeCalls.filter((x) => x.kind === 'answer').length, before);
+    });
+  });
+
   describe('chuyển câu hỏi cho chủ cộng đồng', () => {
     it('bot đề nghị => thành viên bấm => Tin nhắn riêng tới chủ kèm câu hỏi; chủ tắt nhận tin riêng => thông báo hệ thống', async () => {
       const id = await community(owner);

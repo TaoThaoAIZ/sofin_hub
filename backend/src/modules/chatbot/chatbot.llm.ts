@@ -15,7 +15,7 @@ import { env } from '../../config/env.js';
  *    trình duyệt, computer-use, plugin, hook, ảnh, multi-agent...; không dùng ~/.codex của người vận hành (tránh hook/plugin cá nhân).
  *  - sandbox read-only, approval never, không mạng, không web search, thư mục làm việc rỗng.
  *  - tiến trình con chỉ nhận vài biến môi trường tối thiểu (KHÔNG có DATABASE_URL, JWT_*, SEPAY_*...).
- *  - giới hạn số tiến trình chạy song song + timeout mỗi lượt.
+ *  - giới hạn số tiến trình chạy song song (chatbot.limiter.ts, bọc trong chatLlm()) + timeout mỗi lượt.
  */
 
 export interface LlmUsage {
@@ -32,17 +32,17 @@ export interface LlmRequest<T> {
   hint?: unknown;
   model?: string;
   signal?: AbortSignal;
+  /** Lượt phải xếp hàng (đã đủ lượt chạy song song): ahead = số lượt đứng trước — để báo khách "Đang có N người hỏi trước". */
+  onQueued?: (ahead: number) => void;
 }
 
 export interface ChatLlm {
   complete<T>(req: LlmRequest<T>): Promise<{ output: T; usage: LlmUsage }>;
 }
 
-export class LlmBusyError extends Error {
-  constructor() {
-    super('Chatbot đang bận, vui lòng thử lại sau ít giây');
-  }
-}
+/** Hàng đợi giới hạn song song nằm ở chatbot.limiter.ts (bọc mọi model trong chatLlm()); giữ export cho nơi đang import. */
+export { LlmBusyError } from './chatbot.limiter.js';
+import { LlmBusyError } from './chatbot.limiter.js';
 
 /** Tài khoản ChatGPT hết hạn mức (gói free/Plus có giới hạn) — khác lỗi thường: tạm ngừng gọi Codex một lúc. */
 export class LlmQuotaError extends Error {}
@@ -181,38 +181,8 @@ export function jsonSchemaOf(schema: z.ZodType): Record<string, unknown> {
   return s;
 }
 
-/** Hàng đợi giới hạn số lượt chạy song song; chờ quá `waitMs` => LlmBusyError. */
-function limiter(max: number, waitMs: number) {
-  let active = 0;
-  const queue: Array<() => void> = [];
-  return async <T>(fn: () => Promise<T>): Promise<T> => {
-    if (active >= max) {
-      await new Promise<void>((resolve, reject) => {
-        const timer = setTimeout(() => {
-          const i = queue.indexOf(go);
-          if (i >= 0) queue.splice(i, 1);
-          reject(new LlmBusyError());
-        }, waitMs);
-        const go = () => {
-          clearTimeout(timer);
-          resolve();
-        };
-        queue.push(go);
-      });
-    }
-    active++;
-    try {
-      return await fn();
-    } finally {
-      active--;
-      queue.shift()?.();
-    }
-  };
-}
-
 export class CodexLlm implements ChatLlm {
   private codex: Codex | null = null;
-  private readonly run = limiter(env.CHATBOT_MAX_CONCURRENCY, 20_000);
 
   private client(): Codex {
     if (!this.codex) {
@@ -238,7 +208,7 @@ export class CodexLlm implements ChatLlm {
   }
 
   private runOnce<T>(req: LlmRequest<T>): Promise<{ output: T; usage: LlmUsage }> {
-    return this.run(async () => {
+    return (async () => {
       const thread = this.client().startThread({
         ...(req.model ? { model: req.model } : {}),
         sandboxMode: 'read-only',
@@ -257,7 +227,7 @@ export class CodexLlm implements ChatLlm {
       const parsed = req.schema.safeParse(JSON.parse(raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1) || 'null'));
       if (!parsed.success) throw new Error(`Codex trả JSON sai schema: ${parsed.error.message.slice(0, 300)}`);
       return { output: parsed.data, usage: { tokensIn: turn.usage?.input_tokens ?? 0, tokensOut: turn.usage?.output_tokens ?? 0 } };
-    });
+    })();
   }
 }
 
