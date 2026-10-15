@@ -42,7 +42,8 @@
     "register": "Sign up",
     "login": "Log in",
     "fallback": "this page",
-    "explore": "Explore courses"
+    "explore": "Explore courses",
+    "lesson": "lesson"
   },
   "quickReplies": "Quick replies",
   "queued": "queued — Tào will answer right after the current reply"

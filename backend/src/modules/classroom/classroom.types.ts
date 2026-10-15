@@ -55,6 +55,15 @@ export interface ClassroomModule {
 
 export type LockReason = 'previous_module' | 'level' | 'paid' | 'selected' | null;
 
+/** Quyền đọc 1 bài học của 1 người (classroomService.lessonAccess — chatbot cộng đồng). 'sequential' = học tuần tự, chưa xong bài trước. */
+export interface LessonAccess {
+  open: boolean;
+  reason?: Exclude<LockReason, null> | 'sequential';
+  moduleTitle: string;
+  requiredLevel?: number;
+  priceCents?: number;
+}
+
 export interface ClassroomModuleView {
   id: string;
   learningCourseId: string;

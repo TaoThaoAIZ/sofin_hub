@@ -452,6 +452,7 @@ model User {
   ticketsAssigned      SupportTicket[]          @relation("TicketAssignee")
   adminAccount         AdminAccount?            @relation("AdminAccountUser")
   chatbotConversations ChatbotConversation[]
+  botPersonaPrefs      CommunityBotMemberPref[]
   /// Cột GENERATED ALWAYS (họ tên đã gập dấu).
   searchVector         Unsupported("tsvector")?
 
@@ -631,6 +632,12 @@ model Community {
   ownerLedger       OwnerBalanceLedger[]
   hostingPlan       HostingPlan?
   payoutAccount     PayoutAccount?
+  /// Chatbot riêng của cộng đồng (chatbot.md): cấu hình + kho Q&A/tài liệu/hội thoại có communityId.
+  bot               CommunityBot?
+  botMemberPrefs    CommunityBotMemberPref[]
+  chatbotQas        ChatbotQA[]
+  chatbotDocuments  ChatbotDocument[]
+  chatbotConvs      ChatbotConversation[]
   /// Cột GENERATED ALWAYS (title A + description B, đã gập dấu).
   searchVector      Unsupported("tsvector")?
 
@@ -870,6 +877,9 @@ model CommunityEvent {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
+  /// Cột GENERATED ALWAYS (title A + description B đã gập dấu) — chatbot cộng đồng tìm sự kiện.
+  searchVector Unsupported("tsvector")?
+
   community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
   host      User      @relation(fields: [hostId], references: [id], onDelete: Cascade)
 
@@ -878,6 +888,7 @@ model CommunityEvent {
   @@index([communityId, startAt])
   @@index([startAt])
   @@index([hostId])
+  @@index([searchVector], type: Gin)
 }
 
 model EventRsvp {
@@ -1017,12 +1028,16 @@ model ClassroomLesson {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
+  /// Cột GENERATED ALWAYS (title A + body B đã gập dấu) — chatbot cộng đồng tìm bài học.
+  searchVector Unsupported("tsvector")?
+
   module    ClassroomModule  @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   community Community        @relation(fields: [communityId], references: [id], onDelete: Cascade)
   progress  LessonProgress[]
 
   @@index([moduleId, index])
   @@index([communityId])
+  @@index([searchVector], type: Gin)
 }
 
 /// Quyền mở 1 module cho 1 user (accessMode = selected | paid).
@@ -1956,6 +1971,8 @@ model ChatbotQA {
   sourceConversationId String?
   /// Tài liệu mà câu trả lời dựa vào; tài liệu đổi nội dung => status=stale.
   documentId           String?
+  /// null = bot hỗ trợ nền tảng "Tào"; có giá trị = kho riêng của bot cộng đồng đó.
+  communityId          String?                  @map("courseId")
   createdById          String?
   reviewedById         String?
   reviewedAt           DateTime?
@@ -1964,8 +1981,10 @@ model ChatbotQA {
   /// Cột GENERATED ALWAYS (question + variants + answer đã gập dấu).
   searchVector         Unsupported("tsvector")?
 
-  document ChatbotDocument? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  document  ChatbotDocument? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  community Community?       @relation(fields: [communityId], references: [id], onDelete: Cascade)
 
+  @@index([communityId, status])
   @@index([status, updatedAt])
   @@index([documentId])
   @@index([searchVector], type: Gin)
@@ -1981,11 +2000,16 @@ model ChatbotDocument {
   /// sha256 của contentMd: nạp lại cùng nội dung thì bỏ qua.
   contentHash String
   updatedById String?
+  /// null = bot "Tào"; có giá trị = tài liệu riêng của bot cộng đồng (slug có tiền tố c-<communityId>-).
+  communityId String?          @map("courseId")
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 
-  chunks ChatbotDocChunk[]
-  qas    ChatbotQA[]
+  chunks    ChatbotDocChunk[]
+  qas       ChatbotQA[]
+  community Community?        @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@index([communityId, status])
 }
 
 model ChatbotDocChunk {
@@ -2015,11 +2039,15 @@ model ChatbotConversation {
   lastMessageAt DateTime                  @default(now())
   tokensIn      Int                       @default(0)
   tokensOut     Int                       @default(0)
+  /// null = hội thoại với bot "Tào"; có giá trị = với bot của cộng đồng đó.
+  communityId   String?                   @map("courseId")
   createdAt     DateTime                  @default(now())
 
-  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  messages ChatbotMessage[]
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  community Community?       @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  messages  ChatbotMessage[]
 
+  @@index([communityId, userId, lastMessageAt])
   @@index([userId, lastMessageAt])
   @@index([learnedAt, lastMessageAt])
   @@index([status, lastMessageAt])
@@ -2044,4 +2072,39 @@ model ChatbotMessage {
   conversation ChatbotConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@index([conversationId, createdAt])
+}
+
+/// Cấu hình chatbot riêng của 1 cộng đồng (chatbot.md). Chỉ bật được khi chủ ở gói Pro (HostingPlan pro trialing|active).
+model CommunityBot {
+  communityId       String   @id @map("courseId")
+  enabled           Boolean  @default(false)
+  botName           String   @default("Trợ lý")
+  welcomeText       String   @default("")
+  /// Nhân cách mặc định: khóa mẫu (chatbot.persona.ts PERSONA_PRESETS) hoặc 'custom' (dùng customPersona).
+  personaKey        String   @default("mentor")
+  customPersona     Json?
+  /// Nhân cách thành viên VIP được tự chọn (khóa mẫu và/hoặc 'custom').
+  memberPersonaKeys String[] @default([])
+  extraInstructions String   @default("")
+  freeDailyMessages Int      @default(10)
+  vipDailyMessages  Int      @default(100)
+  updatedById       String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+}
+
+/// Nhân cách thành viên VIP tự chọn cho bot của cộng đồng (hết VIP => bỏ qua, dùng mặc định).
+model CommunityBotMemberPref {
+  communityId String   @map("courseId")
+  userId      String
+  personaKey  String
+  updatedAt   DateTime @updatedAt
+
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([communityId, userId])
+  @@index([userId])
 }

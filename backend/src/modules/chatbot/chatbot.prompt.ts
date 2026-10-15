@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { ChatbotSettings } from './chatbot.config.js';
 import type { KnowledgeContext } from './chatbot.context.js';
+import { nowContext } from './chatbot.persona.js';
 
 /**
  * Prompt cho Codex (một lượt, trả JSON). Phần LUẬT CỨNG (chuyển thể từ bot-cskh/app/persona/SYSTEM_RULES.md) admin không sửa được;
@@ -46,7 +47,9 @@ Cách trả lời:
 - Nếu một mục trong <sample_answers> trả lời đúng câu hỏi, dùng nội dung đó (có thể viết gọn lại) và đặt usedSampleId.
 - Lỗi khi dùng tool / Ngân Lượng: dựa vào <documents>. Hỏi về tool: dựa vào <tools> và đặt toolIds.
 - Hỏi tìm cộng đồng/khóa học: dùng <communities> và đưa đường dẫn link của chúng; <communities> rỗng mà có <categories> thì hỏi lại chủ đề (xem nguyên tắc 5).
-- HỎI LẠI khi chưa đủ thông tin để trả lời đúng (khách hỏi tool nào, đơn nào, chủ đề nào...): reply là MỘT câu hỏi ngắn và suggestions là 2-4 lựa chọn lấy từ <context> (tên chủ đề, tên tool...). Không hỏi lại thì suggestions = [].
+- ĐOÁN TRƯỚC, HỎI SAU: hiểu câu hỏi theo cách hợp lý nhất từ <history> và <context> rồi trả lời luôn (vd hướng dẫn chung áp dụng cho mọi tool thì trả lời phần chung trước). Tự hiểu "cái đó", "nó", "đơn kia"... từ <history>, không hỏi lại điều khách vừa nói.
+- CHỈ HỎI LẠI khi thật sự không đoán được mà đoán sai sẽ trả lời sai (khách hỏi giá/lỗi của tool nào, đơn nào, chủ đề khóa học nào...): reply là MỘT câu hỏi ngắn và suggestions là 2-4 lựa chọn lấy từ <context> (tên chủ đề, tên tool...). Không hỏi lại thì suggestions = [].
+- Thời gian: dùng ngày giờ cụ thể (vd "20:00 thứ Năm 16/10"), không nói mơ hồ "lát nữa", "sắp tới"; tính "mai", "tuần sau" theo dòng [Bây giờ là ...] ở đầu.
 - Đường dẫn trong site viết dạng tương đối (vd /tools, /settings/thanh-toan).
 - Trả lời bằng ngôn ngữ khách dùng (mặc định tiếng Việt). Chỉ trả về JSON đúng schema.`;
 
@@ -57,7 +60,7 @@ export function buildAnswerPrompt(
   s: ChatbotSettings,
   input: { firstName?: string | null; history: { role: 'user' | 'assistant'; content: string }[]; message: string; context: KnowledgeContext },
 ): string {
-  const parts = [RULES, `Giọng nói:\n${s.persona}`];
+  const parts = [nowContext(), RULES, `Giọng nói:\n${s.persona}`];
   if (s.extraInstructions) parts.push(`Hướng dẫn bổ sung của quản trị viên (không được trái với các nguyên tắc ở trên):\n${s.extraInstructions}`);
   if (input.firstName) parts.push(block('customer_name', clean(input.firstName).slice(0, 60)));
   const c = input.context;

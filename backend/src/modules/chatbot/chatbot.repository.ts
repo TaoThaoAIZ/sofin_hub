@@ -9,7 +9,11 @@ import { normalizeText } from '../search/search.text.js';
  * Kho tri thức của chatbot: câu hỏi mẫu (ChatbotQA) + tài liệu markdown cắt theo mục `##` (ChatbotDocument/ChatbotDocChunk).
  * Khớp câu hỏi = độ giống trigram (pg_trgm.similarity) trên câu đã gập dấu (sf_fold) với question và từng variant, cộng ts_rank
  * toàn văn để xếp hạng phụ. Bảng nhỏ (vài nghìn hàng) nên chấm điểm trên mọi hàng active là đủ nhanh.
+ *
+ * Phạm vi (`communityId`): null = kho của bot "Tào" (nền tảng); có giá trị = kho riêng của bot cộng đồng đó. MỌI hàm đều lọc theo
+ * phạm vi (mặc định null) — kho của cộng đồng A không bao giờ lẫn sang B hay sang Tào.
  */
+export type BotScope = string | null;
 
 export interface QaMatch {
   id: string;
@@ -77,7 +81,7 @@ export const chatbotRepository = {
    * Q&A active khớp nhất với `text`. order='similarity' (khớp trực tiếp: chỉ độ giống câu hỏi) | 'blend' (tool tra cứu: giống + ts_rank).
    * Không có pg_trgm => similarity=0, chỉ còn ts_rank (vẫn tra cứu được, không bao giờ "khớp trực tiếp").
    */
-  async matchQa(text: string, opts: { limit?: number; order?: 'similarity' | 'blend'; statuses?: ChatbotQaStatus[] } = {}): Promise<QaMatch[]> {
+  async matchQa(text: string, opts: { limit?: number; order?: 'similarity' | 'blend'; statuses?: ChatbotQaStatus[]; communityId?: BotScope } = {}): Promise<QaMatch[]> {
     const { needle, tsq } = queryTerms(text);
     if (!needle) return [];
     const S = await trgmSchema();
@@ -90,7 +94,7 @@ export const chatbotRepository = {
       SELECT * FROM (
         SELECT q."id", q."question", q."answer", (${sim})::float8 AS "similarity", (${rank})::float8 AS "rank"
         FROM "ChatbotQA" q
-        WHERE q."status"::text IN (${Prisma.join(statuses)})
+        WHERE q."status"::text IN (${Prisma.join(statuses)}) AND q."courseId" IS NOT DISTINCT FROM ${opts.communityId ?? null}::text
       ) x
       WHERE x."similarity" > 0 OR x."rank" > 0
       ORDER BY ${order}, x."id"
@@ -103,21 +107,22 @@ export const chatbotRepository = {
   },
 
   /** Đoạn tài liệu (tài liệu active) khớp `text` theo toàn văn. */
-  async searchChunks(text: string, limit = 4): Promise<ChunkMatch[]> {
+  async searchChunks(text: string, limit = 4, communityId: BotScope = null): Promise<ChunkMatch[]> {
     const { tsq } = queryTerms(text);
     if (!tsq) return [];
     return prisma.$queryRaw<ChunkMatch[]>`
       SELECT c."id", c."documentId", d."title" AS "documentTitle", c."heading", c."content",
              ts_rank(c."searchVector", to_tsquery('simple', ${tsq}))::float8 AS "rank"
       FROM "ChatbotDocChunk" c JOIN "ChatbotDocument" d ON d."id" = c."documentId"
-      WHERE d."status" = 'active' AND c."searchVector" @@ to_tsquery('simple', ${tsq})
+      WHERE d."status" = 'active' AND d."courseId" IS NOT DISTINCT FROM ${communityId}::text AND c."searchVector" @@ to_tsquery('simple', ${tsq})
       ORDER BY "rank" DESC, c."position"
       LIMIT ${limit}`;
   },
 
   // ------------------------------------------------------------------ Q&A (admin)
-  async listQa(f: { status?: ChatbotQaStatus; source?: ChatbotQaSource; q?: string; skip: number; take: number }) {
+  async listQa(f: { status?: ChatbotQaStatus; source?: ChatbotQaSource; q?: string; skip: number; take: number; communityId?: BotScope }) {
     const where: Prisma.ChatbotQAWhereInput = {
+      communityId: f.communityId ?? null,
       ...(f.status ? { status: f.status } : {}),
       ...(f.source ? { source: f.source } : {}),
       ...(f.q
@@ -137,13 +142,14 @@ export const chatbotRepository = {
     return { rows, total };
   },
 
-  getQa: (id: string) => prisma.chatbotQA.findUnique({ where: { id } }),
+  /** Q&A thuộc đúng phạm vi (khác phạm vi => null, coi như không tồn tại). */
+  getQa: (id: string, communityId: BotScope = null) => prisma.chatbotQA.findFirst({ where: { id, communityId } }),
 
   createQa: (data: Prisma.ChatbotQAUncheckedCreateInput) => prisma.chatbotQA.create({ data }),
 
   updateQa: (id: string, data: Prisma.ChatbotQAUncheckedUpdateInput) => prisma.chatbotQA.update({ where: { id }, data }),
 
-  countQaByStatus: () => prisma.chatbotQA.groupBy({ by: ['status'], _count: { _all: true } }),
+  countQaByStatus: (communityId: BotScope = null) => prisma.chatbotQA.groupBy({ by: ['status'], where: { communityId }, _count: { _all: true } }),
 
   /** Thêm một cách hỏi mới vào Q&A (bỏ qua nếu trùng sau khi gập dấu). Trả về true nếu có thêm. */
   async addVariant(id: string, variant: string): Promise<boolean> {
@@ -156,32 +162,35 @@ export const chatbotRepository = {
   },
 
   // ------------------------------------------------------------------ tài liệu
-  listDocuments: () =>
+  listDocuments: (communityId: BotScope = null) =>
     prisma.chatbotDocument.findMany({
+      where: { communityId },
       orderBy: [{ status: 'asc' }, { title: 'asc' }],
       select: { id: true, slug: true, title: true, status: true, updatedAt: true, _count: { select: { chunks: true } } },
     }),
 
-  getDocument: (id: string) =>
-    prisma.chatbotDocument.findUnique({ where: { id }, include: { chunks: { orderBy: { position: 'asc' }, select: { id: true, position: true, heading: true, content: true } } } }),
+  getDocument: (id: string, communityId: BotScope = null) =>
+    prisma.chatbotDocument.findFirst({ where: { id, communityId }, include: { chunks: { orderBy: { position: 'asc' }, select: { id: true, position: true, heading: true, content: true } } } }),
 
   /**
    * Tạo/cập nhật tài liệu theo slug. Cùng nội dung (contentHash) => không làm gì. Nội dung đổi => cắt lại các đoạn và chuyển các Q&A active
    * dựa vào tài liệu này sang `stale`. Trả về trạng thái để script/admin báo lại.
    */
-  async upsertDocument(input: { slug: string; title?: string; contentMd: string; updatedById?: string | null }) {
+  async upsertDocument(input: { slug: string; title?: string; contentMd: string; updatedById?: string | null; communityId?: BotScope }) {
     const contentMd = input.contentMd.replace(/\r\n/g, '\n').trim();
     const { title: mdTitle, chunks } = splitMarkdown(contentMd);
     const title = (input.title ?? mdTitle ?? input.slug).trim();
     const contentHash = sha256(contentMd);
     const existing = await prisma.chatbotDocument.findUnique({ where: { slug: input.slug } });
+    // slug là duy nhất toàn bảng: tài liệu cộng đồng dùng tiền tố c-<communityId>- ; trùng slug khác phạm vi là lỗi lập trình.
+    if (existing && existing.communityId !== (input.communityId ?? null)) throw new Error(`slug ${input.slug} thuộc phạm vi khác`);
     if (existing && existing.contentHash === contentHash && existing.title === title) {
       return { document: existing, result: 'unchanged' as const, chunks: chunks.length, staleQa: 0 };
     }
     return prisma.$transaction(async (tx) => {
       const document = existing
         ? await tx.chatbotDocument.update({ where: { id: existing.id }, data: { title, contentMd, contentHash, status: 'active', updatedById: input.updatedById ?? null } })
-        : await tx.chatbotDocument.create({ data: { slug: input.slug, title, contentMd, contentHash, updatedById: input.updatedById ?? null } });
+        : await tx.chatbotDocument.create({ data: { slug: input.slug, title, contentMd, contentHash, updatedById: input.updatedById ?? null, communityId: input.communityId ?? null } });
       await tx.chatbotDocChunk.deleteMany({ where: { documentId: document.id } });
       await tx.chatbotDocChunk.createMany({ data: chunks.map((c, i) => ({ documentId: document.id, position: i + 1, heading: c.heading, content: c.content })) });
       const stale =

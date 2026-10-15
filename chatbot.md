@@ -1,100 +1,246 @@
-# Chatbot hỗ trợ "Tào" — báo cáo triển khai
+# Kế hoạch: Chatbot riêng cho từng cộng đồng
 
-> Branch `feat/chatbot-ai` (chưa merge vào `master` — merge vào `master` sẽ tự deploy lên AWS qua workflow *Deploy to AWS*). Cập nhật 2026-10-14.
-> Tài liệu kỹ thuật: `backend/docs/api/chatbot.md` · kịch bản test tay: `docs/features/chatbot.md` · regression bảo mật: `chatbot_qa_security_suite/README.md`.
+> Trạng thái: **đã làm** (branch `feat/chatbot-ai`, chưa merge master). Cập nhật 2026-10-15. Tài liệu kỹ thuật: `backend/docs/api/community-bot.md`. Kết quả: mục 8.
+> Báo cáo bot hỗ trợ nền tảng "Tào" (đã làm) xem bản trước của file này trong git: `git show cf54005:chatbot.md`.
 
-## 1. Chatbot làm gì
+## 1. Mục tiêu
 
-- Widget chat nổi góc phải cho **người dùng đã đăng nhập** (ẩn ở `/admin`). Trả lời **chỉ** về nền tảng SofinHub và các tool đang bán ở `/tools`; câu ngoài phạm vi / cố lừa bot bị từ chối.
-- Ưu tiên **câu hỏi mẫu do admin đặt**: khớp đủ gần ⇒ trả nguyên văn, không gọi AI.
-- Còn lại: server gom ngữ cảnh (câu mẫu, tài liệu lỗi tool & Ngân Lượng, danh mục tool, cộng đồng kèm giá, giao dịch của **chính** khách khi câu hỏi nhắc tới đơn/thanh toán, số liệu nền tảng) rồi gọi **Codex SDK đăng nhập bằng tài khoản ChatGPT** (không dùng OpenAI API key) một lượt, nhận JSON.
-- Luật cứng: không bịa; không tự báo giá tool; **không bao giờ đưa số tài khoản ngân hàng** (thanh toán chỉ VietQR/SePay); ảnh chụp chuyển khoản không phải bằng chứng; chỉ thấy dữ liệu của chính người hỏi.
-- Không xử lý được ⇒ **chuyển người qua Zalo**: tạo ticket nội bộ kèm đoạn chat, đưa khách mã `T-…`. Chống spam: dùng lại ticket chatbot còn mở trong 24h, tối đa 3 ticket mới/khách/ngày.
-- **Học từ chat** (job mỗi giờ): mọi câu học được đều vào hàng **chờ admin duyệt**, kể cả khi khách 👍 (có tag "khách 👍" để ưu tiên) — bot không tự bật câu nào.
-- **Admin > Hỗ trợ > Chatbot**: kho câu mẫu, chờ duyệt, tài liệu, hội thoại, cài đặt (link Zalo, ngưỡng, giọng nói…), thẻ **Tài khoản ChatGPT** (Super Admin, đăng nhập bằng mã thiết bị — copy link + mã, không popup).
-- Trang `/tools` và chatbot dùng chung danh mục tool (`GET /api/tools`).
+Mỗi cộng đồng có trợ lý AI riêng, trả lời bằng **dữ liệu của chính cộng đồng đó**, nói bằng **persona của cộng đồng**. Cách cấu hình persona học từ `taothaoclaw`.
 
-## 2. Dữ liệu bot dùng để trả lời
+Hiện SofinHub chỉ có bot "Tào" dùng chung toàn site: các bảng `Chatbot*` chưa có `communityId`, persona chỉ là một ô văn bản.
 
-Bot **chỉ** dùng câu mẫu đang bật + tài liệu đang bật; mọi thứ khác (học từ chat, nhập từ Zalo) nằm ở hàng chờ duyệt cho tới khi admin duyệt.
+## 2. Đã chốt
 
-| Nguồn | Số lượng | Trạng thái | Nội dung |
-|---|---|---|---|
-| FAQ công khai | 16 câu | Đang dùng | Viết lại từ trang FAQ của web |
-| Chủ đề Zalo viết lại | 9 câu | Đang dùng | Giá tool (báo riêng → Mua ngay/Zalo), Ngân Lượng, tốn NL khi tạo video, cách mua tool, hỏi số tài khoản (→ VietQR, không gửi STK), ảnh chuyển khoản, báo lỗi tool, hỏi khi nào sửa xong. **Không chép chat thật**, không tên/SĐT, không con số giá |
-| Chủ đề chưa có thông tin | 4 câu | **Chờ admin điền** | Dùng thử, cấu hình máy, phí API/tài khoản AI, người mới/lớn tuổi học. Câu trả lời là `[CẦN ADMIN ĐIỀN…]` — hệ thống **không cho bật** khi chưa điền |
-| Tài liệu tri thức | 2 tài liệu | Đang dùng | Xử lý lỗi thường gặp (9 mục), Ngân Lượng & báo giá (không có Techcombank) |
-| Chat Zalo nhập nguyên văn (bản cũ) | 33 câu | **Đã từ chối** (DB dev) | Chất lượng thấp: hỏi–đáp lệch, văn nói, "gói 0", "lấy bên khác dùng"… |
+| Vấn đề | Chốt |
+|---|---|
+| Ai bật được bot | Chỉ cộng đồng mà **chủ ở gói Chuyên nghiệp (Pro)**, tức `HostingPlan.planKey='pro'` và `status` là trialing hoặc active. Chỉ **chủ** bật hay tắt được |
+| Ai chat được | **Mọi thành viên** của cộng đồng, chia 2 mức (bảng bên dưới). Người ngoài cộng đồng không chat được |
+| Nhân cách | Chủ đặt nhân cách mặc định (chọn mẫu có sẵn, hoặc tự viết theo khuôn taothaoclaw) và chọn những nhân cách thành viên VIP được đổi |
+| Dữ liệu | Giới thiệu, nội quy, giá; bài học lớp học; bài đăng, sự kiện; Q&A và tài liệu riêng do chủ thêm |
+| Không trả lời được | **Chuyển cho chủ cộng đồng** qua Tin nhắn có sẵn của SofinHub. Không dùng Zalo, không tạo ticket |
 
-- Dữ liệu nền nằm trong code (đi theo branch) nhưng **chỉ vào DB khi chạy lệnh riêng** `npm run chatbot:baseline` (AWS: `docker compose exec backend node dist/cli/chatbot-baseline.js`) — backend không tự nạp. Chưa chạy thì trang Admin > Chatbot hiện dải nhắc. Lệnh chạy lại nhiều lần an toàn, không ghi đè câu admin đã sửa; `--status` để xem.
-- Script nhập Zalo có bộ lọc chặt (bỏ câu chào, giá, "gửi ultra", hỏi ngược, hứa giờ, văn nói, không phải câu hỏi) + `--dry-run` xem trước: 35 nhóm → còn 4.
+### Hai mức thành viên
 
-### Bot hỏi lại khách (gợi ý trả lời nhanh)
-
-Khi câu hỏi chưa đủ rõ (khóa học chủ đề nào, tool nào…), bot hỏi lại **một câu ngắn** và kèm 2–4 **nút gợi ý** dưới tin nhắn; khách bấm là gửi luôn. Ví dụ "có những khóa học nào" ⇒ "bạn quan tâm chủ đề nào ạ… xem toàn bộ ở **Khám phá khóa học**" + nút "Công nghệ", "Sáng tạo nội dung"… ⇒ bấm "Công nghệ" ⇒ bot giới thiệu các khóa học công nghệ kèm link. Đã kiểm với model thật (2/2 câu mới trong bộ đo) và E2E.
-
-## 3. Kiến trúc & cô lập Codex
-
-- `backend/src/modules/chatbot/*`, migration `20261016100000_chatbot` (5 bảng `Chatbot*`), cài đặt ở `PlatformSetting` khóa `chatbot.settings`.
-- Codex chạy với **CODEX_HOME riêng** (`backend/data/codex-home`, đã vào `.gitignore`/`.dockerignore`), config do server ghi: tắt shell/exec, trình duyệt, computer-use, plugin, hook, ảnh, multi-agent; sandbox read-only, không mạng, thư mục làm việc rỗng; tiến trình con **không nhận secret** của backend; tối đa 3 lượt song song, timeout 90s; phiên Codex (chứa nội dung chat) bị xóa sau 1 giờ.
-- Mỗi tin của bot ghi lại **ID nguồn** đã đưa vào ngữ cảnh (câu mẫu, đoạn tài liệu) để kiểm tra; `CHATBOT_TRACE_CONTEXT=1` (chỉ QA) lưu cả nguyên văn prompt.
-
-## 4. Lỗi đã phát hiện & đã sửa
-
-| # | Lỗi | Sửa |
+| | Thành viên thường | Thành viên trả phí (VIP) |
 |---|---|---|
-| 1 | Hỏi "có những khóa học nào" ⇒ bot chuyển người (tìm kiếm theo nguyên câu không khớp cộng đồng nào) | Bot **hỏi lại chủ đề** kèm nút gợi ý trả lời nhanh + link "Khám phá khóa học" (không liệt kê khóa học kèm học phí); bấm chủ đề ⇒ khóa học của chủ đề đó |
-| 2 | Chuyển người quá dễ ⇒ có thể spam ticket (6/26 test tạo ticket) | Dùng lại ticket còn mở trong 24h, tối đa 3 ticket mới/khách/ngày, Telegram chỉ báo ticket mới; prompt không chuyển người khi chỉ cần từ chối ⇒ còn 1–2/34 |
-| 3 | Mọi câu hỏi đều gửi giao dịch của khách sang ChatGPT | Chỉ gửi khi câu hỏi (hoặc câu ngay trước) nhắc tới đơn/thanh toán/hoàn tiền/mã đơn |
-| 4 | Hỏi về mã đơn của người khác ⇒ bot chuyển người | Prompt: "không tìm thấy đơn đó trong tài khoản đang đăng nhập", không xác nhận gì, không chuyển người |
-| 5 | Hết hạn mức ChatGPT ⇒ lỗi chung chung, mỗi tin vẫn gọi Codex (~4s) | Nhận diện "usage limit": khách nhận "tạm quá tải + nhắn Zalo", **tạm ngừng gọi Codex 5 phút** (trả lời ~1s), job học dừng lượt, admin thấy dải đỏ (`summary.llm`) |
-| 6 | Không triển khai được trên AWS: token ChatGPT của bot mất sau mỗi lần deploy | Volume bền `chatbot-codex` trong `deploy/aws/docker-compose.yml`; Dockerfile tạo sẵn thư mục cho user `node`; đã kiểm binary Codex chạy trong image Alpine |
-| 7 | Tài liệu tri thức (`*.md`) bị `.dockerignore` loại khỏi image | Ngoại lệ `!prisma/chatbot-kb/*.md` |
-| 8 | Đường dẫn trong câu trả lời hiện "/tools" | Hiện tên trang ("Tải Tool", "Gói & thanh toán"…) tô màu, bấm được |
-| 9 | Backend dev chạy lại bản cũ dùng model giả (tiến trình node mồ côi) | Đã dọn; tài liệu ghi rõ cách chạy |
-| 10 | Bộ regression có thể PASS giả (review bộ test) | Runner bản 3: kết quả bắt buộc liệt kê rõ, manifest ID bắt buộc, chụp **toàn bộ** DB (56 bảng), kiểm ngữ cảnh gửi model, dò rò rỉ chặt hơn, dọn dẹp trong `finally`, tự đăng nhập lại khi token hết hạn, lỗi một case không làm sập cả bộ, `selftest.py` 25 test |
-| 11 | **Production không có dữ liệu chatbot** (prod không chạy seed ⇒ 0 câu mẫu, 0 tài liệu) | Dữ liệu nền trong code + **lệnh riêng** `chatbot:baseline` (build vào `dist/` nên chạy được trong image production — đã kiểm trong Docker); trang admin nhắc khi chưa nạp |
-| 12 | Dữ liệu Zalo nhập nguyên văn, chất lượng thấp | Từ chối 33 câu cũ; viết lại 8 chủ đề thành câu mẫu sạch + 4 câu chờ điền; lọc chặt + `--dry-run` cho lần nhập sau |
-| 13 | Câu học được tự bật khi khách 👍 | Bỏ tự bật: **mọi** câu học được đều chờ admin duyệt (tag "khách 👍" để ưu tiên); bỏ 2 cài đặt ngưỡng/tự học |
-| 14 | Giá "200.000đ/tháng" bị biến thành link "trang này" dẫn tới `/th` | Đường dẫn phải đứng riêng (không dính chữ có dấu); chỉ trang có thật mới thành link; link markdown `[Tên khóa học](/communities/...)` hiện đúng tên |
-| 15 | Bộ Zalo: hỏi "thanh toán bằng MoMo" ⇒ bot trả đúng VietQR nhưng vẫn chuyển người (tạo ticket thừa) | Thêm câu mẫu MoMo/ví/thẻ ⇒ trả ngay (0,1s); dữ liệu nền v3 |
-| 16 | Khi chuyển người, câu trả lời lặp "nhắn Zalo hỗ trợ" 2 lần | Câu trả lời đã mời nhắn Zalo ⇒ chỉ thêm dòng "Mã hỗ trợ của bạn: T-…" |
-| 17 | Khách nhắn liên tục 3-4 tin khi Tào đang trả lời: widget khóa nút Gửi, Enter bị bỏ qua không báo gì; gọi API song song (2 tab) ⇒ nhiều lượt AI chạy cùng lúc trên 1 hội thoại, trả lời lộn thứ tự | Widget cho gửi tiếp: tin mới hiện ngay nhãn "chờ gửi", Tào trả lời xong thì **gộp cả cụm thành 1 lượt** (mỗi tin 1 dòng, ≤ maxChars) ⇒ 1 câu trả lời, ít tốn lượt gọi AI; lỗi thì trả chữ về ô nhập, không mất tin. Backend **khóa theo hội thoại** (Redis/bộ nhớ, chạy đúng khi nhiều instance) ⇒ lượt song song nhận 409 `CHATBOT_BUSY` |
-| 18 | Lỗi có sẵn: chatbot tắt ⇒ khách thấy chữ "CHATBOT_UNAVAILABLE" thay vì câu thông báo (đảo tham số mã lỗi/nội dung) | Sửa thứ tự tham số; test kiểm cả mã lỗi lẫn câu hiện cho khách |
+| Xác định | Có trong cộng đồng | Gói còn hạn (`hasLiveSubscription`). Mod, admin, chủ luôn tính là VIP |
+| Nhân cách | Chỉ nhân cách mặc định của chủ (menu chọn hiện khóa 🔒) | **Mở khóa chọn nhân cách** trong danh sách chủ cho phép, lưu riêng cho từng người |
+| Số tin/ngày | Thấp, chủ đặt (mặc định 10) | Cao (mặc định 100) |
+| Dữ liệu | Giới thiệu, nội quy, sự kiện, bài đăng, Q&A/tài liệu của chủ, bài học người đó đã mở | Như thường, cộng với trích bài học sâu hơn (~1.500 ký tự/bài thay vì ~400) và nhớ lịch sử chat dài hơn (12 lượt thay vì 4) |
+| Chuyển cho chủ | Có | Có |
+| Hết lượt trong ngày | Câu nhắc nâng cấp VIP | Câu "quay lại mai" |
 
-## 5. Kết quả kiểm thử
+- Khóa bài học của lớp học (trả phí theo module, theo level, học tuần tự) **luôn áp dụng theo từng người**. VIP không đọc được bài người đó chưa mua.
+- Widget của thành viên thường hiện dải "Nâng cấp VIP để chọn nhân cách và chat nhiều hơn", dẫn tới trang thanh toán của cộng đồng.
+- Cộng đồng miễn phí không có ai là VIP, nên mọi thành viên ở mức thường, trừ mod trở lên.
+- Gói trả phí hết hạn thì thành viên về mức thường, nhân cách về mặc định.
+
+## 3. Học từ taothaoclaw
+
+`taothaoclaw` ("Bối Bối") là trợ lý thư ký cá nhân, không phải bot CSKH: không có RAG, câu mẫu, chuyển người hay bộ test. Phần áp dụng được:
+
+- **Persona có cấu trúc**, tách khỏi luật khung (luật khóa cứng, persona chủ sửa được):
+  - xưng hô
+  - giọng, giới hạn kính ngữ ("đừng nhồi 4 từ kính ngữ")
+  - chính sách emoji
+  - khi sai: không xin lỗi suông, nhận sai rồi sửa
+  - hỏi lại: chỉ 1 câu, luôn kèm lựa chọn
+  - cách nói chuyện phiếm
+- **Bảng ví dụ 3 cột: Tốt / Quá lê thê / Quá cộc** (`taothaoclaw/data/AGENTS.md`). Đây là cách dạy giọng hiệu quả nhất.
+- **Thứ tự prompt:** thời gian hiện tại theo giờ VN → luật → persona → hướng dẫn thêm → dữ liệu → lịch sử → tin khách.
+- **Luật:**
+  - đoán mặc định hợp lý, chỉ hỏi khi không đoán được
+  - tự hiểu "cái đó/nó" từ lịch sử
+  - chỉ dùng thời gian tuyệt đối
+  - không có dữ liệu thì nói thẳng
+- **Không áp dụng:**
+  - router 2 model: Codex 1 lượt là đủ
+  - bộ nhớ dài hạn theo khách: rủi ro dữ liệu cá nhân
+  - tool loop: server tự gom dữ liệu
+
+Bot "Tào" cũng được thêm thời gian hiện tại và luật "đoán trước, hỏi sau". Lý do: bộ test Zalo cho thấy Tào đang hỏi lại hơi nhiều.
+
+## 4. Thiết kế
+
+### 4.1 Dữ liệu (migration mới)
+- **Bảng có sẵn thêm `communityId`** (để trống = bot Tào): `ChatbotQA`, `ChatbotDocument`, `ChatbotConversation`. Mọi truy vấn hiện có của Tào phải lọc "không thuộc cộng đồng nào", nếu không widget Tào có thể mở nhầm hội thoại của bot cộng đồng.
+- **Bảng mới `CommunityBot`**, mỗi cộng đồng 1 dòng:
+  - bật/tắt, tên bot, lời chào
+  - nhân cách mặc định (mẫu hoặc tự tạo), danh sách nhân cách VIP được đổi
+  - hướng dẫn thêm
+  - giới hạn tin/ngày cho thành viên thường và VIP
+- **Bảng mới `CommunityBotMemberPref`:** nhân cách mỗi thành viên VIP đã chọn.
+- **Thêm chỉ mục tìm kiếm toàn văn** cho bài học (tên + nội dung) và sự kiện, giống cách đã làm cho bài đăng.
+
+### 4.2 Nhân cách mẫu (dùng chung cho cả 2 bot)
+
+| Mẫu | Giọng |
+|---|---|
+| `mentor` | Thầy/cô tận tâm, giải thích từng bước |
+| `buddy` | Bạn đồng hành vui vẻ, thân mật |
+| `coach` | Huấn luyện viên thẳng thắn, thúc đẩy hành động |
+| `concise` | Trợ lý ngắn gọn, vào thẳng ý |
+
+Mỗi mẫu có đủ các mục: tên, xưng hô, giọng, emoji, cách hỏi lại, nói chuyện phiếm, và **bảng ví dụ Tốt / Lê thê / Cộc**. Chủ cũng có thể "Tự tạo" bằng form cùng các mục đó.
+
+### 4.3 Phân quyền
+
+Thứ tự kiểm tra:
+1. Cộng đồng bị khóa → chặn.
+2. Bot tắt → `BOT_DISABLED`.
+3. Chủ không còn Pro → `COMMUNITY_NOT_PRO`.
+4. Không phải thành viên hoặc bị cấm → `NOT_MEMBER`.
+5. Còn lại: xác định mức thường hay VIP, nhân cách đang dùng và các giới hạn.
+
+Ngoài ra:
+- Thành viên thường đổi nhân cách → `VIP_REQUIRED`.
+- Hết lượt trong ngày → `DAILY_LIMIT`, kèm mức thành viên để widget hiện đúng câu nhắc.
+- Admin trở lên quản lý nội dung bot. Chỉ chủ bật/tắt được.
+
+### 4.4 Bot đọc dữ liệu thế nào
+
+Bot chỉ đọc dữ liệu **của cộng đồng đó**, theo **quyền của chính người hỏi**:
+- **Giới thiệu:** mô tả, lợi ích, nội quy, giá, giảng viên. Ai trong cộng đồng cũng xem được.
+- **Q&A và tài liệu riêng của chủ:** đã khớp câu mẫu thì trả lời ngay, không gọi AI (giống Tào).
+- **Bài học:**
+  - Tìm 5 bài liên quan, rồi **lọc qua đúng logic khóa của lớp học**, tách ra thành hàm dùng chung.
+  - Không đọc thẳng từ DB, vì truy vấn thô không áp khóa trả phí/level.
+  - Bài chưa mở: bot chỉ biết tên bài và lý do khóa ("cần level X", "cần mua module").
+  - Bài đã mở: trích nội dung kèm link tới bài.
+- **Bài đăng:** dùng tìm kiếm bài đăng có sẵn, đã tự bỏ bài ẩn hoặc đã xóa.
+- **Sự kiện:** 5 sự kiện sắp tới, cộng với kết quả tìm theo câu hỏi.
+- **Gói của chính người hỏi** trong cộng đồng này (trạng thái, ngày gia hạn): chỉ khi câu hỏi nói về thanh toán.
+- Mỗi câu trả lời lưu vết ID nguồn đã dùng, giống Tào, để kiểm tra rò rỉ.
+
+### 4.5 Luật của bot cộng đồng
+- Chỉ hỗ trợ trong phạm vi cộng đồng đó: nội dung học, nội quy, sự kiện, cách dùng lớp học. Ngoài phạm vi thì từ chối.
+- Không bịa. Con số chỉ lấy từ dữ liệu.
+- **Không tiết lộ nội dung bài đang khóa**, chỉ nói cách mở.
+- Không đưa số tài khoản. Thanh toán chỉ qua VietQR.
+- Đoán trước, hỏi lại ít, hỏi thì kèm nút gợi ý. Tự hiểu "cái đó/nó". Dùng thời gian tuyệt đối.
+- Cần người thật thì đề nghị **gửi câu hỏi cho chủ cộng đồng**.
+
+### 4.6 Chuyển cho chủ cộng đồng
+- Bot đề nghị, widget hiện nút "Gửi câu hỏi cho chủ cộng đồng".
+- **Chỉ khi thành viên bấm** mới gửi. Hệ thống mở hội thoại Tin nhắn giữa thành viên và chủ, rồi gửi tóm tắt "[Hỏi qua trợ lý AI] …" dưới tên thành viên.
+- Nếu chủ tắt nhận tin nhắn riêng, gửi thông báo hệ thống cho chủ.
+
+### 4.7 Dùng lại từ bot Tào
+
+Dùng lại nguyên các phần sau:
+- khớp câu mẫu
+- guardrail (số tài khoản, số tiền không nguồn)
+- che thông tin cá nhân
+- khóa theo hội thoại
+- gộp tin nhắn liên tiếp
+- gợi ý trả lời nhanh
+- xử lý hết hạn mức ChatGPT
+- job học từ chat: câu học được chờ **chủ cộng đồng** duyệt
+
+Chỉ thay phần dữ liệu, prompt, giới hạn theo mức và cách chuyển người.
+
+### 4.8 Giao diện
+
+**Widget trong trang cộng đồng** (chỉ thành viên thấy):
+- Đầu khung: tên bot, nhân cách đang dùng, số tin còn lại hôm nay.
+- **VIP:** có menu đổi nhân cách.
+- **Thành viên thường:** menu nhân cách khóa 🔒 và dải nâng cấp VIP. Cộng đồng miễn phí thì không hiện dải.
+- Widget Tào **ẩn** trong trang cộng đồng để hai widget không chồng nhau.
+
+**Tab "Trợ lý AI" trong Cài đặt cộng đồng:**
+- Bật bot. Nếu chưa ở gói Pro thì hiện nhắc nâng cấp.
+- Tên bot, lời chào.
+- Chọn nhân cách mặc định: thẻ mẫu kèm xem trước câu ví dụ, hoặc "Tự tạo" bằng form có bảng ví dụ Tốt / Lê thê / Cộc.
+- Chọn các nhân cách VIP được đổi.
+- Hướng dẫn thêm, giới hạn tin/ngày cho thành viên thường và VIP.
+- Kho Q&A, tài liệu, câu chờ duyệt, xem hội thoại.
+- Nút **"Chat thử"**.
+
+## 5. Thứ tự làm
+1. Thêm `communityId` vào các bảng chatbot + bảng mới. Kiểm tra bot Tào vẫn chạy như cũ.
+2. Nhân cách có cấu trúc + 4 mẫu. Thêm thời gian và luật "đoán trước" cho Tào.
+3. Phân quyền 2 mức + đọc dữ liệu theo quyền + prompt bot cộng đồng.
+4. Luồng chat của thành viên + chuyển cho chủ qua Tin nhắn.
+5. Phần quản lý của chủ (cài đặt, Q&A, tài liệu, duyệt, xem hội thoại) + job học theo cộng đồng.
+6. Giao diện: widget cộng đồng, tab cài đặt.
+7. Tài liệu + dữ liệu demo (1 cộng đồng Pro có phí, có bot).
+
+## 6. Kiểm thử
+
+### Test tự động (model giả)
+
+**Phân quyền:**
+- Chủ không có Pro → chặn.
+- Bot tắt → chặn.
+- Người ngoài → chặn.
+- Thành viên cộng đồng miễn phí → chat được, mức thường.
+- Thành viên trả phí → VIP.
+- Mod → VIP.
+- Không phải chủ mà bật bot → chặn.
+
+**Hai mức:**
+- Thành viên thường: luôn dùng nhân cách mặc định, đổi nhân cách bị chặn, tin thứ 11 trong ngày bị chặn.
+- VIP: đổi nhân cách thì prompt đổi giọng; chọn nhân cách ngoài danh sách bị chặn.
+- Hết hạn gói → về mức thường.
+
+**Không rò rỉ:**
+- Module trả phí chưa mua: nội dung bài **không** có trong prompt gửi AI, chỉ có tên bài và lý do khóa.
+- Đã mua: có nội dung.
+- Bài nháp, ẩn, đã xóa: không bao giờ có.
+
+**Cô lập:**
+- Q&A và tài liệu của cộng đồng A không xuất hiện ở cộng đồng B, cũng không ở bot Tào.
+- Hội thoại của Tào và bot cộng đồng tách nhau.
+
+**Chuyển cho chủ:**
+- Có tin nhắn tới chủ kèm tóm tắt.
+- Chủ tắt nhận tin riêng → có thông báo.
+
+**Toàn bộ test cũ** vẫn pass: bot Tào không đổi hành vi.
+
+### E2E
+1. Chủ bật bot và chọn nhân cách mẫu.
+2. Thành viên trả phí chat, đổi nhân cách, gửi câu cho chủ.
+3. Thành viên thường chat được, thấy nhân cách bị khóa và dải nâng cấp, bị chặn khi hết lượt.
+
+### Model thật
+Bộ đo nhỏ cho cộng đồng demo, gồm các tình huống:
+- hỏi bài đã mở / đang khóa
+- hỏi nội quy, sự kiện
+- câu ngoài phạm vi
+- đổi nhân cách thì giọng có khác thật không
+
+## 7. Rủi ro & việc cần lưu ý
+- **Hạn mức ChatGPT dùng chung:** mọi bot cộng đồng và Tào chạy trên cùng một tài khoản ChatGPT, nên nhiều cộng đồng hoạt động sẽ hết hạn mức nhanh. Giới hạn tin/ngày theo mức thành viên giúp kiểm soát, nhưng lâu dài nên chuyển sang API key hoặc nhiều tài khoản (OPEN_DECISIONS A18).
+- **Gói Pro hiện là mô phỏng:** chưa thu tiền thật, hết dùng thử không tự hết hạn. Bot sẽ dựa đúng trạng thái gói hiện có, và tự đúng khi gói Pro được làm thật.
+- **Cộng đồng miễn phí:** mọi thành viên ở mức thường và không ai đổi được nhân cách. Đây là hệ quả của định nghĩa VIP = thành viên trả phí.
+- **Quyền riêng tư:** chủ cộng đồng xem được hội thoại của thành viên với bot. Cần ghi rõ trong widget ("Chủ cộng đồng có thể xem nội dung trò chuyện với trợ lý").
+- **Video và file đính kèm bài học** chưa đọc được nội dung, bot chỉ dùng phần chữ của bài.
+
+## 8. Kết quả triển khai (2026-10-15)
+
+Làm đủ 7 bước của mục 5.
+
+| Phần | Đã làm |
+|---|---|
+| Dữ liệu | Migration `20261020100000_community_chatbot`: thêm `communityId` cho Q&A / tài liệu / hội thoại (bot Tào lọc "không thuộc cộng đồng"); bảng `CommunityBot`, `CommunityBotMemberPref`; tìm kiếm toàn văn bài học + sự kiện |
+| Nhân cách | `chatbot.persona.ts`: 4 mẫu (mentor, buddy, coach, concise) đủ bảng ví dụ Tốt / Lê thê / Cộc + nhân cách tự tạo; dòng thời gian VN đầu prompt. Bot Tào cũng có thêm thời gian + luật "đoán trước, hỏi sau" |
+| Phân quyền 2 mức | Gói Pro (dùng thử còn hạn hoặc active) mới bật được; mọi thành viên chat; VIP = trả phí còn hạn (mod+ luôn VIP) |
+| Không lộ bài khóa | Lớp học có hàm mới `lessonAccess` dùng **chính** logic khóa của lớp học; bài chưa mở chỉ có tên + cách mở |
+| Chuyển cho chủ | Bot đề nghị → thành viên bấm → Tin nhắn riêng tới chủ (chủ tắt tin riêng → thông báo) |
+| Quản lý | Tab "Trợ lý AI" trong Cài đặt cộng đồng: bật (chủ + Pro), tên, lời chào, chọn nhân cách (thẻ mẫu có câu xem trước / form tự tạo), nhân cách VIP được đổi, giới hạn tin/ngày, Q&A, tài liệu, câu học được chờ duyệt, xem hội thoại |
+| Widget | Trong trang cộng đồng: tên bot, nhân cách (VIP đổi được / thường 🔒), số lượt còn lại, dải nâng cấp VIP (cộng đồng có phí), gợi ý trả lời nhanh, gộp tin nhắn liên tiếp. Tào tự ẩn khi cộng đồng có bot riêng |
+| Demo | `paid-demo` (member1 VIP), `photo` (member2 thường) bật bot; `yt` không bật (vẫn có Tào) |
+
+### Kiểm thử
 
 | Loại | Kết quả |
 |---|---|
-| Test backend (`npm test`) | **649/649 PASS** (35 test chatbot, thêm: khách nhắn liên tục/khóa hội thoại 409, gộp nhiều tin, file bộ Zalo hợp lệ, hỏi lại + gợi ý trả lời nhanh, thêm: dữ liệu nền, chặn bật câu chưa điền, lọc Zalo, hỏi STK → câu mẫu VietQR; cùng các test cũ: luồng, guardrail, chuyển Zalo, học, phân quyền admin, tài khoản ChatGPT, ngữ cảnh RAG, chống spam ticket, hết hạn mức) |
-| Typecheck BE/FE, build FE, lint | Sạch (lint chỉ còn cảnh báo cũ, không thuộc chatbot) |
-| E2E Playwright (`e2e/tests/05-chatbot.spec.ts`, model giả) | **8/8 PASS** (widget, câu mẫu, thẻ tool + nhãn trang, từ chối, chuyển người, hỏi lại chủ đề + bấm gợi ý, nhắn liên tục 3 tin ⇒ chờ gửi + gộp 1 lượt, trang admin) |
-| Bộ câu hỏi thật từ Zalo — 92 case, 13 nhóm (`tests/chatbot-zalo.vi.json`, model thật, 2026-10-14) | Lần 1: **89/92** (trả lời đúng 96%, chuyển người sai 4%, chuyển người đúng 100%, từ chối đúng 100%, hỏi lại kèm gợi ý 100%, ~12,7s/câu). 3 case trượt: 2 do điều kiện test quá chặt (bot hỏi lại là đúng), 1 lỗi thật (hỏi MoMo ⇒ chuyển người thừa) — đã sửa; chạy lại 5 case liên quan: **5/5** |
-| Bộ đo chất lượng 49 câu (model thật) | 46/47 lần chạy đầy đủ (câu trượt do điều kiện kiểm tra — đã sửa); 2 câu mới về khóa học (c01, c02): 2/2 |
-| Regression bảo mật 34 case (model thật) | Lần chạy đầy đủ: **34/34 PASS** — rò rỉ câu trả lời 0, rò rỉ ngữ cảnh 0, DB đổi trái phép 0 |
-| Selftest runner | **25/25 PASS** |
-| Image Docker production | Build OK; `codex --version`, `codex exec`, `codex login --device-auth` chạy trong container |
+| Test backend (`npm test`) | Toàn bộ pass, gồm 8 test mới `community-bot.test.ts`: phân quyền Pro, 2 mức, **không rò rỉ bài trả phí / nháp / ẩn** (dò nguyên văn prompt), cô lập dữ liệu giữa các cộng đồng và với Tào, chuyển chủ, nhân cách tự tạo, học → chủ duyệt |
+| E2E | 12/12: 8 bot Tào + 4 bot cộng đồng (VIP đổi nhân cách + câu mẫu + gửi cho chủ; thường bị khóa nhân cách; cộng đồng không bật vẫn có Tào; tab cài đặt) |
+| Model thật (4 câu, `paid-demo`) | Liệt kê đúng lộ trình, module khóa chỉ nói cách mở; từ chối câu ngoài phạm vi; thiếu nội quy → nói thẳng + đề nghị gửi chủ; hỏi số tài khoản → chỉ VietQR + đọc đúng ngày gia hạn gói của chính người hỏi |
 
-**Chưa hoàn tất**: chạy lặp `--repeat 3 --parallel-ab 3` với model thật — cả hai tài khoản ChatGPT đã thử đều chạm *"You've hit your usage limit… try again at 1:41 PM"* giữa lượt chạy. Bot xử lý đúng (báo quá tải, không trả lời bừa; runner đánh FAIL đúng, không PASS giả). Cần chạy lại khi hạn mức hồi:
+### Việc còn lại / lưu ý
+- Chưa có bộ đo chất lượng riêng cho bot cộng đồng với model thật; mới thử tay 4 câu.
+- Các rủi ro ở mục 7 vẫn còn nguyên: hạn mức ChatGPT dùng chung, gói Pro đang là mô phỏng, quyền riêng tư, chưa đọc được video/file.
 
-```powershell
-# backend chế độ QA
-cd backend; $env:RUN_SCHEDULERS="0"; $env:CHATBOT_TRACE_CONTEXT="1"; $env:PLATFORM_ADMIN_EMAILS="admin@sofinhub.test"; npm run dev
-cd ../chatbot_qa_security_suite; python selftest.py; python runner.py --repeat 3 --parallel-ab 3
-```
-
-## 6. Triển khai
-
-1. Merge `feat/chatbot-ai` vào `master` khi sẵn sàng ⇒ CI ⇒ tự deploy AWS (migration chạy khi `RUN_MIGRATIONS=1`).
-2. Production **không** đặt `CHATBOT_FAKE_MODEL`, `CHATBOT_TRACE_CONTEXT` (app từ chối khởi động nếu có).
-3. Sau deploy: Super Admin vào Admin > Hỗ trợ > Chatbot > Cài đặt > "Tài khoản ChatGPT của chatbot" ⇒ đăng nhập bằng mã thiết bị (tài khoản phải bật *Device code sign-in* trong ChatGPT > Settings > Security). Nhập link Zalo hỗ trợ ở cùng trang.
-4. **Nạp dữ liệu nền (bắt buộc, chạy tay):** `npm run chatbot:baseline` (AWS: `docker compose exec backend node dist/cli/chatbot-baseline.js`). Kiểm tra: thêm `--status`. Sau đó vào tab **Chờ duyệt**: điền 4 câu `[CẦN ADMIN ĐIỀN]` rồi duyệt; duyệt dần các câu bot học được.
-5. (Tùy chọn) Nhập câu hỏi Zalo mới: chạy `npm run chatbot:import-candidates -- <file> --dry-run` xem trước, rồi bỏ `--dry-run`.
-
-## 7. Rủi ro & việc còn mở
-
-- **Tài khoản ChatGPT cá nhân làm backend cho chatbot công khai**: có thể vi phạm điều khoản OpenAI; hạn mức thấp (đã chạm 2 lần trong một buổi test) — nên dùng gói trả phí / cân nhắc chuyển sang API key khi lưu lượng tăng (OPEN_DECISIONS A18).
-- Mỗi câu trả lời AI mất ~6–15 giây (Codex trả JSON nguyên khối, không stream từng chữ).
-- Chạy lặp 3 lần + song song A/B của bộ regression chưa hoàn tất (xem mục 5).
-- Bộ chụp DB chỉ thấy thay đổi còn tồn tại sau test (chưa có trigger audit ở DB test).
-- Các giá trị tạm (ngưỡng khớp câu mẫu 0.6, 200 tin/ngày, 3 ticket/ngày) cần chốt sau khi chạy thật.

@@ -99,10 +99,10 @@ export const adminChatbotService = {
     const since = new Date(Date.now() - 7 * 86_400_000);
     const [byStatus, conversations7d, handedOff7d, negative7d, docs] = await Promise.all([
       chatbotRepository.countQaByStatus(),
-      prisma.chatbotConversation.count({ where: { createdAt: { gte: since } } }),
-      prisma.chatbotConversation.count({ where: { createdAt: { gte: since }, status: 'handed_off' } }),
-      prisma.chatbotMessage.count({ where: { createdAt: { gte: since }, feedback: -1 } }),
-      prisma.chatbotDocument.count({ where: { status: 'active' } }),
+      prisma.chatbotConversation.count({ where: { communityId: null, createdAt: { gte: since } } }),
+      prisma.chatbotConversation.count({ where: { communityId: null, createdAt: { gte: since }, status: 'handed_off' } }),
+      prisma.chatbotMessage.count({ where: { createdAt: { gte: since }, feedback: -1, conversation: { communityId: null } } }),
+      prisma.chatbotDocument.count({ where: { status: 'active', communityId: null } }),
     ]);
     const qa = Object.fromEntries(QA_STATUSES.map((s) => [s, byStatus.find((r) => r.status === s)?._count._all ?? 0]));
     return {

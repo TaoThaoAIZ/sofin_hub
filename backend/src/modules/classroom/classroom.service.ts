@@ -22,6 +22,7 @@ import type {
   ClassroomLesson,
   ClassroomLessonDetail,
   ClassroomLessonView,
+  LessonAccess,
   ClassroomModule,
   ClassroomModuleView,
   ClassroomProgress,
@@ -315,6 +316,32 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
   }
 
   return {
+    /**
+     * Quyền đọc từng bài học của 1 người trong các khóa `learningCourseIds` — cho chatbot cộng đồng (chatbot.md mục 4.4). Dùng CHÍNH
+     * `state()` nên khớp 100% với lớp học: bài không hiển thị với người đó (nháp/ẩn/gỡ, khóa học chưa xuất bản) => không có trong Map;
+     * bài hiển thị => mở, hoặc khóa kèm lý do (module trước chưa xong / thiếu level / module trả phí / chỉ định / học tuần tự).
+     */
+    async lessonAccess(communityId: string, userId: string, learningCourseIds: string[]): Promise<Map<string, LessonAccess>> {
+      const staff = await isStaff(communityId, userId);
+      const out = new Map<string, LessonAccess>();
+      for (const id of new Set(learningCourseIds)) {
+        const course = await courses.findById(communityId, id);
+        if (!course || (course.publishStatus !== 'published' && !staff)) continue;
+        const { states } = await state(communityId, course, userId, staff);
+        for (const s of states) {
+          const base = {
+            moduleTitle: s.module.title,
+            ...(s.view.requiredLevel ? { requiredLevel: s.view.requiredLevel } : {}),
+            ...(s.view.priceCents ? { priceCents: s.view.priceCents } : {}),
+          };
+          for (const lessonId of s.module.lessonIds) {
+            out.set(lessonId, s.lockedLessons.has(lessonId) ? { open: false, reason: s.view.lockReason ?? 'sequential', ...base } : { open: true, ...base });
+          }
+        }
+      }
+      return out;
+    },
+
     // ================================================================ Khóa học (entity mới) ================================================================
     async listCourses(communityId: string, userId: string, statuses?: CoursePublishStatus[]): Promise<LearningCourseView[]> {
       const staff = await isStaff(communityId, userId);

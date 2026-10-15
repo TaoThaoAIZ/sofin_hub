@@ -2,22 +2,25 @@ import { prisma } from '../../db/prisma.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 import type { ChatbotAnswerSource, ChatbotConversationStatus } from '../../generated/prisma/client.js';
 
-/** Hội thoại & tin nhắn chatbot (Prisma). Mọi hàm nhận userId đều lọc theo chủ hội thoại — không đọc chéo người dùng. */
+/**
+ * Hội thoại & tin nhắn chatbot (Prisma). Mọi hàm nhận userId đều lọc theo chủ hội thoại — không đọc chéo người dùng.
+ * `communityId`: null = hội thoại với bot "Tào"; có giá trị = với bot của cộng đồng đó (2 loại không bao giờ lẫn nhau).
+ */
 
 /** Hội thoại đang mở quá lâu không nhắn thì coi là phiên mới (widget mở lại sẽ bắt đầu hội thoại mới). */
 export const CONVERSATION_IDLE_MS = 24 * 3600_000;
 
 export const conversationRepository = {
-  create: (userId: string) => prisma.chatbotConversation.create({ data: { userId } }),
+  create: (userId: string, communityId: string | null = null) => prisma.chatbotConversation.create({ data: { userId, communityId } }),
 
   /** Hội thoại gần nhất của user còn "sống" (open/handed_off, nhắn trong 24h). */
-  current: (userId: string) =>
+  current: (userId: string, communityId: string | null = null) =>
     prisma.chatbotConversation.findFirst({
-      where: { userId, status: { in: ['open', 'handed_off'] }, lastMessageAt: { gt: new Date(Date.now() - CONVERSATION_IDLE_MS) } },
+      where: { userId, communityId, status: { in: ['open', 'handed_off'] }, lastMessageAt: { gt: new Date(Date.now() - CONVERSATION_IDLE_MS) } },
       orderBy: { lastMessageAt: 'desc' },
     }),
 
-  findOwned: (id: string, userId: string) => prisma.chatbotConversation.findFirst({ where: { id, userId } }),
+  findOwned: (id: string, userId: string, communityId: string | null = null) => prisma.chatbotConversation.findFirst({ where: { id, userId, communityId } }),
 
   findById: (id: string) => prisma.chatbotConversation.findUnique({ where: { id } }),
 
@@ -61,8 +64,8 @@ export const conversationRepository = {
     prisma.chatbotConversation.update({ where: { id }, data }),
 
   /** Số tin user đã gửi từ `since` (giới hạn mỗi ngày). */
-  countUserMessagesSince: (userId: string, since: Date) =>
-    prisma.chatbotMessage.count({ where: { role: 'user', createdAt: { gte: since }, conversation: { userId } } }),
+  countUserMessagesSince: (userId: string, since: Date, communityId: string | null = null) =>
+    prisma.chatbotMessage.count({ where: { role: 'user', createdAt: { gte: since }, conversation: { userId, communityId } } }),
 
   /** Đặt 👍/👎 cho tin của bot — chỉ khi tin thuộc hội thoại của chính user. Trả về null nếu không tìm thấy. */
   async setFeedback(messageId: string, userId: string, value: -1 | 0 | 1) {
@@ -77,14 +80,15 @@ export const conversationRepository = {
       where: { learnedAt: null, lastMessageAt: { lt: new Date(Date.now() - idleMs) } },
       orderBy: { lastMessageAt: 'asc' },
       take,
-      select: { id: true, status: true },
+      select: { id: true, status: true, communityId: true },
     }),
 
   markLearned: (id: string) => prisma.chatbotConversation.update({ where: { id }, data: { learnedAt: new Date() } }),
 
   // ------------------------------------------------------------------ admin
-  async list(f: { status?: ChatbotConversationStatus; feedback?: 'negative'; q?: string; skip: number; take: number }) {
+  async list(f: { status?: ChatbotConversationStatus; feedback?: 'negative'; q?: string; skip: number; take: number; communityId?: string | null }) {
     const where: Prisma.ChatbotConversationWhereInput = {
+      communityId: f.communityId ?? null,
       ...(f.status ? { status: f.status } : {}),
       ...(f.feedback === 'negative' ? { messages: { some: { feedback: -1 } } } : {}),
       ...(f.q
@@ -118,9 +122,9 @@ export const conversationRepository = {
     return { rows: rows.map((r) => ({ ...r, negativeCount: neg.get(r.id) ?? 0 })), total };
   },
 
-  detail: (id: string) =>
-    prisma.chatbotConversation.findUnique({
-      where: { id },
+  detail: (id: string, communityId: string | null = null) =>
+    prisma.chatbotConversation.findFirst({
+      where: { id, communityId },
       include: { user: { select: { id: true, firstName: true, lastName: true, email: true } }, messages: { orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] } },
     }),
 };

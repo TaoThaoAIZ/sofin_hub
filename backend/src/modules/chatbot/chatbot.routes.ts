@@ -62,7 +62,7 @@ chatbotRouter.post('/chatbot/messages/:id/feedback', requireAuth, writeRateLimit
   res.json({ data: await chatbotService.feedback(req.userId!, p(req.params.id), value) });
 });
 
-function startSse(res: Response) {
+export function startSse(res: Response) {
   res.status(200).set({
     'Content-Type': 'text/event-stream; charset=utf-8',
     // no-transform: middleware compression bỏ qua => từng mẩu chữ tới ngay

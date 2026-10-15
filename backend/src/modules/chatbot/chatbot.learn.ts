@@ -77,7 +77,7 @@ export async function learnFromConversations(opts: { idleMs?: number; batch?: nu
           const question = redactPii(pair.question.trim()).text;
           const answer = redactPii(pair.answer.trim()).text;
           if (!question || !answer || looksLikeBankAccount(answer)) continue;
-          const [dup] = await chatbotRepository.matchQa(question, { limit: 1, order: 'similarity', statuses: ['active', 'candidate', 'stale', 'rejected'] });
+          const [dup] = await chatbotRepository.matchQa(question, { limit: 1, order: 'similarity', statuses: ['active', 'candidate', 'stale', 'rejected'], communityId: conv.communityId });
           if (dup && dup.similarity >= DUPLICATE_SIMILARITY) {
             stats.duplicates++;
             continue;
@@ -89,6 +89,8 @@ export async function learnFromConversations(opts: { idleMs?: number; batch?: nu
             source: 'learned',
             confidence: pair.confidence,
             sourceConversationId: conv.id,
+            // Hội thoại với bot cộng đồng => câu học được vào kho của cộng đồng đó, chờ chủ cộng đồng duyệt.
+            communityId: conv.communityId,
             tags: liked ? ['học từ chat', 'khách 👍'] : ['học từ chat'],
           });
           stats.candidates++;

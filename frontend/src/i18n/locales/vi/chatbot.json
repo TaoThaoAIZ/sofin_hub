@@ -42,7 +42,8 @@
     "register": "Đăng ký",
     "login": "Đăng nhập",
     "fallback": "trang này",
-    "explore": "Khám phá khóa học"
+    "explore": "Khám phá khóa học",
+    "lesson": "bài học"
   },
   "quickReplies": "Gợi ý trả lời nhanh",
   "queued": "chờ gửi — Tào trả lời xong tin trước sẽ trả lời luôn"

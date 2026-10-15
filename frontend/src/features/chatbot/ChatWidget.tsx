@@ -5,6 +5,8 @@ import { Link, useLocation } from 'react-router-dom';
 import { ApiError } from '../../lib/api';
 import { useAuth } from '../auth/AuthContext';
 import { requestHandoff, sendChatMessage, sendFeedback, startConversation } from './api';
+import { useMessageQueue } from './useMessageQueue';
+import { useCommunityBotStatus } from '../community-bot/queries';
 import { chatbotKeys, useChatbotStatus, useCurrentConversation } from './queries';
 import type { ChatConversation, ChatMessage, Handoff, ToolCard } from './types';
 
@@ -17,7 +19,10 @@ export function ChatWidget() {
   const { pathname } = useLocation();
   const status = useChatbotStatus();
   const [open, setOpen] = useState(false);
-  if (authStatus !== 'authenticated' || pathname.startsWith('/admin') || !status.data?.available) return null;
+  // Trang cộng đồng có trợ lý AI riêng đang dùng được (CommunityBotWidget, cùng góc màn hình) => ẩn Tào để không chồng nhau.
+  const communityId = /^\/communities\/([^/]+)\/community(\/|$)/.exec(pathname)?.[1];
+  const communityBot = useCommunityBotStatus(communityId);
+  if (authStatus !== 'authenticated' || pathname.startsWith('/admin') || communityBot.data?.available || !status.data?.available) return null;
   return open ? <ChatPanel onClose={() => setOpen(false)} zaloUrl={status.data.zaloSupportUrl} maxChars={status.data.maxInputChars} /> : <Launcher onOpen={() => setOpen(true)} />;
 }
 
@@ -35,7 +40,7 @@ function Launcher({ onOpen }: { onOpen: () => void }) {
   );
 }
 
-interface Bubble extends ChatMessage {
+export interface Bubble extends ChatMessage {
   tools?: ToolCard[];
   /** Lựa chọn trả lời nhanh khi bot hỏi lại (chỉ hiện dưới tin mới nhất). */
   suggestions?: string[];
@@ -54,7 +59,7 @@ function ChatPanel(props: { onClose: () => void; zaloUrl: string | null; maxChar
   return <ChatSession {...props} initial={current.data ?? null} />;
 }
 
-const PANEL_CLASS =
+export const PANEL_CLASS =
   'glass fixed inset-0 z-[60] flex flex-col overflow-hidden [--glass-bg:rgba(255,255,255,.92)] sm:inset-auto sm:right-6 sm:bottom-6 sm:h-[min(620px,calc(100vh-48px))] sm:w-[400px] sm:rounded-3xl';
 
 function ChatSession({
@@ -73,15 +78,10 @@ function ChatSession({
   const [conversation, setConversation] = useState<ChatConversation | null>(initial?.conversation ?? null);
   const [messages, setMessages] = useState<Bubble[]>(initial?.messages ?? []);
   const [draft, setDraft] = useState('');
-  const [pending, setPending] = useState<{ user: string; reply: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [handoff, setHandoff] = useState<Handoff | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
-  }, [messages, pending]);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -108,27 +108,30 @@ function ChatSession({
     return r.conversation;
   }
 
-  /**
-   * Khách nhắn liên tục (kiểu Zalo: 3-4 tin ngắn liền nhau) trong lúc Tào đang trả lời: tin mới vào hàng chờ (hiện ngay, nhãn "chờ gửi"),
-   * trả lời xong thì GỘP cả hàng chờ thành 1 lượt (mỗi tin 1 dòng, tối đa maxChars/lượt) — bot trả lời một lần cho cả cụm, không gọi AI
-   * song song trên cùng hội thoại (backend cũng chặn bằng khóa theo hội thoại, 409 CHATBOT_BUSY).
-   */
-  const busyRef = useRef(false);
-  const queueRef = useRef<string[]>([]);
-  const [queued, setQueued] = useState<string[]>([]);
+  /** Hàng chờ gộp tin nhắn liên tiếp (useMessageQueue): mỗi lượt gửi các tin gộp, xong thì thêm tin khách + tin bot vào danh sách. */
+  const queue = useMessageQueue(
+    maxChars,
+    async (text, parts, h) => {
+      const conv = await ensureConversation();
+      const done = await sendChatMessage(conv.id, text, h);
+      const userMsgs: Bubble[] = parts.map((content, i) => ({ id: `local-${done.message.id}-${i}`, role: 'user', content, answerSource: null, feedback: 0, createdAt: done.message.createdAt }));
+      setMessages((m) => [...m, ...userMsgs, { ...done.message, tools: done.tools, suggestions: done.suggestions }]);
+      convRef.current = done.conversation;
+      setConversation(done.conversation);
+      if (done.handoff) setHandoff(done.handoff);
+      void qc.invalidateQueries({ queryKey: chatbotKeys.current });
+    },
+    // Lỗi: trả các tin chưa gửi về ô nhập để khách gửi lại, không mất chữ.
+    (err, unsent) => {
+      setError(errText(err));
+      setDraft((d) => [...unsent, d].filter(Boolean).join('\n').slice(0, maxChars));
+    },
+  );
+  const { pending, queued } = queue;
 
-  /** Lấy từ đầu hàng chờ các tin gộp được trong maxChars (ít nhất 1 tin). */
-  function takeBatch(): string[] {
-    const q = queueRef.current;
-    const batch: string[] = [];
-    let len = 0;
-    while (q.length && (batch.length === 0 || len + 1 + q[0]!.length <= maxChars)) {
-      len += (batch.length ? 1 : 0) + q[0]!.length;
-      batch.push(q.shift()!);
-    }
-    setQueued([...q]);
-    return batch;
-  }
+  useEffect(() => {
+    listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
+  }, [messages, pending, queued]);
 
   /** Gửi ô nhập, hoặc `preset` khi bấm một gợi ý trả lời nhanh (ô nhập giữ nguyên). */
   function send(e?: FormEvent, preset?: string) {
@@ -137,44 +140,7 @@ function ChatSession({
     if (!text) return;
     setError(null);
     if (preset === undefined) setDraft('');
-    queueRef.current.push(text.slice(0, maxChars));
-    setQueued([...queueRef.current]);
-    if (!busyRef.current) void drain();
-  }
-
-  async function drain() {
-    busyRef.current = true;
-    try {
-      while (queueRef.current.length) {
-        const parts = takeBatch();
-        const text = parts.join('\n');
-        setPending({ user: text, reply: '' });
-        try {
-          const conv = await ensureConversation();
-          const done = await sendChatMessage(conv.id, text, {
-            onDelta: (d) => setPending((p) => (p ? { ...p, reply: p.reply + d } : p)),
-            onReplace: (r) => setPending((p) => (p ? { ...p, reply: r } : p)),
-          });
-          const userMsgs: Bubble[] = parts.map((content, i) => ({ id: `local-${done.message.id}-${i}`, role: 'user', content, answerSource: null, feedback: 0, createdAt: done.message.createdAt }));
-          setMessages((m) => [...m, ...userMsgs, { ...done.message, tools: done.tools, suggestions: done.suggestions }]);
-          convRef.current = done.conversation;
-          setConversation(done.conversation);
-          if (done.handoff) setHandoff(done.handoff);
-          void qc.invalidateQueries({ queryKey: chatbotKeys.current });
-        } catch (err) {
-          // Lỗi: trả các tin chưa gửi (lượt này + hàng chờ còn lại) về ô nhập để khách gửi lại, không mất chữ.
-          setError(errText(err));
-          const rest = [...parts, ...queueRef.current];
-          queueRef.current = [];
-          setQueued([]);
-          setDraft((d) => [...rest, d].filter(Boolean).join('\n').slice(0, maxChars));
-        } finally {
-          setPending(null);
-        }
-      }
-    } finally {
-      busyRef.current = false;
-    }
+    queue.enqueue(text);
   }
 
   async function onHandoff() {
@@ -201,8 +167,7 @@ function ChatSession({
   }
 
   function newChat() {
-    queueRef.current = [];
-    setQueued([]);
+    queue.clear();
     setConversation(null);
     setMessages([]);
     setHandoff(null);
@@ -348,7 +313,7 @@ function ChatSession({
   );
 }
 
-function MessageBubble({ m, onRate, streaming }: { m: Bubble; onRate?: (v: -1 | 1) => void; streaming?: boolean }) {
+export function MessageBubble({ m, onRate, streaming }: { m: Bubble; onRate?: (v: -1 | 1) => void; streaming?: boolean }) {
   const { t } = useTranslation('chatbot');
   const mine = m.role === 'user';
   return (
@@ -458,9 +423,12 @@ function PlainLinks({ text, label, t }: { text: string; label?: string; t: (k: s
   // Đường dẫn phải đứng riêng: trước không phải chữ/số/"/"/"." và sau không phải chữ (kể cả chữ có dấu) — "200.000đ/tháng" không phải link.
   const parts = text.split(/(https:\/\/[^\s)]+|(?<![\p{L}\p{N}/.])\/[a-z0-9][a-z0-9\-/]*(?![\p{L}\p{N}]))/giu);
   if (label !== undefined && parts.length !== 3) return <>{label}</>;
-  const pageOf = (path: string) =>
-    // Tiền tố kết thúc bằng "/" khớp mọi trang con (/communities/abc); còn lại khớp đúng trang hoặc trang con của nó.
-    PAGE_LABELS.find(([prefix]) => (prefix.endsWith('/') ? path.startsWith(prefix) : path === prefix || path.startsWith(`${prefix}/`)));
+  const pageOf = (path: string): [string, string] | undefined =>
+    // Bài học trong lớp học (/communities/:id/community/lop-hoc/:lessonId) => "bài học" (bot cộng đồng hay đưa link bài).
+    /^\/communities\/[^/]+\/community\/lop-hoc\/[^/]+$/.test(path)
+      ? [path, 'lesson']
+      : // Tiền tố kết thúc bằng "/" khớp mọi trang con (/communities/abc); còn lại khớp đúng trang hoặc trang con của nó.
+        PAGE_LABELS.find(([prefix]) => (prefix.endsWith('/') ? path.startsWith(prefix) : path === prefix || path.startsWith(`${prefix}/`)));
   const hostLabel = (url: string) => {
     try {
       const host = new URL(url).hostname.replace(/^www\./, '');
@@ -495,18 +463,18 @@ function PlainLinks({ text, label, t }: { text: string; label?: string; t: (k: s
   );
 }
 
-const ChatIcon = ({ size = 24 }: { size?: number }) => (
+export const ChatIcon = ({ size = 24 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12Z" />
     <path d="M8.5 11h.01M12 11h.01M15.5 11h.01" />
   </svg>
 );
-const CloseIcon = () => (
+export const CloseIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
     <path d="M6 6l12 12M18 6 6 18" />
   </svg>
 );
-const SendIcon = () => (
+export const SendIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7Z" />
   </svg>

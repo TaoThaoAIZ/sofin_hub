@@ -1,4 +1,5 @@
 import { normalizeText } from '../search/search.text.js';
+import type { CommunityContext } from '../community-bot/community-bot.context.js';
 import type { KnowledgeContext } from './chatbot.context.js';
 import type { ChatLlm, LlmRequest, LlmUsage } from './chatbot.llm.js';
 import type { AnswerOutput } from './chatbot.prompt.js';
@@ -65,6 +66,26 @@ function answer(message: string, c: KnowledgeContext): AnswerOutput {
   return { ...base, reply: 'dạ Tào chưa có thông tin chính xác ạ, bạn nhắn Zalo hỗ trợ để được giúp nha', handoff: false };
 }
 
+/** Bot cộng đồng (community-bot): trả lời từ ngữ cảnh cộng đồng — bài mở (trích nội dung), bài khóa (chỉ cách mở), sự kiện, nội quy. */
+function communityAnswer(message: string, c: CommunityContext): AnswerOutput {
+  const t = normalizeText(message);
+  const base: AnswerOutput = { onTopic: true, injection: false, reply: '', handoff: false, handoffCategory: 'user', handoffReason: '', toolIds: [], usedSampleId: '', suggestions: [] };
+  if (/\b(tho|code|toan|bai tap ve nha|poem|thoi tiet)\b/.test(t)) return { ...base, onTopic: false, reply: 'ngoài phạm vi' };
+  if (/bo qua|ignore|system prompt/.test(t)) return { ...base, injection: true, reply: 'ngoài phạm vi' };
+  if (replyOverride) return { ...base, reply: replyOverride(message) };
+  if (/gap chu|hoi chu|gap nguoi|hoan tien|khieu nai/.test(t)) return { ...base, handoff: true, handoffReason: message.slice(0, 200), reply: 'Để mình gửi câu hỏi này cho chủ cộng đồng nhé.' };
+  const open = c.lessons.find((l) => l.status === 'open');
+  const locked = c.lessons.find((l) => l.status === 'locked');
+  if (/bai|hoc|lesson/.test(t) && (open || locked)) {
+    if (open) return { ...base, reply: `Bài "${open.title}": ${(open.content ?? '').slice(0, 120)} (${open.link})` };
+    return { ...base, reply: `Bài "${locked!.title}" đang khóa, ${locked!.howToUnlock}.` };
+  }
+  if (/su kien|lich|event|live/.test(t) && c.events[0]) return { ...base, reply: `Sự kiện "${c.events[0].title}" lúc ${c.events[0].startAt}.` };
+  if (/noi quy|quy dinh|rule/.test(t) && c.community.rules[0]) return { ...base, reply: `Nội quy: ${c.community.rules.map((r) => r.title).join(', ')}.` };
+  if (c.sampleAnswers[0]) return { ...base, reply: c.sampleAnswers[0].answer, usedSampleId: c.sampleAnswers[0].id };
+  return { ...base, reply: `Mình chưa có thông tin về việc này trong cộng đồng ${c.community.name}.` };
+}
+
 export class FakeChatModel implements ChatLlm {
   async complete<T>(req: LlmRequest<T>): Promise<{ output: T; usage: LlmUsage }> {
     if (answerDelayMs && req.kind === 'answer') await new Promise((r) => setTimeout(r, answerDelayMs));
@@ -80,8 +101,8 @@ export class FakeChatModel implements ChatLlm {
           })();
       return { output: req.schema.parse(raw), usage: USAGE };
     }
-    const h = req.hint as { message: string; context: KnowledgeContext };
+    const h = req.hint as { message: string; context: KnowledgeContext; community?: CommunityContext };
     fakeCalls.push({ kind: 'answer', input: h.message });
-    return { output: req.schema.parse(answer(h.message, h.context)), usage: USAGE };
+    return { output: req.schema.parse(h.community ? communityAnswer(h.message, h.community) : answer(h.message, h.context)), usage: USAGE };
   }
 }

@@ -63,7 +63,7 @@ const BUSY_TEXT = 'dạ hiện nhiều bạn hỏi cùng lúc quá, bạn thử 
 const QUOTA_TEXT = 'dạ hiện Tào đang tạm quá tải, bạn thử lại sau ít phút hoặc bấm "Nhắn Zalo hỗ trợ" để gặp người hỗ trợ ngay nha';
 
 /** Gợi ý trả lời nhanh từ model: gọn, không trùng, tối đa 4; bỏ mục vi phạm guardrail (số tài khoản, số tiền không nguồn...). */
-function cleanSuggestions(items: string[], sources: string[]): string[] {
+export function cleanSuggestions(items: string[], sources: string[]): string[] {
   const out: string[] = [];
   for (const raw of items) {
     const v = raw.replace(/\s+/g, ' ').trim().slice(0, 60);
@@ -123,7 +123,7 @@ const LOCK_TTL_MS = env.CHATBOT_TIMEOUT_MS + 30_000;
  * Khóa 1 lượt trả lời cho mỗi hội thoại (Redis khi có REDIS_URL => đúng cả khi chạy nhiều instance; không có thì trong bộ nhớ).
  * Đang có lượt khác => 409 CHATBOT_BUSY (widget không gửi song song — nó gộp tin nhắn liên tiếp vào 1 lượt; lỗi này chỉ gặp khi 2 tab/gọi API trực tiếp).
  */
-async function lockConversation(conversationId: string): Promise<() => Promise<void>> {
+export async function lockConversation(conversationId: string): Promise<() => Promise<void>> {
   const key = `chatbot:busy:${conversationId}`;
   const token = randomUUID();
   if (!(await shared().kv.setNx(key, token, LOCK_TTL_MS))) {
