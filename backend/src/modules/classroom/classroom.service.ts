@@ -402,11 +402,9 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
       const flat = flatLessonIds(modules);
       const i = flat.indexOf(lessonId);
       const isLocked = (id: string | undefined) => !!id && states.some((x) => x.lockedLessons.has(id));
-      const q = await quizStore.findByLesson(lessonId);
-      const quiz =
-        q && q.questions.length > 0
-          ? { questionCount: q.questions.length, passPercent: q.passPercent, passed: await quizStore.hasPassed(q.id, userId), required: !staff }
-          : null;
+      // Tóm tắt trắc nghiệm đi kèm truy vấn findLesson (không thêm truy vấn khi bài không có trắc nghiệm).
+      const q = lesson.quiz;
+      const quiz = q ? { questionCount: q.questionCount, passPercent: q.passPercent, passed: await quizStore.hasPassed(q.id, userId), required: !staff } : null;
       return {
         ...lessonView(lesson, doneIds),
         learningCourseId: course.id,
@@ -431,8 +429,8 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
       assertLessonOpen(s, lesson);
       // Bài có trắc nghiệm: muốn ĐÁNH DẤU hoàn thành phải đã đạt điểm (bỏ đánh dấu thì không cần). Mod+ không bị bắt buộc.
       if (!staff && !doneIds.has(lessonId)) {
-        const q = await quizStore.findByLesson(lessonId);
-        if (q && q.questions.length > 0 && !(await quizStore.hasPassed(q.id, userId))) {
+        const q = lesson.quiz;
+        if (q && !(await quizStore.hasPassed(q.id, userId))) {
           throw HttpError.coded(409, 'QUIZ_REQUIRED', `Bạn cần đạt tối thiểu ${q.passPercent}% bài trắc nghiệm để hoàn thành bài học này`);
         }
       }
