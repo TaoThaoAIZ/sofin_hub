@@ -1966,6 +1966,7 @@ model CommunityReferral {
 
   @@unique([communityId, referredUserId])
   @@index([communityId, referrerId])
+  @@index([referrerId])
   @@index([referredUserId])
 }
 

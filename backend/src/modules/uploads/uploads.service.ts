@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { Transform, type Readable } from 'node:stream';
+import { Transform, pipeline, type Readable } from 'node:stream';
 import { env } from '../../config/env.js';
 import { HttpError } from '../../utils/http-error.js';
 import { catalogService } from '../catalog/catalog.service.js';
@@ -158,8 +158,8 @@ export function createUploadService(repo: UploadRepository = prismaUploadReposit
         },
       });
       try {
-        body.on('error', (e) => guard.destroy(e));
-        body.pipe(guard);
+        // pipeline (không dùng .pipe): lỗi của guard/request được truyền sang guard để storage.putStream thấy và dọn dẹp, không phát sinh uncaughtException.
+        pipeline(body, guard, () => undefined);
         await storage.putStream(record.key, guard, { contentType: ticket.ct, size: contentLength });
         await repo.update(record.key, { status: 'uploaded', size: seen });
       } catch (e) {
