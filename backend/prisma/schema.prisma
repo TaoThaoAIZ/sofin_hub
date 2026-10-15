@@ -789,6 +789,9 @@ model Post {
   likes        PostLike[]
   likeNotices  PostLikeNotice[]
   pollVotes    PollVote[]
+  /// Thông báo popup đăng kèm bài này (CommunityAnnouncement.postId).
+  announcement CommunityAnnouncement?
+
   /// Cột GENERATED ALWAYS (migration 20261005100000_search_fulltext): chỉ đọc bằng SQL thô; Prisma bỏ qua khi ghi.
   searchVector Unsupported("tsvector")?
 
@@ -2143,7 +2146,8 @@ model CommunityWelcomeSeen {
   @@index([communityId])
 }
 
-/// Thông báo popup của chủ/admin cộng đồng — chỉ hiện ở trang của cộng đồng đó; mỗi thành viên thấy 1 lần. Chỉ bản active mới nhất được hiện.
+/// Thông báo popup = bài "Thông báo" đang ghim của cộng đồng — chỉ hiện ở trang của cộng đồng đó, mỗi thành viên mỗi thông báo 1 lần,
+/// chỉ thông báo đăng/ghim SAU khi người đó tham gia; nhiều thông báo => slide từ cũ tới mới.
 model CommunityAnnouncement {
   id          String   @id @default(uuid())
   communityId String   @map("courseId")
@@ -2152,12 +2156,15 @@ model CommunityAnnouncement {
   body        String
   /// Nút "Xem" (đường dẫn trong site /... hoặc https://...), null = không có nút.
   link        String?
+  /// Bài "Thông báo" đã ghim trên Bảng tin (ghim <=> popup; bỏ ghim => active=false; xóa bài => xóa thông báo).
+  postId      String?  @unique
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   community Community                   @relation(fields: [communityId], references: [id], onDelete: Cascade)
   author    User                        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  post      Post?                       @relation(fields: [postId], references: [id], onDelete: Cascade)
   seen      CommunityAnnouncementSeen[]
 
   @@index([communityId, active, createdAt])

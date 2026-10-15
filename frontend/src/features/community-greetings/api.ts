@@ -9,15 +9,27 @@ export interface GreetingSender {
   avatarUrl: string | null;
   role: 'owner' | 'admin' | 'mod' | 'member' | null;
 }
+export interface PendingAnnouncement {
+  id: string;
+  title: string;
+  body: string;
+  /** Nút "Xem chi tiết": link riêng của chủ hoặc bài trên Bảng tin. */
+  link: string | null;
+  postLink: string | null;
+  createdAt: string;
+  sender: GreetingSender;
+}
 export interface PendingGreetings {
   welcome: { message: string; sender: GreetingSender } | null;
-  announcement: { id: string; title: string; body: string; link: string | null; createdAt: string; sender: GreetingSender } | null;
+  /** Thông báo chưa xem, cũ -> mới (hiện dạng slide). */
+  announcements: PendingAnnouncement[];
 }
 export interface AnnouncementRow {
   id: string;
   title: string;
   body: string;
   link: string | null;
+  postLink: string | null;
   createdAt: string;
   active: boolean;
   author: string;
@@ -44,14 +56,18 @@ export const publishAnnouncement = (id: string, body: { title: string; body: str
 export const setAnnouncementActive = (id: string, aid: string, active: boolean) =>
   apiPatch<{ data: GreetingSettings }>(`${G(id)}/announcements/${aid}`, { active }).then((r) => r.data);
 
-/** Popup cần hiện ở trang cộng đồng `id` — hỏi 1 lần mỗi lần vào cộng đồng (không tự tải lại). */
+/**
+ * Popup cần hiện ở trang cộng đồng `id`. Mỗi lần vào lại cộng đồng đều hỏi lại server (staleTime 0); popup đã hiện thì
+ * GreetingPopup xóa khỏi cache ngay (dropFromCache) để quay lại trang không thấy bản cũ trong cache.
+ */
 export const usePendingGreetings = (id: string) => {
   const { status } = useAuth();
   return useQuery({
     queryKey: greetingKeys.pending(id),
     queryFn: ({ signal }) => apiGet<{ data: PendingGreetings }>(`${G(id)}/pending`, undefined, signal).then((r) => r.data),
     enabled: status === 'authenticated' && Boolean(id),
-    staleTime: Infinity,
+    staleTime: 0,
+    refetchOnWindowFocus: false,
     retry: false,
   });
 };

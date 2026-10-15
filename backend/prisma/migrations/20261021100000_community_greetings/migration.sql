@@ -29,6 +29,7 @@ CREATE TABLE "CommunityAnnouncement" (
     "title" TEXT NOT NULL,
     "body" TEXT NOT NULL,
     "link" TEXT,
+    "postId" TEXT,
     "active" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -55,6 +56,9 @@ CREATE INDEX "CommunityWelcomeSeen_courseId_idx" ON "CommunityWelcomeSeen"("cour
 CREATE INDEX "CommunityAnnouncement_authorId_idx" ON "CommunityAnnouncement"("authorId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "CommunityAnnouncement_postId_key" ON "CommunityAnnouncement"("postId");
+
+-- CreateIndex
 CREATE INDEX "CommunityAnnouncementSeen_userId_idx" ON "CommunityAnnouncementSeen"("userId");
 
 -- AddForeignKey
@@ -71,6 +75,9 @@ ALTER TABLE "CommunityAnnouncement" ADD CONSTRAINT "CommunityAnnouncement_course
 
 -- AddForeignKey
 ALTER TABLE "CommunityAnnouncement" ADD CONSTRAINT "CommunityAnnouncement_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "CommunityAnnouncement" ADD CONSTRAINT "CommunityAnnouncement_postId_fkey" FOREIGN KEY ("postId") REFERENCES "Post"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "CommunityAnnouncementSeen" ADD CONSTRAINT "CommunityAnnouncementSeen_announcementId_fkey" FOREIGN KEY ("announcementId") REFERENCES "CommunityAnnouncement"("id") ON DELETE CASCADE ON UPDATE CASCADE;

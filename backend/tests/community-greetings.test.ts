@@ -17,8 +17,9 @@ describe('lời chào + thông báo cộng đồng', () => {
   const pending = async (u: U, id: string) => {
     const r = await api(u, 'GET', id, '/pending');
     assert.equal(r.status, 200, JSON.stringify(r.body));
-    return r.body.data as { welcome: { message: string; sender: { id: string | null; name: string } } | null; announcement: { id: string; title: string } | null };
+    return r.body.data as { welcome: { message: string; sender: { id: string | null; name: string } } | null; announcements: { id: string; title: string; link: string | null }[] };
   };
+  const titles = async (u: U, id: string) => (await pending(u, id)).announcements.map((a) => a.title);
   const join = async (u: U, id: string) => assert.equal((await c.call('POST', `/courses/${id}/enroll`, { token: u.token })).status < 300, true);
   const leave = async (u: U, id: string) => assert.equal((await c.call('DELETE', `/me/communities/${id}`, { token: u.token })).status, 200);
 
@@ -67,7 +68,7 @@ describe('lời chào + thông báo cộng đồng', () => {
     // Chủ/admin không thấy lời chào của chính cộng đồng mình; người ngoài không có gì.
     assert.equal((await pending(owner, id)).welcome, null);
     const outsider = await c.registerUser('grout');
-    assert.deepEqual(await pending(outsider, id), { welcome: null, announcement: null });
+    assert.deepEqual(await pending(outsider, id), { welcome: null, announcements: [] });
     assert.equal((await api(outsider, 'POST', id, '/welcome/seen')).status, 403);
   });
 
@@ -83,7 +84,7 @@ describe('lời chào + thông báo cộng đồng', () => {
     assert.equal((await pending(mid, id)).welcome, null, 'bật lại không hiện cho người đã tham gia từ trước');
   });
 
-  it('thông báo: chỉ bản mới nhất, mỗi người 1 lần, chỉ trong cộng đồng đó; gỡ => không hiện; chỉ admin trở lên đăng được', async () => {
+  it('thông báo = bài "Thông báo" đang ghim: nhiều thông báo => slide cũ -> mới; mỗi thông báo 1 lần; chỉ thông báo sau khi tham gia; chỉ trong cộng đồng đó', async () => {
     const id = await community();
     const other = await community();
     const m = await c.registerUser('grann');
@@ -93,26 +94,48 @@ describe('lời chào + thông báo cộng đồng', () => {
     assert.equal((await api(m, 'POST', id, '/announcements', { title: 'x', body: 'y' })).status, 403, 'thành viên thường không đăng được');
     assert.equal((await api(admin, 'POST', id, '/announcements', { title: 'Lịch live', body: 'Tối nay 20:00', link: 'javascript:alert(1)' })).status, 400);
     assert.equal((await api(admin, 'POST', id, '/announcements', { title: 'Cũ', body: 'cũ' })).status, 201);
-    const r = await api(owner, 'POST', id, '/announcements', { title: 'Lịch live', body: 'Tối nay 20:00', link: '/communities/x/community/lich' });
+    const r = await api(owner, 'POST', id, '/announcements', { title: 'Lịch live', body: 'Tối nay 20:00' });
     assert.equal(r.status, 201, JSON.stringify(r.body));
-    const list = r.body.data.announcements as { id: string; title: string; active: boolean }[];
-    assert.deepEqual(list.map((a) => [a.title, a.active]), [['Lịch live', true], ['Cũ', false]], 'đăng mới => bản cũ thôi hiện');
+    const list = r.body.data.announcements as { id: string; title: string; active: boolean; postLink: string }[];
+    assert.deepEqual(list.map((a) => [a.title, a.active]), [['Lịch live', true], ['Cũ', true]], 'nhiều thông báo cùng hiện');
+
+    // Đăng thông báo = bài mục "Thông báo" đã ghim trên Bảng tin.
+    const posts = await db.prisma.post.findMany({ where: { communityId: id }, orderBy: { createdAt: 'asc' } });
+    assert.deepEqual(posts.map((p) => [p.content, p.category, p.pinned]), [['Cũ\n\ncũ', 'announcement', true], ['Lịch live\n\nTối nay 20:00', 'announcement', true]]);
 
     const p = await pending(m, id);
-    assert.equal(p.announcement?.title, 'Lịch live');
-    assert.equal((await pending(m, other)).announcement, null, 'không hiện ở cộng đồng khác');
-    assert.equal((await pending(owner, id)).announcement, null, 'người đăng không thấy popup của chính mình');
-    assert.equal((await api(m, 'POST', other, `/announcements/${p.announcement!.id}/seen`)).status, 404, 'id thuộc cộng đồng khác');
-    assert.equal((await api(m, 'POST', id, `/announcements/${p.announcement!.id}/seen`)).status, 200);
-    assert.equal((await pending(m, id)).announcement, null, 'đã xem => không hiện lại');
+    assert.deepEqual(p.announcements.map((a) => a.title), ['Cũ', 'Lịch live'], 'slide từ cũ tới mới');
+    assert.equal(p.announcements[1]!.link, `/communities/${id}/community?post=${posts[1]!.id}`, 'không có link riêng => mở bài trên Bảng tin');
+    assert.deepEqual(await titles(m, other), [], 'không hiện ở cộng đồng khác');
+    assert.deepEqual(await titles(owner, id), ['Cũ'], 'người đăng không thấy popup của chính mình');
+    assert.equal((await api(m, 'POST', other, `/announcements/${p.announcements[0]!.id}/seen`)).status, 404, 'id thuộc cộng đồng khác');
+    assert.equal((await api(m, 'POST', id, `/announcements/${p.announcements[0]!.id}/seen`)).status, 200);
+    assert.deepEqual(await titles(m, id), ['Lịch live'], 'xem slide nào thì slide đó không hiện lại');
 
+    // Thành viên mới: không bị dồn thông báo cũ; chỉ thấy thông báo đăng/ghim SAU khi tham gia.
     const m2 = await c.registerUser('grann2');
     await join(m2, id);
-    assert.equal((await pending(m2, id)).announcement?.title, 'Lịch live', 'thành viên mới vẫn thấy thông báo đang hiện');
-    const off = await api(owner, 'PATCH', id, `/announcements/${p.announcement!.id}`, { active: false });
+    assert.deepEqual(await titles(m2, id), []);
+    await new Promise((res) => setTimeout(res, 5));
+    // Ghim bài "Thông báo" ngay trên Bảng tin cũng thành popup; bỏ ghim => thôi hiện.
+    const feedPost = await db.prisma.post.create({ data: { communityId: id, authorId: admin.id, content: 'Đổi giờ học\nTừ tuần sau học lúc 21:00', category: 'announcement' } });
+    assert.equal((await c.call('POST', `/posts/${feedPost.id}/pin`, { token: owner.token })).status, 200);
+    assert.deepEqual(await titles(m2, id), ['Đổi giờ học']);
+    assert.deepEqual(await titles(m, id), ['Lịch live', 'Đổi giờ học']);
+    assert.equal((await c.call('POST', `/posts/${feedPost.id}/pin`, { token: owner.token })).status, 200);
+    assert.deepEqual(await titles(m2, id), [], 'bỏ ghim => thôi hiện');
+    // Ghim bài thường (không phải mục Thông báo) => không popup.
+    const normal = await db.prisma.post.create({ data: { communityId: id, authorId: admin.id, content: 'Thảo luận', category: 'general' } });
+    await c.call('POST', `/posts/${normal.id}/pin`, { token: owner.token });
+    assert.deepEqual(await titles(m2, id), []);
+
+    // Gỡ trong Cài đặt = bỏ ghim bài trên Bảng tin.
+    const live = p.announcements[1]!;
+    const off = await api(owner, 'PATCH', id, `/announcements/${live.id}`, { active: false });
     assert.equal(off.status, 200);
-    assert.equal((await pending(m2, id)).announcement, null, 'gỡ => không hiện');
+    assert.equal((await db.prisma.post.findUniqueOrThrow({ where: { id: posts[1]!.id } })).pinned, false);
+    assert.deepEqual(await titles(m, id), [], 'gỡ => không hiện');
     const s = await api(admin, 'GET', id, '/settings');
-    assert.equal(s.body.data.announcements[0].seenCount, 1);
+    assert.equal(s.body.data.announcements.find((a: { title: string }) => a.title === 'Cũ').seenCount, 1);
   });
 });

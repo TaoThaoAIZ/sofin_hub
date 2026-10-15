@@ -4,13 +4,16 @@ import { HttpError } from '../../utils/http-error.js';
 import { catalogService } from '../catalog/catalog.service.js';
 import { enrollmentService } from '../enrollments/enrollments.service.js';
 import { requireRole } from '../permissions/policy.js';
+import { postsService } from '../posts/posts.service.js';
 
 /**
  * Lời chào thành viên mới + thông báo popup của chủ cộng đồng (docs/features/community-greetings.md).
  * - Lời chào: hiện 1 lần duy nhất / người / cộng đồng, chỉ cho người tham gia TỪ lúc chủ bật; rời rồi tham gia lại cũng không hiện nữa
  *   (CommunityWelcomeSeen không gắn với Enrollment).
- * - Thông báo: chỉ bản active mới nhất, chỉ hiện ở trang của cộng đồng đó, mỗi thành viên 1 lần.
- * Đánh dấu "đã xem" ngay khi popup HIỆN (không chờ bấm đóng) => tải lại trang không hiện lại.
+ * - Thông báo = bài mục "Thông báo" đang GHIM (đăng ở đây hoặc ghim trên Bảng tin — announcement-sync.ts). Chỉ hiện ở trang của cộng
+ *   đồng đó, mỗi thành viên mỗi thông báo 1 lần, CHỈ thông báo đăng/ghim sau khi người đó tham gia (người mới chỉ thấy lời chào, không bị
+ *   dồn thông báo cũ). Nhiều thông báo chưa xem => trả về theo thứ tự cũ -> mới (FE hiện dạng slide), tối đa MAX_SLIDES.
+ * Đánh dấu "đã xem" ngay khi popup / slide HIỆN (không chờ bấm đóng) => tải lại trang không hiện lại.
  */
 
 const LINK = z
@@ -30,6 +33,9 @@ export const announcementBody = z.object({
 });
 export const patchAnnouncementBody = z.object({ active: z.boolean() });
 
+/** Số thông báo chưa xem tối đa hiện trong 1 lần (lấy mới nhất), để popup không quá dài. */
+export const MAX_SLIDES = 10;
+
 type Sender = { id: string | null; name: string; avatarUrl: string | null; role: 'owner' | 'admin' | 'mod' | 'member' | null };
 
 const userSelect = { id: true, firstName: true, lastName: true, avatarUrl: true } as const;
@@ -48,35 +54,46 @@ async function senderFor(communityId: string, userId: string | null, fallbackNam
   return u ? { id: u.id, name: nameOf(u), avatarUrl: u.avatarUrl, role: e?.role ?? null } : { id: null, name: fallbackName, avatarUrl: null, role: null };
 }
 
-const announcementView = (a: { id: string; title: string; body: string; link: string | null; createdAt: Date }) => ({
+const postLink = (communityId: string, postId: string | null) => (postId ? `/communities/${communityId}/community?post=${postId}` : null);
+const announcementView = (a: { id: string; communityId: string; title: string; body: string; link: string | null; postId: string | null; createdAt: Date }) => ({
   id: a.id,
   title: a.title,
   body: a.body,
-  link: a.link,
+  /** Nút "Xem chi tiết": link riêng nếu có, không thì mở bài trên Bảng tin. */
+  link: a.link ?? postLink(a.communityId, a.postId),
+  postLink: postLink(a.communityId, a.postId),
   createdAt: a.createdAt.toISOString(),
 });
+const announcementSelect = { id: true, communityId: true, title: true, body: true, link: true, postId: true, createdAt: true, authorId: true } as const;
+/** Thông báo còn hiệu lực: đang bật + bài gốc còn ghim, không bị ẩn/gỡ. */
+const LIVE = { active: true, post: { pinned: true, hidden: false, removedAt: null } } as const;
 
 export const greetingsService = {
-  /** Popup cần hiện cho người đang xem trang cộng đồng (null = không có). Người ngoài / cộng đồng bị khóa => không có gì. */
+  /** Popup cần hiện cho người đang xem trang cộng đồng. Người ngoài / cộng đồng bị khóa => không có gì. */
   async pending(userId: string, communityId: string) {
-    const none = { welcome: null, announcement: null };
+    const none = { welcome: null, announcements: [] };
     const { locked } = await catalogService.requireLockState(communityId);
     if (locked) return none;
     const role = await enrollmentService.getActiveRole(userId, communityId);
     if (!role) return none;
-    const [community, enrollment, welcome, seen, latest, me] = await Promise.all([
+    const [community, enrollment, welcome, seen, me] = await Promise.all([
       prisma.community.findUnique({ where: { id: communityId }, select: { title: true, ownerId: true, instructorName: true } }),
       prisma.enrollment.findUnique({ where: { userId_communityId: { userId, communityId } }, select: { enrolledAt: true } }),
       prisma.communityWelcome.findUnique({ where: { communityId } }),
       prisma.communityWelcomeSeen.findUnique({ where: { userId_communityId: { userId, communityId } }, select: { seenAt: true } }),
-      prisma.communityAnnouncement.findFirst({
-        where: { communityId, active: true },
-        orderBy: { createdAt: 'desc' },
-        select: { id: true, title: true, body: true, link: true, createdAt: true, authorId: true, seen: { where: { userId }, select: { userId: true } } },
-      }),
       prisma.user.findUnique({ where: { id: userId }, select: { firstName: true } }),
     ]);
     if (!community || !enrollment) return none;
+
+    // Chỉ thông báo đăng/ghim SAU khi tham gia, chưa xem, không phải của chính mình; lấy MAX_SLIDES mới nhất rồi xếp cũ -> mới.
+    const unseen = await prisma.communityAnnouncement.findMany({
+      where: { communityId, ...LIVE, createdAt: { gt: enrollment.enrolledAt }, authorId: { not: userId }, seen: { none: { userId } } },
+      orderBy: { createdAt: 'desc' },
+      take: MAX_SLIDES,
+      select: announcementSelect,
+    });
+    const senders = new Map<string, Sender>();
+    for (const a of unseen) if (!senders.has(a.authorId)) senders.set(a.authorId, await senderFor(communityId, a.authorId, community.instructorName));
 
     const showWelcome =
       role === 'member' &&
@@ -85,7 +102,6 @@ export const greetingsService = {
       welcome.message.trim() !== '' &&
       welcome.enabledSince !== null &&
       enrollment.enrolledAt >= welcome.enabledSince;
-    const showAnnouncement = latest && latest.authorId !== userId && latest.seen.length === 0;
 
     return {
       welcome: showWelcome
@@ -94,7 +110,7 @@ export const greetingsService = {
             sender: await senderFor(communityId, community.ownerId, community.instructorName),
           }
         : null,
-      announcement: showAnnouncement ? { ...announcementView(latest), sender: await senderFor(communityId, latest.authorId, community.instructorName) } : null,
+      announcements: unseen.reverse().map((a) => ({ ...announcementView(a), sender: senders.get(a.authorId)! })),
     };
   },
 
@@ -121,13 +137,18 @@ export const greetingsService = {
         where: { communityId },
         orderBy: { createdAt: 'desc' },
         take: 20,
-        select: { id: true, title: true, body: true, link: true, active: true, createdAt: true, author: { select: userSelect }, _count: { select: { seen: true } } },
+        select: { ...announcementSelect, active: true, author: { select: userSelect }, post: { select: { pinned: true, hidden: true, removedAt: true } }, _count: { select: { seen: true } } },
       }),
       prisma.enrollment.count({ where: { communityId } }),
     ]);
     return {
       welcome: { enabled: welcome?.enabled ?? false, message: welcome?.message ?? '', enabledSince: welcome?.enabledSince?.toISOString() ?? null },
-      announcements: rows.map((a) => ({ ...announcementView(a), active: a.active, author: nameOf(a.author), seenCount: a._count.seen })),
+      announcements: rows.map((a) => ({
+        ...announcementView(a),
+        active: a.active && a.post?.pinned === true && !a.post.hidden && !a.post.removedAt,
+        author: nameOf(a.author),
+        seenCount: a._count.seen,
+      })),
       members,
     };
   },
@@ -143,25 +164,27 @@ export const greetingsService = {
     return this.settings(userId, communityId);
   },
 
-  /** Đăng thông báo mới: các thông báo cũ thôi hiện (chỉ bản mới nhất là popup). */
+  /**
+   * Đăng thông báo = đăng bài mục "Thông báo" lên Bảng tin + ghim (=> popup qua announcement-sync). Các thông báo đang ghim khác giữ
+   * nguyên — thành viên chưa xem thấy dạng slide.
+   */
   async publishAnnouncement(userId: string, communityId: string, input: z.infer<typeof announcementBody>) {
     await requireRole(userId, communityId, 'admin');
-    await prisma.$transaction([
-      prisma.communityAnnouncement.updateMany({ where: { communityId, active: true }, data: { active: false } }),
-      prisma.communityAnnouncement.create({ data: { communityId, authorId: userId, title: input.title, body: input.body, link: input.link ?? null } }),
-    ]);
+    // Bảng tin hiển thị chữ thuần => bỏ dấu **in đậm** trong bài (popup vẫn giữ in đậm).
+    const post = await postsService.create(communityId, userId, `${input.title}\n\n${input.body.replace(/\*\*([^*\n]+?)\*\*/g, '$1')}`, 'Thông báo', []);
+    await postsService.togglePin(post.id);
+    // Giữ đúng tiêu đề / nội dung chủ nhập (không tách lại từ bài) + nút link riêng nếu có.
+    await prisma.communityAnnouncement.update({ where: { postId: post.id }, data: { title: input.title, body: input.body, link: input.link ?? null } });
     return this.settings(userId, communityId);
   },
 
-  /** Gỡ (active=false) / hiện lại (active=true — các bản khác thôi hiện). Người đã xem rồi không thấy lại. */
+  /** Gỡ / hiện lại = bỏ ghim / ghim lại bài trên Bảng tin. Ai đã xem rồi không thấy lại. */
   async setAnnouncementActive(userId: string, communityId: string, announcementId: string, active: boolean) {
     await requireRole(userId, communityId, 'admin');
-    const a = await prisma.communityAnnouncement.findFirst({ where: { id: announcementId, communityId }, select: { id: true } });
+    const a = await prisma.communityAnnouncement.findFirst({ where: { id: announcementId, communityId }, select: { id: true, postId: true, post: { select: { pinned: true } } } });
     if (!a) throw new HttpError(404, 'NOT_FOUND', 'Không tìm thấy thông báo');
-    await prisma.$transaction([
-      ...(active ? [prisma.communityAnnouncement.updateMany({ where: { communityId, active: true }, data: { active: false } })] : []),
-      prisma.communityAnnouncement.update({ where: { id: announcementId }, data: { active } }),
-    ]);
+    if (a.postId && a.post && a.post.pinned !== active) await postsService.togglePin(a.postId);
+    else await prisma.communityAnnouncement.update({ where: { id: a.id }, data: { active } });
     return this.settings(userId, communityId);
   },
 };

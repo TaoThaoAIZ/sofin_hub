@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
 import { useAuth } from '../auth/AuthContext';
 import { RichText } from '../chatbot/ChatWidget';
@@ -164,7 +165,17 @@ function AnnouncementSection({ communityId, data }: { communityId: string; data:
                     {a.active ? t('active') : t('inactive')}
                   </span>
                 </p>
-                <p className="m-0 mt-0.5 text-xs text-stone-500">{t('meta', { author: a.author, date: fmt(a.createdAt), seen: a.seenCount, members: data.members })}</p>
+                <p className="m-0 mt-0.5 text-xs text-stone-500">
+                  {t('meta', { author: a.author, date: fmt(a.createdAt), seen: a.seenCount, members: data.members })}
+                  {a.postLink && (
+                    <>
+                      {' · '}
+                      <Link to={a.postLink} className="font-semibold text-brand hover:underline">
+                        {t('viewPost')}
+                      </Link>
+                    </>
+                  )}
+                </p>
               </div>
               <button
                 type="button"
