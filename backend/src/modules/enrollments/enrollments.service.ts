@@ -54,7 +54,11 @@ export function createEnrollmentService(repo: EnrollmentRepository = enrollmentR
         // Gói còn hiệu lực (vd. đã "rời" nhưng chưa hết kỳ đã trả): vào lại KHÔNG phải trả tiền lại (nhưng cộng đồng riêng tư vẫn phải được duyệt).
         const live = await paymentsService.hasLiveSubscription(userId, communityId);
         // Cộng đồng riêng tư: luôn qua bước duyệt (kể cả còn gói đã trả); còn gói thì chỉ khỏi trả tiền lại, không khỏi duyệt.
-        if (course.visibility === 'private' && !(live && (await repo.hasApprovedJoinRequest(userId, communityId)))) {
+        // Cộng đồng riêng tư CÓ PHÍ đã được duyệt nhưng chưa trả: qua bước duyệt rồi → rơi xuống 402 PAYMENT_REQUIRED bên dưới (FE mở thanh toán, không mở lại hộp "Gửi yêu cầu").
+        if (
+          course.visibility === 'private' &&
+          !((await repo.hasApprovedJoinRequest(userId, communityId)) && (live || course.priceUsd > 0))
+        ) {
           throw HttpError.coded(403, 'JOIN_REQUEST_REQUIRED', 'Cộng đồng riêng tư: hãy gửi yêu cầu tham gia hoặc dùng lời mời');
         }
         if (!live) {
