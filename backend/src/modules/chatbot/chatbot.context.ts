@@ -1,10 +1,10 @@
 import { prisma } from '../../db/prisma.js';
 import { sendTelegram } from '../payments/payments.alerts.js';
-import { searchService } from '../search/search.service.js';
 import { normalizeText } from '../search/search.text.js';
 import { cfg } from '../settings/settings.service.js';
 import { addMessage, createTicket, OPEN_STATUSES, ticketCode } from '../support/tickets.core.js';
 import { TOOLS } from '../tools/tools.catalog.js';
+import { catalogKeywords } from './chatbot.keywords.js';
 import { accountGroups, myAccount } from './chatbot.my-data.js';
 import { chatbotSettings } from './chatbot.config.js';
 import { conversationRepository } from './chatbot.conversations.js';
@@ -34,12 +34,20 @@ export interface KnowledgeContext {
   sampleAnswers: { id: string; question: string; answer: string }[];
   documents: { document: string; section: string; content: string }[];
   tools: ReturnType<typeof toolView>[];
-  communities: { title: string; summary: string; link: string; price?: string }[];
+  communities: { title: string; summary: string; link: string; instructor?: string; price?: string }[];
   /** Chủ đề khóa học đang có (chỉ khi khách hỏi chung về khóa học mà chưa nói chủ đề) — để bot hỏi lại + gợi ý. */
   categories: { name: string; courses: number }[];
   /** null = không đưa vào ngữ cảnh (câu hỏi không liên quan đơn/thanh toán) — giảm dữ liệu cá nhân gửi sang ChatGPT. */
   /** Thông tin CÔNG KHAI của cộng đồng khách đang xem (null = không ở trang cộng đồng / không xem được). */
-  currentPage: { community: { name: string; link: string; description: string; instructor: string; promise: string | null; benefits: string[]; rules: string[]; price: string; members: number } } | null;
+  currentPage:
+    | {
+        community: { name: string; link: string; description: string; instructor: string; promise: string | null; benefits: string[]; rules: string[]; price: string; members: number };
+        /** Khách đã tham gia chưa — nội dung thành viên (bài đăng, bài học, lịch, bình chọn) Tào KHÔNG có: chưa tham gia => mời tham gia. */
+        viewerIsMember: boolean;
+      }
+    /** Cộng đồng RIÊNG TƯ khách chưa tham gia: chỉ tên + link, không có thông tin nào khác. */
+    | { restricted: { name: string; link: string; reason: 'private' } }
+    | null;
   myPayments: { community: string; amount: string; status: string; type: string; createdAt: string; transferContent?: string; refunded?: string }[] | null;
   /** Cộng đồng CHÍNH khách đã tham gia (null = câu hỏi không hỏi về cộng đồng/khóa học của khách). */
   myCommunities: { name: string; link: string; role: string; joinedAt: string }[] | null;
@@ -159,17 +167,100 @@ function categoryIn(texts: string[], cats: { key: string; name: string }[]) {
   return cats.find((c) => t.includes(` ${normalizeText(c.name)} `));
 }
 
+const communitySelect = { id: true, title: true, description: true, pricing: true, priceCents: true, priceAnnualCents: true, instructorName: true } as const;
+type CommunityRow = { id: string; title: string; description: string; pricing: string; priceCents: number; priceAnnualCents: number | null; instructorName: string };
+
 async function featuredCommunities(limit: number, category?: string): Promise<KnowledgeContext['communities']> {
   const rows = await prisma.community.findMany({
     where: { ...LISTED, ...(category ? { category: category as never } : {}) },
     orderBy: [{ students: 'desc' }, { rating: 'desc' }, { id: 'asc' }],
     take: limit,
-    select: { id: true, title: true, description: true, pricing: true, priceCents: true, priceAnnualCents: true },
+    select: communitySelect,
   });
+  return communityViews(rows);
+}
+
+/** Khoảng cách sửa chữ có tính đảo 2 ký tự cạnh nhau ("fimga" ~ "figma" = 1). */
+function editDistance(a: string, b: string): number {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)] as number[]);
+  for (let j = 1; j <= b.length; j++) d[0]![j] = j;
+  for (let i = 1; i <= a.length; i++)
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      d[i]![j] = Math.min(d[i - 1]![j]! + 1, d[i]![j - 1]! + 1, d[i - 1]![j - 1]! + cost);
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i]![j] = Math.min(d[i]![j]!, d[i - 2]![j - 2]! + 1);
+    }
+  return d[a.length]![b.length]!;
+}
+
+/** Mức khớp 1 từ khóa với 1 từ: đúng 1 · tiền tố (≥3 ký tự) 0.8 · sai 1 ký tự (≥4 ký tự) 0.7. */
+function wordMatch(k: string, w: string): number {
+  if (k === w) return 1;
+  if (k.length >= 3 && w.startsWith(k)) return 0.8;
+  if (k.length >= 4 && w.length >= 4 && Math.abs(k.length - w.length) <= 1 && editDistance(k, w) <= 1) return 0.7;
+  return 0;
+}
+
+const tokens = (s: string) => normalizeText(s).split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+
+/**
+ * Xếp hạng khóa học công khai theo từ khóa: khớp TÊN ×3, người hướng dẫn ×2, mô tả ×1 (mỗi từ khóa lấy chỗ khớp tốt nhất).
+ * Chịu được sai chính tả nhẹ và câu hỏi dài có từ thừa (không cần khớp MỌI từ như tìm kiếm thường). Giữ khóa có điểm ≥ 2 (1 từ khớp tên,
+ * kể cả sai 1 ký tự) và ≥ 60% khóa đầu ("tiếng anh" không kéo theo "Nhiếp ảnh").
+ */
+export function rankCommunities<T extends Pick<CommunityRow, 'title' | 'description' | 'instructorName'>>(rows: T[], keywords: string[], limit = 3): T[] {
+  if (!keywords.length) return [];
+  const scored = rows.map((r) => {
+    const fields: [string[], number][] = [[tokens(r.title), 3], [tokens(r.instructorName), 2], [tokens(r.description), 1]];
+    let score = 0;
+    for (const k of keywords) score += Math.max(0, ...fields.map(([ws, weight]) => Math.max(0, ...ws.map((w) => wordMatch(k, w))) * weight));
+    return { r, score };
+  });
+  const top = Math.max(0, ...scored.map((x) => x.score));
+  if (top < 2) return [];
+  return scored.filter((x) => x.score >= Math.max(2, top * 0.6)).sort((a, b) => b.score - a.score).slice(0, limit).map((x) => x.r);
+}
+
+/** Khóa học công khai (cache 60s — danh mục đổi ít, mỗi câu hỏi đều cần). */
+let catalogCache: { at: number; rows: CommunityRow[] } | null = null;
+async function listedCommunities(): Promise<CommunityRow[]> {
+  if (catalogCache && Date.now() - catalogCache.at < 60_000) return catalogCache.rows;
+  const rows = await prisma.community.findMany({ where: LISTED, orderBy: [{ students: 'desc' }, { id: 'asc' }], take: 500, select: communitySelect });
+  catalogCache = { at: Date.now(), rows };
+  return rows;
+}
+export const resetCatalogCacheForTests = () => {
+  catalogCache = null;
+};
+
+/** "cộng đồng này", "khóa này", "ở đây" — câu hỏi nói về trang khách đang xem. */
+const DEICTIC = /\b(nay|o day|cho nay|ben nay)\b/;
+
+/** Hỏi so sánh / rẻ nhất / bảng giá => cần giá của MỌI khóa công khai. */
+const PRICE_LIST_TOPIC = /\b(re nhat|dat nhat|mac nhat|thap nhat|cao nhat|so sanh|bang gia|muc gia|tat ca (cac )?khoa|duoi \d+|tren \d+|tam gia)\b/;
+
+/**
+ * Khóa học khớp câu hỏi (xếp hạng theo từ khóa trên các khóa công khai). Câu hỏi nối tiếp không có từ khóa ("ai dạy khóa đó vậy",
+ * "còn giá thì sao") => dùng từ khóa của câu khách ngay trước. Hỏi so sánh / rẻ nhất mà không chỉ rõ ≥ 2 khóa => bảng giá mọi khóa.
+ */
+async function searchCommunities(text: string, previous: string | undefined): Promise<{ list: KnowledgeContext['communities']; priceList: boolean }> {
+  const rows = await listedCommunities();
+  let hits = rankCommunities(rows, catalogKeywords(text));
+  if (!hits.length && previous) hits = rankCommunities(rows, catalogKeywords(previous));
+  if (PRICE_LIST_TOPIC.test(normalizeText(text)) && hits.length < 2) {
+    const all = [...rows].sort((a, b) => (a.pricing === 'free' ? 0 : a.priceCents) - (b.pricing === 'free' ? 0 : b.priceCents)).slice(0, 40);
+    return { list: communityViews(all, true), priceList: true };
+  }
+  return { list: communityViews(hits), priceList: false };
+}
+
+/** `compact` = bảng giá (bỏ mô tả cho prompt gọn). */
+function communityViews(rows: CommunityRow[], compact = false): KnowledgeContext['communities'] {
   return rows.map((c) => ({
     title: c.title,
-    summary: c.description.slice(0, 200),
+    summary: compact ? '' : c.description.slice(0, 200),
     link: `/communities/${c.id}`,
+    instructor: c.instructorName,
     price:
       c.pricing === 'free' || c.priceCents === 0
         ? 'Miễn phí'
@@ -179,7 +270,8 @@ async function featuredCommunities(limit: number, category?: string): Promise<Kn
 
 /**
  * Thông tin CÔNG KHAI (như trang giới thiệu) của cộng đồng khách đang xem: tên, mô tả, người hướng dẫn, lợi ích, nội quy, giá, số thành
- * viên. Không có bài học / bài đăng / danh sách thành viên. Cộng đồng riêng tư chỉ khi khách là thành viên; nháp / bị gỡ / bị khóa => null.
+ * viên. Không có bài học / bài đăng / danh sách thành viên. Cộng đồng riêng tư mà khách chưa tham gia => chỉ { restricted } (tên + link) để Tào
+ * nói đúng "đây là cộng đồng riêng tư" thay vì đi tìm nhầm khóa khác; nháp / bị gỡ / bị khóa => null.
  */
 async function pageCommunity(userId: string, communityId: string): Promise<KnowledgeContext['currentPage']> {
   const c = await prisma.community.findFirst({
@@ -187,7 +279,8 @@ async function pageCommunity(userId: string, communityId: string): Promise<Knowl
     select: { id: true, title: true, description: true, instructorName: true, instructorRole: true, promise: true, benefits: true, rules: true, visibility: true, pricing: true, priceCents: true, priceAnnualCents: true, _count: { select: { enrollments: true } } },
   });
   if (!c) return null;
-  if (c.visibility !== 'public' && !(await prisma.enrollment.findUnique({ where: { userId_communityId: { userId, communityId } }, select: { userId: true } }))) return null;
+  const viewerIsMember = Boolean(await prisma.enrollment.findUnique({ where: { userId_communityId: { userId, communityId } }, select: { userId: true } }));
+  if (c.visibility !== 'public' && !viewerIsMember) return { restricted: { name: c.title, link: `/communities/${c.id}`, reason: 'private' } };
   const rules = Array.isArray(c.rules) ? (c.rules as { title?: unknown }[]).map((r) => String(r.title ?? '')).filter(Boolean).slice(0, 10) : [];
   return {
     community: {
@@ -201,6 +294,7 @@ async function pageCommunity(userId: string, communityId: string): Promise<Knowl
       price: c.pricing === 'free' || c.priceCents === 0 ? 'Miễn phí' : `${vnd(c.priceCents)}/tháng${c.priceAnnualCents ? ` hoặc ${vnd(c.priceAnnualCents)}/năm` : ''}`,
       members: c._count.enrollments,
     },
+    viewerIsMember,
   };
 }
 
@@ -208,6 +302,8 @@ async function pageCommunity(userId: string, communityId: string): Promise<Knowl
  * Gom ngữ cảnh cho câu hỏi `text` (truy vấn song song, mỗi phần có giới hạn kích thước). `recentUserTexts` = các tin khách gần
  * nhất (để câu nối tiếp như "còn đơn kia thì sao" vẫn nhận ra chủ đề thanh toán).
  */
+export { catalogKeywords };
+
 export async function gatherContext(ctx: ChatContext, text: string, recentUserTexts: string[] = []): Promise<KnowledgeContext> {
   const wantPayments = isPaymentTopic([text, ...recentUserTexts.slice(-1)]);
   const wantCatalog = CATALOG_TOPIC.test(normalizeText(text));
@@ -217,26 +313,21 @@ export async function gatherContext(ctx: ChatContext, text: string, recentUserTe
   const [qa, chunks, found, payments, cats, mine, account] = await Promise.all([
     chatbotRepository.matchQa(text, { limit: 5, order: 'blend' }),
     chatbotRepository.searchChunks(text, 4),
-    searchService
-      .search(ctx.userId, { q: text.slice(0, 100), type: 'courses', page: 1, limit: 3 })
-      .then((r) =>
-        r.data.map((d) => {
-          const x = d as { title?: string; snippet?: string; link?: string };
-          return { title: x.title ?? '', summary: (x.snippet ?? '').slice(0, 200), link: x.link ?? '' };
-        }),
-      )
-      .catch(() => []),
+    searchCommunities(text, recentUserTexts.at(-1)).catch(() => ({ list: [], priceList: false })),
     wantPayments ? myPayments(ctx.userId) : Promise.resolve(null),
     courseCategories().catch(() => []),
     wantMine ? myCommunities(ctx.userId).catch(() => []) : Promise.resolve(null),
     myAccount(ctx.userId, groups),
   ]);
   const currentPage = ctx.pageCommunityId ? await pageCommunity(ctx.userId, ctx.pageCommunityId).catch(() => null) : null;
+  // "cộng đồng này / khóa này / ở đây" khi đang xem 1 cộng đồng => nói về CHÍNH cộng đồng đó, không đi tìm khóa khác theo từ khóa.
+  if (currentPage && DEICTIC.test(normalizeText(text))) found.list = [];
   // Khách nhắc tên một chủ đề (thường do bấm gợi ý) => khóa học của chủ đề đó (có giá).
   // Hỏi chung về khóa học mà không khớp gì => KHÔNG liệt kê khóa học; đưa danh sách chủ đề để bot hỏi lại khách quan tâm chủ đề nào.
-  const topic = found.length ? undefined : categoryIn([text], cats);
-  const communities = topic ? await featuredCommunities(5, topic.key) : found;
-  const categories = !mine && !topic && !found.length && wantCatalog ? cats.map(({ name, courses }) => ({ name, courses })) : [];
+  // Khách bấm / gõ đúng tên chủ đề => khóa học của chủ đề (ưu tiên hơn xếp hạng theo từ khóa).
+  const topic = categoryIn([text], cats);
+  const communities = topic ? await featuredCommunities(5, topic.key) : found.list;
+  const categories = !mine && !topic && !found.list.length && wantCatalog ? cats.map(({ name, courses }) => ({ name, courses })) : [];
   return {
     sampleAnswers: qa.map((q) => ({ id: q.id, question: q.question, answer: q.answer })),
     documents: chunks.map((c) => ({ document: c.documentTitle, section: c.heading, content: c.content })),

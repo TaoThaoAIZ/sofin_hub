@@ -405,26 +405,46 @@ const PAGE_LABELS: [prefix: string, key: string][] = [
   ['/login', 'login'],
 ];
 
-type TextBlock = { kind: 'p' | 'ul' | 'ol'; lines: string[] };
+type TextLine = { text: string; depth: number };
+type TextBlock = { kind: 'p' | 'ul' | 'ol'; lines: TextLine[] };
 
-/** Tách câu trả lời thành khối: đoạn (dòng trống ngăn cách), gạch đầu dòng ("- ", "• "), bước ("1. "). */
+/** Ô của 1 hàng bảng markdown ("| a | b |" => ["a", "b"]). */
+const tableCells = (line: string) => line.replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => c.trim());
+
+/**
+ * Tách câu trả lời thành khối: đoạn (dòng trống ngăn cách), gạch đầu dòng ("- ", "• ", "* "; thụt lề = mục con), bước ("1. ", "1) ").
+ * Định dạng ngoài FORMAT_RULE mà model lỡ dùng vẫn hiển thị gọn thay vì lộ ký tự: "# Tiêu đề" => dòng in đậm; bảng "| a | b |" => mỗi
+ * hàng 1 gạch đầu dòng "a — b" (bỏ dòng kẻ |---|).
+ */
 function toBlocks(text: string): TextBlock[] {
   const blocks: TextBlock[] = [];
   let cur: TextBlock | null = null;
+  const push = (kind: TextBlock['kind'], line: TextLine) => {
+    if (!cur || cur.kind !== kind) {
+      cur = { kind, lines: [] };
+      blocks.push(cur);
+    }
+    cur.lines.push(line);
+  };
   for (const raw of text.replace(/\r/g, '').split('\n')) {
     const line = raw.trim();
     if (!line) {
       cur = null;
       continue;
     }
-    const item = /^(?:([-•*])|(\d{1,2})[.)])\s+(.+)$/.exec(line);
-    const kind = item ? (item[1] ? 'ul' : 'ol') : 'p';
-    const content = item ? item[3]! : line;
-    if (!cur || cur.kind !== kind) {
-      cur = { kind, lines: [] };
-      blocks.push(cur);
+    const heading = /^#{1,6}\s+(.+)$/.exec(line);
+    if (heading) {
+      push('p', { text: `**${heading[1]!.replace(/\*\*/g, '')}**`, depth: 0 });
+      continue;
     }
-    cur.lines.push(content);
+    if (/^\|.*\|$/.test(line)) {
+      if (/^\|[\s:|-]+\|$/.test(line)) continue; // dòng kẻ |---|---|
+      push('ul', { text: tableCells(line).filter(Boolean).join(' — '), depth: 0 });
+      continue;
+    }
+    const item = /^(?:([-•*])|(\d{1,2})[.)])\s+(.+)$/.exec(line);
+    const depth = item ? Math.min(2, Math.floor((raw.length - raw.trimStart().length) / 2)) : 0;
+    push(item ? (item[1] ? 'ul' : 'ol') : 'p', { text: item ? item[3]! : line, depth });
   }
   return blocks;
 }
@@ -435,6 +455,7 @@ function toBlocks(text: string): TextBlock[] {
  */
 export function RichText({ text }: { text: string }) {
   const blocks = toBlocks(text);
+  const indent = (d: number) => (d ? { marginLeft: d * 14 } : undefined);
   return (
     <div className="flex flex-col gap-1.5">
       {blocks.map((b, i) =>
@@ -443,23 +464,23 @@ export function RichText({ text }: { text: string }) {
             {b.lines.map((l, j) => (
               <Fragment key={j}>
                 {j > 0 && <br />}
-                <Inline text={l} />
+                <Inline text={l.text} />
               </Fragment>
             ))}
           </p>
         ) : b.kind === 'ul' ? (
           <ul key={i} className="flex flex-col gap-1">
             {b.lines.map((l, j) => (
-              <li key={j} className="relative pl-3.5 before:absolute before:top-[0.62em] before:left-0.5 before:h-1.5 before:w-1.5 before:rounded-full before:bg-brand/70">
-                <Inline text={l} />
+              <li key={j} style={indent(l.depth)} className="relative pl-3.5 before:absolute before:top-[0.62em] before:left-0.5 before:h-1.5 before:w-1.5 before:rounded-full before:bg-brand/70">
+                <Inline text={l.text} />
               </li>
             ))}
           </ul>
         ) : (
           <ol key={i} className="flex list-decimal flex-col gap-1 pl-5 marker:font-semibold marker:text-brand">
             {b.lines.map((l, j) => (
-              <li key={j} className="pl-0.5">
-                <Inline text={l} />
+              <li key={j} style={indent(l.depth)} className="pl-0.5">
+                <Inline text={l.text} />
               </li>
             ))}
           </ol>
@@ -469,10 +490,12 @@ export function RichText({ text }: { text: string }) {
   );
 }
 
-/** **in đậm** + link trong một dòng. */
+/**
+ * Trong 1 dòng: **in đậm**, *nghiêng* / _nghiêng_, `code`, ~~gạch~~ (bỏ dấu) + link. "**" chưa đóng (đang stream) thì ẩn dấu đó.
+ */
 function Inline({ text }: { text: string }) {
   const marks = text.split('**').length - 1;
-  const safe = marks % 2 ? text.slice(0, text.lastIndexOf('**')) + text.slice(text.lastIndexOf('**') + 2) : text;
+  const safe = (marks % 2 ? text.slice(0, text.lastIndexOf('**')) + text.slice(text.lastIndexOf('**') + 2) : text).replace(/~~([^~\n]+)~~/g, '$1');
   return (
     <>
       {safe.split(/\*\*([^*\n]+?)\*\*/g).map((seg, i) =>
@@ -481,7 +504,29 @@ function Inline({ text }: { text: string }) {
             <Linkified text={seg} />
           </strong>
         ) : (
-          <Linkified key={i} text={seg} />
+          <Minor key={i} text={seg} />
+        ),
+      )}
+    </>
+  );
+}
+
+/** *nghiêng* / _nghiêng_ (không dính chữ hai bên — "a*b*c", tên_biến giữ nguyên) và `code`. */
+function Minor({ text }: { text: string }) {
+  const parts = text.split(/(`[^`\n]+`|(?<![\p{L}\p{N}*_])[*_][^\s*_][^*_\n]*?[*_](?![\p{L}\p{N}*_]))/gu);
+  return (
+    <>
+      {parts.map((p, i) =>
+        /^`[^`]+`$/.test(p) ? (
+          <code key={i} className="rounded bg-stone-100 px-1 py-px font-mono text-[12.5px]">
+            {p.slice(1, -1)}
+          </code>
+        ) : /^[*_].+[*_]$/.test(p) && p.length > 2 ? (
+          <em key={i}>
+            <Linkified text={p.slice(1, -1)} />
+          </em>
+        ) : (
+          <Linkified key={i} text={p} />
         ),
       )}
     </>

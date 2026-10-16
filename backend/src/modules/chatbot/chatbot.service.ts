@@ -6,6 +6,7 @@ import { HttpError } from '../../utils/http-error.js';
 import { TOOLS } from '../tools/tools.catalog.js';
 import { chatbotAvailable, chatbotSettings, type ChatbotSettings } from './chatbot.config.js';
 import { conversationRepository } from './chatbot.conversations.js';
+import { qaCoversQuery } from './chatbot.keywords.js';
 import { checkOutput, type OutputViolation } from './chatbot.guardrails.js';
 import { moderate, moderationReply } from './chatbot.moderation.js';
 import { containsPii } from './chatbot.pii.js';
@@ -59,7 +60,8 @@ export type MessageView = ReturnType<typeof messageView>;
 
 const SAFE_TEXT: Record<OutputViolation, string> = {
   bank_account: 'dạ thanh toán trên SofinHub chỉ qua mã VietQR ở trang thanh toán thôi ạ, bạn không chuyển theo số tài khoản nào khác nha',
-  unsourced_amount: 'dạ phần giá này Tào chưa có thông tin chính xác ạ, bạn bấm "Mua ngay" ở trang /tools hoặc nhắn Zalo hỗ trợ để được báo giá nha',
+  // Chung cho giá khóa học lẫn tool (trước đây chỉ nói tool => khách hỏi giá khóa học thấy lạc đề).
+  unsourced_amount: 'dạ phần số tiền này Tào chưa có thông tin chính xác ạ. Giá khóa học bạn xem ở trang của khóa đó, giá tool thì bấm "Mua ngay" ở trang /tools hoặc nhắn Zalo hỗ trợ nha',
 };
 const ERROR_TEXT = 'dạ Tào đang gặp trục trặc một chút, bạn thử lại sau ít phút hoặc nhắn Zalo hỗ trợ nha';
 const BUSY_TEXT = 'dạ hiện nhiều bạn hỏi cùng lúc quá, bạn thử lại sau ít giây hoặc nhắn Zalo hỗ trợ nha';
@@ -172,8 +174,10 @@ async function answerTurn(userId: string, conv: OwnedConversation, text: string,
   }
 
   // B2: khớp trực tiếp câu hỏi mẫu — trừ câu hỏi về dữ liệu của CHÍNH khách ("tôi đã tham gia cộng đồng nào"): câu mẫu là câu chung, dễ khớp nhầm "cách tham gia".
-  const [top] = isPersonalTopic(text) ? [] : await chatbotRepository.matchQa(text, { limit: 1, order: 'similarity' });
-  if (top && top.similarity >= s.directThreshold) {
+  // Chỉ trả thẳng khi câu mẫu chứa ĐỦ từ khóa của khách (trigram coi "rời cộng đồng" ~ "tạo cộng đồng"); xét 3 câu đầu.
+  const candidates = isPersonalTopic(text) ? [] : await chatbotRepository.matchQa(text, { limit: 3, order: 'similarity' });
+  const top = candidates.find((q) => q.similarity >= s.directThreshold && qaCoversQuery(text, q));
+  if (top) {
     void chatbotRepository.recordHit(top.id);
     emit({ event: 'delta', data: { text: top.answer } });
     return finish(top.answer, 'qa_direct', { matchedQaId: top.id, toolCalls: [{ name: 'qa_direct', ids: [top.id] }] });

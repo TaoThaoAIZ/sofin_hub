@@ -367,7 +367,11 @@ describe('chatbot', () => {
       assert.match(p1, /<current_page>\n\{/);
       assert.match(p1, /Trần Minh Tùng/);
       const r2 = await send(priv);
-      assert.doesNotMatch(await trace(r2.body.data.message.id), /NGUOI_KIN_CANARY|<current_page>\n\{/);
+      // Riêng tư + chưa tham gia => chỉ { restricted: tên + link }, không có người hướng dẫn / mô tả / giá.
+      const p2 = await trace(r2.body.data.message.id);
+      assert.doesNotMatch(p2, /NGUOI_KIN_CANARY/);
+      assert.match(p2, /"restricted": \{\n\s*"name": "Nhóm kín"/);
+      assert.match(p1, /"viewerIsMember": false/, 'Tào biết khách chưa tham gia (nội dung thành viên => mời tham gia)');
       assert.equal((await send('khong-ton-tai')).status, 200, 'id lạ => bỏ qua, không lỗi');
     });
 
@@ -550,6 +554,10 @@ describe('chatbot', () => {
       const b = await import('../src/modules/chatbot/chatbot.baseline.js');
       await prisma.platformSetting.deleteMany({ where: { key: b.CHATBOT_BASELINE_KEY } });
       await prisma.chatbotQA.update({ where: { id: 'seed-chatbot-qa-tools-price' }, data: { answer: 'dạ admin đã sửa ạ' } });
+      // Câu nền đã sửa ở bản mới (community-leave): DB còn đúng nội dung CŨ => được cập nhật; câu mới v4 chưa có => được thêm.
+      const leave = b.CHATBOT_BASELINE_REVISIONS.find((r) => r.key === 'community-leave')!;
+      await prisma.chatbotQA.update({ where: { id: 'seed-chatbot-qa-community-leave' }, data: { answer: leave.previousAnswers[0]! } });
+      await prisma.chatbotQA.deleteMany({ where: { id: 'seed-chatbot-qa-lesson-locked' } });
       // Không tự nạp: trang admin báo chưa nạp cho tới khi chạy lệnh riêng.
       assert.deepEqual((await ADM('GET', '/summary')).body.data.baseline, { loaded: null, current: b.CHATBOT_BASELINE_VERSION });
       const r1 = await b.ensureChatbotBaseline();
@@ -557,6 +565,14 @@ describe('chatbot', () => {
       assert.deepEqual((await ADM('GET', '/summary')).body.data.baseline, { loaded: b.CHATBOT_BASELINE_VERSION, current: b.CHATBOT_BASELINE_VERSION });
       assert.ok(!('skipped' in (await b.ensureChatbotBaseline({ force: true }))), '--force nạp lại dù đã nạp');
       assert.equal((await prisma.chatbotQA.findUniqueOrThrow({ where: { id: 'seed-chatbot-qa-tools-price' } })).answer, 'dạ admin đã sửa ạ');
+      assert.match((await prisma.chatbotQA.findUniqueOrThrow({ where: { id: 'seed-chatbot-qa-community-leave' } })).answer, /"Rời cộng đồng"/, 'câu nền cũ admin chưa sửa => cập nhật');
+      assert.equal((await prisma.chatbotQA.findUniqueOrThrow({ where: { id: 'seed-chatbot-qa-lesson-locked' } })).status, 'active', 'câu mới v4 được thêm');
+      // Admin đã sửa câu đó => nạp lại KHÔNG ghi đè.
+      await prisma.chatbotQA.update({ where: { id: 'seed-chatbot-qa-community-leave' }, data: { answer: 'dạ admin viết lại ạ' } });
+      await b.ensureChatbotBaseline({ force: true });
+      assert.equal((await prisma.chatbotQA.findUniqueOrThrow({ where: { id: 'seed-chatbot-qa-community-leave' } })).answer, 'dạ admin viết lại ạ');
+      // Không câu nền nào chứa giá / con số cụ thể (số liệu luôn lấy từ dữ liệu thật mỗi lượt).
+      for (const q of b.BASELINE_ACTIVE()) assert.doesNotMatch(q.answer, /\d{2,}(\.\d{3})+\s?đ|\d+\s?%/, q.key);
       assert.deepEqual(await b.ensureChatbotBaseline(), { skipped: true });
 
       const pending = await prisma.chatbotQA.findUniqueOrThrow({ where: { id: 'seed-chatbot-qa-tools-trial' } });
@@ -566,6 +582,24 @@ describe('chatbot', () => {
       const ok = await ADM('POST', `/qa/${pending.id}/approve`, { answer: 'dạ hiện chưa có bản dùng thử ạ' });
       assert.equal(ok.status, 200, JSON.stringify(ok.body));
       assert.equal(ok.body.data.status, 'active');
+    });
+
+    it('câu mẫu nền: mỗi câu hỏi + mọi cách hỏi khớp đúng chính nó; câu thiếu từ khóa ("rời" vs "tạo") không trả thẳng câu sai', async () => {
+      const b = await import('../src/modules/chatbot/chatbot.baseline.js');
+      const { qaCoversQuery } = await import('../src/modules/chatbot/chatbot.keywords.js');
+      const { chatbotRepository } = await import('../src/modules/chatbot/chatbot.repository.js');
+      await b.ensureChatbotBaseline({ force: true });
+      const pick = async (q: string) => (await chatbotRepository.matchQa(q, { limit: 3, order: 'similarity' })).find((m) => m.similarity >= 0.6 && qaCoversQuery(q, m))?.id ?? null;
+      const wrong: string[] = [];
+      for (const qa of b.BASELINE_ACTIVE())
+        for (const q of [qa.question, ...qa.variants]) {
+          const got = await pick(q);
+          if (got && got !== `seed-chatbot-qa-${qa.key}`) wrong.push(`"${q}" => ${got} (mong ${qa.key})`);
+        }
+      assert.deepEqual(wrong, [], 'câu mẫu bị câu khác chen vào');
+      assert.equal(await pick('rời cộng đồng thế nào'), 'seed-chatbot-qa-community-leave');
+      assert.equal(await pick('tạo cộng đồng thế nào'), 'seed-chatbot-qa-community-create');
+      assert.notEqual(await pick('giá tool grok bao nhiêu'), 'seed-chatbot-qa-account-register');
     });
 
     it('hỏi số tài khoản => câu mẫu nền (VietQR), không có số tài khoản', async () => {
@@ -672,6 +706,54 @@ describe('chatbot', () => {
       }
       assert.equal(await prisma.supportTicket.count({ where: { requesterId: u.id, source: 'chatbot' } }), MAX_NEW_HANDOFF_TICKETS_PER_DAY);
       assert.equal(codes.at(-1), codes[MAX_NEW_HANDOFF_TICKETS_PER_DAY - 1]);
+    });
+
+    it('guardrail số tiền: số bịa bị chặn; tổng / hiệu / ×12 của giá có trong nguồn được phép (so sánh giá 2 khóa)', async () => {
+      const { checkOutput } = await import('../src/modules/chatbot/chatbot.guardrails.js');
+      const src = ['{"communities":[{"title":"Python","price":"175.000đ/tháng"},{"title":"Excel","price":"125.000đ/tháng"}]}'];
+      assert.equal(checkOutput('Python 175.000đ/tháng, Excel 125.000đ/tháng', src), null);
+      assert.equal(checkOutput('Python 175.000đ, Excel 125.000đ — Python đắt hơn 50.000đ mỗi tháng', src), null, 'hiệu của 2 giá đã nêu');
+      assert.equal(checkOutput('Python 175.000đ + Excel 125.000đ = 300.000đ/tháng', src), null, 'tổng');
+      assert.equal(checkOutput('Python 175.000đ/tháng, 1 năm là 2.100.000đ', src), null, '×12');
+      assert.equal(checkOutput('Python 175.000đ, Excel 125.000đ, rẻ hơn 50k', src), null, '"50k" = 50.000');
+      assert.equal(checkOutput('Học cả 2 khóa chỉ 300.000đ', src), 'unsourced_amount', 'tổng mà không nêu 2 giá gốc => vẫn chặn');
+      assert.equal(checkOutput('Khóa này giá 199.000đ', src), 'unsourced_amount', 'số bịa');
+      assert.equal(checkOutput('Python 175.000đ, giảm còn 99k', src), 'unsourced_amount', 'số không suy ra được');
+    });
+
+    it('hỏi khóa học bằng câu dài ("hiện tại đang có khoá học nào liên quan đến … không", "… giá bao nhiêu thế") => tìm theo từ khóa, có tên + giá', async () => {
+      const { gatherContext, catalogKeywords, rankCommunities, resetCatalogCacheForTests } = await import('../src/modules/chatbot/chatbot.context.js');
+      assert.deepEqual(catalogKeywords('hiện tại đang có khoá học nào liên quan đến giao tiếp không'), ['giao', 'tiep']);
+      assert.deepEqual(catalogKeywords('tôi thấy có khoá học thiết kế figma, giá bao nhiêu thế'), ['thiet', 'ke', 'figma']);
+      assert.deepEqual(catalogKeywords('có khóa học nào về tiếng anh không'), ['tieng', 'anh'], '"tiếng anh" giữ "anh"');
+      assert.deepEqual(catalogKeywords('có những khóa học nào'), [], 'hỏi chung => không từ khóa (bot hỏi lại chủ đề)');
+      const id = `zen-${Date.now().toString(36)}`;
+      await prisma.community.create({ data: { id, title: 'Vẽ Zentangle thư giãn', description: 'Học vẽ hoa văn Zentangle', category: 'design' as never, thumbnail: '/x.webp', instructorName: 'A', instructorRole: 'B', priceCents: 99000, pricing: 'paid' } });
+      resetCatalogCacheForTests(); // danh mục cache 60s — khóa vừa tạo phải thấy ngay trong test
+      // Xếp hạng: câu dài có từ thừa, sai chính tả nhẹ, "tiếng anh" không kéo theo "nhiếp ảnh", hỏi nối tiếp dùng câu trước.
+      const rows = [
+        { title: 'Thiết kế với Figma', description: 'giao diện', instructorName: 'Sophia' },
+        { title: 'Tiếng Anh giao tiếp', description: 'nói tiếng Anh', instructorName: 'Mai' },
+        { title: 'Nhiếp ảnh bằng điện thoại', description: 'chụp ảnh', instructorName: 'Phương' },
+        { title: 'Nấu ăn gia đình', description: 'món ngon', instructorName: 'Trang' },
+      ];
+      const titles = (q: string) => rankCommunities(rows, catalogKeywords(q)).map((r) => r.title);
+      assert.deepEqual(titles('khoa hok fimga bn tien vay'), ['Thiết kế với Figma'], 'sai chính tả "fimga"');
+      assert.deepEqual(titles('cho mình hỏi khóa Nấu ăn gia đình bn tiền 1 tháng'), ['Nấu ăn gia đình'], 'câu dài có từ thừa');
+      assert.deepEqual(titles('có khóa học nào về tiếng anh không'), ['Tiếng Anh giao tiếp']);
+      assert.deepEqual(titles('ai dạy khóa đó vậy'), [], 'không từ khóa => dùng câu trước (gatherContext)');
+      const u = await c.registerUser('cbcourse');
+      const ctx = { userId: u.id, conversationId: 'x', viewer: { firstName: 'T', lastName: 'U', email: u.email } };
+      const r = await gatherContext(ctx, 'hiện tại đang có khoá học nào liên quan đến zentangle không, giá bao nhiêu thế');
+      const hit = r.communities.find((x) => x.link === `/communities/${id}`);
+      assert.ok(hit, JSON.stringify(r.communities));
+      assert.equal(hit.title, 'Vẽ Zentangle thư giãn', 'tên là chuỗi (không phải "[object Object]")');
+      assert.equal(hit.price, '99.000đ/tháng');
+      assert.equal(hit.instructor, 'A', 'có người hướng dẫn');
+      const follow = await gatherContext(ctx, 'ai dạy khóa đó vậy', ['có khóa zentangle không']);
+      assert.ok(follow.communities.some((x) => x.link === `/communities/${id}`), 'hỏi nối tiếp "khóa đó" => khóa của câu trước');
+      const cheap = await gatherContext(ctx, 'khóa học rẻ nhất bên mình giá bao nhiêu');
+      assert.ok(cheap.communities.length >= 2 && cheap.communities.every((x) => x.price), 'hỏi rẻ nhất => bảng giá các khóa');
     });
 
     it('chỉ đưa giao dịch của khách vào ngữ cảnh khi câu hỏi nhắc tới đơn/thanh toán; hỏi chung khóa học => danh sách chủ đề (không liệt kê giá); nói chủ đề => khóa học của chủ đề', async () => {
