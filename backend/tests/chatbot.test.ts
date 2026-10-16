@@ -767,6 +767,32 @@ describe('chatbot', () => {
       llm.resetLlmHealthForTests();
     });
 
+    it('chỉ "hết hạn mức của gói" mới tạm ngừng; 429 / too many requests tạm thời KHÔNG tạm ngừng; số chứa "429" không bị nhận nhầm; đọc giờ reset', async () => {
+      const llm = await import('../src/modules/chatbot/chatbot.llm.js');
+      llm.resetLlmHealthForTests();
+      // Lỗi thường có dãy số chứa 429 (trước đây khớp /429/ => tạm ngừng cả trợ lý 5 phút).
+      assert.equal(llm.recordLlmResult(new Error('codex exited with code 1 after 14290 ms')), 'error');
+      assert.equal(llm.llmHealth().pausedUntil, null);
+      for (const m of ['429 Too Many Requests', 'stream error: rate limit exceeded, retry shortly', 'HTTP 429']) {
+        assert.equal(llm.recordLlmResult(new Error(m)), 'rate_limit', m);
+        assert.equal(llm.llmHealth().pausedUntil, null, `${m}: không tạm ngừng`);
+      }
+      const now = Date.now();
+      assert.equal(llm.parseResetAt('{"type":"usage_limit_reached","resets_in_seconds": 3600}', now), now + 3600_000);
+      assert.equal(llm.parseResetAt("You've hit your usage limit. Try again in 2 hours 5 minutes.", now), now + (2 * 60 + 5) * 60_000);
+      assert.equal(llm.parseResetAt('usage limit … try again in 1 day 3 hours', now), now + 27 * 3600_000);
+      const at = llm.parseResetAt('try again at 1:41 PM', now)!;
+      assert.ok(at > now && at - now <= 24 * 3600_000 && new Date(at).getHours() === 13 && new Date(at).getMinutes() === 41);
+      assert.equal(llm.parseResetAt('lỗi lạ', now), null);
+
+      assert.equal(llm.recordLlmResult(new Error("You've hit your usage limit. Try again in 2 hours.")), 'quota');
+      const until = Date.parse(llm.llmHealth().pausedUntil!);
+      assert.ok(Math.abs(until - (Date.now() + 2 * 3600_000)) < 5000, 'tạm ngừng tới đúng giờ reset (không phải cố định 5 phút)');
+      llm.recordLlmResult(new Error('usage limit reached'));
+      assert.ok(Date.parse(llm.llmHealth().pausedUntil!) - Date.now() <= llm.QUOTA_COOLDOWN_MS + 1000, 'không đọc được giờ reset => thử lại sau 5 phút');
+      llm.resetLlmHealthForTests();
+    });
+
     it('khách nhận câu "tạm quá tải" (answerSource=error); câu khớp câu mẫu vẫn trả lời; admin summary có trạng thái llm', async () => {
       const llm = await import('../src/modules/chatbot/chatbot.llm.js');
       const { setChatLlmForTests } = await import('../src/modules/chatbot/chatbot.model.js');

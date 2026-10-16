@@ -69,5 +69,6 @@ export const writeRateLimit =
     const r = await rateLimitHit(`w:${bucket}:${req.userId ?? req.ip ?? 'anon'}`, max);
     if (r.ok) return next();
     res.setHeader('Retry-After', String(r.retryAfterSec));
-    next(HttpError.tooMany('Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút'));
+    // Chatbot: nói rõ đây là giới hạn chống spam của SofinHub (không phải ChatGPT hết hạn mức) + thời gian chờ thật.
+    next(HttpError.tooMany(bucket === 'chatbot' ? `Bạn gửi hơi nhanh (tối đa ${max} tin mỗi phút). Đợi khoảng ${Math.max(1, r.retryAfterSec)} giây rồi gửi tiếp nhé` : 'Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút'));
   };

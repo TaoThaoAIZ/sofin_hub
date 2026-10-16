@@ -188,3 +188,13 @@ Hướng dẫn đầy đủ: `chatbot_qa_security_suite/README.md`. Báo cáo (`
 - Không bao giờ gửi: email đầy đủ, mật khẩu, mã 2FA, phiên/IP, nội dung tin nhắn riêng, dữ liệu người khác.
 - Câu hỏi cá nhân **bỏ qua khớp câu mẫu trực tiếp** (câu mẫu là câu chung, vd "cách tham gia cộng đồng").
 - Bot chỉ đọc: yêu cầu sửa/hủy ⇒ hướng dẫn + link trang cài đặt.
+
+**Giới hạn — phân biệt rõ 3 loại** (`chatbot.llm.ts`, `middlewares/rate-limit.ts`, `community-bot.service.ts`)
+| Loại | Nguồn | Xử lý | Khách thấy |
+|---|---|---|---|
+| Hết hạn mức của GÓI ChatGPT | lỗi Codex khớp `usage limit` / `usage_limit_reached` / `insufficient_quota` | Tạm ngừng gọi Codex **tới giờ reset** đọc từ thông báo (`resets_in_seconds`, "try again in 2 hours", "try again at 1:41 PM"); không đọc được => thử lại sau 5 phút; tối đa 7 ngày; 1 lượt thành công => hết tạm ngừng | "đang tạm quá tải…" (Tào / bot cộng đồng) |
+| ChatGPT giới hạn tốc độ tạm thời | `429` / `too many requests` / `rate limit` (không phải usage limit) | Thử lại sau 2s rồi 5s; vẫn bị => `LlmBusyError` ("đang đông người hỏi"); **không** tạm ngừng cả trợ lý | "đang có nhiều người hỏi…" |
+| Giới hạn của SofinHub | chống spam `RATE_LIMIT_CHATBOT_PER_MIN` (12 tin/phút/người); lượt/ngày của cộng đồng (`freeDailyMessages` / `vipDailyMessages`) | 429 `TOO_MANY_REQUESTS` / `DAILY_LIMIT` | "Bạn gửi hơi nhanh (tối đa 12 tin mỗi phút). Đợi khoảng N giây…" / "Bạn đã dùng hết N lượt hỏi trợ lý hôm nay (giới hạn của cộng đồng…). Lượt mới mở lúc 0:00…" |
+
+Trước 16/10/2026: một mẫu chung `/usage limit|rate limit|quota|too many requests|429/` (429 không có ranh giới từ) và tạm ngừng cố định 5 phút cho mọi trường hợp => có thể báo "quá tải" dù gói ChatGPT còn hạn mức.
+

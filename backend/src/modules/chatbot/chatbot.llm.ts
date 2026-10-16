@@ -44,42 +44,88 @@ export interface ChatLlm {
 export { LlmBusyError } from './chatbot.limiter.js';
 import { LlmBusyError } from './chatbot.limiter.js';
 
-/** Tài khoản ChatGPT hết hạn mức (gói free/Plus có giới hạn) — khác lỗi thường: tạm ngừng gọi Codex một lúc. */
+/** Tài khoản ChatGPT hết hạn mức của GÓI (5 giờ / tuần) — tạm ngừng gọi Codex tới giờ reset. */
 export class LlmQuotaError extends Error {}
 
-const QUOTA_PATTERN = /usage limit|rate limit|quota|too many requests|429/i;
-/** Sau khi hết hạn mức, không gọi Codex lại trong khoảng này (tránh dồn yêu cầu vô ích, trả lời khách ngay). */
+/**
+ * Phân loại lỗi model (Codex dùng tài khoản ChatGPT):
+ * - quota: hết hạn mức của GÓI ("You've hit your usage limit … try again at 1:41 PM", usage_limit_reached) => tạm ngừng tới giờ reset.
+ * - rate_limit: bị giới hạn tốc độ TẠM THỜI (429 / too many requests) => thử lại sau vài giây, KHÔNG tạm ngừng cả trợ lý.
+ * - error: lỗi khác.
+ * Trước đây gộp chung + /429/ không có ranh giới từ (dãy "14290 ms" cũng khớp) => có thể tạm ngừng cả trợ lý dù ChatGPT còn hạn mức.
+ */
+export type LlmIssueKind = 'quota' | 'rate_limit' | 'error';
+const USAGE_LIMIT = /usage[ _]limit|hit your (usage )?limit|plan limit|quota exceeded|exceeded your (current )?quota|insufficient_quota/i;
+const RATE_LIMIT = /\b429\b|too many requests|rate[ _-]?limit/i;
+/** Hết hạn mức mà không đọc được giờ reset => thử lại sau khoảng này (1 lượt gọi thử; thành công => hết tạm ngừng). */
 export const QUOTA_COOLDOWN_MS = 5 * 60_000;
+/** Không tạm ngừng quá 7 ngày dù thông báo nói lâu hơn (hạn mức tuần). */
+const MAX_PAUSE_MS = 7 * 24 * 3600_000;
+/** Thử lại khi bị giới hạn tốc độ tạm thời: chờ 2s rồi 5s. */
+const RATE_LIMIT_RETRY_MS = [2000, 5000];
+
+/** Giờ reset đọc từ thông báo lỗi (ms epoch) — "resets_in_seconds": N | "try again in 1 day 2 hours 3 minutes" | "try again at 1:41 PM". */
+export function parseResetAt(message: string, now = Date.now()): number | null {
+  const secs = /resets?_in_seconds"?\s*[:=]\s*(\d+)/i.exec(message);
+  if (secs) return now + Number(secs[1]) * 1000;
+  const inM = /try again in ([^.\n]*)/i.exec(message);
+  if (inM) {
+    const unit = (re: RegExp) => Number(re.exec(inM[1]!)?.[1] ?? 0);
+    const ms = unit(/(\d+)\s*days?/i) * 86400_000 + unit(/(\d+)\s*h(?:ours?|rs?)?\b/i) * 3600_000 + unit(/(\d+)\s*m(?:in(?:ute)?s?)?\b/i) * 60_000 + unit(/(\d+)\s*s(?:ec(?:ond)?s?)?\b/i) * 1000;
+    if (ms > 0) return now + ms;
+  }
+  const at = /try again at (\d{1,2}):(\d{2})\s*(AM|PM)?/i.exec(message);
+  if (at) {
+    let h = Number(at[1]) % 12;
+    if ((at[3] ?? '').toUpperCase() === 'PM') h += 12;
+    if (!at[3]) h = Number(at[1]);
+    const d = new Date(now);
+    d.setHours(h, Number(at[2]), 0, 0);
+    if (d.getTime() <= now) d.setDate(d.getDate() + 1);
+    return d.getTime();
+  }
+  return null;
+}
+
+export function classifyLlmError(message: string): LlmIssueKind {
+  if (USAGE_LIMIT.test(message)) return 'quota';
+  if (RATE_LIMIT.test(message)) return 'rate_limit';
+  return 'error';
+}
 
 export interface LlmHealth {
   lastSuccessAt: string | null;
-  lastIssue: { kind: 'quota' | 'error'; message: string; at: string } | null;
-  /** Đang tạm ngừng gọi Codex vì hết hạn mức (tới thời điểm này). */
+  lastIssue: { kind: LlmIssueKind; message: string; at: string } | null;
+  /** Đang tạm ngừng gọi Codex vì hết hạn mức của gói (tới thời điểm này). */
   pausedUntil: string | null;
 }
 
-const health: { lastSuccessAt: number | null; lastIssue: { kind: 'quota' | 'error'; message: string; at: number } | null } = { lastSuccessAt: null, lastIssue: null };
+const health: { lastSuccessAt: number | null; lastIssue: { kind: LlmIssueKind; message: string; at: number; until: number | null } | null } = { lastSuccessAt: null, lastIssue: null };
 
 export function llmHealth(): LlmHealth {
   const i = health.lastIssue;
-  const paused = i?.kind === 'quota' && (!health.lastSuccessAt || health.lastSuccessAt < i.at) && Date.now() - i.at < QUOTA_COOLDOWN_MS;
+  const paused = i?.kind === 'quota' && i.until !== null && (!health.lastSuccessAt || health.lastSuccessAt < i.at) && Date.now() < i.until;
   return {
     lastSuccessAt: health.lastSuccessAt ? new Date(health.lastSuccessAt).toISOString() : null,
     lastIssue: i ? { kind: i.kind, message: i.message, at: new Date(i.at).toISOString() } : null,
-    pausedUntil: paused && i ? new Date(i.at + QUOTA_COOLDOWN_MS).toISOString() : null,
+    pausedUntil: paused && i?.until ? new Date(i.until).toISOString() : null,
   };
 }
 
-/** Ghi nhận kết quả 1 lượt gọi model (dùng chung cho Codex thật; test gọi trực tiếp). Lỗi hết hạn mức => LlmQuotaError. */
-export function recordLlmResult(error?: unknown): void {
+/** Ghi nhận kết quả 1 lượt gọi model (dùng chung cho Codex thật; test gọi trực tiếp). Trả về loại lỗi. */
+export function recordLlmResult(error?: unknown): LlmIssueKind | null {
   if (!error) {
     health.lastSuccessAt = Date.now();
-    return;
+    return null;
   }
   const message = (error instanceof Error ? error.message : String(error)).slice(0, 300);
-  const kind = QUOTA_PATTERN.test(message) ? 'quota' : 'error';
-  health.lastIssue = { kind, message, at: Date.now() };
-  if (kind === 'quota') console.error(`[chatbot] tài khoản ChatGPT hết hạn mức — tạm ngừng gọi Codex ${QUOTA_COOLDOWN_MS / 60_000} phút: ${message}`);
+  const kind = classifyLlmError(message);
+  const now = Date.now();
+  const until = kind === 'quota' ? Math.min(parseResetAt(message, now) ?? now + QUOTA_COOLDOWN_MS, now + MAX_PAUSE_MS) : null;
+  health.lastIssue = { kind, message, at: now, until };
+  if (kind === 'quota') console.error(`[chatbot] tài khoản ChatGPT hết hạn mức của gói — tạm ngừng gọi Codex tới ${new Date(until!).toISOString()}: ${message}`);
+  else if (kind === 'rate_limit') console.warn(`[chatbot] ChatGPT giới hạn tốc độ tạm thời (không tạm ngừng trợ lý): ${message}`);
+  return kind;
 }
 
 export const resetLlmHealthForTests = () => {
@@ -194,16 +240,25 @@ export class CodexLlm implements ChatLlm {
 
   async complete<T>(req: LlmRequest<T>): Promise<{ output: T; usage: LlmUsage }> {
     const paused = llmHealth().pausedUntil;
-    if (paused) throw new LlmQuotaError(`Đang tạm ngừng gọi Codex vì hết hạn mức (tới ${paused})`);
-    try {
-      const out = await this.runOnce(req);
-      recordLlmResult();
-      return out;
-    } catch (e) {
-      if (e instanceof LlmBusyError) throw e;
-      recordLlmResult(e);
-      if (llmHealth().lastIssue?.kind === 'quota') throw new LlmQuotaError(e instanceof Error ? e.message : String(e));
-      throw e;
+    if (paused) throw new LlmQuotaError(`Đang tạm ngừng gọi Codex vì hết hạn mức của gói (tới ${paused})`);
+    for (let attempt = 0; ; attempt++) {
+      try {
+        const out = await this.runOnce(req);
+        recordLlmResult();
+        return out;
+      } catch (e) {
+        if (e instanceof LlmBusyError) throw e;
+        const kind = recordLlmResult(e);
+        if (kind === 'quota') throw new LlmQuotaError(e instanceof Error ? e.message : String(e));
+        // Giới hạn tốc độ tạm thời: thử lại sau vài giây; vẫn bị => báo "đông người", KHÔNG tạm ngừng cả trợ lý.
+        if (kind === 'rate_limit') {
+          const wait = RATE_LIMIT_RETRY_MS[attempt];
+          if (wait === undefined) throw new LlmBusyError();
+          await new Promise((r) => setTimeout(r, wait));
+          continue;
+        }
+        throw e;
+      }
     }
   }
 

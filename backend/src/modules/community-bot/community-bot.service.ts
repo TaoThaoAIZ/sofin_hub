@@ -234,7 +234,10 @@ export const communityBotService = {
       throw HttpError.coded(
         429,
         'DAILY_LIMIT',
-        a.tier === 'free' ? 'Bạn đã dùng hết lượt hỏi hôm nay. Nâng cấp VIP để hỏi nhiều hơn nhé' : 'Bạn đã dùng hết lượt hỏi hôm nay, quay lại vào ngày mai nhé',
+        // Giới hạn do CHỦ CỘNG ĐỒNG đặt (không phải ChatGPT hết hạn mức) — nói rõ số lượt + giờ mở lại.
+        a.tier === 'free'
+          ? `Bạn đã dùng hết ${quota.limit} lượt hỏi trợ lý hôm nay (giới hạn của cộng đồng cho thành viên thường). Lượt mới mở lúc 0:00, hoặc nâng cấp VIP để hỏi nhiều hơn nhé`
+          : `Bạn đã dùng hết ${quota.limit} lượt hỏi trợ lý hôm nay (giới hạn của cộng đồng). Lượt mới mở lúc 0:00 nhé`,
         { tier: a.tier, limit: quota.limit },
       );
     }
