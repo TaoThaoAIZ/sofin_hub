@@ -46,7 +46,8 @@ const USAGE: LlmUsage = { tokensIn: 10, tokensOut: 20 };
 function answer(message: string, c: KnowledgeContext): AnswerOutput {
   const t = normalizeText(message);
   const base: AnswerOutput = { onTopic: true, injection: false, reply: '', handoff: false, handoffCategory: 'user', handoffReason: '', toolIds: [], usedSampleId: '', suggestions: [] };
-  if (/\b(tho|code|toan|bai tap|poem)\b/.test(t)) return { ...base, onTopic: false, reply: 'dạ Tào chỉ hỗ trợ về SofinHub thôi ạ' };
+  // "toan" = môn toán (ngoài phạm vi) — trừ "thanh toán".
+  if (/\b(tho|code|(?<!thanh )toan|bai tap|poem)\b/.test(t)) return { ...base, onTopic: false, reply: 'dạ Tào chỉ hỗ trợ về SofinHub thôi ạ' };
   if (/bo qua|ignore|system prompt/.test(t)) return { ...base, injection: true, reply: 'dạ Tào chỉ hỗ trợ về SofinHub thôi ạ' };
   if (replyOverride) return { ...base, reply: replyOverride(message) };
   if (/gap nhan vien|gap nguoi|zalo|hoan tien|khieu nai/.test(t)) {

@@ -29,7 +29,7 @@ try {
     await status();
   } else {
     const r = await ensureChatbotBaseline({ force: args.includes('--force') });
-    console.log('skipped' in r ? `Đã nạp v${CHATBOT_BASELINE_VERSION} từ trước — không làm gì (dùng --force để nạp lại phần còn thiếu).` : `Xong: +${r.qa} câu mẫu, +${r.documents} tài liệu.`);
+    console.log('skipped' in r ? `Đã nạp v${CHATBOT_BASELINE_VERSION} từ trước — không làm gì (dùng --force để nạp lại phần còn thiếu).` : `Xong: +${r.qa} câu mẫu mới, ${r.revised} câu nền được cập nhật, +${r.documents} tài liệu.`);
     await status();
   }
 } catch (e) {

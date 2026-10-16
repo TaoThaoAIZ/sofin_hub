@@ -18,6 +18,7 @@ import { notify } from '../notifications/notifications.service.js';
 import { communityBotAccess, type BotAccess, type BotTier } from './community-bot.access.js';
 import { communitySourcesOf, gatherCommunityContext, type CommunityContext } from './community-bot.context.js';
 import { buildCommunityPrompt } from './community-bot.prompt.js';
+import { qaCoversQuery } from '../chatbot/chatbot.keywords.js';
 
 /**
  * Bot riêng của cộng đồng (chatbot.md). Cùng khuôn luồng với bot "Tào" (chatbot.service.ts): khóa theo hội thoại, khớp câu mẫu trước,
@@ -133,8 +134,8 @@ async function answerTurn(a: BotAccess, userId: string, conv: { id: string; stat
   }
 
   // Khớp trực tiếp câu mẫu của CỘNG ĐỒNG NÀY (không gọi AI).
-  const [top] = await chatbotRepository.matchQa(text, { limit: 1, order: 'similarity', communityId });
-  if (top && top.similarity >= s.directThreshold) {
+  const top = (await chatbotRepository.matchQa(text, { limit: 3, order: 'similarity', communityId })).find((q) => q.similarity >= s.directThreshold && qaCoversQuery(text, q));
+  if (top) {
     void chatbotRepository.recordHit(top.id);
     emit({ event: 'delta', data: { text: top.answer } });
     return finish(top.answer, 'qa_direct', { matchedQaId: top.id, toolCalls: [{ name: 'qa_direct', ids: [top.id] }, { name: 'persona', key: a.personaKey, tier: a.tier }] });

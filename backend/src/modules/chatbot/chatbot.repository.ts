@@ -18,6 +18,7 @@ export type BotScope = string | null;
 export interface QaMatch {
   id: string;
   question: string;
+  variants: string[];
   answer: string;
   /** Độ giống trigram cao nhất giữa câu hỏi khách và question/variants (0..1). */
   similarity: number;
@@ -92,7 +93,7 @@ export const chatbotRepository = {
     const order = opts.order === 'blend' ? Prisma.sql`("similarity" + "rank") DESC` : Prisma.sql`"similarity" DESC, "rank" DESC`;
     const rows = await prisma.$queryRaw<QaMatch[]>`
       SELECT * FROM (
-        SELECT q."id", q."question", q."answer", (${sim})::float8 AS "similarity", (${rank})::float8 AS "rank"
+        SELECT q."id", q."question", q."variants", q."answer", (${sim})::float8 AS "similarity", (${rank})::float8 AS "rank"
         FROM "ChatbotQA" q
         WHERE q."status"::text IN (${Prisma.join(statuses)}) AND q."courseId" IS NOT DISTINCT FROM ${opts.communityId ?? null}::text
       ) x
