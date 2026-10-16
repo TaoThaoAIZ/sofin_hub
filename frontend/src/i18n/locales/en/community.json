@@ -29,10 +29,7 @@
     },
     "moderation": "Moderation",
     "revenue": "Revenue & payouts",
-    "settings": "Settings",
-    "ctaTitle": "Build your own community",
-    "ctaDesc": "Bring people together around your passion and get paid.",
-    "ctaButton": "Get started"
+    "settings": "Settings"
   },
   "rightSidebar": {
     "by": "By {{name}}",
