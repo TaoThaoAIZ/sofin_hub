@@ -10,6 +10,8 @@ server {
 
 server {
   listen 443 ssl default_server;
+  # HTTP/2: dồn mọi request vào 1 kết nối (HTTP/1.1 chỉ ~6 kết nối/domain, SSE chiếm hết slot gây request bị treo/hủy).
+  http2 on;
   server_name __HOST__;
 
   ssl_certificate     /etc/letsencrypt/live/__HOST__/fullchain.pem;
