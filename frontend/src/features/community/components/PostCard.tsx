@@ -391,7 +391,7 @@ export function PostCard({
   return (
     <article
       id={`post-${post.id}`}
-      className={`relative flex gap-4 rounded-[20px] border bg-white p-4 shadow-[0_8px_24px_rgba(120,60,20,.06)] ${
+      className={`relative flex gap-4 rounded-[20px] border bg-white p-4 max-md:gap-3 max-md:p-3 shadow-[0_8px_24px_rgba(120,60,20,.06)] ${
         highlighted ? 'border-brand ring-2 ring-brand/30' : 'border-[rgba(120,60,20,.08)]'
       } ${post.hidden ? 'opacity-70' : ''}`}
     >
@@ -421,6 +421,9 @@ export function PostCard({
             )}
           </div>
 
+          {/* Mobile (Figma): chữ bên trái, ảnh thu nhỏ bên phải; desktop giữ nguyên (ảnh dưới chữ). */}
+          <div className="max-md:flex max-md:items-start max-md:gap-3">
+          <div className="min-w-0 flex-1">
           {editing ? (
             <div className="mt-2 flex flex-col gap-2">
               <textarea value={editText} onChange={(e) => setEditText(e.target.value)} rows={5} maxLength={4000} aria-label={t('post.editAria')} className={areaCls} />
@@ -455,7 +458,9 @@ export function PostCard({
             </>
           )}
 
-          {img && !editing && <img src={img} alt={t('post.imageAlt')} loading="lazy" className="mt-3 max-h-[560px] w-full rounded-2xl border border-[rgba(120,60,20,.08)] bg-stone-50 object-contain" />}
+          </div>
+          {img && !editing && <img src={img} alt={t('post.imageAlt')} loading="lazy" className="mt-3 max-h-[560px] w-full max-md:mt-2 max-md:h-20 max-md:w-[125px] max-md:flex-none max-md:object-cover rounded-2xl border border-[rgba(120,60,20,.08)] bg-stone-50 object-contain" />}
+          </div>
           {post.poll && !editing && <PollBlock courseId={courseId} post={post} />}
 
           {post.tags.length > 0 && (

@@ -49,7 +49,7 @@ export function AboutTab() {
           ))}
         </div>
 
-        <section className="rounded-[22px] border border-brand/15 bg-gradient-to-br from-[#fff3e8] to-[#ffe9d9] px-7 py-[22px]">
+        <section className="rounded-[22px] border border-brand/15 bg-gradient-to-br from-[#fff3e8] to-[#ffe9d9] px-7 py-[22px] max-md:border-0 max-md:bg-none max-md:bg-white max-md:px-4 max-md:py-4 max-md:shadow-soft dark:max-md:bg-[rgba(63,63,63,.3)]">
           <div className="max-w-[760px]">
             <div className="text-[22px] font-extrabold text-[#e8590c]">{course.title}</div>
             <p className="mt-2.5 text-[15px] leading-[1.65] text-stone-700 whitespace-pre-line break-words">{course.about}</p>
@@ -123,7 +123,10 @@ export function AboutTab() {
         </section>
       </main>
 
-      <CommunityInfoCard course={course} coverHeight={170} />
+      {/* Mobile (Figma) không có thẻ thông tin bên phải. */}
+      <div className="max-md:hidden">
+        <CommunityInfoCard course={course} coverHeight={170} />
+      </div>
     </div>
   );
 }

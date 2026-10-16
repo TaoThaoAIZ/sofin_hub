@@ -30,9 +30,10 @@ export function PageBanner({
   className?: string;
 }) {
   return (
-    <section className={`px-1 py-2 ${className}`}>
-      <h1 className="m-0 text-[28px] leading-tight font-extrabold tracking-tight">{title}</h1>
-      {subtitle && <p className="mt-1 text-[15px] text-stone-700">{subtitle}</p>}
+    <section className={`px-1 py-2 max-md:py-0 ${className}`}>
+      {/* Mobile: tiêu đề đã nằm ở thanh trên (MobileChrome) nên chỉ giữ dòng mô tả căn giữa. */}
+      <h1 className="m-0 text-[28px] leading-tight font-extrabold tracking-tight max-md:hidden">{title}</h1>
+      {subtitle && <p className="mt-1 text-[15px] text-stone-700 max-md:mt-0 max-md:text-center max-md:text-sm max-md:text-stone-600">{subtitle}</p>}
     </section>
   );
 }

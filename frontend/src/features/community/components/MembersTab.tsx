@@ -105,7 +105,7 @@ export function MembersTab() {
                     setFilter(tb.key);
                     setPage(1);
                   }}
-                  className={`flex h-10 items-center gap-2 rounded-xl border px-4 text-[13.5px] whitespace-nowrap ${
+                  className={`flex h-10 items-center gap-2 rounded-xl border px-4 text-[13.5px] whitespace-nowrap max-md:h-9 max-md:rounded-[32px] max-md:px-3.5 ${
                     on
                       ? 'border-transparent bg-gradient-to-b from-[#ff8f45] to-brand font-bold text-white shadow-[0_8px_18px_-6px_rgba(255,87,10,.5)]'
                       : 'border-[rgba(120,60,20,.12)] bg-white font-medium text-stone-800'
@@ -121,8 +121,8 @@ export function MembersTab() {
                 </button>
               );
             })}
-            <div className="ml-auto flex min-w-0 flex-1 basis-[220px] items-center justify-end gap-2.5">
-              <label className="flex h-10 min-w-0 max-w-[260px] flex-1 items-center gap-2 rounded-xl border border-[rgba(120,60,20,.12)] bg-white px-3">
+            <div className="ml-auto flex min-w-0 flex-1 basis-[220px] items-center justify-end gap-2.5 max-md:ml-0 max-md:basis-full">
+              <label className="flex h-10 min-w-0 max-w-[260px] flex-1 items-center gap-2 max-md:max-w-none rounded-xl border border-[rgba(120,60,20,.12)] bg-white px-3">
                 <MaterialIcon name="search" size={19} color="#78716c" />
                 <input
                   value={q}
@@ -272,7 +272,12 @@ export function MembersTab() {
         </div>
       )}
 
-      {course && <CommunityInfoCard course={course} />}
+      {/* Mobile (Figma) không có thẻ thông tin cộng đồng bên phải. */}
+      {course && (
+        <div className="max-md:hidden">
+          <CommunityInfoCard course={course} />
+        </div>
+      )}
     </div>
   );
 }

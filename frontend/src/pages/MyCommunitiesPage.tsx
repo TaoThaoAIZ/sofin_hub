@@ -14,23 +14,24 @@ const ACTIVE = 'myCommunities';
 
 /** Nút phụ (Figma "Explore communities action"): cao 47, bo 15; sáng = trắng viền #eee1d9; tối = xám sáng .16. */
 const OUTLINE_BTN =
-  'inline-flex h-[47px] items-center justify-center gap-2.5 rounded-[15px] border border-[#eee1d9] bg-white px-7 text-[15px] font-bold text-[#1e1c1a] no-underline hover:border-[#fdba74] dark:border-transparent dark:bg-[rgba(232,232,232,.16)] dark:text-[#e8e8e8]';
+  'inline-flex h-[47px] items-center justify-center max-sm:w-full gap-2.5 rounded-[15px] border border-[#eee1d9] bg-white px-7 text-[15px] font-bold text-[#1e1c1a] no-underline hover:border-[#fdba74] dark:border-transparent dark:bg-[rgba(232,232,232,.16)] dark:text-[#e8e8e8]';
 /** Nút chính (Figma "Sign in action"): cam #ff6717, cao 47, bo 15. */
-const PRIMARY_BTN = 'h-[47px] gap-2.5 rounded-[15px] bg-[#ff6717] px-8 text-[15px] font-bold shadow-[0_4px_10px_rgba(229,120,41,0.15)]';
+const PRIMARY_BTN = 'h-[47px] max-sm:w-full gap-2.5 rounded-[15px] bg-[#ff6717] px-8 text-[15px] font-bold shadow-[0_4px_10px_rgba(229,120,41,0.15)]';
 
 function EmptyState({ title, content, children }: { title: React.ReactNode; content: string; children: React.ReactNode }) {
   return (
     <section className="mx-auto flex max-w-[1000px] flex-col items-center px-4 pt-[clamp(24px,3.5vw,64px)] pb-[clamp(40px,5vw,90px)] text-center">
       <ThemedImg name="guest_art" className="mx-auto h-auto w-full max-w-[482px]" />
-      <h1 className="m-0 pt-2.5 text-[clamp(30px,2.45vw,44px)] leading-[1.32] font-extrabold text-[#1e1c1a] text-balance dark:text-white">{title}</h1>
+      <h1 className="m-0 pt-2.5 text-[clamp(26px,2.45vw,44px)] leading-[1.32] font-extrabold text-[#1e1c1a] text-balance dark:text-white">{title}</h1>
       <p className="mt-3 mb-0 max-w-[620px] text-base leading-[26px] text-[#696460] text-pretty dark:text-[#bababa]">{content}</p>
-      <div className="flex flex-wrap items-center justify-center gap-[13px] pt-[29px]">{children}</div>
+      <div className="flex flex-wrap items-center justify-center gap-[13px] pt-[29px] max-sm:w-full max-sm:flex-col">{children}</div>
     </section>
   );
 }
 
 export function MyCommunitiesPage() {
   const { t } = useTranslation('misc');
+  const { t: tc } = useTranslation('common');
   const { status } = useAuth();
   const location = useLocation();
   const authed = status === 'authenticated';
@@ -87,7 +88,12 @@ export function MyCommunitiesPage() {
   } else {
     body = (
       <section className="mx-auto w-full max-w-[1320px] px-4 pt-10 pb-24 md:px-10">
-        <h1 className="m-0 mb-6 text-[clamp(26px,3vw,36px)] font-extrabold tracking-[-1px]">{t('myCommunities.title')}</h1>
+        <h1 className="m-0 mb-6 text-[clamp(26px,3vw,36px)] font-extrabold tracking-[-1px] max-md:hidden">{t('myCommunities.title')}</h1>
+        {/* Mobile (Figma): nút "Tạo cộng đồng" to ở đầu danh sách (Header mobile không có nút này). */}
+        <ButtonLink to="/communities/new" className="mb-4 h-12 w-full gap-2 rounded-2xl text-base font-bold md:hidden">
+          <MaterialIcon name="add" size={22} color="#fff" />
+          {tc('header.createCommunity')}
+        </ButtonLink>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {list.map((c) => (
             <Link
@@ -121,7 +127,9 @@ export function MyCommunitiesPage() {
     <div className="min-h-screen">
       <Header active={ACTIVE} />
       {body}
-      <Footer />
+      <div className="max-md:hidden">
+        <Footer />
+      </div>
     </div>
   );
 }

@@ -40,7 +40,7 @@ export const useCommunityDetail = (id: string) => {
   return useQuery({
     queryKey: courseKeys.detail(id),
     queryFn: ({ signal }) => fetchCourseDetail(id, accessToken ?? undefined, signal),
-    enabled: status !== 'loading',
+    enabled: status !== 'loading' && !!id,
   });
 };
 

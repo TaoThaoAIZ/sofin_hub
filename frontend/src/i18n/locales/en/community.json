@@ -328,7 +328,8 @@
     "deleteConfirm": "Delete event",
     "deleted": "Event deleted",
     "cancelled": "Cancelled",
-    "cancelledEvent": "This event has been cancelled"
+    "cancelledEvent": "This event has been cancelled",
+    "subtitle": "Manage and join events in your community"
   },
   "ui": {
     "close": "Close",
@@ -864,6 +865,27 @@
         "cta": "Get it",
         "again": "Get again"
       }
+    }
+  },
+  "mobile": {
+    "menu": "Open menu",
+    "close": "Close",
+    "search": "Search",
+    "notifications": "Notifications",
+    "login": "Log in",
+    "tabs": {
+      "aria": "Main navigation",
+      "home": "Home",
+      "community": "Communities",
+      "chat": "Chat",
+      "me": "Profile"
+    },
+    "promo": {
+      "badge": "Learning & growth community",
+      "title": "Create your own community",
+      "desc": "Connect people who share your passion, share knowledge and spread positive value.",
+      "cta": "Create a community now",
+      "note": "Free to create · Takes only 1 minute"
     }
   }
 }

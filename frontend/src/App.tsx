@@ -1,3 +1,4 @@
+import { MobileTabBar } from './components/layout/MobileChrome';
 import { CommunityReferralTab } from './features/community/components/CommunityReferralTab';
 import { lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -62,6 +63,7 @@ export default function App() {
       <ScrollToTop />
       <ReferralCapture />
       <ChatWidget />
+      <MobileTabBar />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />

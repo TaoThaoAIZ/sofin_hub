@@ -206,7 +206,7 @@ export function ReferralTab() {
         </Link>
       </div>
 
-      <section className="relative flex flex-wrap items-end gap-6 overflow-hidden rounded-[20px] border border-[#fde3cf] px-[30px] py-7" style={{ background: 'linear-gradient(110deg,#fff6ef 0%,#ffe3cd 100%)' }}>
+      <section className="relative flex flex-wrap items-end gap-6 overflow-hidden rounded-[20px] border border-[#fde3cf] bg-[linear-gradient(110deg,#fff6ef_0%,#ffe3cd_100%)] px-[30px] py-7 dark:border-[rgba(255,220,197,.1)] dark:bg-[linear-gradient(110deg,rgba(63,63,63,.3)_0%,rgba(74,29,0,.3)_100%)]">
         <span className="pointer-events-none absolute top-4 right-6 opacity-90">
           <MaterialIcon name="redeem" size={60} filled color="#ff570a" />
         </span>
@@ -221,7 +221,7 @@ export function ReferralTab() {
         <div className="relative min-w-[280px] flex-[0_1_460px]">
           <div className="mb-2 text-sm text-stone-700">{t('referral.yourLink')}</div>
           <div className="flex gap-3">
-            <div className="flex h-[50px] min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-[#f0e2d7] bg-white px-4">
+            <div className="flex h-[50px] min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-[#f0e2d7] bg-white px-4 dark:border-white/10 dark:bg-black/30">
               <span className="min-w-0 flex-1 truncate text-[14.5px]">{link ? link.replace(/^https?:\/\//, '') : overview.isError ? t('referral.linkFail') : '…'}</span>
               <button type="button" aria-label={t('referral.copyLinkLabel')} onClick={copy} disabled={!link} className="border-0 bg-transparent p-0 text-stone-600">
                 <MaterialIcon name="content_copy" size={20} />

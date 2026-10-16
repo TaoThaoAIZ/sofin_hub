@@ -20,7 +20,7 @@ const CONTACTS = [
 export function Footer() {
   const { t } = useTranslation('layout');
   return (
-    <footer className={`${PAGE_X} flex flex-col gap-6 py-4`}>
+    <footer className={`${PAGE_X} flex flex-col gap-6 py-4 max-md:hidden`}>
       <div className="flex items-center justify-between gap-4">
         <BrandLogo className="h-[clamp(40px,3.1vw,56px)]" />
         {/* Biểu tượng mạng xã hội theo thiết kế; chưa có đường dẫn thật nên chỉ hiển thị. */}

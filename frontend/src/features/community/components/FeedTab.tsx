@@ -117,7 +117,7 @@ export function FeedTab() {
         </div>
         )}
 
-        <div className="flex flex-wrap gap-2">
+        <div className="no-scrollbar flex flex-wrap gap-2 max-md:flex-nowrap max-md:overflow-x-auto">
           {isModPlus(viewerRole) && (
             <button
               type="button"
@@ -143,7 +143,7 @@ export function FeedTab() {
                     setCategory(f.key === 'all' ? undefined : f.key);
                   }
                 }}
-                className={`flex h-10 items-center gap-2 rounded-xl px-4 text-[13.5px] font-semibold whitespace-nowrap ${
+                className={`flex h-10 flex-none items-center gap-2 rounded-xl px-4 text-[13.5px] font-semibold whitespace-nowrap max-md:h-9 max-md:rounded-[32px] max-md:px-3.5 ${
                   active ? 'bg-brand text-white' : 'glass-chip text-stone-900'
                 }`}
               >
@@ -198,7 +198,12 @@ export function FeedTab() {
         {posts.isFetchNextPageError && <ErrorNote message={errText(posts.error, t('feed.loadMoreFailed'))} />}
       </div>
 
-      {course && <CommunityRightSidebar course={course} />}
+      {/* Mobile (Figma) không có cột phải; thông tin/đề xuất/Premium chỉ hiện từ md. */}
+      {course && (
+        <div className="max-md:hidden">
+          <CommunityRightSidebar course={course} />
+        </div>
+      )}
     </div>
   );
 }

@@ -91,11 +91,11 @@ export function CalendarTab() {
   const visible = (events.data ?? []).filter((e) => (filter === 'upcoming' ? !e.isPast : filter === 'rsvped' ? e.viewerRsvped : true));
   const eventsOn = (d: Date) => visible.filter((e) => sameDay(new Date(e.startAt), d)).sort((a, b) => a.startAt.localeCompare(b.startAt));
   const selected = events.data?.find((e) => e.id === selectedId) ?? null;
-  const rowH = view === 'month' ? 'min-h-[118px]' : 'min-h-[420px]';
+  const rowH = view === 'month' ? 'min-h-[118px] max-md:min-h-[78px]' : 'min-h-[420px] max-md:min-h-[260px]';
 
   return (
     <main className="flex min-w-0 flex-col gap-4">
-      <PageBanner image="cal-hero-bg.webp" icon="calendar_month" title={t('calendar.title')} />
+      <PageBanner image="cal-hero-bg.webp" icon="calendar_month" title={t('calendar.title')} subtitle={t('calendar.subtitle')} />
 
       <section className="glass rounded-3xl p-4">
         <div className="mb-4 flex flex-wrap items-center gap-4">
@@ -116,12 +116,12 @@ export function CalendarTab() {
             <div className="mt-0.5 text-[12.5px] text-stone-600">{t('calendar.timezone')}</div>
           </div>
 
-          <div className="ml-auto flex gap-1 rounded-[14px] border border-[rgba(120,60,20,.12)] bg-white p-1">
+          <div className="ml-auto flex gap-1 rounded-[14px] border border-[rgba(120,60,20,.12)] bg-white p-1 max-md:order-last max-md:ml-0 max-md:w-full">
             {VIEWS.map((v) => (
               <button
                 key={v}
                 onClick={() => setView(v)}
-                className={`h-9 rounded-[10px] px-[22px] text-[14.5px] ${
+                className={`h-9 rounded-[10px] px-[22px] text-[14.5px] max-md:flex-1 max-md:px-2 ${
                   view === v
                     ? 'bg-gradient-to-b from-[#fff1e6] to-[#ffe4d1] font-semibold text-brand shadow-[inset_0_0_0_1px_rgba(255,87,10,.2)]'
                     : 'font-medium text-stone-600'
@@ -167,7 +167,7 @@ export function CalendarTab() {
             {t('calendar.subscribeAll')}
           </button>
 
-          {canManage && <button onClick={() => setShowForm((s) => !s)} className="flex h-11 items-center gap-2 rounded-xl bg-brand px-[18px] text-sm font-bold text-white">
+          {canManage && <button onClick={() => setShowForm((s) => !s)} className="flex h-11 items-center gap-2 rounded-xl bg-brand px-[18px] text-sm font-bold text-white max-md:order-first max-md:w-full max-md:justify-center">
             <MaterialIcon name={showForm ? 'close' : 'add'} size={19} color="#fff" />
             {showForm ? t('calendar.close') : t('calendar.create')}
           </button>}
@@ -220,7 +220,7 @@ export function CalendarTab() {
         )}
 
         <div className="overflow-hidden rounded-[14px] border border-[rgba(120,60,20,.1)] bg-white">
-          <div className="grid border-b border-[rgba(120,60,20,.1)]" style={{ gridTemplateColumns: `repeat(${cols},minmax(0,1fr))` }}>
+          <div className="grid border-b border-[rgba(120,60,20,.1)] max-md:[&>div]:h-9" style={{ gridTemplateColumns: `repeat(${cols},minmax(0,1fr))` }}>
             {heads.map((h, i) => (
               <div key={h} className={`grid h-11 place-items-center text-[13px] font-semibold ${i ? 'border-l border-[rgba(120,60,20,.08)]' : ''}`}>
                 {t(`calendar.dayShort.${h}`)}
@@ -235,15 +235,15 @@ export function CalendarTab() {
               return (
                 <div
                   key={d.toISOString()}
-                  className={`${rowH} min-w-0 p-3 ${i % cols ? 'border-l border-[rgba(120,60,20,.08)]' : ''} ${i >= cols ? 'border-t border-[rgba(120,60,20,.08)]' : ''} ${
+                  className={`${rowH} min-w-0 p-3 max-md:p-1 ${i % cols ? 'border-l border-[rgba(120,60,20,.08)]' : ''} ${i >= cols ? 'border-t border-[rgba(120,60,20,.08)]' : ''} ${
                     isToday ? 'bg-gradient-to-b from-[#fff1e6] to-[#fff7f0]' : ''
                   }`}
                 >
                   <span
                     className={
                       isToday
-                        ? '-mt-1.5 -ml-1 grid size-[34px] place-items-center rounded-full bg-gradient-to-b from-[#ff8f45] to-brand text-[13.5px] font-bold text-white shadow-[0_6px_14px_rgba(255,87,10,.35)]'
-                        : `text-[13.5px] font-medium ${out ? 'text-stone-400' : 'text-stone-900'}`
+                        ? '-mt-1.5 -ml-1 grid size-[34px] max-md:mx-auto max-md:mt-0 max-md:ml-0 max-md:size-8 place-items-center rounded-full bg-gradient-to-b from-[#ff8f45] to-brand text-[13.5px] font-bold text-white shadow-[0_6px_14px_rgba(255,87,10,.35)]'
+                        : `text-[13.5px] font-medium max-md:block max-md:text-center ${out ? 'text-stone-400' : 'text-stone-900'}`
                     }
                   >
                     {d.getDate()}
@@ -253,7 +253,7 @@ export function CalendarTab() {
                       <button
                         key={ev.id}
                         onClick={() => setSelectedId(ev.id)}
-                        className={`truncate rounded-md px-1.5 py-1 text-left text-[11.5px] font-semibold ${
+                        className={`truncate rounded-md px-1.5 py-1 text-left text-[11.5px] font-semibold max-md:px-1 max-md:py-0.5 max-md:text-[10px] ${
                           ev.cancelledAt ? 'bg-stone-100 text-stone-500 line-through opacity-60' : ev.isPast ? 'bg-stone-100 text-stone-500 opacity-60' : 'bg-brand/15 text-brand-dark hover:bg-brand/25'
                         }`}
                       >

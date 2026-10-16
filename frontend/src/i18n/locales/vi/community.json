@@ -328,7 +328,8 @@
     "deleteConfirm": "Xóa sự kiện",
     "deleted": "Đã xóa sự kiện",
     "cancelled": "Đã hủy",
-    "cancelledEvent": "Sự kiện này đã bị hủy"
+    "cancelledEvent": "Sự kiện này đã bị hủy",
+    "subtitle": "Quản lý và tham gia các sự kiện trong cộng đồng"
   },
   "ui": {
     "close": "Đóng",
@@ -864,6 +865,27 @@
         "cta": "Tải ngay",
         "again": "Tải lại"
       }
+    }
+  },
+  "mobile": {
+    "menu": "Mở menu",
+    "close": "Đóng",
+    "search": "Tìm kiếm",
+    "notifications": "Thông báo",
+    "login": "Đăng nhập",
+    "tabs": {
+      "aria": "Điều hướng chính",
+      "home": "Trang chủ",
+      "community": "Cộng đồng",
+      "chat": "Chat",
+      "me": "Cá nhân"
+    },
+    "promo": {
+      "badge": "Cộng đồng học tập & phát triển",
+      "title": "Tạo cộng đồng của riêng bạn",
+      "desc": "Kết nối những người cùng đam mê, chia sẻ kiến thức và lan tỏa giá trị tích cực.",
+      "cta": "Tạo cộng đồng ngay",
+      "note": "Có thể tạo miễn phí · Chỉ mất 1 phút"
     }
   }
 }

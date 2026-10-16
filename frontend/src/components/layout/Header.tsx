@@ -1,4 +1,5 @@
 import { PAGE_X } from '../../lib/layout';
+import { MobileTopBar } from './MobileChrome';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -51,7 +52,9 @@ export function Header({ active = 'discover' }: { active?: string }) {
   };
 
   return (
-    <header className={`${PAGE_X} sticky top-[18px] z-20 mt-[18px] flex h-[72px] items-center gap-[clamp(12px,2vw,32px)] rounded-[28px] border border-transparent bg-white/70 py-0 pr-[11px] pl-4 shadow-nav backdrop-blur-[22px] backdrop-saturate-[180%] md:pl-6 min-[1600px]:pl-9 dark:border-white/10 dark:bg-black/30`}>
+    <>
+    <MobileTopBar />
+    <header className={`max-md:hidden ${PAGE_X} sticky top-[18px] z-20 mt-[18px] flex h-[72px] items-center gap-[clamp(12px,2vw,32px)] rounded-[28px] border border-transparent bg-white/70 py-0 pr-[11px] pl-4 shadow-nav backdrop-blur-[22px] backdrop-saturate-[180%] md:pl-6 min-[1600px]:pl-9 dark:border-white/10 dark:bg-black/30`}>
       <Logo />
 
       <nav className="hidden min-w-0 flex-1 flex-wrap items-center justify-center gap-x-[clamp(16px,1.8vw,32px)] overflow-hidden text-[clamp(15px,1vw,18px)] leading-[1.5] whitespace-nowrap md:flex">
@@ -157,5 +160,6 @@ export function Header({ active = 'discover' }: { active?: string }) {
         </Link>
       </div>
     </header>
+    </>
   );
 }

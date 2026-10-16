@@ -209,10 +209,10 @@ export function ClassroomTab() {
       <ToastHost />
       <div className="flex flex-wrap items-center gap-x-6 gap-y-4 px-1 py-1.5">
         <div className="min-w-0 flex-1 basis-[300px]">
-          <h1 className="m-0 text-[32px] leading-tight font-extrabold tracking-tight">{t('classroom.title')}</h1>
-          <p className="mt-1 mb-0 text-sm text-stone-700 [text-wrap:pretty]">{t('classroom.subtitle')}</p>
+          <h1 className="m-0 text-[32px] leading-tight font-extrabold tracking-tight max-md:hidden">{t('classroom.title')}</h1>
+          <p className="mt-1 mb-0 text-sm text-stone-700 [text-wrap:pretty] max-md:mt-0 max-md:text-center max-md:text-stone-600">{t('classroom.subtitle')}</p>
         </div>
-        <div className="ml-auto flex items-center divide-x divide-stone-200/80 py-2">
+        <div className="ml-auto flex items-center divide-x divide-stone-200/80 py-2 max-md:hidden">
           {[
             { icon: 'school', value: list.length, label: t('classroom.statModules') },
             { icon: 'article', value: totalLessons, label: t('classroom.statLessons') },
@@ -228,7 +228,7 @@ export function ClassroomTab() {
           ))}
         </div>
         {canEdit && (
-          <button type="button" onClick={() => setWizard('new')} className={`${primaryBtn} h-14 flex-none rounded-2xl px-6 text-[15px] whitespace-nowrap`}>
+          <button type="button" onClick={() => setWizard('new')} className={`${primaryBtn} h-14 flex-none rounded-2xl px-6 text-[15px] whitespace-nowrap max-md:h-12 max-md:w-full`}>
             <MaterialIcon name="add" size={22} color="#fff" />
             {t('classroom.addLesson')}
           </button>
@@ -337,7 +337,7 @@ export function ClassroomTab() {
                       className="flex h-[34px] items-center gap-1.5 rounded-[10px] bg-white/95 px-3 text-[13px] font-bold shadow-[0_6px_16px_rgba(0,0,0,.18)] hover:bg-white hover:text-brand"
                     >
                       <MaterialIcon name="edit" size={17} />
-                      {t('classroom.editBtn')}
+                      <span className="max-md:hidden">{t('classroom.editBtn')}</span>
                     </button>
                     <button
                       type="button"

@@ -229,6 +229,110 @@ export function CourseDetailPage() {
     });
   };
 
+  // Cụm nút tham gia/rời/chờ duyệt... dùng ở 2 nơi: thẻ gói bên phải (desktop) và ngay dưới mô tả (mobile, theo Figma).
+  const joinControls = (
+      <div className="flex flex-col gap-4">
+        {isLocked && (
+          <p className="rounded-xl bg-red-50 px-3 py-2 text-center text-[13px] font-medium text-red-700">
+            {t('detail.lockedBanner')}
+          </p>
+        )}
+        {course.viewerEnrolled && !isLocked && (
+          <ButtonLink to={`/communities/${id}/community`} className="h-[65px] gap-3 rounded-[20px] text-[22px] font-extrabold max-md:h-12 max-md:text-lg shadow-[0_6px_16px_rgba(246,107,24,0.13)]">
+            {t('detail.enter')}
+            <MaterialIcon name="arrow_forward" size={24} color="#fff" />
+          </ButtonLink>
+        )}
+        {course.viewerEnrolled && !isLocked && course.viewerRole !== 'owner' && (
+          <button
+            type="button"
+            onClick={handleJoin}
+            disabled={enroll.isPending}
+            className="h-11 rounded-2xl border-[1.5px] border-red-200 bg-white text-[15px] font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
+          >
+            {enroll.isPending ? t('detail.leaving') : t('detail.leave')}
+          </button>
+        )}
+        {!course.viewerEnrolled && (
+        <Button
+          onClick={handleJoin}
+          disabled={enroll.isPending || hasPendingRequest}
+          variant={course.viewerEnrolled ? 'success' : 'brand'}
+          className="h-[65px] gap-3 rounded-[20px] text-[22px] font-extrabold max-md:h-12 max-md:text-lg shadow-[0_6px_16px_rgba(246,107,24,0.13)]"
+        >
+          {course.viewerEnrolled
+            ? t('detail.joined')
+            : hasPendingRequest
+              ? t('detail.requestPending')
+              : approved
+                ? t('detail.approvedPay')
+              : isPrivate
+                ? t('detail.requestJoin')
+                : t('detail.joinNow')}
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+            <path d={course.viewerEnrolled ? 'M5 12l5 5 9-10' : 'M5 12h14M13 6l6 6-6 6'} />
+          </svg>
+        </Button>
+        )}
+        {isPrivate && !course.viewerEnrolled && !hasPendingRequest && (
+          <p className="m-0 text-center text-xs text-[#827b75] dark:text-[#bababa]">{t('detail.privateNote')}</p>
+        )}
+        {hasPendingRequest && (
+          <div className="flex flex-col items-center gap-1.5 text-center text-[13px] text-[#57524e] dark:text-[#bababa]">
+            <span>{t('detail.reviewNote')}</span>
+            {pendingRequest !== 'unknown' && (
+              <button
+                type="button"
+                onClick={handleCancelRequest}
+                disabled={cancelRequest.isPending}
+                className="font-semibold text-brand hover:underline disabled:opacity-50"
+              >
+                {cancelRequest.isPending ? t('detail.canceling') : t('detail.cancelRequest')}
+              </button>
+            )}
+            {cancelRequest.isError && <span className="text-red-600">{errorText(cancelRequest.error)}</span>}
+          </div>
+        )}
+        {joinNotice && <p className="m-0 text-center text-sm text-red-600">{joinNotice}</p>}
+        {isAtLeast(course.viewerRole, 'admin') && (
+          <Link
+            to={`/communities/${id}/community/cai-dat`}
+            className="flex h-10 items-center justify-center gap-2 rounded-xl bg-brand/10 text-sm font-semibold text-brand hover:bg-brand/15"
+          >
+            <MaterialIcon name="settings" size={18} color="#ff570a" />
+            {t('detail.settings')}
+          </Link>
+        )}
+      </div>
+  );
+
+  // Thẻ "Cần hỗ trợ?": desktop nằm cuối cột phải; mobile (Figma) nằm trước khối đánh giá.
+  const supportCard = (
+  <div className="flex flex-col gap-3 rounded-[22px] bg-white pt-4 pr-[18px] pb-[17px] pl-[17px] shadow-[0_5px_32px_6px_rgba(121,81,54,0.05)] dark:bg-[rgba(63,63,63,.3)] dark:shadow-none">
+    <div className="flex items-start gap-3">
+      <div className="grid size-12 flex-none place-items-center rounded-xl bg-[#ffe7d6] dark:bg-[rgba(255,87,10,.16)]">
+        <PathIcon
+          d="M3 18v-6a9 9 0 0 1 18 0v6M21 19a2 2 0 0 1-2 2h-1v-6h3zM3 19a2 2 0 0 0 2 2h1v-6H3z"
+          stroke="#ff570a"
+          size={26}
+        />
+      </div>
+      <div className="min-w-0 flex-1 pt-px">
+        <div className="text-[22px] font-bold text-[#242321] dark:text-white">{t('detail.needHelp')}</div>
+        <div className="mt-1 text-sm leading-5 text-[#8c8580] dark:text-[#bababa]">
+          {t('detail.contactUs')}
+        </div>
+      </div>
+    </div>
+    <Link
+      to="/contact"
+      className="flex h-12 items-center justify-center rounded-[15px] border border-brand text-base font-bold text-brand hover:bg-brand-soft"
+    >
+      {t('detail.sendMessage')}
+    </Link>
+  </div>
+  );
+
   return (
     <div className="min-h-screen">
       <Header active="courses" />
@@ -264,7 +368,7 @@ export function CourseDetailPage() {
           />
 
           <div className="flex flex-col gap-3">
-            <h1 className="m-0 text-[clamp(30px,2.55vw,46px)] leading-[1.48] font-extrabold text-[#201d1b] dark:text-white">{course.title}</h1>
+            <h1 className="m-0 text-[clamp(30px,2.55vw,46px)] leading-[1.48] max-md:text-2xl max-md:leading-8 font-extrabold text-[#201d1b] dark:text-white">{course.title}</h1>
             <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-lg text-[#57524e] dark:text-[#bababa]">
               <span className="flex items-center gap-3">
                 <StarIcon size={22} />
@@ -278,6 +382,7 @@ export function CourseDetailPage() {
               </span>
             </div>
             <ShortText text={course.description} />
+            <div className="md:hidden">{joinControls}</div>
           </div>
 
           <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-[15px]">
@@ -323,6 +428,8 @@ export function CourseDetailPage() {
           {tab === 'content' && <ContentTab courseId={id} enrolled={!!course.viewerEnrolled} lessons={Number(course.facts.find((f) => f.label === 'Bài học')?.value ?? 0)} />}
           {tab === 'faq' && course.faqs.length > 0 && <FaqTab faqs={course.faqs} />}
 
+          <div className="md:hidden">{supportCard}</div>
+
           <div ref={reviewsRef} className="scroll-mt-24">
             <ReviewsSection
               courseId={id}
@@ -335,7 +442,7 @@ export function CourseDetailPage() {
         </main>
 
         <aside className="sticky top-24 flex min-w-0 flex-1 basis-[340px] flex-col gap-5 max-lg:static max-lg:basis-full min-[1100px]:max-w-[401px]">
-          <div className="rounded-[32px] border border-white bg-gradient-to-r from-white to-[#fff9f3] p-[11px] shadow-[1px_6px_15px_rgba(121,81,54,0.08)] dark:border-white/10 dark:from-[rgba(63,63,63,.3)] dark:to-[rgba(63,63,63,.3)] dark:shadow-none">
+          <div className="max-md:hidden rounded-[32px] border border-white bg-gradient-to-r from-white to-[#fff9f3] p-[11px] shadow-[1px_6px_15px_rgba(121,81,54,0.08)] dark:border-white/10 dark:from-[rgba(63,63,63,.3)] dark:to-[rgba(63,63,63,.3)] dark:shadow-none">
             <div className="relative h-[200px] overflow-hidden rounded-3xl">
               <img src={course.thumbnail} alt="" className="size-full object-cover" />
             </div>
@@ -363,79 +470,7 @@ export function CourseDetailPage() {
                 ))}
               </div>
 
-              <div className="flex flex-col gap-4">
-                {isLocked && (
-                  <p className="rounded-xl bg-red-50 px-3 py-2 text-center text-[13px] font-medium text-red-700">
-                    {t('detail.lockedBanner')}
-                  </p>
-                )}
-                {course.viewerEnrolled && !isLocked && (
-                  <ButtonLink to={`/communities/${id}/community`} className="h-[65px] gap-3 rounded-[20px] text-[22px] font-extrabold shadow-[0_6px_16px_rgba(246,107,24,0.13)]">
-                    {t('detail.enter')}
-                    <MaterialIcon name="arrow_forward" size={24} color="#fff" />
-                  </ButtonLink>
-                )}
-                {course.viewerEnrolled && !isLocked && course.viewerRole !== 'owner' && (
-                  <button
-                    type="button"
-                    onClick={handleJoin}
-                    disabled={enroll.isPending}
-                    className="h-11 rounded-2xl border-[1.5px] border-red-200 bg-white text-[15px] font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
-                  >
-                    {enroll.isPending ? t('detail.leaving') : t('detail.leave')}
-                  </button>
-                )}
-                {!course.viewerEnrolled && (
-                <Button
-                  onClick={handleJoin}
-                  disabled={enroll.isPending || hasPendingRequest}
-                  variant={course.viewerEnrolled ? 'success' : 'brand'}
-                  className="h-[65px] gap-3 rounded-[20px] text-[22px] font-extrabold shadow-[0_6px_16px_rgba(246,107,24,0.13)]"
-                >
-                  {course.viewerEnrolled
-                    ? t('detail.joined')
-                    : hasPendingRequest
-                      ? t('detail.requestPending')
-                      : approved
-                        ? t('detail.approvedPay')
-                      : isPrivate
-                        ? t('detail.requestJoin')
-                        : t('detail.joinNow')}
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
-                    <path d={course.viewerEnrolled ? 'M5 12l5 5 9-10' : 'M5 12h14M13 6l6 6-6 6'} />
-                  </svg>
-                </Button>
-                )}
-                {isPrivate && !course.viewerEnrolled && !hasPendingRequest && (
-                  <p className="m-0 text-center text-xs text-[#827b75] dark:text-[#bababa]">{t('detail.privateNote')}</p>
-                )}
-                {hasPendingRequest && (
-                  <div className="flex flex-col items-center gap-1.5 text-center text-[13px] text-[#57524e] dark:text-[#bababa]">
-                    <span>{t('detail.reviewNote')}</span>
-                    {pendingRequest !== 'unknown' && (
-                      <button
-                        type="button"
-                        onClick={handleCancelRequest}
-                        disabled={cancelRequest.isPending}
-                        className="font-semibold text-brand hover:underline disabled:opacity-50"
-                      >
-                        {cancelRequest.isPending ? t('detail.canceling') : t('detail.cancelRequest')}
-                      </button>
-                    )}
-                    {cancelRequest.isError && <span className="text-red-600">{errorText(cancelRequest.error)}</span>}
-                  </div>
-                )}
-                {joinNotice && <p className="m-0 text-center text-sm text-red-600">{joinNotice}</p>}
-                {isAtLeast(course.viewerRole, 'admin') && (
-                  <Link
-                    to={`/communities/${id}/community/cai-dat`}
-                    className="flex h-10 items-center justify-center gap-2 rounded-xl bg-brand/10 text-sm font-semibold text-brand hover:bg-brand/15"
-                  >
-                    <MaterialIcon name="settings" size={18} color="#ff570a" />
-                    {t('detail.settings')}
-                  </Link>
-                )}
-              </div>
+              {joinControls}
             </div>
 
             <div className="flex flex-col px-3">
@@ -453,7 +488,7 @@ export function CourseDetailPage() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-4 rounded-[28px] border border-white bg-white p-[26px] shadow-[1px_6px_15px_rgba(121,81,54,0.08)] dark:border-white/10 dark:bg-[rgba(63,63,63,.3)] dark:shadow-none">
+          <div className="max-md:hidden flex flex-col gap-4 rounded-[28px] border border-white bg-white p-[26px] shadow-[1px_6px_15px_rgba(121,81,54,0.08)] dark:border-white/10 dark:bg-[rgba(63,63,63,.3)] dark:shadow-none">
             <div className="text-[22px] leading-normal font-extrabold text-[#201d1b] dark:text-white">{t('detail.youGet')}</div>
             <div className="flex flex-col gap-3">
               {sidebarPerks(course).map((p) => (
@@ -469,29 +504,7 @@ export function CourseDetailPage() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-3 rounded-[22px] bg-white pt-4 pr-[18px] pb-[17px] pl-[17px] shadow-[0_5px_32px_6px_rgba(121,81,54,0.05)] dark:bg-[rgba(63,63,63,.3)] dark:shadow-none">
-            <div className="flex items-start gap-3">
-              <div className="grid size-12 flex-none place-items-center rounded-xl bg-[#ffe7d6] dark:bg-[rgba(255,87,10,.16)]">
-                <PathIcon
-                  d="M3 18v-6a9 9 0 0 1 18 0v6M21 19a2 2 0 0 1-2 2h-1v-6h3zM3 19a2 2 0 0 0 2 2h1v-6H3z"
-                  stroke="#ff570a"
-                  size={26}
-                />
-              </div>
-              <div className="min-w-0 flex-1 pt-px">
-                <div className="text-[22px] font-bold text-[#242321] dark:text-white">{t('detail.needHelp')}</div>
-                <div className="mt-1 text-sm leading-5 text-[#8c8580] dark:text-[#bababa]">
-                  {t('detail.contactUs')}
-                </div>
-              </div>
-            </div>
-            <Link
-              to="/contact"
-              className="flex h-12 items-center justify-center rounded-[15px] border border-brand text-base font-bold text-brand hover:bg-brand-soft"
-            >
-              {t('detail.sendMessage')}
-            </Link>
-          </div>
+          <div className="max-md:hidden">{supportCard}</div>
         </aside>
       </div>
 

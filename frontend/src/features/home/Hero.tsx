@@ -31,42 +31,42 @@ export function Hero({ onSearch }: { onSearch: (q: string) => void }) {
   };
 
   return (
-    <section className={`${PAGE_X} relative flex flex-col items-start pt-[clamp(36px,5.5vw,100px)] pb-[clamp(36px,4.5vw,80px)]`}>
-      <div className="flex h-[37px] items-center gap-2.5 rounded-full bg-white px-[19px] shadow-[0_8px_30px_rgba(159,126,103,0.06)] dark:bg-[#333] dark:shadow-none">
-        <ThemedImg name="cap_label" className="size-[19px]" />
-        <span className="text-[clamp(12px,0.89vw,16px)] leading-normal font-semibold whitespace-nowrap text-brand">{t('hero.badge')}</span>
+    <section className={`${PAGE_X} relative flex flex-col items-start pt-[clamp(36px,5.5vw,100px)] pb-[clamp(36px,4.5vw,80px)] max-md:items-center max-md:pt-1 max-md:pb-3 max-md:text-center`}>
+      <div className="flex h-[37px] items-center gap-2.5 rounded-full bg-white px-[19px] shadow-[0_8px_30px_rgba(159,126,103,0.06)] max-md:h-auto max-md:gap-1 max-md:bg-[rgba(124,124,124,.1)] max-md:px-2 max-md:py-0.5 dark:bg-[#333] dark:shadow-none">
+        <ThemedImg name="cap_label" className="size-[19px] max-md:size-4" />
+        <span className="text-[clamp(12px,0.89vw,16px)] leading-normal font-semibold max-md:leading-5 whitespace-nowrap text-brand">{t('hero.badge')}</span>
       </div>
 
-      <h1 className="m-0 mt-6 text-[clamp(32px,3.17vw,57px)] leading-[1.175] font-extrabold tracking-[-0.5px] text-[#201e1c] dark:text-white">
+      <h1 className="m-0 mt-6 text-[clamp(32px,3.17vw,57px)] leading-[1.175] max-md:mt-2.5 max-md:text-[26px] max-md:leading-8 font-extrabold tracking-[-0.5px] text-[#201e1c] dark:text-white">
         {t('hero.title1')}
         <br />
         <span className="text-brand">{t('hero.title2')}</span>
       </h1>
 
-      <p className="mt-[22px] mb-0 max-w-[760px] text-[clamp(15px,1.22vw,22px)] leading-normal text-[#606060] text-pretty dark:text-[#bababa]">{t('hero.desc')}</p>
+      <p className="mt-[22px] mb-0 max-w-[760px] text-[clamp(15px,1.22vw,22px)] leading-normal max-md:mt-2 max-md:text-sm max-md:leading-5 text-[#606060] text-pretty dark:text-[#bababa]">{t('hero.desc')}</p>
 
       <form
         onSubmit={submit}
         role="search"
-        className="mt-[35px] flex h-[clamp(56px,4.1vw,74px)] w-full max-w-[800px] items-center gap-[18px] rounded-[28px] border border-white bg-white/85 pr-[9px] pl-[26px] shadow-[0_8px_30px_rgba(159,126,103,0.06)] dark:border-[rgba(161,161,161,.3)] dark:bg-[rgba(63,63,63,.3)]"
+        className="mt-[35px] flex h-[clamp(56px,4.1vw,74px)] w-full max-w-[800px] items-center gap-[18px] rounded-[28px] border border-white bg-white/85 pr-[9px] pl-[26px] max-md:mt-3 max-md:h-auto max-md:gap-2 max-md:rounded-[30px] max-md:border-[#cfcfcf] max-md:bg-white/60 max-md:py-1.5 max-md:pr-1.5 max-md:pl-3.5 shadow-[0_8px_30px_rgba(159,126,103,0.06)] dark:border-[rgba(161,161,161,.3)] dark:bg-[rgba(63,63,63,.3)]"
       >
-        <ThemedImg name="search" className="size-6 flex-none" />
+        <ThemedImg name="search" className="size-6 flex-none max-md:size-5" />
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder={t('hero.searchPlaceholder')}
           aria-label={t('hero.searchAria')}
-          className="min-w-0 flex-1 border-0 bg-transparent text-[clamp(15px,1.11vw,20px)] text-[#201e1c] outline-0 placeholder:text-[#a6a19d] dark:text-white"
+          className="min-w-0 flex-1 border-0 bg-transparent text-[clamp(15px,1.11vw,20px)] max-md:text-sm text-[#201e1c] outline-0 placeholder:text-[#a6a19d] dark:text-white"
         />
         <button
           type="submit"
-          className="h-[clamp(42px,3.33vw,60px)] w-[clamp(110px,10.6vw,191px)] flex-none rounded-[20px] bg-brand text-[clamp(14px,1.11vw,20px)] font-medium whitespace-nowrap text-white shadow-[0_8px_30px_rgba(159,126,103,0.06)] hover:brightness-[1.06]"
+          className="h-[clamp(42px,3.33vw,60px)] w-[clamp(110px,10.6vw,191px)] flex-none rounded-[20px] bg-brand text-[clamp(14px,1.11vw,20px)] max-md:h-[38px] max-md:w-auto max-md:rounded-[34px] max-md:px-3 max-md:text-sm max-md:font-semibold font-medium whitespace-nowrap text-white shadow-[0_8px_30px_rgba(159,126,103,0.06)] hover:brightness-[1.06]"
         >
           {t('hero.searchButton')} →
         </button>
       </form>
 
-      <div className="mt-[38px] flex flex-wrap gap-x-[clamp(20px,2vw,36px)] gap-y-5">
+      <div className="mt-[38px] flex flex-wrap gap-x-[clamp(20px,2vw,36px)] gap-y-5 max-md:hidden">
         {STAT_ITEMS.map((s) => (
           <div key={s.key} className="flex items-center gap-3">
             <div className={`grid size-[clamp(44px,3vw,54px)] flex-none place-items-center rounded-full border border-white shadow-[0_8px_30px_rgba(159,126,103,0.06)] dark:border-transparent dark:shadow-none ${s.bg}`}>

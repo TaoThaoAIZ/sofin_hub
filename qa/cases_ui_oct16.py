@@ -245,3 +245,62 @@ def load(add):
     B("Chatbot", "Widget chatbot 'Tào' chỉ hiện khi Admin bật VÀ đã đăng nhập ChatGPT (Codex) hoặc dev bật CHATBOT_FAKE_MODEL=1", "Chức năng", "Trung bình", "Quyền Super Admin.",
       ["Chưa đăng nhập ChatGPT: mở / khi đã đăng nhập", "Admin > Hỗ trợ > Chatbot > Cài đặt > đăng nhập ChatGPT theo hướng dẫn", "Tải lại trang người dùng"], "-",
       "Chưa đăng nhập ChatGPT: không có nút chat (GET /api/chatbot/status trả available=false); sau khi đăng nhập + bật: nút chat tròn cam ở góc phải dưới. Trang cộng đồng có bot riêng thì Tào ẩn.", pw="Không")
+
+    # ======================================================================= MOB
+    M, MN = "MOB", "Giao diện mobile (Figma Sofin-HUB)"
+
+    def Mo(feature, title, ttype, prio, pre, steps, data, exp, pw="Một phần", st=DONE):
+        add(M, MN, feature, title, ttype, prio, st, pre, steps, data, exp, pw=pw)
+
+    MB = "Chrome DevTools > chế độ thiết bị 390x844 (iPhone 14) hoặc điện thoại thật; Frontend :5173 + backend :4000 chạy."
+    Mo("Khung mobile", "< 768px: Header desktop ẩn, hiện thanh trên: nút menu trái, logo giữa (hoặc tiêu đề trang), nút tìm kiếm + chuông phải", "Giao diện", "Cao", MB,
+      ["Mở /", "Mở /me/communities", "Mở một trang trong cộng đồng (vd. Lớp học)"], "-",
+      "Thanh cao 60px nền trong suốt; 3 nút tròn 36px nền xám .2; trang chủ/chi tiết/Cộng đồng của tôi hiện logo; trang trong cộng đồng hiện tiêu đề (Cộng đồng, Lớp học, Lịch sự kiện, Thành viên, Giới thiệu, Giới thiệu hoa hồng...); chuông có số chưa đọc (chấm cam 16px) dẫn /notifications; khách thấy icon người dẫn /login.")
+    Mo("Khung mobile", "Từ 768px trở lên: giao diện desktop giữ nguyên, không có thanh trên/thanh tab mobile", "Giao diện", "Cao", "Cửa sổ rộng ≥ 768px.",
+      ["Mở /, /courses/<id>, trang cộng đồng"], "-", "Chỉ có Header dạng viên và sidebar như cũ; không thấy thanh tab dưới.", pw="Có")
+    Mo("Khung mobile", "Ngăn kéo menu: mở bằng nút menu, đóng bằng nền mờ / nút X / Esc / đổi trang; khóa cuộn nền khi mở", "Chức năng", "Cao", MB + " Đã đăng nhập.",
+      ["Bấm nút menu trái", "Bấm vùng mờ bên ngoài", "Mở lại, bấm một mục", "Mở lại, bấm nút X"], "-",
+      "Ngăn kéo trượt từ trái rộng ≤ 320px; có khối người dùng (avatar, tên, email -> /settings), điều hướng chung (Khám phá, Khóa học, Cộng đồng của tôi, Tạo cộng đồng, Cài đặt hồ sơ, Quản trị nếu là admin), đổi giao diện sáng/tối, đổi ngôn ngữ, Đăng xuất, liên kết Điều khoản/Bảo mật/FAQ; đóng được bằng cả 4 cách; trang nền không cuộn khi ngăn kéo mở.")
+    Mo("Khung mobile", "Trong một cộng đồng, ngăn kéo có thêm menu cộng đồng (Cộng đồng, Lớp học, Lịch sự kiện, Thành viên, Xếp hạng, Giới thiệu, ...) theo quyền", "Chức năng", "Cao", MB + " Đã tham gia một cộng đồng; thử thêm bằng tài khoản mod/chủ.",
+      ["Vào trang cộng đồng", "Mở ngăn kéo", "Bấm 'Lớp học'"], "-", "Hiện tên cộng đồng + danh sách mục như sidebar desktop (mod+: Kiểm duyệt; chủ: Doanh thu; admin+: Cài đặt); bấm mục chuyển trang đúng và đóng ngăn kéo; mục đang ở được tô cam.")
+    Mo("Khung mobile", "Thanh tab dưới cố định: Trang chủ · Cộng đồng · Chat · Cá nhân; tab đang ở có quầng cam + chữ trắng", "Giao diện", "Cao", MB,
+      ["Lần lượt bấm 4 tab", "Quan sát tab đang chọn khi ở /, /me/communities, trang trong cộng đồng, /messages, /settings"], "-",
+      "Thanh kính tối bo 20 cao 70, 4 tab 60px; tab đúng trang có quầng cam mờ; Chat có chấm số tin chưa đọc; 'Cá nhân' dẫn /settings (khách: /login); nội dung trang không bị che (có khoảng trống cuối trang).")
+    Mo("Khung mobile", "Thanh tab ẩn ở trang đăng nhập/đăng ký/quên mật khẩu, admin, tạo cộng đồng, thanh toán, khung chat đang mở", "Giao diện", "Trung bình", MB,
+      ["Mở /login, /register, /communities/new, /messages/<id>, /admin"], "-", "Không có thanh tab ở các trang này; các trang khác có.")
+    Mo("Khung mobile", "Nút chatbot nổi nằm trên thanh tab (không bị che) ở mobile", "Giao diện", "Thấp", MB + " Chatbot đã bật.",
+      ["Mở trang chủ khi đã đăng nhập"], "-", "Nút chat tròn cam cách đáy ~100px, không chồng lên thanh tab; desktop vẫn ở góc dưới phải như cũ.")
+    Mo("Trang chủ mobile", "Hero gọn: nhãn nền tảng, tiêu đề 26px 2 dòng căn giữa, mô tả 14px, ô tìm kiếm bo tròn + nút 'Tìm kiếm →'; ẩn ảnh hero và 4 số liệu", "Giao diện", "Cao", MB,
+      ["Mở /", "So sánh với Figma khung Home (1:189)"], "-", "Nền gradient cam nhạt đầu trang (dải nền chung); nhãn nền xám .1; tìm kiếm nền trắng .6 viền #cfcfcf, nút cam cao 38; không có hàng số liệu; tìm kiếm vẫn lọc danh sách.")
+    Mo("Trang chủ mobile", "Chip danh mục nhỏ (14px) cuộn ngang + nút tròn bộ lọc; bấm nút mở/ đóng hàng Giá/Loại/Trạng thái/Ngôn ngữ/Sắp xếp", "Chức năng", "Cao", MB,
+      ["Bấm một chip danh mục", "Bấm nút tròn bộ lọc ở cuối hàng", "Chọn một bộ lọc"], "-", "Chip nền xám .1, đang chọn nền cam; nút bộ lọc tô cam khi đang mở; hàng bộ lọc ẩn mặc định, hiện khi bấm; lọc đúng như desktop.")
+    Mo("Trang chủ mobile", "Thẻ khóa học 1 cột: ảnh cao 192, tiêu đề 20px, mô tả 14px, chip học phí + thống kê cùng một hàng; bấm cả thẻ vào chi tiết", "Giao diện", "Cao", MB,
+      ["Cuộn danh sách thẻ", "Bấm vào thẻ"], "-", "Thẻ bo 20 padding 8; chip học phí nền #ffeae1 bên trái, thành viên + sao bên phải; mở /courses/<id>.")
+    Mo("Trang chủ mobile", "Mobile kết thúc ở danh sách + phân trang: ẩn khối 'Vì sao nên chọn', banner CTA và Footer", "Giao diện", "Trung bình", MB,
+      ["Cuộn xuống cuối trang chủ"], "-", "Không có 3 khối trên (desktop vẫn có); liên kết Điều khoản/Bảo mật nằm trong ngăn kéo menu.")
+    Mo("Chi tiết mobile", "Chi tiết khóa học: nút 'Tham gia ngay' (48px) nằm ngay dưới mô tả; ẩn thẻ gói + 'Bạn sẽ nhận được' bên phải; vẫn còn 'Cần hỗ trợ?'", "Giao diện", "Cao", MB,
+      ["Mở /communities/<id>", "Bấm 'Tham gia ngay' (khách / chưa tham gia)"], "-", "Luồng tham gia/chờ duyệt/riêng tư/thanh toán hoạt động như desktop; thành viên đã tham gia thấy nút 'Vào cộng đồng' + 'Rời cộng đồng'.")
+    Mo("Cộng đồng của tôi mobile", "Khách: nút Đăng nhập + Khám phá cộng đồng full-width xếp dọc; đã đăng nhập: nút 'Tạo cộng đồng' to ở đầu danh sách, không có Footer", "Giao diện", "Trung bình", MB,
+      ["Mở /me/communities khi chưa đăng nhập", "Đăng nhập và mở lại"], "-", "Khách: hình minh họa, tiêu đề, 2 nút rộng hết khung, dòng đăng ký; có tài khoản: nút cam 'Tạo cộng đồng' + danh sách thẻ 1 cột.")
+    Mo("Chế độ tối mobile", "Khung mobile ở giao diện tối: thanh trên, ngăn kéo, thanh tab, chip, thẻ đọc rõ", "Giao diện", "Trung bình", MB + " Giao diện tối.",
+      ["Mở /, trang cộng đồng, ngăn kéo menu"], "-", "Ngăn kéo nền #14181c chữ trắng; nút tròn trên cùng chữ trắng; chip xám mờ; thẻ rgba(63,63,63,.3).")
+
+    # ---- Bổ sung đợt 2 (màn trong cộng đồng + popup + sửa giao diện tối)
+    Mo("Cộng đồng mobile", "Bảng tin: ô soạn bài gọn (thanh công cụ cuộn ngang, nút đăng chỉ còn icon), chip chủ đề cuộn ngang 1 hàng, bài viết chữ trái + ảnh thu nhỏ phải, ẩn cột phải", "Giao diện", "Cao", MB + " Đã tham gia một cộng đồng có bài viết kèm ảnh.",
+      ["Mở /communities/<slug>/community", "Cuộn chip chủ đề", "Xem một bài có ảnh", "Bấm Thích / Bình luận / Chia sẻ / menu '...'"], "-",
+      "Không còn cột thông tin/đề xuất/Premium bên phải; chip 1 hàng cuộn được; ảnh bài viết ~125x80 bên phải nội dung (desktop vẫn ảnh dưới chữ); các nút tương tác và menu hoạt động như cũ; đăng bài mới vẫn được.")
+    Mo("Cộng đồng mobile", "Lịch sự kiện: mô tả căn giữa, nút 'Tạo sự kiện' full-width trên cùng, bộ chuyển Tháng/Tuần/Ngày full-width, lưới lịch gọn (ô thấp, nhãn sự kiện nhỏ)", "Giao diện", "Trung bình", MB,
+      ["Mở /communities/<slug>/community/lich", "Chuyển Tháng/Tuần/Ngày", "Bấm một sự kiện", "Bấm 'Tạo sự kiện' (mod+)"], "-", "Lịch vừa 390px không tràn ngang; hôm nay là chấm tròn cam; tạo/xem sự kiện hoạt động như desktop; có dòng mô tả 'Quản lý và tham gia các sự kiện trong cộng đồng'.")
+    Mo("Cộng đồng mobile", "Thành viên: chip lọc bo tròn, ô tìm kiếm full-width, dòng thành viên gọn (avatar, tên, @handle, nút chat/menu); ẩn thẻ thông tin cộng đồng", "Giao diện", "Trung bình", MB,
+      ["Mở /communities/<slug>/community/thanh-vien", "Lọc 'Đang trực tuyến', tìm tên, bấm nút chat"], "-", "Các cột trạng thái/ngày tham gia ẩn trên mobile; tìm kiếm + lọc + chat 1-1 hoạt động; không có thẻ thông tin bên dưới.")
+    Mo("Cộng đồng mobile", "Giới thiệu: thẻ mô tả nền trắng gọn, ẩn thẻ thông tin bên phải; Lớp học: mô tả căn giữa, nút 'Thêm bài học' full-width, nút Sửa chỉ icon, ẩn 3 số liệu", "Giao diện", "Trung bình", MB + " Tài khoản mod+.",
+      ["Mở trang Giới thiệu và Lớp học"], "-", "Layout 1 cột gọn như Figma; thêm/sửa/xóa module và bài học vẫn hoạt động (nút icon có tooltip).")
+    Mo("Chi tiết mobile", "Khối 'Cần hỗ trợ?' nằm TRƯỚC khối 'Đánh giá từ học viên' ở mobile (desktop vẫn cuối cột phải)", "Giao diện", "Thấp", MB,
+      ["Mở /communities/<id>, cuộn tới cuối"], "-", "Thứ tự: Tổng quan -> Bạn nhận được gì? -> Cần hỗ trợ? -> Đánh giá; nút 'Gửi tin nhắn' mở /contact.")
+    Mo("Popup mobile", "Popup 'Tạo cộng đồng của riêng bạn' hiện 1 lần/phiên, sau ~1 giây, chỉ trên mobile ở trang chủ cho khách hoặc người chưa tham gia cộng đồng nào", "Chức năng", "Cao", MB + " Xóa sessionStorage hoặc mở cửa sổ ẩn danh mới.",
+      ["Mở / ở 390px khi chưa đăng nhập", "Đóng popup rồi tải lại trang", "Đăng nhập tài khoản đã có cộng đồng", "Mở ở desktop"], "-",
+      "Lần đầu: popup có logo, nhãn, tiêu đề 26px, mô tả, hình minh họa, nút 'Tạo cộng đồng ngay →' (dẫn /communities/new), dòng 'Có thể tạo miễn phí · Chỉ mất 1 phút'; đóng bằng X/nền mờ/Esc; tải lại cùng phiên không hiện lại; tài khoản đã có cộng đồng và desktop không hiện.")
+    Mo("Chế độ tối", "Hover dòng thông báo/menu ở giao diện tối không còn chói trắng (nền cam mờ, chữ đọc rõ); banner 'Nhận X% mỗi tháng' ở Giới thiệu & hoa hồng đúng nền tối", "Giao diện", "Trung bình", "Giao diện tối, desktop.",
+      ["Mở chuông thông báo, rê chuột qua từng dòng", "Mở Cộng đồng > Giới thiệu & hoa hồng"], "-", "Dòng hover nền cam mờ; banner nền xám->nâu mờ, tiêu đề trắng + số % cam, ô link nền tối.")
+    Mo("Hạ tầng dev", "Backend local không chạy gây 502 mọi API qua proxy Vite: khởi động lại backend :4000 thì hết lỗi", "Chức năng", "Thấp", "Máy dev; backend đã dừng.",
+      ["Mở http://localhost:5173 khi backend tắt (thấy 502)", "Chạy npm run dev (hoặc npm --prefix backend run dev)"], "-", "API trả dữ liệu lại bình thường; /health trả 200.", pw="Không")

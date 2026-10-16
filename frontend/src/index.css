@@ -314,3 +314,39 @@
 .dark .page-warm-bg {
   background: none;
 }
+
+/* ===== Mobile (< md): thanh tab dưới cố định => chừa chỗ cuối trang; dải nền đầu trang co theo màn nhỏ ===== */
+@media (max-width: 767px) {
+  body.has-tabbar {
+    padding-bottom: 104px;
+  }
+  body {
+    background-size: 100% 420px;
+  }
+}
+
+/* Trạng thái hover của các nền sáng viết cứng (vd. dòng thông báo: hover:bg-[#fff7f0]) -> tương đương bản tối, không bị "chói trắng". */
+.dark [class~='hover:bg-[#fff7f0]']:not([class*='dark:hover:bg-']):hover,
+.dark [class~='hover:bg-[#fff4ec]']:not([class*='dark:hover:bg-']):hover,
+.dark [class~='hover:bg-[#fff1e6]']:not([class*='dark:hover:bg-']):hover,
+.dark [class~='hover:bg-[#fffaf6]']:not([class*='dark:hover:bg-']):hover,
+.dark [class~='hover:bg-[#fff6f0]']:not([class*='dark:hover:bg-']):hover,
+.dark [class~='hover:bg-[#fff9f4]']:not([class*='dark:hover:bg-']):hover,
+.dark [class~='hover:bg-[#fdf9f6]']:not([class*='dark:hover:bg-']):hover,
+.dark [class~='hover:bg-[#fdf6f1]']:not([class*='dark:hover:bg-']):hover {
+  background-color: rgba(255, 87, 10, 0.14);
+}
+.dark [class~='hover:bg-[#faf5f1]']:not([class*='dark:hover:bg-']):hover,
+.dark [class~='hover:bg-[#faf7f4]']:not([class*='dark:hover:bg-']):hover,
+.dark [class~='hover:bg-[#f5f1ed]']:not([class*='dark:hover:bg-']):hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+.dark [class~='hover:bg-[#fef2f2]']:not([class*='dark:hover:bg-']):hover,
+.dark [class~='hover:bg-[#fee2e2]']:not([class*='dark:hover:bg-']):hover,
+.dark .hover\:bg-red-50:not([class*='dark:hover:bg-']):hover,
+.dark .hover\:bg-red-100:not([class*='dark:hover:bg-']):hover {
+  background-color: rgba(220, 38, 38, 0.2);
+}
+.dark .hover\:bg-amber-100:not([class*='dark:hover:bg-']):hover {
+  background-color: rgba(245, 158, 11, 0.2);
+}

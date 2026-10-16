@@ -123,7 +123,7 @@ export function PostComposer({ courseId }: { courseId: string }) {
 
   const suggestions = (tagsQuery.data ?? []).filter((s) => !tags.some((x) => x.toLowerCase() === normTag(s.tag).toLowerCase())).slice(0, 8);
   const toolBtn = (active: boolean) =>
-    `flex h-9 items-center gap-2 rounded-lg px-3 text-[13px] font-medium hover:bg-stone-100 disabled:opacity-50 ${active ? 'bg-brand/10 text-brand' : 'text-stone-700'}`;
+    `flex h-9 flex-none items-center gap-2 rounded-lg px-3 text-[13px] font-medium whitespace-nowrap max-md:gap-1 max-md:px-2 max-md:text-xs hover:bg-stone-100 disabled:opacity-50 ${active ? 'bg-brand/10 text-brand' : 'text-stone-700'}`;
 
   return (
     <div className="glass flex flex-col gap-3 rounded-2xl p-4">
@@ -246,7 +246,7 @@ export function PostComposer({ courseId }: { courseId: string }) {
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-1">
+      <div className="flex items-center gap-1 max-md:flex-nowrap max-md:overflow-x-auto md:flex-wrap [&::-webkit-scrollbar]:hidden">
         <input ref={imageInput} type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden onChange={(e) => { void pickImage(e.target.files?.[0]); e.target.value = ''; }} />
         <input ref={videoInput} type="file" accept="video/mp4" hidden onChange={(e) => { void pickFile(e.target.files?.[0]); e.target.value = ''; }} />
         <input ref={fileInput} type="file" hidden onChange={(e) => { void pickFile(e.target.files?.[0]); e.target.value = ''; }} />
@@ -269,10 +269,10 @@ export function PostComposer({ courseId }: { courseId: string }) {
           type="button"
           onClick={submit}
           disabled={!canSubmit}
-          className="ml-auto flex h-10 items-center gap-2 rounded-xl bg-brand px-4 text-sm font-bold text-white disabled:opacity-50"
+          className="ml-auto flex h-10 flex-none items-center gap-2 rounded-xl bg-brand px-4 text-sm font-bold text-white max-md:size-9 max-md:justify-center max-md:p-0 disabled:opacity-50"
         >
           <MaterialIcon name="send" size={17} color="#fff" />
-          {createPost.isPending ? t('composer.posting') : uploading ? t('composer.uploading') : t('composer.submit')}
+          <span className="max-md:sr-only">{createPost.isPending ? t('composer.posting') : uploading ? t('composer.uploading') : t('composer.submit')}</span>
         </button>
       </div>
       <div className="flex justify-between text-[11.5px] text-stone-400">
