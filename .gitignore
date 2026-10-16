@@ -20,3 +20,9 @@ __pycache__/
 
 # Log
 *.log
+
+# Báo cáo bộ regression chatbot: chứa nội dung hội thoại test, email/mã đơn giả lập, có thể cả ngữ cảnh — không commit
+chatbot_qa_security_suite/report.json
+chatbot_qa_security_suite/report.csv
+chatbot_qa_security_suite/report.md
+chatbot_qa_security_suite/reports/

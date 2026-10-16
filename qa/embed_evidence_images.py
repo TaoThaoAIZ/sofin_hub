@@ -13,10 +13,12 @@ from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 from PIL import Image as PILImage
 
-XLSX = r"C:\Users\dev\Desktop\sofin_hub\SofinHub_TestCases.xlsx"
-RESULTS = r"C:\Users\dev\Desktop\sofin_hub\e2e\parsed_results.json"
-EVIDENCE_DIR = r"C:\Users\dev\Desktop\sofin_hub\e2e\evidence"
-THUMB_DIR = r"C:\Users\dev\Desktop\sofin_hub\e2e\evidence\_thumbs"
+# Gốc repo = thư mục cha của qa/ (không gắn cứng đường dẫn máy cụ thể).
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+XLSX = os.path.join(ROOT, "SofinHub_TestCases.xlsx")
+RESULTS = os.path.join(ROOT, "e2e", "parsed_results.json")
+EVIDENCE_DIR = os.path.join(ROOT, "e2e", "evidence")
+THUMB_DIR = os.path.join(ROOT, "e2e", "evidence", "_thumbs")
 FONT_NAME = "Arial"
 
 THUMB_WIDTH = 360  # px

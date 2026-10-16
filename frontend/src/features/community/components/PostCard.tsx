@@ -22,6 +22,8 @@ import {
 } from '../queries';
 import { categoryLabel, POST_CATEGORIES, REPORT_REASONS, reportReasonLabel, type Comment, type Post, type PostCategory, type ReportReason } from '../types';
 import { areaCls, ConfirmDialog, copyText, Dialog, errText, ErrorNote, fmtDateTime, ghostBtn, inputCls, isModPlus, primaryBtn, safeUrl, toast, type ViewerRole } from './contentUi';
+import { isPinLimit } from '../../community-greetings/api';
+import { PinManagerModal } from '../../community-greetings/PinManagerModal';
 
 export const CATEGORY_META: Record<PostCategory, { icon: string; color: string }> = {
   'Thảo luận chung': { icon: 'chat_bubble', color: '#2563eb' },
@@ -341,6 +343,8 @@ export function PostCard({
   const [editTags, setEditTags] = useState(post.tags.map((tg) => tg.replace(/^#+/, '')).join(', '));
   const [confirmDel, setConfirmDel] = useState(false);
   const [reporting, setReporting] = useState(false);
+  // Đã đủ bài ghim => hộp Quản lý ghim, bỏ ghim bớt rồi ghim lại bài này.
+  const [pinFull, setPinFull] = useState(false);
 
   const isAuthor = !!user && post.authorId === user.id;
   const mod = isModPlus(viewerRole);
@@ -496,7 +500,7 @@ export function PostCard({
                     </button>
                   )}
                   {mod && (
-                    <button role="menuitem" type="button" className={menuItem} onClick={() => { setMenuOpen(false); pin.mutate(post.id, { onError: (e) => toast(errText(e), 'error') }); }}>
+                    <button role="menuitem" type="button" className={menuItem} onClick={() => { setMenuOpen(false); pin.mutate(post.id, { onError: (e) => (isPinLimit(e) ? setPinFull(true) : toast(errText(e), 'error')) }); }}>
                       <MaterialIcon name="push_pin" size={18} /> {post.pinned ? t('post.unpin') : t('post.pin')}
                     </button>
                   )}
@@ -535,6 +539,7 @@ export function PostCard({
         </div>
       </div>
 
+      {pinFull && <PinManagerModal communityId={courseId} onClose={() => setPinFull(false)} onRetry={() => pin.mutateAsync(post.id)} />}
       {confirmDel && (
         <ConfirmDialog
           title={t('post.deleteTitle')}

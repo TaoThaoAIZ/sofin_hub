@@ -1,0 +1,161 @@
+{
+  "title": "Chatbot hỗ trợ",
+  "subtitle": "Câu hỏi mẫu, tri thức, hội thoại và cài đặt của trợ lý Tào",
+  "noKey": "Chatbot chưa đăng nhập ChatGPT nên đang tắt với người dùng. Vào tab Cài đặt > Tài khoản ChatGPT để đăng nhập.",
+  "kpi": {
+    "status": "Trạng thái",
+    "on": "Đang bật",
+    "off": "Đang tắt",
+    "active": "Câu mẫu đang dùng",
+    "candidates": "Chờ duyệt",
+    "conversations7d": "Hội thoại 7 ngày",
+    "handedOff7d": "Chuyển Zalo 7 ngày",
+    "negative7d": "👎 7 ngày"
+  },
+  "tab": {
+    "qa": "Kho câu hỏi mẫu",
+    "review": "Chờ duyệt",
+    "docs": "Tài liệu",
+    "conversations": "Hội thoại",
+    "settings": "Cài đặt"
+  },
+  "qaStatus": {
+    "active": "Đang dùng",
+    "candidate": "Chờ duyệt",
+    "rejected": "Đã từ chối",
+    "archived": "Lưu trữ",
+    "stale": "Cần xem lại"
+  },
+  "docStatus": {
+    "active": "Đang dùng",
+    "archived": "Lưu trữ"
+  },
+  "convStatus": {
+    "all": "Tất cả",
+    "open": "Đang mở",
+    "handed_off": "Đã chuyển Zalo",
+    "closed": "Đã đóng"
+  },
+  "source": {
+    "admin": "Admin nhập",
+    "learned": "Đã học {{conversations}} hội thoại: {{candidates}} câu mới chờ duyệt, thêm {{variants}} cách hỏi",
+    "import": "Nhập từ Zalo"
+  },
+  "answerSource": {
+    "qa_direct": "câu mẫu",
+    "agent": "AI",
+    "refusal": "từ chối",
+    "handoff": "chuyển Zalo",
+    "error": "lỗi"
+  },
+  "col": {
+    "question": "Câu hỏi / trả lời",
+    "source": "Nguồn",
+    "hits": "Lượt dùng",
+    "updated": "Cập nhật",
+    "status": "Trạng thái",
+    "document": "Tài liệu",
+    "chunks": "Số đoạn",
+    "user": "Người dùng",
+    "firstMessage": "Tin đầu tiên",
+    "messages": "Số tin",
+    "feedback": "Đánh giá"
+  },
+  "action": {
+    "create": "Thêm câu hỏi",
+    "edit": "Sửa",
+    "review": "Xem & duyệt",
+    "approve": "Duyệt & bật",
+    "reject": "Từ chối",
+    "archive": "Lưu trữ",
+    "activate": "Bật lại",
+    "save": "Lưu",
+    "createDoc": "Thêm tài liệu",
+    "view": "Xem",
+    "close": "Đóng",
+    "learnNow": "Chạy học ngay"
+  },
+  "dialog": {
+    "createTitle": "Thêm câu hỏi mẫu",
+    "createBody": "Khớp đủ gần thì bot trả nguyên câu trả lời này, không gọi AI.",
+    "editTitle": "Sửa câu hỏi mẫu",
+    "reviewTitle": "Duyệt câu hỏi học được"
+  },
+  "field": {
+    "question": "Câu hỏi",
+    "variants": "Cách hỏi khác (mỗi dòng một câu)",
+    "answer": "Câu trả lời",
+    "tags": "Thẻ",
+    "tagsPlaceholder": "tài khoản, thanh toán",
+    "slug": "Slug",
+    "title": "Tiêu đề",
+    "content": "Nội dung markdown (mỗi mục ## là một đoạn)",
+    "docActive": "Bot được dùng tài liệu này"
+  },
+  "searchQa": "Tìm câu hỏi, câu trả lời…",
+  "searchConv": "Tìm nội dung, email, mã T-…",
+  "negativeOnly": "Có 👎",
+  "empty": "Chưa có dữ liệu.",
+  "reviewHint": "Câu học từ chat hoặc nhập từ Zalo chỉ được bot dùng sau khi duyệt. Kiểm tra lại giá, cách sửa lỗi còn đúng và bỏ thông tin riêng của khách trước khi bật.",
+  "docsHint": "Tài liệu dùng cho câu hỏi dài: lỗi khi dùng tool, cách tính Ngân Lượng… Sửa nội dung thì các câu mẫu dựa vào tài liệu chuyển sang “Cần xem lại”.",
+  "docBody": "Bot chỉ được trả lời theo nội dung trong các đoạn này. Không ghi số tài khoản ngân hàng.",
+  "chunksPreview": "{{n}} đoạn hiện tại",
+  "redacted": "có thông tin riêng (không học)",
+  "settings": {
+    "enabled": "Bật chatbot cho người dùng",
+    "zaloSupportUrl": "Link Zalo hỗ trợ",
+    "model": "Model Codex",
+    "modelDefault": "Bỏ trống = mặc định của tài khoản ChatGPT",
+    "directThreshold": "Ngưỡng trả thẳng câu mẫu (0.3–1)",
+    "maxHistory": "Số tin lịch sử gửi cho AI",
+    "maxInputChars": "Độ dài tối đa mỗi tin",
+    "dailyMessagesPerUser": "Số tin tối đa mỗi người / ngày (0 = không giới hạn)",
+    "zaloHandoffText": "Câu bot nói khi chuyển Zalo ({code} = mã hỗ trợ)",
+    "refusalText": "Câu từ chối khi hỏi ngoài phạm vi",
+    "persona": "Giọng nói",
+    "extraInstructions": "Hướng dẫn bổ sung cho bot",
+    "rulesNote": "Luật an toàn (không bịa, không báo giá tool, không đưa số tài khoản, chỉ xem dữ liệu của chính khách) là cố định, không sửa ở đây."
+  },
+  "toast": {
+    "saved": "Đã lưu",
+    "noChange": "Không có thay đổi",
+    "approved": "Đã duyệt, bot bắt đầu dùng câu này",
+    "rejected": "Đã từ chối",
+    "archived": "Đã lưu trữ",
+    "activated": "Đã bật lại",
+    "docSavedStale": "Đã lưu. {{n}} câu mẫu chuyển sang “Cần xem lại”",
+    "learned": "Đã học {{conversations}} hội thoại: {{candidates}} câu mới chờ duyệt, thêm {{variants}} cách hỏi",
+    "learnSkipped": "Chatbot đang tắt nên không chạy học"
+  },
+  "account": {
+    "title": "Tài khoản ChatGPT của chatbot",
+    "loggedIn": "Đã đăng nhập",
+    "loggedOut": "Chưa đăng nhập",
+    "as": "Đang dùng tài khoản",
+    "plan": "gói",
+    "hint": "Chatbot trả lời bằng Codex SDK chạy trên tài khoản ChatGPT này. Đăng nhập bằng mã: không mở popup, copy link và mã sang trình duyệt trên máy bất kỳ.",
+    "login": "Đăng nhập tài khoản ChatGPT",
+    "relogin": "Đăng nhập tài khoản khác",
+    "starting": "Đang lấy mã…",
+    "logout": "Đăng xuất",
+    "logoutConfirm": "Đăng xuất tài khoản ChatGPT? Chatbot sẽ tắt với người dùng cho tới khi đăng nhập lại.",
+    "step1": "Mở link này trong trình duyệt (máy nào cũng được) và đăng nhập tài khoản ChatGPT:",
+    "step2": "Nhập mã dùng một lần:",
+    "step3": "Xác nhận trên trang đó. Trang này tự cập nhật khi xong.",
+    "expires": "Mã hết hạn lúc {{time}}",
+    "waiting": "đang chờ xác nhận…",
+    "cancel": "Hủy",
+    "copy": "Copy",
+    "copied": "Đã copy",
+    "lastError": "Lần đăng nhập trước thất bại ({{time}})",
+    "superOnly": "Chỉ Super Admin xem và đổi tài khoản ChatGPT của chatbot.",
+    "toast": {
+      "loggedIn": "Chatbot đã đăng nhập ChatGPT ({{email}})",
+      "loggedOut": "Đã đăng xuất, chatbot đang tắt"
+    },
+    "deviceHelp": "Trang đăng nhập báo \"Enable device code sign-in…\"? Bật \"Device code sign-in\" trong cài đặt bảo mật của tài khoản ChatGPT đó, rồi bấm Hủy và đăng nhập lại để lấy mã mới:",
+    "securityLink": "Mở ChatGPT > Settings > Security"
+  },
+  "quota": "Tài khoản ChatGPT của chatbot đã HẾT HẠN MỨC ({{time}}): khách đang nhận câu \"tạm quá tải\" và được mời nhắn Zalo. Câu khớp câu mẫu vẫn trả lời bình thường. Chờ hạn mức hồi hoặc đăng nhập tài khoản gói cao hơn ở tab Cài đặt. Chi tiết: {{message}}",
+  "baselineMissing": "Chưa nạp dữ liệu nền của chatbot (bản v{{current}}, DB đang: {{loaded}}): câu mẫu và tài liệu đi kèm hệ thống chưa có. Người vận hành chạy lệnh trên server: `npm run chatbot:baseline` (Docker: `docker compose exec backend node dist/cli/chatbot-baseline.js`). Câu admin đã sửa không bị ghi đè."
+}

@@ -25,7 +25,8 @@ createRoot(document.getElementById('root')!).render(
           </PopupProvider>
         </AuthProvider>
       </BrowserRouter>
-      <ReactQueryDevtools initialIsOpen={false} />
+      {/* Góc phải dưới dành cho nút trợ lý chatbot (features/chatbot/ChatWidget.tsx). */}
+      <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />
     </QueryClientProvider>
   </StrictMode>,
 );

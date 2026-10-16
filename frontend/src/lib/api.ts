@@ -78,6 +78,13 @@ let refreshing: Promise<string | null> | null = null;
 const refreshOnce = () => (refreshing ??= refreshHandler!().finally(() => (refreshing = null)));
 
 async function request<T>(method: string, url: string, body: unknown, opts?: RequestOptions): Promise<T> {
+  const res = await authedFetch(method, url, body, opts);
+  if (res.status === 204) return undefined as T;
+  return res.json() as Promise<T>;
+}
+
+/** Gửi request kèm access token (tự làm mới khi sắp/đã hết hạn). Trả về Response đã `ok`; lỗi HTTP ném ApiError. */
+async function authedFetch(method: string, url: string, body: unknown, opts?: RequestOptions): Promise<Response> {
   let token = opts?.token ?? currentToken;
   // Các endpoint "optionalAuth" của BE coi token hết hạn là khách (không trả 401) nên không tự refresh được:
   // để web mở lâu, request sẽ bị hiểu nhầm là chưa tham gia cộng đồng. Làm mới token trước khi gửi nếu sắp/đã hết hạn.
@@ -103,8 +110,40 @@ async function request<T>(method: string, url: string, body: unknown, opts?: Req
   }
 
   if (!res.ok) await parseErrorBody(res);
-  if (res.status === 204) return undefined as T;
-  return res.json() as Promise<T>;
+  return res;
+}
+
+/**
+ * POST nhận stream SSE (`Accept: text/event-stream`), ví dụ trả lời của chatbot. Lỗi trước khi stream (4xx/5xx) ném ApiError;
+ * mỗi sự kiện `event:/data:` được gọi `onEvent` với data đã parse JSON.
+ */
+export async function apiPostStream(path: string, body: unknown, onEvent: (event: string, data: unknown) => void, opts?: RequestOptions): Promise<void> {
+  const res = await authedFetch('POST', `${API_URL}${path}`, body, { ...opts, headers: { ...opts?.headers, Accept: 'text/event-stream' } });
+  if (!res.body) return;
+  const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+  let buf = '';
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += value;
+    let i: number;
+    while ((i = buf.indexOf('\n\n')) >= 0) {
+      const frame = buf.slice(0, i);
+      buf = buf.slice(i + 2);
+      let event = 'message';
+      let data = '';
+      for (const line of frame.split('\n')) {
+        if (line.startsWith('event:')) event = line.slice(6).trim();
+        else if (line.startsWith('data:')) data += line.slice(5).trim();
+      }
+      if (!data) continue;
+      try {
+        onEvent(event, JSON.parse(data));
+      } catch {
+        /* bỏ khung hỏng */
+      }
+    }
+  }
 }
 
 export async function apiGet<T>(path: string, params?: Params, signal?: AbortSignal, opts?: RequestOptions): Promise<T> {

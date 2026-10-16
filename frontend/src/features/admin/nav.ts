@@ -126,7 +126,7 @@ export const ADMIN_NAV: NavGroup[] = [
     perm: 'support.manage',
     icon: 'support_agent',
     get label() { return tl('nav.groups.support'); },
-    kids: [kid('support', 'tickets'), kid('support', 'user'), kid('support', 'creator'), kid('support', 'payment')],
+    kids: [kid('support', 'tickets'), kid('support', 'user'), kid('support', 'creator'), kid('support', 'payment'), kid('support', 'chatbot')],
   },
   {
     key: 'system',

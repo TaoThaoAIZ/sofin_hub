@@ -15,10 +15,12 @@ def clean(text: str) -> str:
 import os
 from openpyxl.styles import Font
 
-XLSX = r"C:\Users\dev\Desktop\sofin_hub\SofinHub_TestCases.xlsx"
-RESULTS = r"C:\Users\dev\Desktop\sofin_hub\e2e\parsed_results.json"
-EVIDENCE_DIR = r"C:\Users\dev\Desktop\sofin_hub\e2e\evidence"
-REPORT_FILE = r"C:\Users\dev\Desktop\sofin_hub\e2e\report\index.html"
+# Gốc repo = thư mục cha của qa/ (không gắn cứng đường dẫn máy cụ thể).
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+XLSX = os.path.join(ROOT, "SofinHub_TestCases.xlsx")
+RESULTS = os.path.join(ROOT, "e2e", "parsed_results.json")
+EVIDENCE_DIR = os.path.join(ROOT, "e2e", "evidence")
+REPORT_FILE = os.path.join(ROOT, "e2e", "report", "index.html")
 REPORT_LINK = "e2e/report/index.html"
 TESTER1 = "Claude (Playwright automation)"
 HYPERLINK_FONT = Font(name="Arial", size=10, color="0563C1", underline="single")

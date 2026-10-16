@@ -404,20 +404,20 @@ model User {
   updatedAt          DateTime   @updatedAt
 
   sessions                   Session[]
-  referralCode               ReferralCode?            @relation("ReferralCodeOwner")
-  referralsMade              Referral[]               @relation("ReferralReferrer")
-  referredBy                 Referral?                @relation("ReferralReferred")
-  commissionsEarned          ReferralCommission[]     @relation("CommissionReferrer")
-  commissionsCaused          ReferralCommission[]     @relation("CommissionReferred")
+  referralCode               ReferralCode?               @relation("ReferralCodeOwner")
+  referralsMade              Referral[]                  @relation("ReferralReferrer")
+  referredBy                 Referral?                   @relation("ReferralReferred")
+  commissionsEarned          ReferralCommission[]        @relation("CommissionReferrer")
+  commissionsCaused          ReferralCommission[]        @relation("CommissionReferred")
   oneTimeTokens              OneTimeToken[]
   emailOtps                  EmailOtp[]
   socialAccounts             SocialAccount[]
-  ownedCommunities           Community[]              @relation("CourseOwner")
+  ownedCommunities           Community[]                 @relation("CourseOwner")
   enrollments                Enrollment[]
-  bansReceived               CommunityBan[]           @relation("BanTarget")
-  bansIssued                 CommunityBan[]           @relation("BanIssuer")
-  joinRequests               JoinRequest[]            @relation("JoinRequester")
-  joinRequestsDecided        JoinRequest[]            @relation("JoinDecider")
+  bansReceived               CommunityBan[]              @relation("BanTarget")
+  bansIssued                 CommunityBan[]              @relation("BanIssuer")
+  joinRequests               JoinRequest[]               @relation("JoinRequester")
+  joinRequestsDecided        JoinRequest[]               @relation("JoinDecider")
   invitesCreated             Invite[]
   reviews                    Review[]
   posts                      Post[]
@@ -429,40 +429,45 @@ model User {
   eventRsvps                 EventRsvp[]
   pointEvents                PointEvent[]
   lessonProgress             LessonProgress[]
-  quizAttempts               QuizAttempt[]
-  communityOnboardings       CommunityOnboarding[]
-  communityReferralsGiven    CommunityReferral[]      @relation("CommunityReferralReferrer")
-  communityReferralsReceived CommunityReferral[]      @relation("CommunityReferralReferred")
   moduleAccess               ModuleAccess[]
   certificates               Certificate[]
   notifications              Notification[]
   notificationPrefs          NotificationPreference?
-  conversationsAsA           Conversation[]           @relation("ConversationUserA")
-  conversationsAsB           Conversation[]           @relation("ConversationUserB")
+  conversationsAsA           Conversation[]              @relation("ConversationUserA")
+  conversationsAsB           Conversation[]              @relation("ConversationUserB")
   messagesSent               Message[]
-  blocksMade                 UserBlock[]              @relation("Blocker")
-  blocksReceived             UserBlock[]              @relation("BlockTarget")
-  reportsFiled               Report[]                 @relation("ReportReporter")
-  reportsAgainst             Report[]                 @relation("ReportTargetUser")
-  reportsResolved            Report[]                 @relation("ReportResolver")
-  reportsAssigned            Report[]                 @relation("ReportAssignee")
+  blocksMade                 UserBlock[]                 @relation("Blocker")
+  blocksReceived             UserBlock[]                 @relation("BlockTarget")
+  reportsFiled               Report[]                    @relation("ReportReporter")
+  reportsAgainst             Report[]                    @relation("ReportTargetUser")
+  reportsResolved            Report[]                    @relation("ReportResolver")
+  reportsAssigned            Report[]                    @relation("ReportAssignee")
   reportEvents               ReportEvent[]
-  auditLogs                  AdminAuditLog[]          @relation("AuditActor")
+  auditLogs                  AdminAuditLog[]             @relation("AuditActor")
   payments                   Payment[]
   paymentCards               PaymentCard[]
   payoutAccountsOwned        PayoutAccount[]
   subscriptions              Subscription[]
-  refundRequests             RefundRequest[]          @relation("RefundRequester")
-  refundsResolved            RefundRequest[]          @relation("RefundResolver")
+  refundRequests             RefundRequest[]             @relation("RefundRequester")
+  refundsResolved            RefundRequest[]             @relation("RefundResolver")
   payouts                    Payout[]
   chargebacks                Chargeback[]
   idempotencyKeys            IdempotencyKey[]
   uploads                    Upload[]
-  ticketsRequested           SupportTicket[]          @relation("TicketRequester")
-  ticketsAssigned            SupportTicket[]          @relation("TicketAssignee")
-  adminAccount               AdminAccount?            @relation("AdminAccountUser")
+  ticketsRequested           SupportTicket[]             @relation("TicketRequester")
+  ticketsAssigned            SupportTicket[]             @relation("TicketAssignee")
+  adminAccount               AdminAccount?               @relation("AdminAccountUser")
+  chatbotConversations       ChatbotConversation[]
+  botPersonaPrefs            CommunityBotMemberPref[]
+  welcomesSeen               CommunityWelcomeSeen[]
+  announcements              CommunityAnnouncement[]
+  announcementsSeen          CommunityAnnouncementSeen[]
   /// Cột GENERATED ALWAYS (họ tên đã gập dấu).
   searchVector               Unsupported("tsvector")?
+  quizAttempts               QuizAttempt[]
+  communityOnboardings       CommunityOnboarding[]
+  communityReferralsGiven    CommunityReferral[]         @relation("CommunityReferralReferrer")
+  communityReferralsReceived CommunityReferral[]         @relation("CommunityReferralReferred")
 
   @@index([isDemo])
   @@index([status])
@@ -642,6 +647,16 @@ model Community {
   ownerLedger        OwnerBalanceLedger[]
   hostingPlan        HostingPlan?
   payoutAccount      PayoutAccount?
+  /// Chatbot riêng của cộng đồng (chatbot.md): cấu hình + kho Q&A/tài liệu/hội thoại có communityId.
+  bot                CommunityBot?
+  botMemberPrefs     CommunityBotMemberPref[]
+  /// Lời chào thành viên mới + thông báo popup của chủ (docs/features/community-greetings.md).
+  welcome            CommunityWelcome?
+  welcomesSeen       CommunityWelcomeSeen[]
+  announcements      CommunityAnnouncement[]
+  chatbotQas         ChatbotQA[]
+  chatbotDocuments   ChatbotDocument[]
+  chatbotConvs       ChatbotConversation[]
   /// Cột GENERATED ALWAYS (title A + description B, đã gập dấu).
   searchVector       Unsupported("tsvector")?
   communityReferrals CommunityReferral[]
@@ -788,6 +803,9 @@ model Post {
   likes        PostLike[]
   likeNotices  PostLikeNotice[]
   pollVotes    PollVote[]
+  /// Thông báo popup đăng kèm bài này (CommunityAnnouncement.postId).
+  announcement CommunityAnnouncement?
+
   /// Cột GENERATED ALWAYS (migration 20261005100000_search_fulltext): chỉ đọc bằng SQL thô; Prisma bỏ qua khi ghi.
   searchVector Unsupported("tsvector")?
 
@@ -883,6 +901,9 @@ model CommunityEvent {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
+  /// Cột GENERATED ALWAYS (title A + description B đã gập dấu) — chatbot cộng đồng tìm sự kiện.
+  searchVector Unsupported("tsvector")?
+
   community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
   host      User      @relation(fields: [hostId], references: [id], onDelete: Cascade)
 
@@ -891,6 +912,7 @@ model CommunityEvent {
   @@index([communityId, startAt])
   @@index([startAt])
   @@index([hostId])
+  @@index([searchVector], type: Gin)
 }
 
 model EventRsvp {
@@ -1030,6 +1052,9 @@ model ClassroomLesson {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
+  /// Cột GENERATED ALWAYS (title A + body B đã gập dấu) — chatbot cộng đồng tìm bài học.
+  searchVector Unsupported("tsvector")?
+
   module    ClassroomModule  @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   community Community        @relation(fields: [communityId], references: [id], onDelete: Cascade)
   progress  LessonProgress[]
@@ -1037,6 +1062,7 @@ model ClassroomLesson {
 
   @@index([moduleId, index])
   @@index([communityId])
+  @@index([searchVector], type: Gin)
 }
 
 /// Quyền mở 1 module cho 1 user (accessMode = selected | paid).
@@ -1650,7 +1676,7 @@ model SupportTicket {
   requesterId     String?
   requesterName   String
   requesterEmail  String
-  /// contact_form | user | admin | seed
+  /// contact_form | user | admin | seed | chatbot
   source          String              @default("user")
   assigneeId      String?
   escalated       Boolean             @default(false)
@@ -1918,6 +1944,231 @@ model ReferralCommission {
   @@index([referredUserId])
 }
 
+// =====================================================================// CHATBOT HỖ TRỢ (chatbot.md) — kho câu hỏi mẫu, tài liệu tri thức, hội thoại
+// ============================================================================
+
+enum ChatbotQaStatus {
+  active
+  candidate
+  rejected
+  archived
+  /// Tài liệu gốc đã đổi nội dung, cần admin xem lại.
+  stale
+}
+
+enum ChatbotQaSource {
+  admin
+  learned
+  import
+}
+
+enum ChatbotDocStatus {
+  active
+  archived
+}
+
+enum ChatbotConversationStatus {
+  open
+  handed_off
+  closed
+}
+
+enum ChatbotRole {
+  user
+  assistant
+}
+
+enum ChatbotAnswerSource {
+  qa_direct
+  agent
+  refusal
+  handoff
+  error
+}
+
+/// Câu hỏi mẫu + câu trả lời (admin nhập, bot học được, hoặc nhập từ dữ liệu cũ). Chỉ `active` được bot dùng.
+model ChatbotQA {
+  id                   String                   @id @default(uuid())
+  question             String
+  /// Các cách hỏi khác của cùng câu hỏi (khớp như question).
+  variants             String[]                 @default([])
+  answer               String
+  tags                 String[]                 @default([])
+  status               ChatbotQaStatus          @default(active)
+  source               ChatbotQaSource          @default(admin)
+  /// Độ tin cậy do agent trích xuất chấm (0..1); null với Q&A admin nhập.
+  confidence           Float?
+  hitCount             Int                      @default(0)
+  lastHitAt            DateTime?
+  /// Hội thoại sinh ra Q&A (source=learned); không FK để giữ Q&A khi hội thoại bị xóa.
+  sourceConversationId String?
+  /// Tài liệu mà câu trả lời dựa vào; tài liệu đổi nội dung => status=stale.
+  documentId           String?
+  /// null = bot hỗ trợ nền tảng "Tào"; có giá trị = kho riêng của bot cộng đồng đó.
+  communityId          String?                  @map("courseId")
+  createdById          String?
+  reviewedById         String?
+  reviewedAt           DateTime?
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+  /// Cột GENERATED ALWAYS (question + variants + answer đã gập dấu).
+  searchVector         Unsupported("tsvector")?
+
+  document  ChatbotDocument? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  community Community?       @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@index([communityId, status])
+  @@index([status, updatedAt])
+  @@index([documentId])
+  @@index([searchVector], type: Gin)
+}
+
+/// Tài liệu tri thức dạng markdown (lỗi thường gặp, cách tính phí...). Mỗi mục `##` thành 1 ChatbotDocChunk.
+model ChatbotDocument {
+  id          String           @id @default(uuid())
+  slug        String           @unique
+  title       String
+  contentMd   String
+  status      ChatbotDocStatus @default(active)
+  /// sha256 của contentMd: nạp lại cùng nội dung thì bỏ qua.
+  contentHash String
+  updatedById String?
+  /// null = bot "Tào"; có giá trị = tài liệu riêng của bot cộng đồng (slug có tiền tố c-<communityId>-).
+  communityId String?          @map("courseId")
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  chunks    ChatbotDocChunk[]
+  qas       ChatbotQA[]
+  community Community?        @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@index([communityId, status])
+}
+
+model ChatbotDocChunk {
+  id           String                   @id @default(uuid())
+  documentId   String
+  position     Int
+  heading      String
+  content      String
+  /// Cột GENERATED ALWAYS (heading + content đã gập dấu).
+  searchVector Unsupported("tsvector")?
+
+  document ChatbotDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, position])
+  @@index([searchVector], type: Gin)
+}
+
+model ChatbotConversation {
+  id            String                    @id @default(uuid())
+  userId        String
+  status        ChatbotConversationStatus @default(open)
+  /// Ticket nội bộ tạo khi chuyển sang Zalo (không FK: ticket có vòng đời riêng).
+  ticketId      String?
+  ticketCode    String?
+  /// Job học đã xử lý hội thoại này (null = chưa).
+  learnedAt     DateTime?
+  lastMessageAt DateTime                  @default(now())
+  tokensIn      Int                       @default(0)
+  tokensOut     Int                       @default(0)
+  /// null = hội thoại với bot "Tào"; có giá trị = với bot của cộng đồng đó.
+  communityId   String?                   @map("courseId")
+  createdAt     DateTime                  @default(now())
+
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  community Community?       @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  messages  ChatbotMessage[]
+
+  @@index([communityId, userId, lastMessageAt])
+  @@index([userId, lastMessageAt])
+  @@index([learnedAt, lastMessageAt])
+  @@index([status, lastMessageAt])
+}
+
+model ChatbotMessage {
+  id             String               @id @default(uuid())
+  conversationId String
+  role           ChatbotRole
+  content        String
+  /// Chỉ có ở tin của bot.
+  answerSource   ChatbotAnswerSource?
+  matchedQaId    String?
+  /// [{name, args}] các tool agent đã gọi (để admin xem lại).
+  toolCalls      Json?
+  /// -1 | 0 | 1 (👎 / chưa đánh giá / 👍), chỉ có ý nghĩa với tin của bot.
+  feedback       Int                  @default(0)
+  /// Tin chứa thông tin cá nhân (SĐT, email, STK...) => không dùng để học.
+  redacted       Boolean              @default(false)
+  createdAt      DateTime             @default(now())
+
+  conversation ChatbotConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+}
+
+/// Cấu hình chatbot riêng của 1 cộng đồng (chatbot.md). Chỉ bật được khi chủ ở gói Pro (HostingPlan pro trialing|active).
+model CommunityBot {
+  communityId       String   @id @map("courseId")
+  enabled           Boolean  @default(false)
+  botName           String   @default("Trợ lý")
+  welcomeText       String   @default("")
+  /// Nhân cách mặc định: khóa mẫu (chatbot.persona.ts PERSONA_PRESETS) hoặc 'custom' (dùng customPersona).
+  personaKey        String   @default("mentor")
+  customPersona     Json?
+  /// Nhân cách thành viên VIP được tự chọn (khóa mẫu và/hoặc 'custom').
+  memberPersonaKeys String[] @default([])
+  extraInstructions String   @default("")
+  freeDailyMessages Int      @default(10)
+  vipDailyMessages  Int      @default(100)
+  updatedById       String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+}
+
+/// Nhân cách thành viên VIP tự chọn cho bot của cộng đồng (hết VIP => bỏ qua, dùng mặc định).
+model CommunityBotMemberPref {
+  communityId String   @map("courseId")
+  userId      String
+  personaKey  String
+  updatedAt   DateTime @updatedAt
+
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([communityId, userId])
+  @@index([userId])
+}
+
+/// Lời chào tự động hiện (popup) cho thành viên MỚI tham gia — mỗi người mỗi cộng đồng đúng 1 lần.
+model CommunityWelcome {
+  communityId  String    @id @map("courseId")
+  enabled      Boolean   @default(false)
+  /// Nội dung; biến {ten} = tên thành viên, {cong_dong} = tên cộng đồng.
+  message      String    @default("")
+  /// Lần bật gần nhất: chỉ người tham gia TỪ lúc này mới thấy (thành viên cũ không bị hiện khi chủ bật tính năng).
+  enabledSince DateTime?
+  updatedById  String?
+  updatedAt    DateTime  @updatedAt
+
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+}
+
+/// Đã hiện lời chào. Không gắn với Enrollment => rời cộng đồng rồi tham gia lại cũng không hiện nữa.
+model CommunityWelcomeSeen {
+  userId      String
+  communityId String   @map("courseId")
+  seenAt      DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@id([userId, communityId])
+  @@index([communityId])
+}
+
 /// Trắc nghiệm của MỘT bài học (không bắt buộc). Có ít nhất 1 câu thì thành viên (không phải mod+) phải ĐẠT điểm (>= passPercent) mới đánh dấu hoàn thành bài.
 /// `questions` = [{ id, text, options: string[2..6], correctIndex }] — đáp án đúng KHÔNG gửi cho học viên trước khi họ đạt.
 model LessonQuiz {
@@ -1985,4 +2236,41 @@ model CommunityOnboarding {
 
   @@id([userId, communityId])
   @@index([communityId])
+}
+
+/// Thông báo popup = bài "Thông báo" đang ghim của cộng đồng — chỉ hiện ở trang của cộng đồng đó, mỗi thành viên mỗi thông báo 1 lần,
+/// chỉ thông báo đăng/ghim SAU khi người đó tham gia; nhiều thông báo => slide từ cũ tới mới.
+model CommunityAnnouncement {
+  id          String   @id @default(uuid())
+  communityId String   @map("courseId")
+  authorId    String
+  title       String
+  body        String
+  /// Nút "Xem" (đường dẫn trong site /... hoặc https://...), null = không có nút.
+  link        String?
+  /// Bài "Thông báo" đã ghim trên Bảng tin (ghim <=> popup; bỏ ghim => active=false; xóa bài => xóa thông báo).
+  postId      String?  @unique
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  community Community                   @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  author    User                        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  post      Post?                       @relation(fields: [postId], references: [id], onDelete: Cascade)
+  seen      CommunityAnnouncementSeen[]
+
+  @@index([communityId, active, createdAt])
+  @@index([authorId])
+}
+
+model CommunityAnnouncementSeen {
+  announcementId String
+  userId         String
+  seenAt         DateTime @default(now())
+
+  announcement CommunityAnnouncement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([announcementId, userId])
+  @@index([userId])
 }

@@ -11,6 +11,10 @@ import { userRepository } from '../auth/auth.repository.js';
 import { postsRepository, type CommentCursor, type PollTally, type PostCursor, type PostsRepository } from './posts.repository.js';
 import type { Comment, CommentView, PollDef, PollView, Post, PostAuthorView, PostCategory, PostView } from './posts.types.js';
 import type { CreatePollBody, ListCommentsQuery, ListPostsQuery, UpdatePostBody } from './posts.schema.js';
+import { syncPinnedAnnouncement } from '../community-greetings/announcement-sync.js';
+
+/** Số bài ghim tối đa mỗi cộng đồng (mọi mục; bài "Thông báo" đang ghim cũng là popup — community-greetings). */
+export const MAX_PINNED_POSTS = 5;
 
 /** Đường dẫn FE để mở thẳng 1 bài viết. */
 export const postPath = (post: Pick<Post, 'communityId' | 'id'>) => `/courses/${post.communityId}/community?post=${post.id}`;
@@ -185,6 +189,8 @@ export function createPostsService(repo: PostsRepository = postsRepository) {
       const post = await this.getOrThrow(postId);
       if (!(await canManageContent(actorId, post.communityId, post.authorId))) throw HttpError.forbidden('Bạn chỉ được sửa bài viết của mình');
       const updated = await repo.update(postId, patch);
+      // Bài đang ghim: cập nhật nội dung popup (đổi khỏi mục "Thông báo" => thôi hiện).
+      if (post.pinned) await syncPinnedAnnouncement(postId, true);
       return toView(updated!, actorId);
     },
 
@@ -227,7 +233,12 @@ export function createPostsService(repo: PostsRepository = postsRepository) {
     async togglePin(postId: string) {
       const post = await this.getOrThrow(postId);
       const nextPinned = !post.pinned;
-      await repo.setPinned(postId, nextPinned);
+      if (!nextPinned) await repo.setPinned(postId, false);
+      else if (!(await repo.pinWithLimit(postId, post.communityId, MAX_PINNED_POSTS)))
+        // FE mở hộp "Quản lý ghim" (GET /courses/:id/pins) để bỏ ghim bớt rồi ghim lại.
+        throw new HttpError(409, 'PIN_LIMIT', `Cộng đồng đã ghim đủ ${MAX_PINNED_POSTS} bài. Bỏ ghim bớt một bài để ghim bài mới.`, { limit: MAX_PINNED_POSTS });
+      // Bài mục "Thông báo": ghim => hiện popup cho thành viên, bỏ ghim => thôi hiện (community-greetings).
+      await syncPinnedAnnouncement(postId, nextPinned);
       return { pinned: nextPinned };
     },
 

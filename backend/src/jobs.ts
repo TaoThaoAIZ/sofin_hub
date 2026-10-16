@@ -1,6 +1,8 @@
 import type { Job } from './infra/scheduler.js';
 import { runEventRemindersOnce } from './modules/events/events.reminders.js';
 import { purgeUnverifiedUsers } from './modules/auth/unverified.js';
+import { learnFromConversations } from './modules/chatbot/chatbot.learn.js';
+import { cleanupCodexSessions } from './modules/chatbot/chatbot.llm.js';
 import { paymentsService } from './modules/payments/payments.service.js';
 import { communityReferralService } from './modules/referrals/community-referral.service.js';
 import { referralsService } from './modules/referrals/referrals.service.js';
@@ -29,5 +31,9 @@ export function allJobs(): Job[] {
     { name: 'events.reminders', intervalMs: 60_000, run: () => runEventRemindersOnce() },
     // Dọn tài khoản đăng ký dở (chưa nhập OTP) quá 7 ngày để không chiếm email.
     { name: 'auth.purgeUnverified', intervalMs: 60 * 60_000, run: () => purgeUnverifiedUsers(new Date()) },
+    // Chatbot học từ hội thoại đã im >= 30 phút (chatbot.md mục 3.4). Bỏ qua khi chatbot tắt / Codex chưa đăng nhập ChatGPT.
+    { name: 'chatbot.learn', intervalMs: 60 * 60_000, run: () => learnFromConversations() },
+    // Xóa phiên Codex (chứa nội dung chat của khách) cũ hơn 1 giờ trong CODEX_HOME của bot.
+    { name: 'chatbot.codexCleanup', intervalMs: 60 * 60_000, run: () => cleanupCodexSessions() },
   ];
 }

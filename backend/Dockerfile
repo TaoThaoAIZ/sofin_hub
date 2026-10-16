@@ -21,7 +21,8 @@ COPY prisma ./prisma
 RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=build /app/dist ./dist
 COPY docker-entrypoint.sh ./
-RUN sed -i 's/\r$//' docker-entrypoint.sh && chmod +x docker-entrypoint.sh && chown -R node:node /app
+# data/codex-home = CODEX_HOME của chatbot (token ChatGPT) — gắn volume bền ở compose; tạo sẵn để volume mới thuộc user node.
+RUN sed -i 's/\r$//' docker-entrypoint.sh && chmod +x docker-entrypoint.sh && mkdir -p /app/data/codex-home && chown -R node:node /app
 USER node
 EXPOSE 4000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s \

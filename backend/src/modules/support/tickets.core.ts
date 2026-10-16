@@ -101,7 +101,7 @@ export interface NewTicket {
   requesterId?: string | null;
   requesterName: string;
   requesterEmail: string;
-  source: 'contact_form' | 'user' | 'admin' | 'seed';
+  source: 'contact_form' | 'user' | 'admin' | 'seed' | 'chatbot';
   /** Người viết tin đầu (mặc định là khách). */
   authorId?: string | null;
 }

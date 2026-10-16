@@ -9,6 +9,8 @@ import { prisma } from '../src/db/prisma.js';
 import { seedAdmin } from './seed/admin.js';
 import { seedAdminBatch2 } from './seed/admin-batch2.js';
 import { seedAdminBatch3 } from './seed/admin-batch3.js';
+import { seedChatbot } from './seed/chatbot.js';
+import { seedCommunityBot } from './seed/community-bot.js';
 import { seedClassroom } from './seed/classroom.js';
 import { ensureAllDefaultCourses } from './seed/courses.js';
 import { seedCommunityWizard } from './seed/community-wizard.js';
@@ -93,5 +95,8 @@ export async function runSeed(db: Db = prisma): Promise<SeedContext> {
   await ensureAllDefaultCourses(db);
   // Sau cùng: bản nháp wizard (không có khóa học/thành viên/bài viết) + danh mục Discovery mới.
   await seedCommunityWizard(ctx);
+  // Chatbot: kho câu hỏi mẫu (FAQ) + tài liệu tri thức.
+  await seedChatbot(ctx);
+  await seedCommunityBot(ctx);
   return ctx;
 }

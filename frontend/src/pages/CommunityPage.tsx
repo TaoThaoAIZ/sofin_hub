@@ -2,6 +2,8 @@ import { useTranslation } from 'react-i18next';
 import { Navigate, Outlet, useParams } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { CommunitySidebar } from '../features/community/components/CommunitySidebar';
+import { CommunityBotWidget } from '../features/community-bot/CommunityBotWidget';
+import { GreetingPopup } from '../features/community-greetings/GreetingPopup';
 import { useCommunityDetail } from '../features/courses/queries';
 
 export function CommunityPage() {
@@ -32,6 +34,10 @@ export function CommunityPage() {
           <Outlet context={{ course }} />
         </div>
       </div>
+      {/* Trợ lý AI riêng của cộng đồng (chỉ hiện khi chủ đã bật + gói Pro) — chatbot.md. */}
+      <CommunityBotWidget communityId={id} />
+      {/* Lời chào thành viên mới (1 lần) + thông báo mới nhất của chủ — chỉ ở trang của cộng đồng này. */}
+      <GreetingPopup communityId={id} />
     </div>
   );
 }

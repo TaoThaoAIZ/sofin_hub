@@ -5,6 +5,7 @@ import { closeShared } from './infra/shared.js';
 import { createScheduler } from './infra/scheduler.js';
 import { allJobs } from './jobs.js';
 import { gracefulShutdown, installSignalHandlers } from './lifecycle.js';
+import { CHATBOT_BASELINE_VERSION, chatbotBaselineVersion } from './modules/chatbot/chatbot.baseline.js';
 import { streamHub } from './modules/messages/messages.stream.js';
 import { closeNotificationStreams } from './modules/notifications/notifications.routes.js';
 import { flushNotifications } from './modules/notifications/notifications.service.js';
@@ -18,6 +19,15 @@ server.requestTimeout = 3 * 60 * 60 * 1000;
 
 // Nạp cấu hình nền tảng (Global Settings) ngay khi khởi động; lỗi thì dùng mặc định từ env.
 void refreshConfig().catch((e) => console.error('[settings] không nạp được cấu hình:', e));
+
+// Chatbot: dữ liệu nền (câu mẫu + tài liệu) KHÔNG tự nạp — chỉ nhắc nếu chưa chạy lệnh `npm run chatbot:baseline` cho bản hiện tại.
+if (env.NODE_ENV !== 'test')
+  void chatbotBaselineVersion()
+    .then((v) => {
+      if (v === null || v < CHATBOT_BASELINE_VERSION)
+        console.warn(`[chatbot] chưa nạp dữ liệu nền v${CHATBOT_BASELINE_VERSION} (DB: ${v === null ? 'chưa có' : `v${v}`}) — chạy lệnh: npm run chatbot:baseline (container: node dist/cli/chatbot-baseline.js)`);
+    })
+    .catch(() => undefined);
 
 // Job nền (gia hạn, đối soát tiền, nhắc lịch) chạy dưới leader election (Postgres advisory lock): bật ở mọi instance cũng chỉ 1 instance
 // chạy mỗi lượt. RUN_SCHEDULERS=0 => process web-only, job do `npm run start:worker` đảm nhiệm. Không chạy khi test.

@@ -102,6 +102,7 @@
     "other": "Lý do khác"
   },
   "feed": {
+    "managePins": "Quản lý ghim",
     "all": "Tất cả",
     "trending": "Đang thịnh hành",
     "welcome": "Chào mừng bạn trở lại, {{name}}!",

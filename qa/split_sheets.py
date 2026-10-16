@@ -37,6 +37,7 @@ SHORT_NAMES = {
     "PAY": "Thanh toán & Gói",
     "BANK": "Thanh toán chuyển khoản",
     "TOOLS": "Tải Tool",
+    "BOT": "Chatbot hỗ trợ",
     "HOST": "Phí hosting & GD giới thiệu",
     "CXT": "Bổ sung: đăng nhập, trắc nghiệm, giới thiệu CĐ",
     "ADMIN": "Quản trị & Kiểm duyệt",

@@ -26,6 +26,11 @@ import { adminBatch3Router } from './modules/admin/admin-b3.routes.js';
 import { maintenanceGuard, platformRouter } from './modules/platform/platform.routes.js';
 import { moderationRouter } from './modules/moderation/moderation.routes.js';
 import { myCommunitiesRouter } from './modules/my-communities/my-communities.routes.js';
+import { toolsRouter } from './modules/tools/tools.routes.js';
+import { adminChatbotRouter } from './modules/chatbot/admin-chatbot.routes.js';
+import { chatbotRouter } from './modules/chatbot/chatbot.routes.js';
+import { communityBotRouter } from './modules/community-bot/community-bot.routes.js';
+import { greetingsRouter } from './modules/community-greetings/greetings.routes.js';
 import { onboardingRouter } from './modules/onboarding/onboarding.routes.js';
 import { quizRouter } from './modules/quiz/quiz.routes.js';
 import { communityReferralRouter } from './modules/referrals/community-referral.routes.js';
@@ -41,6 +46,10 @@ apiRouter.use('/auth', authRouter);
 apiRouter.use('/', mailRouter);
 apiRouter.use('/', usersRouter);
 apiRouter.use('/', supportRouter);
+apiRouter.use('/', toolsRouter);
+apiRouter.use('/', chatbotRouter);
+apiRouter.use('/', communityBotRouter);
+apiRouter.use('/', greetingsRouter);
 apiRouter.use('/', ticketsRouter);
 apiRouter.use('/courses', catalogRouter);
 apiRouter.use('/', metaRouter);
@@ -68,3 +77,5 @@ apiRouter.use('/', adminRouter);
 apiRouter.use('/', adminBatch2Router);
 // Admin đợt 3 (analytics / support / system).
 apiRouter.use('/', adminBatch3Router);
+// Admin > Hỗ trợ > Chatbot (/admin/support/chatbot/*, quyền support.manage).
+apiRouter.use('/', adminChatbotRouter);

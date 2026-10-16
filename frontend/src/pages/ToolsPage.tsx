@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Footer } from '../components/layout/Footer';
 import { Header } from '../components/layout/Header';
-import { ALL_CATEGORY, CATEGORIES, TOOLS, type DownloadTool } from '../features/tools/catalog';
+import { ALL_CATEGORY, type DownloadTool } from '../features/tools/catalog';
+import { useTools } from '../features/tools/queries';
 import { ToolCard } from '../features/tools/ToolCard';
 import { ToolLeadForm } from '../features/tools/ToolLeadForm';
 
@@ -11,8 +12,10 @@ export function ToolsContent() {
   const { t } = useTranslation('tools');
   const [category, setCategory] = useState<string>(ALL_CATEGORY);
   const [buying, setBuying] = useState<DownloadTool | null>(null);
+  const catalog = useTools();
 
-  const list = category === ALL_CATEGORY ? TOOLS : TOOLS.filter((x) => x.category === category);
+  const tools = catalog.data?.tools ?? [];
+  const list = category === ALL_CATEGORY ? tools : tools.filter((x) => x.category === category);
 
   return (
     <>
@@ -25,7 +28,7 @@ export function ToolsContent() {
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-sm font-semibold text-stone-500">{t('categoryLabel')}</span>
           <div className="flex flex-wrap gap-2">
-            {[ALL_CATEGORY, ...CATEGORIES].map((c) => (
+            {[ALL_CATEGORY, ...(catalog.data?.categories ?? [])].map((c) => (
               <button
                 key={c}
                 type="button"
@@ -43,7 +46,16 @@ export function ToolsContent() {
           </div>
         </div>
 
-        {list.length === 0 ? (
+        {catalog.isPending ? (
+          <div className="glass rounded-3xl p-10 text-center text-stone-500">{t('loading')}</div>
+        ) : catalog.isError ? (
+          <div role="alert" className="glass rounded-3xl p-10 text-center text-stone-500">
+            {t('loadError')}{' '}
+            <button type="button" onClick={() => void catalog.refetch()} className="font-semibold text-brand underline">
+              {t('retry')}
+            </button>
+          </div>
+        ) : list.length === 0 ? (
           <div className="glass rounded-3xl p-10 text-center text-stone-500">{t('empty')}</div>
         ) : (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
