@@ -27,7 +27,7 @@ import { isAtLeast } from '../features/communities/types';
 import { usePopup } from '../components/ui/usePopup';
 
 import { formatCents } from '../lib/datetime';
-import { TOOLS } from '../features/tools/catalog';
+import { useTools } from '../features/tools/queries';
 
 // Icon cờ lê (lucide "wrench") cho ô "Công cụ hỗ trợ".
 const WRENCH_ICON = 'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94z';
@@ -70,6 +70,7 @@ export function CourseDetailPage() {
   const { data: categories = [] } = useCategories();
   const { data: course, isPending, error } = useCommunityDetail(id);
   const enroll = useToggleEnrollment(id);
+  const toolsCount = useTools().data?.tools.length;
   const qc = useQueryClient();
   const [tab, setTab] = useState<TabKey>('overview');
   const [showPaidDialog, setShowPaidDialog] = useState(false);
@@ -280,7 +281,7 @@ export function CourseDetailPage() {
 
           <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-3">
             {course.facts
-              .map((f) => (f.label === 'Chi phí tham gia' ? { ...f, label: t('detail.toolsFact'), value: String(TOOLS.length), icon: WRENCH_ICON } : f))
+              .map((f) => (f.label === 'Chi phí tham gia' ? { ...f, label: t('detail.toolsFact'), value: toolsCount === undefined ? '–' : String(toolsCount), icon: WRENCH_ICON } : f))
               .map((f) => (
               <div
                 key={f.label}

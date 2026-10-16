@@ -40,6 +40,26 @@ describe('S3Storage', () => {
     assert.equal(sent[0]!.input.ContentType, 'image/png');
   });
 
+  it('putStream: hứng xuống đĩa tạm rồi mới gửi S3 (đủ ContentLength); luồng lỗi thì không chạm S3', async () => {
+    const { client, sent } = fakeClient(async (cmd) => {
+      // Body phải đọc được trọn vẹn từ đĩa (không phải luồng gốc của người dùng).
+      const chunks: Buffer[] = [];
+      for await (const c of cmd.input.Body as Readable) chunks.push(c as Buffer);
+      return { body: Buffer.concat(chunks).toString() };
+    });
+    const s = new S3Storage('bkt', client as never);
+    await s.putStream(KEY, Readable.from([Buffer.from('ab'), Buffer.from('cd')]), { contentType: 'image/png', size: 4 });
+    assert.equal(sent.length, 1);
+    assert.equal(sent[0]!.input.ContentLength, 4);
+
+    const bad = Readable.from((async function* () {
+      yield Buffer.from('ab');
+      throw new Error('client aborted');
+    })());
+    await assert.rejects(() => s.putStream(KEY, bad, { contentType: 'image/png', size: 4 }), /client aborted/);
+    assert.equal(sent.length, 1, 'lỗi giữa chừng thì không gửi gì lên S3');
+  });
+
   it('getStream: trả stream + size; NoSuchKey -> null; lỗi khác (vd. AccessDenied) -> ném lên', async () => {
     const ok = fakeClient(() => ({ Body: Readable.from(['abc']), ContentLength: 3 }));
     const got = await new S3Storage('bkt', ok.client as never).getStream(KEY);

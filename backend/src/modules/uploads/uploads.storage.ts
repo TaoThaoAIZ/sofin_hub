@@ -1,6 +1,8 @@
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { createReadStream, createWriteStream } from 'node:fs';
 import { mkdir, rename, stat, unlink, writeFile } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
+import { tmpdir } from 'node:os';
 import { isAbsolute, join, resolve } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import type { Readable } from 'node:stream';
@@ -144,8 +146,16 @@ export class S3Storage implements StorageProvider {
 
   async putStream(key: string, stream: Readable, meta: { contentType: string; size: number }): Promise<void> {
     assertKey(key);
-    // PutObject với stream + ContentLength (tối đa 5GB): SDK đẩy từng khúc, không giữ cả file trong RAM.
-    await this.client.send(new PutObjectCommand({ Bucket: this.bucket, Key: key, Body: stream, ContentLength: meta.size, ContentType: meta.contentType }));
+    // Hứng toàn bộ file xuống đĩa tạm TRƯỚC rồi mới đẩy lên S3 từ đĩa. Nếu truyền thẳng luồng của người dùng sang S3, người dùng mạng chậm
+    // làm S3 chờ dữ liệu quá lâu -> S3 đóng socket ("non-retryable streaming request") và request treo vô hạn ở phía trình duyệt.
+    // Cách này cũng đảm bảo lỗi kiểm tra (sai magic bytes, thiếu byte) xảy ra trước khi chạm S3, không bao giờ có object dở dang.
+    const tmp = join(tmpdir(), `upload-${randomUUID()}.part`);
+    try {
+      await pipeline(stream, createWriteStream(tmp));
+      await this.client.send(new PutObjectCommand({ Bucket: this.bucket, Key: key, Body: createReadStream(tmp), ContentLength: meta.size, ContentType: meta.contentType }));
+    } finally {
+      await unlink(tmp).catch(() => undefined);
+    }
   }
 
   async getStream(key: string, range?: ByteRange) {
