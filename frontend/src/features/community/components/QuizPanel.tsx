@@ -35,7 +35,7 @@ export function QuizPanel({ communityId, lessonId }: { communityId: string; less
   return (
     <section className="mt-6 rounded-2xl border border-[rgba(120,60,20,.12)] bg-[#fffaf5] p-4" aria-label={t('quiz.title')}>
       <div className="flex flex-wrap items-center gap-2">
-        <MaterialIcon name="quiz" size={22} filled color="#f26a1b" />
+        <MaterialIcon name="quiz" size={22} filled color="#ff570a" />
         <h2 className="m-0 text-[17px] font-extrabold">{t('quiz.title')}</h2>
         <span className="ml-auto text-[12.5px] text-stone-500">{t('quiz.passRule', { n: quiz.questionCount, pct: quiz.passPercent })}</span>
       </div>

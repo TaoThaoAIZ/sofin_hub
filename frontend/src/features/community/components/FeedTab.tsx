@@ -16,7 +16,7 @@ import { PostComposer } from './PostComposer';
 // Tên icon + màu chuyên mục: xem CATEGORY_META trong PostCard.tsx (lấy từ file thiết kế gốc).
 const FILTERS: { key: 'all' | 'trending' | PostCategory; icon?: string; color?: string }[] = [
   { key: 'all' },
-  { key: 'trending', icon: 'local_fire_department', color: '#f26a1b' },
+  { key: 'trending', icon: 'local_fire_department', color: '#ff570a' },
   ...POST_CATEGORIES.map((c) => ({ key: c, icon: CATEGORY_META[c].icon, color: CATEGORY_META[c].color })),
 ];
 
@@ -105,7 +105,7 @@ export function FeedTab() {
                   onClick={a.key === 'popular' ? () => setSort('popular') : undefined}
                   className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl bg-white/90 px-4 py-3.5 text-left shadow-[0_6px_18px_rgba(120,60,20,.08)] hover:bg-white disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  <MaterialIcon name={a.icon} size={28} filled color="#f26a1b" className="flex-none" />
+                  <MaterialIcon name={a.icon} size={28} filled color="#ff570a" className="flex-none" />
                   <div className="min-w-0">
                     <div className="truncate text-[14.5px] font-bold">{t(`feed.actions.${a.key}.title`)}</div>
                     <div className="mt-[3px] truncate text-xs text-stone-500">{t(`feed.actions.${a.key}.desc`)}</div>
@@ -124,7 +124,7 @@ export function FeedTab() {
               onClick={() => setManagePins(true)}
               className="glass-chip order-last ml-auto flex h-10 items-center gap-1.5 rounded-xl px-4 text-[13.5px] font-semibold whitespace-nowrap text-stone-900"
             >
-              <MaterialIcon name="push_pin" size={17} color="#f26a1b" />
+              <MaterialIcon name="push_pin" size={17} color="#ff570a" />
               {t('feed.managePins')}
             </button>
           )}
@@ -160,7 +160,7 @@ export function FeedTab() {
             <span className="flex items-center gap-1 rounded-lg bg-brand/10 px-2.5 py-1 font-semibold text-brand">
               #{tag}
               <button type="button" aria-label={t('feed.clearTag')} onClick={() => setParam('tag')}>
-                <MaterialIcon name="close" size={15} color="#f26a1b" />
+                <MaterialIcon name="close" size={15} color="#ff570a" />
               </button>
             </span>
           </div>

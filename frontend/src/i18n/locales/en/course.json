@@ -103,7 +103,25 @@
     "leave": "Leave community",
     "leaving": "Leaving…",
     "leftToast": "You have left the community",
-    "approvedPay": "Approved – pay to join"
+    "approvedPay": "Approved – pay to join",
+    "perks": {
+      "instant": {
+        "title": "Instant access",
+        "desc": "After payment"
+      },
+      "anywhere": {
+        "title": "Learn anywhere, anytime",
+        "desc": "On web, mobile, tablet"
+      },
+      "updates": {
+        "title": "Continuously updated content",
+        "desc": "Always improving"
+      },
+      "support": {
+        "title": "Community support",
+        "desc": "Q&A, share experience"
+      }
+    }
   },
   "lesson": {
     "loadingAttachment": "{{name}} (loading…)",

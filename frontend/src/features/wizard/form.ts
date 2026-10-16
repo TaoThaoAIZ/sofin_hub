@@ -43,7 +43,7 @@ export const STEP_LABEL_KEYS = ['basics', 'plan', 'identity', 'members', 'launch
 export const STEP_KEYS = ['basics', 'plan', 'identity', 'members'] as const;
 export type StepKey = (typeof STEP_KEYS)[number];
 
-export const BRAND_SWATCHES = ['#f26a1b', '#16a34a', '#2563eb', '#7c3aed', '#ec4899', '#111111'] as const;
+export const BRAND_SWATCHES = ['#ff570a', '#16a34a', '#2563eb', '#7c3aed', '#ec4899', '#111111'] as const;
 
 /** Giá thành viên tối đa (VND, nguyên đồng). */
 export const MAX_PRICE_USD = 50_000_000;

@@ -126,7 +126,7 @@ export function CardFields({
       <div className="min-w-[200px] [grid-column:span_2]">
         <label htmlFor={`${id}-number`} className="mb-2.5 flex items-center gap-2.5 text-[15px] font-bold">
           <span className="grid size-8 place-items-center rounded-full bg-[#fff1e6]">
-            <MaterialIcon name="credit_card" size={18} color="#f26a1b" />
+            <MaterialIcon name="credit_card" size={18} color="#ff570a" />
           </span>
           {t('card.paymentInfo')}
         </label>

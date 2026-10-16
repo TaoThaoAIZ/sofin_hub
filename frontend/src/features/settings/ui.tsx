@@ -30,7 +30,7 @@ export function SHead({
     <div className={`flex flex-wrap items-start gap-3.5 ${className}`}>
       {icon && (
         <span className={`grid ${box} flex-none place-items-center rounded-full ${danger ? 'bg-[#fee2e2]' : 'bg-[#fff1e6]'}`}>
-          <MaterialIcon name={icon} size={size === 'lg' ? 23 : 22} filled color={danger ? '#dc2626' : '#f26a1b'} />
+          <MaterialIcon name={icon} size={size === 'lg' ? 23 : 22} filled color={danger ? '#dc2626' : '#ff570a'} />
         </span>
       )}
       <div className="min-w-[200px] flex-1">
@@ -54,7 +54,7 @@ export function Toggle({ on, onChange, label, small, disabled }: { on: boolean; 
       disabled={disabled}
       onClick={() => onChange(!on)}
       style={{ width: w, height: h }}
-      className={`relative inline-block flex-none rounded-full border-0 p-0 transition-colors duration-200 disabled:opacity-50 ${on ? 'bg-gradient-to-b from-[#ff8f45] to-[#f26a1b]' : 'bg-[#e2dcd6]'}`}
+      className={`relative inline-block flex-none rounded-full border-0 p-0 transition-colors duration-200 disabled:opacity-50 ${on ? 'bg-gradient-to-b from-[#ff8f45] to-[#ff570a]' : 'bg-[#e2dcd6]'}`}
     >
       <span
         style={{ top: 3, left: on ? off : 3, width: k, height: k }}
@@ -108,7 +108,7 @@ export function Segmented<T extends string>({
 export const OUTLINE_BTN =
   'inline-flex h-[46px] items-center justify-center gap-2 rounded-xl border-[1.5px] border-[#e7e0da] bg-white px-[18px] text-sm font-bold text-stone-900 hover:border-[#fdba74] disabled:opacity-50';
 export const PRIMARY_BTN =
-  'inline-flex items-center justify-center gap-2 rounded-xl border-0 bg-gradient-to-b from-[#ff8f45] to-[#f26a1b] font-bold text-white shadow-[0_10px_24px_rgba(242,106,27,.32)] disabled:opacity-60 disabled:shadow-none';
+  'inline-flex items-center justify-center gap-2 rounded-xl border-0 bg-gradient-to-b from-[#ff8f45] to-[#ff570a] font-bold text-white shadow-[0_10px_24px_rgba(255,87,10,.32)] disabled:opacity-60 disabled:shadow-none';
 
 /** Ô nhập có icon bên trái (khung bo 12px, viền be). */
 export function IconInput({

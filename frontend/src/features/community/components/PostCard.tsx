@@ -123,7 +123,7 @@ function PollBlock({ courseId, post }: { courseId: string; post: Post }) {
             >
               <span className="absolute inset-y-0 left-0 bg-brand/15" style={{ width: `${pct}%` }} />
               <span className="relative flex min-w-0 items-center gap-2">
-                <MaterialIcon name={mine ? (poll.multiple ? 'check_box' : 'radio_button_checked') : poll.multiple ? 'check_box_outline_blank' : 'radio_button_unchecked'} size={18} color={mine ? '#f26a1b' : '#a8a29e'} />
+                <MaterialIcon name={mine ? (poll.multiple ? 'check_box' : 'radio_button_checked') : poll.multiple ? 'check_box_outline_blank' : 'radio_button_unchecked'} size={18} color={mine ? '#ff570a' : '#a8a29e'} />
                 <span className="truncate">{o.text}</span>
               </span>
               <span className="relative flex-none pl-2 text-[12.5px] font-semibold text-stone-600">
@@ -273,7 +273,7 @@ function PostFile({ name, url }: { name: string; url: string }) {
   }
   return (
     <a href={href} target="_blank" rel="noreferrer noopener" download className="flex items-center gap-2.5 rounded-xl border border-[rgba(120,60,20,.1)] bg-white px-3 py-2 text-[13.5px] hover:border-brand">
-      <MaterialIcon name="attach_file" size={18} color="#f26a1b" />
+      <MaterialIcon name="attach_file" size={18} color="#ff570a" />
       <span className="min-w-0 flex-1 truncate font-medium">{name}</span>
     </a>
   );
@@ -411,7 +411,7 @@ export function PostCard({
             </span>
             {post.pinned && (
               <span className="flex items-center gap-1 rounded-lg bg-brand/10 px-2 py-0.5 text-xs font-semibold text-brand">
-                <MaterialIcon name="push_pin" size={13} filled color="#f26a1b" /> {t('post.pinned')}
+                <MaterialIcon name="push_pin" size={13} filled color="#ff570a" /> {t('post.pinned')}
               </span>
             )}
             {post.hidden && (
@@ -474,7 +474,7 @@ export function PostCard({
               onClick={() => like.mutate(post.id)}
               disabled={like.isPending}
               aria-pressed={!!post.viewerLiked}
-              className={`flex h-9 items-center gap-2 rounded-xl px-3.5 text-[13px] font-bold transition-colors ${post.viewerLiked ? 'bg-brand text-white shadow-[0_4px_12px_rgba(242,106,27,.35)]' : 'bg-stone-100 text-stone-700 hover:bg-brand/10'}`}
+              className={`flex h-9 items-center gap-2 rounded-xl px-3.5 text-[13px] font-bold transition-colors ${post.viewerLiked ? 'bg-brand text-white shadow-[0_4px_12px_rgba(255,87,10,.35)]' : 'bg-stone-100 text-stone-700 hover:bg-brand/10'}`}
             >
               <MaterialIcon name="thumb_up" size={16} filled={post.viewerLiked} color={post.viewerLiked ? '#ffffff' : '#57534e'} />
               {post.likesCount}

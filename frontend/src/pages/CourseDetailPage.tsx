@@ -8,13 +8,13 @@ import { Header } from '../components/layout/Header';
 import { Button, ButtonLink } from '../components/ui/Button';
 import { MaterialIcon } from '../components/ui/MaterialIcon';
 import { PathIcon, StarIcon, UserIcon } from '../components/ui/icons';
-import { SectionTitle } from '../components/ui/SectionTitle';
 import { useAuth } from '../features/auth/AuthContext';
 import { MediaGallery } from '../features/courses/components/MediaGallery';
 import { TAG_UI } from '../features/courses/constants';
 import { courseKeys, useCategories, useCommunityDetail, useToggleEnrollment } from '../features/courses/queries';
-import type { CommunityDetail, CourseFaq, CourseHighlight } from '../features/courses/types';
+import type { CommunityDetail, CourseFaq } from '../features/courses/types';
 import { ApiError } from '../lib/api';
+import { PAGE_X } from '../lib/layout';
 import { formatCompact } from '../lib/format';
 import { JoinDialog } from '../features/payments/components/JoinDialog';
 import { JoinRequestDialog, loadPendingRequestId, savePendingRequestId } from '../features/communities/components/JoinRequestDialog';
@@ -31,6 +31,13 @@ import { useTools } from '../features/tools/queries';
 
 // Icon cờ lê (lucide "wrench") cho ô "Công cụ hỗ trợ".
 const WRENCH_ICON = 'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94z';
+/** 4 lợi ích gói thành viên dưới nút "Tham gia" (Figma "Membership benefits"): icon Material + màu nhấn (nền = màu nhấn ở độ mờ .16). */
+const MEMBERSHIP_PERKS = [
+  { key: 'instant', icon: 'bolt', color: '#ff9a1f' },
+  { key: 'anywhere', icon: 'desktop_windows', color: '#16a34a' },
+  { key: 'updates', icon: 'sync', color: '#3b82f6' },
+  { key: 'support', icon: 'chat_bubble', color: '#ef4466' },
+] as const;
 type TabKey = 'overview' | 'content' | 'faq';
 const TABS: { key: TabKey | 'reviews' }[] = [{ key: 'overview' }, { key: 'content' }, { key: 'reviews' }, { key: 'faq' }];
 
@@ -50,8 +57,8 @@ function ShortText({ text }: { text: string }) {
   const [open, setOpen] = useState(false);
   const long = text.length > 220 || text.split('\n').length > 4;
   return (
-    <div className="mt-3.5 max-w-[760px]">
-      <p className={`m-0 text-base leading-[1.65] text-stone-700 text-pretty whitespace-pre-line break-words ${long && !open ? 'line-clamp-4' : ''}`}>{text}</p>
+    <div className="max-w-[1000px]">
+      <p className={`m-0 text-[clamp(16px,1.11vw,20px)] leading-[1.6] text-[#57524e] text-pretty whitespace-pre-line break-words dark:text-[#bababa] ${long && !open ? 'line-clamp-4' : ''}`}>{text}</p>
       {long && (
         <button type="button" onClick={() => setOpen((o) => !o)} className="mt-1 border-0 bg-transparent p-0 text-sm font-semibold text-brand hover:underline">
           {open ? t('detail.showLess') : t('detail.showMore')}
@@ -110,7 +117,7 @@ export function CourseDetailPage() {
 
   if (isPending) {
     return (
-      <div className="min-h-screen bg-white">
+      <div className="min-h-screen">
         <Header active="courses" />
         <p className="py-24 text-center text-stone-500">{t('detail.loading')}</p>
       </div>
@@ -119,7 +126,7 @@ export function CourseDetailPage() {
 
   if (error || !course) {
     return (
-      <div className="min-h-screen bg-white">
+      <div className="min-h-screen">
         <Header active="courses" />
         <div className="grid place-items-center px-4 py-24 text-center">
           <div>
@@ -223,29 +230,23 @@ export function CourseDetailPage() {
   };
 
   return (
-    <div
-      className="min-h-screen bg-white"
-      style={{
-        background:
-          'radial-gradient(700px 500px at 0% 30%, rgba(255,186,140,.3), transparent 70%), radial-gradient(700px 600px at 100% 20%, rgba(255,200,160,.3), transparent 70%), radial-gradient(800px 600px at 60% 100%, rgba(251,207,232,.28), transparent 70%), #fff',
-      }}
-    >
+    <div className="min-h-screen">
       <Header active="courses" />
 
-      <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-2.5 px-4 pt-5 text-[13px] text-stone-600 md:px-10">
+      <div className={`${PAGE_X} flex flex-wrap items-center gap-3 pt-6 text-[14px] leading-6 text-[#57524e] dark:text-[#bababa]`}>
         <Link to="/" className="grid place-items-center text-brand" aria-label={t('detail.homeAria')}>
-          <PathIcon d="M12 3 3 10.5V21h6v-6h6v6h6V10.5z" fill="#f26a1b" size={16} />
+          <PathIcon d="M12 3 3 10.5V21h6v-6h6v6h6V10.5z" fill="#ff570a" size={18} />
         </Link>
         <span>›</span>
-        <Link to="/" className="text-stone-600 hover:text-brand">
+        <Link to="/" className="text-inherit hover:text-brand">
           {categoryName}
         </Link>
         <span>›</span>
-        <span className="font-medium text-stone-900">{course.title}</span>
+        <span className="font-medium text-[#201e1c] dark:text-white">{course.title}</span>
       </div>
 
-      <div className="mx-auto flex max-w-[1400px] flex-wrap items-start gap-7 px-4 pt-4 md:px-10">
-        <main className="flex min-w-0 flex-[999_1_620px] flex-col gap-[22px]">
+      <div className={`${PAGE_X} flex flex-wrap items-start gap-6 pt-5`}>
+        <main className="flex min-w-0 flex-[999_1_620px] flex-col gap-[30px]">
           <MediaGallery
             items={course.media ?? []}
             fallback={course.thumbnail}
@@ -253,8 +254,8 @@ export function CourseDetailPage() {
             overlay={
               tag && (
                 <span
-                  className="absolute top-[18px] left-[18px] flex items-center gap-1.5 rounded-full border border-white/50 px-3.5 py-1.5 text-sm font-semibold"
-                  style={{ background: tag.bg, color: tag.fg, boxShadow: `0 6px 16px color-mix(in srgb, ${tag.bg} 45%, transparent)` }}
+                  className="absolute top-3 left-3.5 flex h-[42px] items-center rounded-[24px] px-[18px] text-lg font-bold"
+                  style={{ background: tag.bg, color: tag.fg }}
                 >
                   {t(tag.labelKey)}
                 </span>
@@ -262,43 +263,43 @@ export function CourseDetailPage() {
             }
           />
 
-          <div>
-            <h1 className="m-0 text-[clamp(28px,2.6vw,38px)] font-extrabold tracking-[-1px]">{course.title}</h1>
-            <div className="mt-3 flex flex-wrap items-center gap-x-[18px] gap-y-2.5 text-sm text-stone-600">
-              <span className="flex items-center gap-2">
-                <StarIcon size={20} />
+          <div className="flex flex-col gap-3">
+            <h1 className="m-0 text-[clamp(30px,2.55vw,46px)] leading-[1.48] font-extrabold text-[#201d1b] dark:text-white">{course.title}</h1>
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-lg text-[#57524e] dark:text-[#bababa]">
+              <span className="flex items-center gap-3">
+                <StarIcon size={22} />
                 <span>
-                  <b className="text-stone-900">{course.rating}</b> ({course.ratingCount})
+                  <b className="text-[#201d1b] dark:text-white">{course.rating}</b> <span className="text-[#827b75] dark:text-[#bababa]">({course.ratingCount})</span>
                 </span>
               </span>
-              <span className="flex items-center gap-2">
-                <UserIcon size={18} />
-                <Trans t={t} i18nKey="detail.by" values={{ name: course.instructor.name }} components={{ b: <b className="text-stone-900" /> }} />
+              <span className="flex items-center gap-2.5">
+                <UserIcon size={22} />
+                <Trans t={t} i18nKey="detail.by" values={{ name: course.instructor.name }} components={{ b: <b className="text-[#201d1b] dark:text-white" /> }} />
               </span>
             </div>
             <ShortText text={course.description} />
           </div>
 
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-3">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-[15px]">
             {course.facts
               .map((f) => (f.label === 'Chi phí tham gia' ? { ...f, label: t('detail.toolsFact'), value: toolsCount === undefined ? '–' : String(toolsCount), icon: WRENCH_ICON } : f))
               .map((f) => (
               <div
                 key={f.label}
-                className="glass-chip flex items-center gap-3 rounded-[18px] p-3.5"
+                className="flex items-center gap-3 rounded-[26px] bg-white p-[18px] shadow-[1px_6px_15px_rgba(121,81,54,0.08)] dark:bg-[rgba(63,63,63,.3)] dark:shadow-none"
               >
-                <div className="grid size-10 flex-none place-items-center rounded-xl" style={{ background: f.bg }}>
-                  <PathIcon d={f.icon} stroke={f.fg} size={20} />
+                <div className="grid size-[50px] flex-none place-items-center rounded-2xl" style={{ background: `color-mix(in srgb, ${f.fg} 16%, transparent)` }}>
+                  <PathIcon d={f.icon} stroke={f.fg} size={24} />
                 </div>
-                <div className="min-w-0">
-                  <div className="text-[15px] font-bold whitespace-nowrap">{f.value}</div>
-                  <div className="text-xs whitespace-nowrap text-stone-500">{f.label}</div>
+                <div className="min-w-0 leading-normal">
+                  <div className="text-xl font-bold whitespace-nowrap text-[#201d1b] dark:text-white">{f.value}</div>
+                  <div className="text-sm whitespace-nowrap text-[#827b75] dark:text-[#bababa]">{f.label}</div>
                 </div>
               </div>
             ))}
           </div>
 
-          <div className="no-scrollbar flex gap-1 overflow-x-auto border-b border-[rgba(120,60,20,.1)]">
+          <div className="no-scrollbar flex items-center gap-2 overflow-x-auto rounded-[20px] p-1.5">
             {TABS.filter((tb) => tb.key !== 'faq' || course.faqs.length > 0).map((tb) => {
               const isActive = tb.key === tab;
               return (
@@ -306,8 +307,10 @@ export function CourseDetailPage() {
                   key={tb.key}
                   type="button"
                   onClick={() => (tb.key === 'reviews' ? scrollToReviews() : setTab(tb.key))}
-                  className={`h-12 border-0 border-b-[2.5px] bg-transparent px-5 text-[15px] whitespace-nowrap ${
-                    isActive ? 'border-brand font-bold text-brand' : 'border-transparent font-medium text-stone-700'
+                  className={`h-[42px] flex-none rounded-[18px] border-0 px-[22px] text-[15px] leading-[1.45] whitespace-nowrap ${
+                    isActive
+                      ? 'bg-[linear-gradient(180deg,#ff8b3d,#ff7825_80%,#ef5a08)] font-bold text-white shadow-[0_9px_20px_rgba(237,109,35,0.25)]'
+                      : 'bg-transparent font-normal text-[#5c5855] hover:text-brand dark:text-[#bababa]'
                   }`}
                 >
                   {t(`detail.tabs.${tb.key}`)}
@@ -319,115 +322,144 @@ export function CourseDetailPage() {
           {tab === 'overview' && <OverviewTab course={course} priceLabel={priceLabel} />}
           {tab === 'content' && <ContentTab courseId={id} enrolled={!!course.viewerEnrolled} lessons={Number(course.facts.find((f) => f.label === 'Bài học')?.value ?? 0)} />}
           {tab === 'faq' && course.faqs.length > 0 && <FaqTab faqs={course.faqs} />}
+
+          <div ref={reviewsRef} className="scroll-mt-24">
+            <ReviewsSection
+              courseId={id}
+              viewerEnrolled={!!course.viewerEnrolled}
+              viewerRole={course.viewerRole}
+              fallbackRating={course.rating}
+              fallbackCount={course.ratingCount}
+            />
+          </div>
         </main>
 
-        <aside className="sticky top-24 flex min-w-0 flex-1 basis-[320px] flex-col gap-4 max-lg:static max-lg:basis-full">
-          <div className="glass rounded-[26px] p-2">
-            <div className="relative h-[190px] overflow-hidden rounded-[20px]">
+        <aside className="sticky top-24 flex min-w-0 flex-1 basis-[340px] flex-col gap-5 max-lg:static max-lg:basis-full min-[1100px]:max-w-[401px]">
+          <div className="rounded-[32px] border border-white bg-gradient-to-r from-white to-[#fff9f3] p-[11px] shadow-[1px_6px_15px_rgba(121,81,54,0.08)] dark:border-white/10 dark:from-[rgba(63,63,63,.3)] dark:to-[rgba(63,63,63,.3)] dark:shadow-none">
+            <div className="relative h-[200px] overflow-hidden rounded-3xl">
               <img src={course.thumbnail} alt="" className="size-full object-cover" />
             </div>
-            <div className="flex flex-col gap-4 px-3 pt-[18px] pb-3">
-              <div className="flex items-center justify-between gap-2.5">
-                <div className="text-[32px] sm:text-[40px] leading-none font-extrabold tracking-[-1px] text-brand">
-                  {priceLabel}
-                  {course.priceUsd > 0 && <span className="text-lg font-semibold">{t('detail.perMonth')}</span>}
-                </div>
+            <div className="flex flex-col p-3">
+              <div className="flex items-end gap-1 whitespace-nowrap text-brand">
+                <span className="text-[clamp(34px,2.3vw,42px)] leading-[1.48] font-extrabold">{course.priceUsd === 0 ? priceLabel : Math.round(course.priceUsd).toLocaleString('vi-VN')}</span>
+                {course.priceUsd > 0 && (
+                  <span className="pb-1.5 text-[23px] leading-[1.2] font-medium">
+                    <span className="underline">đ</span>
+                    {t('detail.perMonth')}
+                  </span>
+                )}
               </div>
 
-              <div className="grid grid-cols-3 text-center">
+              <div className="flex items-center py-5 text-center">
                 {[
                   { v: formatCompact(course.stats.members), l: t('detail.members') },
                   { v: course.stats.online, l: t('detail.online') },
                   { v: course.stats.admins, l: t('detail.admins') },
                 ].map((s, i) => (
-                  <div key={s.l} className={i ? 'border-l border-[rgba(120,60,20,.1)]' : ''}>
-                    <div className="text-xl font-bold">{s.v}</div>
-                    <div className="mt-0.5 text-xs text-stone-500">{s.l}</div>
+                  <div key={s.l} className={`flex-1 ${i ? 'border-l border-[#f0e4dc] dark:border-white/10' : ''}`}>
+                    <div className="text-[26px] leading-[1.4] font-bold text-[#201d1b] dark:text-white">{s.v}</div>
+                    <div className="text-[15px] leading-normal text-[#827b75] dark:text-[#bababa]">{s.l}</div>
                   </div>
                 ))}
               </div>
 
-              {isLocked && (
-                <p className="rounded-xl bg-red-50 px-3 py-2 text-center text-[13px] font-medium text-red-700">
-                  {t('detail.lockedBanner')}
-                </p>
-              )}
-              {course.viewerEnrolled && !isLocked && (
-                <ButtonLink to={`/communities/${id}/community`} className="h-[52px] gap-2.5 rounded-2xl text-base font-bold">
-                  {t('detail.enter')}
-                  <MaterialIcon name="arrow_forward" size={20} color="#fff" />
-                </ButtonLink>
-              )}
-              {course.viewerEnrolled && !isLocked && course.viewerRole !== 'owner' && (
-                <button
-                  type="button"
+              <div className="flex flex-col gap-4">
+                {isLocked && (
+                  <p className="rounded-xl bg-red-50 px-3 py-2 text-center text-[13px] font-medium text-red-700">
+                    {t('detail.lockedBanner')}
+                  </p>
+                )}
+                {course.viewerEnrolled && !isLocked && (
+                  <ButtonLink to={`/communities/${id}/community`} className="h-[65px] gap-3 rounded-[20px] text-[22px] font-extrabold shadow-[0_6px_16px_rgba(246,107,24,0.13)]">
+                    {t('detail.enter')}
+                    <MaterialIcon name="arrow_forward" size={24} color="#fff" />
+                  </ButtonLink>
+                )}
+                {course.viewerEnrolled && !isLocked && course.viewerRole !== 'owner' && (
+                  <button
+                    type="button"
+                    onClick={handleJoin}
+                    disabled={enroll.isPending}
+                    className="h-11 rounded-2xl border-[1.5px] border-red-200 bg-white text-[15px] font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
+                  >
+                    {enroll.isPending ? t('detail.leaving') : t('detail.leave')}
+                  </button>
+                )}
+                {!course.viewerEnrolled && (
+                <Button
                   onClick={handleJoin}
-                  disabled={enroll.isPending}
-                  className="h-11 rounded-2xl border-[1.5px] border-red-200 bg-white text-[15px] font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
+                  disabled={enroll.isPending || hasPendingRequest}
+                  variant={course.viewerEnrolled ? 'success' : 'brand'}
+                  className="h-[65px] gap-3 rounded-[20px] text-[22px] font-extrabold shadow-[0_6px_16px_rgba(246,107,24,0.13)]"
                 >
-                  {enroll.isPending ? t('detail.leaving') : t('detail.leave')}
-                </button>
-              )}
-              {!course.viewerEnrolled && (
-              <Button
-                onClick={handleJoin}
-                disabled={enroll.isPending || hasPendingRequest}
-                variant={course.viewerEnrolled ? 'success' : 'brand'}
-                className="h-[52px] gap-2.5 rounded-2xl text-base font-bold"
-              >
-                {course.viewerEnrolled
-                  ? t('detail.joined')
-                  : hasPendingRequest
-                    ? t('detail.requestPending')
-                    : approved
-                      ? t('detail.approvedPay')
-                    : isPrivate
-                      ? t('detail.requestJoin')
-                      : t('detail.joinNow')}
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
-                  <path d={course.viewerEnrolled ? 'M5 12l5 5 9-10' : 'M5 12h14M13 6l6 6-6 6'} />
-                </svg>
-              </Button>
-              )}
-              {isPrivate && !course.viewerEnrolled && !hasPendingRequest && (
-                <p className="text-center text-xs text-stone-500">{t('detail.privateNote')}</p>
-              )}
-              {hasPendingRequest && (
-                <div className="flex flex-col items-center gap-1.5 text-center text-[13px] text-stone-600">
-                  <span>{t('detail.reviewNote')}</span>
-                  {pendingRequest !== 'unknown' && (
-                    <button
-                      type="button"
-                      onClick={handleCancelRequest}
-                      disabled={cancelRequest.isPending}
-                      className="font-semibold text-brand hover:underline disabled:opacity-50"
-                    >
-                      {cancelRequest.isPending ? t('detail.canceling') : t('detail.cancelRequest')}
-                    </button>
-                  )}
-                  {cancelRequest.isError && <span className="text-red-600">{errorText(cancelRequest.error)}</span>}
+                  {course.viewerEnrolled
+                    ? t('detail.joined')
+                    : hasPendingRequest
+                      ? t('detail.requestPending')
+                      : approved
+                        ? t('detail.approvedPay')
+                      : isPrivate
+                        ? t('detail.requestJoin')
+                        : t('detail.joinNow')}
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+                    <path d={course.viewerEnrolled ? 'M5 12l5 5 9-10' : 'M5 12h14M13 6l6 6-6 6'} />
+                  </svg>
+                </Button>
+                )}
+                {isPrivate && !course.viewerEnrolled && !hasPendingRequest && (
+                  <p className="m-0 text-center text-xs text-[#827b75] dark:text-[#bababa]">{t('detail.privateNote')}</p>
+                )}
+                {hasPendingRequest && (
+                  <div className="flex flex-col items-center gap-1.5 text-center text-[13px] text-[#57524e] dark:text-[#bababa]">
+                    <span>{t('detail.reviewNote')}</span>
+                    {pendingRequest !== 'unknown' && (
+                      <button
+                        type="button"
+                        onClick={handleCancelRequest}
+                        disabled={cancelRequest.isPending}
+                        className="font-semibold text-brand hover:underline disabled:opacity-50"
+                      >
+                        {cancelRequest.isPending ? t('detail.canceling') : t('detail.cancelRequest')}
+                      </button>
+                    )}
+                    {cancelRequest.isError && <span className="text-red-600">{errorText(cancelRequest.error)}</span>}
+                  </div>
+                )}
+                {joinNotice && <p className="m-0 text-center text-sm text-red-600">{joinNotice}</p>}
+                {isAtLeast(course.viewerRole, 'admin') && (
+                  <Link
+                    to={`/communities/${id}/community/cai-dat`}
+                    className="flex h-10 items-center justify-center gap-2 rounded-xl bg-brand/10 text-sm font-semibold text-brand hover:bg-brand/15"
+                  >
+                    <MaterialIcon name="settings" size={18} color="#ff570a" />
+                    {t('detail.settings')}
+                  </Link>
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-col px-3">
+              {MEMBERSHIP_PERKS.map((p, i) => (
+                <div key={p.key} className={`flex h-[63px] items-center gap-[13px] ${i < MEMBERSHIP_PERKS.length - 1 ? 'border-b border-[#f0ece9] dark:border-white/10' : ''}`}>
+                  <div className="grid size-10 flex-none place-items-center rounded-xl" style={{ background: `color-mix(in srgb, ${p.color} 16%, transparent)` }}>
+                    <MaterialIcon name={p.icon} size={20} color={p.color} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-base leading-6 font-bold text-[#201e1c] dark:text-white">{t(`detail.perks.${p.key}.title`)}</div>
+                    <div className="truncate text-xs leading-4 text-[#89827d] dark:text-[#bababa]">{t(`detail.perks.${p.key}.desc`)}</div>
+                  </div>
                 </div>
-              )}
-              {joinNotice && <p className="text-center text-sm text-red-600">{joinNotice}</p>}
-              {isAtLeast(course.viewerRole, 'admin') && (
-                <Link
-                  to={`/communities/${id}/community/cai-dat`}
-                  className="flex h-10 items-center justify-center gap-2 rounded-xl bg-brand/10 text-sm font-semibold text-brand hover:bg-brand/15"
-                >
-                  <MaterialIcon name="settings" size={18} color="#f26a1b" />
-                  {t('detail.settings')}
-                </Link>
-              )}
+              ))}
             </div>
           </div>
 
-          <div className="glass rounded-[22px] p-5">
-            <div className="mb-3.5 text-[17px] font-bold">{t('detail.youGet')}</div>
-            <div className="flex flex-col gap-3.5">
+          <div className="flex flex-col gap-4 rounded-[28px] border border-white bg-white p-[26px] shadow-[1px_6px_15px_rgba(121,81,54,0.08)] dark:border-white/10 dark:bg-[rgba(63,63,63,.3)] dark:shadow-none">
+            <div className="text-[22px] leading-normal font-extrabold text-[#201d1b] dark:text-white">{t('detail.youGet')}</div>
+            <div className="flex flex-col gap-3">
               {sidebarPerks(course).map((p) => (
-                <div key={p} className="flex items-center gap-3 text-[15px] text-stone-800">
-                  <span className="bg-brand-gradient grid size-[26px] flex-none place-items-center rounded-full shadow-[0_4px_10px_rgba(242,106,27,.3)]">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={3.5} strokeLinecap="round" strokeLinejoin="round">
+                <div key={p} className="flex items-center gap-3.5 text-base leading-6 text-[#201d1b] dark:text-white">
+                  <span className="grid size-[33px] flex-none place-items-center rounded-full bg-brand shadow-[0_6px_16px_rgba(246,107,24,0.13)]">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={3.5} strokeLinecap="round" strokeLinejoin="round">
                       <path d="M5 12l5 5 9-10" />
                     </svg>
                   </span>
@@ -437,25 +469,25 @@ export function CourseDetailPage() {
             </div>
           </div>
 
-          <div className="glass flex flex-col gap-3.5 rounded-[22px] p-[18px]">
-            <div className="flex items-start gap-3.5">
-              <div className="grid size-12 flex-none place-items-center rounded-2xl bg-[#ffe7d4]">
+          <div className="flex flex-col gap-3 rounded-[22px] bg-white pt-4 pr-[18px] pb-[17px] pl-[17px] shadow-[0_5px_32px_6px_rgba(121,81,54,0.05)] dark:bg-[rgba(63,63,63,.3)] dark:shadow-none">
+            <div className="flex items-start gap-3">
+              <div className="grid size-12 flex-none place-items-center rounded-xl bg-[#ffe7d6] dark:bg-[rgba(255,87,10,.16)]">
                 <PathIcon
                   d="M3 18v-6a9 9 0 0 1 18 0v6M21 19a2 2 0 0 1-2 2h-1v-6h3zM3 19a2 2 0 0 0 2 2h1v-6H3z"
-                  stroke="#f26a1b"
-                  size={22}
+                  stroke="#ff570a"
+                  size={26}
                 />
               </div>
-              <div>
-                <div className="text-base font-bold">{t('detail.needHelp')}</div>
-                <div className="mt-1 text-[13px] leading-[1.55] text-stone-500">
+              <div className="min-w-0 flex-1 pt-px">
+                <div className="text-[22px] font-bold text-[#242321] dark:text-white">{t('detail.needHelp')}</div>
+                <div className="mt-1 text-sm leading-5 text-[#8c8580] dark:text-[#bababa]">
                   {t('detail.contactUs')}
                 </div>
               </div>
             </div>
             <Link
               to="/contact"
-              className="flex h-[46px] items-center justify-center gap-2 rounded-2xl border-[1.5px] border-[#fdba8c] bg-white/70 text-[15px] font-semibold text-brand hover:bg-brand-soft"
+              className="flex h-12 items-center justify-center rounded-[15px] border border-brand text-base font-bold text-brand hover:bg-brand-soft"
             >
               {t('detail.sendMessage')}
             </Link>
@@ -463,16 +495,7 @@ export function CourseDetailPage() {
         </aside>
       </div>
 
-      <section ref={reviewsRef} className="mx-auto max-w-[1400px] scroll-mt-24 px-4 pt-10 pb-16 md:px-10">
-        <ReviewsSection
-          courseId={id}
-          viewerEnrolled={!!course.viewerEnrolled}
-          viewerRole={course.viewerRole}
-          fallbackRating={course.rating}
-          fallbackCount={course.ratingCount}
-        />
-      </section>
-
+      <div className="h-[clamp(36px,4.4vw,80px)]" />
       <Footer />
       <ToastHost />
 
@@ -510,79 +533,48 @@ export function CourseDetailPage() {
   );
 }
 
-function OverviewTab({ course, priceLabel }: { course: CommunityDetail; priceLabel: string }) {
+const CARD = 'rounded-[25px] bg-white p-6 shadow-[1px_6px_30px_2px_rgba(121,81,54,0.1)] dark:bg-[rgba(63,63,63,.3)] dark:shadow-none';
+const CARD_TITLE = 'm-0 text-[22px] leading-[30px] font-bold text-[#201e1c] dark:text-white';
+
+function OverviewTab({ course }: { course: CommunityDetail; priceLabel: string }) {
   const { t } = useTranslation('course');
   return (
-    <div className="flex flex-col gap-[22px]">
-      <section className="glass flex flex-col gap-4 rounded-[26px] p-6">
-        <SectionTitle>{t('detail.aboutCourse')}</SectionTitle>
-        <p className="m-0 text-[15px] leading-[1.75] text-stone-600 text-pretty whitespace-pre-line break-words">{course.about}</p>
+    <div className="flex flex-col gap-5">
+      <section className={`${CARD} flex flex-col gap-4`}>
+        <h2 className={CARD_TITLE}>{t('detail.tabs.overview')}</h2>
+        <p className="m-0 text-base leading-6 text-[#5c5855] text-pretty whitespace-pre-line break-words dark:text-[#bababa]">{course.about}</p>
         {course.highlights.length > 0 && (
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,300px),1fr))] gap-3">
+          <div className="flex flex-col gap-[13px]">
             {course.highlights.map((h) => (
-              <HighlightCard key={h.title} item={h} />
+              <p key={h.title} className="m-0 text-base leading-6 text-[#5c5855] dark:text-[#bababa]">
+                <b className="font-semibold text-[#201e1c] dark:text-white">{h.title}</b>
+                {h.desc ? `: ${h.desc}` : ''}
+              </p>
             ))}
           </div>
         )}
       </section>
 
       {course.gains.length > 0 && (
-      <section className="glass flex flex-col gap-4.5 rounded-[26px] p-6">
-        <SectionTitle>{t('detail.whatYouGet')}</SectionTitle>
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-x-7 gap-y-5">
-          {course.gains.map((g) => (
-            <div key={g.title} className="flex items-center gap-3.5">
-              <div className="glass-chip grid size-12 flex-none place-items-center rounded-2xl">
-                <PathIcon d={g.icon} stroke="#f26a1b" size={22} />
-              </div>
-              <div>
-                <div className="text-[15px] font-bold">{g.title}</div>
-                <div className="mt-0.5 text-sm text-stone-500">{g.desc}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-      )}
-
-      <section className="glass flex flex-col gap-4.5 rounded-[26px] p-6">
-        <SectionTitle>{t('detail.cost')}</SectionTitle>
-        <div className="flex flex-wrap items-center gap-x-10 gap-y-6 rounded-[22px] border border-white/95 bg-[linear-gradient(135deg,rgba(255,237,222,.85),rgba(255,247,240,.7))] p-6 shadow-[0_12px_30px_rgba(242,106,27,.08)]">
-          <div className="flex flex-1 basis-[240px] items-center gap-5">
-            <div className="grid size-[68px] flex-none place-items-center rounded-[18px] bg-white shadow-[0_8px_20px_rgba(242,106,27,.14)]">
-              <PathIcon d="M4 7h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a1 1 0 0 1-1-1zM4 7l11-3v3M16 13.5h.01" stroke="#f26a1b" size={32} />
-            </div>
-            <div className="text-[32px] font-extrabold tracking-[-1px] sm:text-[40px] sm:whitespace-nowrap">
-              {priceLabel} {course.priceUsd > 0 && <span className="text-[20px] sm:text-[26px] font-semibold tracking-normal">{t('detail.perMonthSpaced')}</span>}
-            </div>
-          </div>
-          {course.priceNotes.length > 0 && <div className="hidden w-px self-stretch bg-[rgba(242,106,27,.2)] sm:block" />}
-          <div className="flex flex-1 basis-[260px] flex-col gap-2.5">
-            {course.priceNotes.map((p) => (
-              <div key={p} className="flex items-center gap-2.5 text-[15px] text-stone-800">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f26a1b" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" className="flex-none">
-                  <path d="M5 12l5 5 9-10" />
-                </svg>
-                {p}
+        <section className={`${CARD} flex flex-col gap-4`}>
+          <h2 className={CARD_TITLE}>{t('detail.whatYouGet')}</h2>
+          <div className="flex flex-col gap-[13px]">
+            {course.gains.map((g) => (
+              <div key={g.title} className="flex items-center gap-3 text-base leading-6 text-[#5c5855] dark:text-[#bababa]">
+                <span className="grid size-[22px] flex-none place-items-center rounded-full bg-gradient-to-b from-[#4be582] to-[#00a53f] shadow-[0_3px_5px_rgba(0,166,67,0.19)]">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={3.5} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12l5 5 9-10" />
+                  </svg>
+                </span>
+                <span>
+                  {g.title}
+                  {g.desc ? ` — ${g.desc}` : ''}
+                </span>
               </div>
             ))}
           </div>
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function HighlightCard({ item }: { item: CourseHighlight }) {
-  return (
-    <div className="glass flex items-start gap-3.5 rounded-[20px] p-4.5">
-      <div className="grid size-12 flex-none place-items-center rounded-2xl bg-[#ffe7d4]">
-        <PathIcon d={item.icon} stroke="#f26a1b" size={24} />
-      </div>
-      <div>
-        <div className="text-[15px] leading-[1.35] font-bold">{item.title}</div>
-        <div className="mt-1.5 text-[13px] leading-[1.55] text-stone-500">{item.desc}</div>
-      </div>
+        </section>
+      )}
     </div>
   );
 }
@@ -591,8 +583,8 @@ function ContentTab({ courseId, enrolled, lessons }: { courseId: string; enrolle
   const { t } = useTranslation('course');
   // Module/bài học thật nằm trong Lớp học của cộng đồng (chỉ thành viên xem được), không có bản "xem trước" bịa ở đây.
   return (
-    <section className="glass flex flex-col items-center gap-3 rounded-3xl p-8 text-center">
-      <p className="m-0 text-[15px] text-stone-700">
+    <section className={`${CARD} flex flex-col items-center gap-3 p-8 text-center`}>
+      <p className="m-0 text-[15px] text-[#5c5855] dark:text-[#bababa]">
         {lessons > 0
           ? t('detail.contentSome', { n: lessons })
           : t('detail.contentNone')}
@@ -610,7 +602,7 @@ function FaqTab({ faqs }: { faqs: CourseFaq[] }) {
   return (
     <section className="flex flex-col gap-2.5">
       {faqs.map((f) => (
-        <div key={f.question} className="glass rounded-[18px] p-4 px-5">
+        <div key={f.question} className="rounded-[18px] bg-white px-5 py-4 shadow-[1px_6px_15px_rgba(121,81,54,0.08)] dark:bg-[rgba(63,63,63,.3)] dark:shadow-none">
           <div className="text-[15px] font-bold">{f.question}</div>
           <div className="mt-1.5 text-sm leading-[1.6] text-stone-600">{f.answer}</div>
         </div>

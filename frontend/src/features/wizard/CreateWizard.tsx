@@ -438,7 +438,7 @@ export function CreateWizard() {
                   onClick={() => goto(i)}
                   className={`flex w-full items-center gap-3.5 rounded-[14px] border-0 px-3 py-2.5 text-left max-lg:whitespace-nowrap ${on ? 'bg-[#fff1e6]' : 'bg-transparent'} ${clickable ? 'cursor-pointer' : 'cursor-default'}`}
                 >
-                  <span className={`grid size-[38px] flex-none place-items-center rounded-full text-[15px] font-bold ${on || done ? 'bg-brand-gradient border-0 text-white' : 'border-[1.5px] border-[#e7e0da] bg-white text-stone-700'} ${on ? 'shadow-[0_6px_14px_rgba(242,106,27,.3)]' : ''}`}>
+                  <span className={`grid size-[38px] flex-none place-items-center rounded-full text-[15px] font-bold ${on || done ? 'bg-brand-gradient border-0 text-white' : 'border-[1.5px] border-[#e7e0da] bg-white text-stone-700'} ${on ? 'shadow-[0_6px_14px_rgba(255,87,10,.3)]' : ''}`}>
                     {done ? '✓' : i + 1}
                   </span>
                   <span className={`text-[15px] ${on ? 'font-bold text-stone-900' : 'font-medium text-stone-600'}`}>{t(`steps.${labelKey}`)}</span>
@@ -481,7 +481,7 @@ export function CreateWizard() {
               <div className="flex items-center gap-3.5 text-[13px] text-stone-500">
                 <span className="flex-none">{t('wizard.stepOf', { step: step + 1 })}</span>
                 <div className="h-[5px] flex-1 overflow-hidden rounded-full bg-[#efeae6]">
-                  <div className="h-full rounded-full bg-[linear-gradient(90deg,#ff8f45,#f26a1b)] transition-[width]" style={{ width: `${(step + 1) * 20}%` }} />
+                  <div className="h-full rounded-full bg-[linear-gradient(90deg,#ff8f45,#ff570a)] transition-[width]" style={{ width: `${(step + 1) * 20}%` }} />
                 </div>
               </div>
               <h1 className="mt-5 mb-0 text-[clamp(26px,3vw,40px)] leading-[1.15] font-extrabold tracking-[-0.03em]">
@@ -509,7 +509,7 @@ export function CreateWizard() {
                         savedCardReady && draft?.plan?.paymentMethod ? (
                           <div className="flex items-center justify-between gap-3 text-sm">
                             <span className="flex items-center gap-2 font-semibold">
-                              <MaterialIcon name="credit_card" size={22} color="#f26a1b" filled />
+                              <MaterialIcon name="credit_card" size={22} color="#ff570a" filled />
                               {t('wizard.cardSaved', { brand: draft.plan.paymentMethod.brand, last4: draft.plan.paymentMethod.last4 })}
                             </span>
                             <button

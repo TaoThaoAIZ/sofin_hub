@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
+import { Footer } from '../components/layout/Footer';
 import { Header } from '../components/layout/Header';
+import { ThemedImg } from '../components/ui/ThemedImg';
 import { ButtonLink } from '../components/ui/Button';
 import { MaterialIcon } from '../components/ui/MaterialIcon';
 import { useAuth } from '../features/auth/AuthContext';
@@ -10,21 +12,19 @@ import { sortCommunities, useMyCommunities } from '../features/settings/communit
 
 const ACTIVE = 'myCommunities';
 
+/** Nút phụ (Figma "Explore communities action"): cao 47, bo 15; sáng = trắng viền #eee1d9; tối = xám sáng .16. */
 const OUTLINE_BTN =
-  'inline-flex h-[52px] items-center justify-center gap-2.5 rounded-2xl border border-[rgba(120,60,20,.12)] bg-white px-7 text-base font-bold text-stone-900 no-underline hover:border-[#fdba74]';
-
-/** Minh họa cộng đồng (nhỏ, nằm trên tiêu đề). */
-function CommunityArt() {
-  return <img src="/images/background_comunity.png" alt="" className="mx-auto mb-4 h-auto w-full max-w-[460px]" />;
-}
+  'inline-flex h-[47px] items-center justify-center gap-2.5 rounded-[15px] border border-[#eee1d9] bg-white px-7 text-[15px] font-bold text-[#1e1c1a] no-underline hover:border-[#fdba74] dark:border-transparent dark:bg-[rgba(232,232,232,.16)] dark:text-[#e8e8e8]';
+/** Nút chính (Figma "Sign in action"): cam #ff6717, cao 47, bo 15. */
+const PRIMARY_BTN = 'h-[47px] gap-2.5 rounded-[15px] bg-[#ff6717] px-8 text-[15px] font-bold shadow-[0_4px_10px_rgba(229,120,41,0.15)]';
 
 function EmptyState({ title, content, children }: { title: React.ReactNode; content: string; children: React.ReactNode }) {
   return (
-    <section className="mx-auto flex max-w-[640px] flex-col items-center px-4 pt-8 pb-24 text-center">
-      <CommunityArt />
-      <h1 className="m-0 text-[clamp(30px,4.4vw,52px)] leading-[1.15] font-extrabold tracking-[-1.5px] text-balance">{title}</h1>
-      <p className="mt-4 mb-8 max-w-[520px] text-[clamp(15px,1.4vw,18px)] leading-[1.6] text-stone-600 text-pretty">{content}</p>
-      <div className="flex flex-wrap items-center justify-center gap-3.5">{children}</div>
+    <section className="mx-auto flex max-w-[1000px] flex-col items-center px-4 pt-[clamp(24px,3.5vw,64px)] pb-[clamp(40px,5vw,90px)] text-center">
+      <ThemedImg name="guest_art" className="mx-auto h-auto w-full max-w-[482px]" />
+      <h1 className="m-0 pt-2.5 text-[clamp(30px,2.45vw,44px)] leading-[1.32] font-extrabold text-[#1e1c1a] text-balance dark:text-white">{title}</h1>
+      <p className="mt-3 mb-0 max-w-[620px] text-base leading-[26px] text-[#696460] text-pretty dark:text-[#bababa]">{content}</p>
+      <div className="flex flex-wrap items-center justify-center gap-[13px] pt-[29px]">{children}</div>
     </section>
   );
 }
@@ -50,7 +50,7 @@ export function MyCommunitiesPage() {
         }
         content={t('myCommunities.guestContent')}
       >
-        <ButtonLink to="/login" state={{ from: location.pathname }} className="h-[52px] gap-2.5 rounded-2xl px-8 text-base font-bold">
+        <ButtonLink to="/login" state={{ from: location.pathname }} className={PRIMARY_BTN}>
           <MaterialIcon name="login" size={20} color="#fff" />
           {t('myCommunities.login')}
         </ButtonLink>
@@ -58,9 +58,9 @@ export function MyCommunitiesPage() {
           <MaterialIcon name="explore" size={20} />
           {t('myCommunities.explore')}
         </Link>
-        <div className="mt-2 w-full text-[15px] text-stone-500">
+        <div className="mt-5 w-full text-[13px] leading-5 text-[#837b76] dark:text-[#bababa]">
           {t('myCommunities.noAccount')}{' '}
-          <Link to="/register" className="font-bold">
+          <Link to="/register" className="font-bold text-inherit">
             {t('myCommunities.register')}
           </Link>
         </div>
@@ -78,7 +78,7 @@ export function MyCommunitiesPage() {
         title={t('myCommunities.emptyTitle')}
         content={t('myCommunities.emptyContent')}
       >
-        <ButtonLink to="/" className="h-[52px] gap-2.5 rounded-2xl px-8 text-base font-bold">
+        <ButtonLink to="/" className={PRIMARY_BTN}>
           <MaterialIcon name="explore" size={20} color="#fff" />
           {t('myCommunities.explore')}
         </ButtonLink>
@@ -107,7 +107,7 @@ export function MyCommunitiesPage() {
                     {roleText(c)}
                   </span>
                 </div>
-                {c.pinned && <MaterialIcon name="keep" size={18} filled color="#f26a1b" />}
+                {c.pinned && <MaterialIcon name="keep" size={18} filled color="#ff570a" />}
               </div>
               <div className="text-sm leading-normal text-stone-500">{lineText(c)}</div>
             </Link>
@@ -118,9 +118,10 @@ export function MyCommunitiesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(800px_600px_at_5%_95%,rgba(255,160,100,.22),transparent_70%),radial-gradient(700px_500px_at_98%_55%,rgba(255,200,160,.25),transparent_70%),#fff]">
+    <div className="min-h-screen">
       <Header active={ACTIVE} />
       {body}
+      <Footer />
     </div>
   );
 }

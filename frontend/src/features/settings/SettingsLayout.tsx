@@ -49,7 +49,7 @@ function SideNav() {
                 <>
                   <span
                     className={`grid size-[38px] flex-none place-items-center rounded-full ${
-                      isActive ? 'bg-gradient-to-b from-[#ff8f45] to-[#f26a1b]' : 'border border-[#efe9e4] bg-white'
+                      isActive ? 'bg-gradient-to-b from-[#ff8f45] to-[#ff570a]' : 'border border-[#efe9e4] bg-white'
                     }`}
                   >
                     <MaterialIcon name={n.icon} size={21} filled={isActive} color={isActive ? '#fff' : '#292524'} />

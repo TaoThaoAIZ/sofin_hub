@@ -111,7 +111,7 @@ function NotificationsInner() {
   const del = useDeleteNotification();
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen">
       <Header />
       <div className="mx-auto max-w-[760px] px-4 py-8 md:px-0">
         <div className="flex flex-wrap items-center gap-3">
@@ -150,7 +150,7 @@ function NotificationsInner() {
             <div key={n.id} className={`flex items-start gap-3 border-b border-[rgba(120,60,20,.06)] px-4 py-3.5 ${n.readAt ? '' : 'bg-brand/5'}`}>
               <button type="button" onClick={() => open(n)} className="flex min-w-0 flex-1 items-start gap-3 text-left">
                 <span className="grid size-10 flex-none place-items-center rounded-full bg-brand/10">
-                  <MaterialIcon name={NOTIFICATION_TYPE_ICON[n.type] ?? 'notifications'} size={20} color="#f26a1b" />
+                  <MaterialIcon name={NOTIFICATION_TYPE_ICON[n.type] ?? 'notifications'} size={20} color="#ff570a" />
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className={`block text-[14px] ${n.readAt ? 'font-medium' : 'font-bold'}`}>{n.title}</span>

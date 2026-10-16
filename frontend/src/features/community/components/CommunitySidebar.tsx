@@ -59,7 +59,7 @@ export function CommunitySidebar({ courseTitle }: { courseTitle: string }) {
             end={item.end}
             className={({ isActive }) =>
               `flex h-11 items-center gap-3.5 rounded-xl px-3.5 text-[14.5px] ${
-                isActive ? 'bg-brand-soft font-semibold text-brand' : 'font-normal text-stone-900 hover:bg-stone-50'
+                isActive ? 'bg-brand-soft font-semibold text-brand dark:bg-white/10' : 'font-normal text-stone-900 hover:bg-stone-50'
               }`
             }
           >
@@ -76,7 +76,7 @@ export function CommunitySidebar({ courseTitle }: { courseTitle: string }) {
             to="kiem-duyet"
             className={({ isActive }) =>
               `flex h-11 items-center gap-3.5 rounded-xl px-3.5 text-[14.5px] ${
-                isActive ? 'bg-brand-soft font-semibold text-brand' : 'font-normal text-stone-900 hover:bg-stone-50'
+                isActive ? 'bg-brand-soft font-semibold text-brand dark:bg-white/10' : 'font-normal text-stone-900 hover:bg-stone-50'
               }`
             }
           >
@@ -89,7 +89,7 @@ export function CommunitySidebar({ courseTitle }: { courseTitle: string }) {
             to="doanh-thu"
             className={({ isActive }) =>
               `flex h-11 items-center gap-3.5 rounded-xl px-3.5 text-[14.5px] ${
-                isActive ? 'bg-brand-soft font-semibold text-brand' : 'font-normal text-stone-900 hover:bg-stone-50'
+                isActive ? 'bg-brand-soft font-semibold text-brand dark:bg-white/10' : 'font-normal text-stone-900 hover:bg-stone-50'
               }`
             }
           >
@@ -102,7 +102,7 @@ export function CommunitySidebar({ courseTitle }: { courseTitle: string }) {
             to="cai-dat"
             className={({ isActive }) =>
               `flex h-11 items-center gap-3.5 rounded-xl px-3.5 text-[14.5px] ${
-                isActive ? 'bg-brand-soft font-semibold text-brand' : 'font-normal text-stone-900 hover:bg-stone-50'
+                isActive ? 'bg-brand-soft font-semibold text-brand dark:bg-white/10' : 'font-normal text-stone-900 hover:bg-stone-50'
               }`
             }
           >

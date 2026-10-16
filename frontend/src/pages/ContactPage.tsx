@@ -46,7 +46,7 @@ export function ContactPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen">
       <Header />
       <main className="mx-auto w-full max-w-[680px] px-4 py-8 md:py-12">
         <h1 className="m-0 text-[clamp(26px,3vw,36px)] font-extrabold tracking-[-1px]">{t('contact.title')}</h1>

@@ -18,7 +18,7 @@ function ResultRow({ r }: { r: SearchResult }) {
   return (
     <Link to={resultHref(r)} className="flex items-start gap-3 border-b border-[rgba(120,60,20,.06)] px-4 py-3.5 hover:bg-[#fff7f0]">
       <span className="grid size-10 flex-none place-items-center rounded-full bg-brand/10">
-        <MaterialIcon name={RESULT_ICON[r.type]} size={20} color="#f26a1b" />
+        <MaterialIcon name={RESULT_ICON[r.type]} size={20} color="#ff570a" />
       </span>
       <span className="min-w-0 flex-1">
         {r.type === 'course' && (
@@ -85,7 +85,7 @@ function SearchInner() {
   const err = result.error instanceof ApiError ? result.error : null;
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen">
       <Header />
       <div className="mx-auto max-w-[820px] px-4 py-8 md:px-0">
         <form

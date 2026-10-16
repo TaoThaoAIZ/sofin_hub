@@ -175,8 +175,9 @@ export function createBankReconciler(deps: BankDeps) {
     };
 
     if (t.amount > MAX_SINGLE_AMOUNT) {
-      await repo.recordBankTransaction({ ...base, note: `vượt trần ${MAX_SINGLE_AMOUNT}` });
-      alert(`giao dịch ${t.externalId} ${t.amount}đ vượt trần — cần admin xem`);
+      const { created } = await repo.recordBankTransaction({ ...base, note: `vượt trần ${MAX_SINGLE_AMOUNT}` });
+      // Vòng quét chạy mỗi phút và gặp lại đúng giao dịch này: chỉ báo admin ở lần đầu ghi nhận, không báo lặp.
+      if (created) alert(`giao dịch ${t.externalId} ${t.amount}đ vượt trần — cần admin xem`);
       return { outcome: 'unmatched' };
     }
 
@@ -193,15 +194,17 @@ export function createBankReconciler(deps: BankDeps) {
         return { outcome: 'already', paymentId: payment.id };
       }
       // Phiên đã được trả bằng giao dịch khác ⇒ đây là khoản chuyển TRÙNG: không cấp lần 2, admin hoàn tay.
-      alert(`mã ${t.ref} đã thanh toán xong nhưng nhận thêm ${t.amount}đ (giao dịch ${t.externalId}) — cần hoàn tiền thủ công`);
-      return note(`mã ${t.ref} đã thanh toán trước đó — chuyển trùng, cần hoàn`, 'duplicate', payment.id);
+      const dupNote = `mã ${t.ref} đã thanh toán trước đó — chuyển trùng, cần hoàn`;
+      if (row.note !== dupNote) alert(`mã ${t.ref} đã thanh toán xong nhưng nhận thêm ${t.amount}đ (giao dịch ${t.externalId}) — cần hoàn tiền thủ công`);
+      return note(dupNote, 'duplicate', payment.id);
     }
 
     const now = new Date();
     if (payment.status === 'failed' || (payment.expiresAt && new Date(payment.expiresAt) < now)) {
       if (payment.status === 'pending') await repo.transition(payment.id, ['pending'], { status: 'failed', failureReason: 'expired' });
-      alert(`phiên ${t.ref} đã hết hạn/đóng nhưng nhận ${t.amount}đ — cần admin duyệt tay`);
-      return note(`phiên ${t.ref} đã hết hạn/đóng (${payment.failureReason ?? 'expired'}) — duyệt tay`, 'expired', payment.id);
+      const expiredNote = `phiên ${t.ref} đã hết hạn/đóng (${payment.failureReason ?? 'expired'}) — duyệt tay`;
+      if (row.note !== expiredNote) alert(`phiên ${t.ref} đã hết hạn/đóng nhưng nhận ${t.amount}đ — cần admin duyệt tay`);
+      return note(expiredNote, 'expired', payment.id);
     }
 
     if (t.amount < payment.amountCents) {
@@ -222,8 +225,9 @@ export function createBankReconciler(deps: BankDeps) {
     } catch (err) {
       // Tiền ĐÃ VÀO nhưng chưa cấp được (cộng đồng bị xóa/khóa, bị cấm...): payment vẫn 'pending', admin duyệt tay.
       const msg = err instanceof Error ? err.message : String(err);
-      alert(`mã ${t.ref} nhận ${t.amount}đ nhưng chưa cấp được: ${msg} — cần admin duyệt tay`);
-      return note(`chưa cấp được: ${msg}`, 'error', payment.id);
+      const failNote = `chưa cấp được: ${msg}`;
+      if (row.note !== failNote) alert(`mã ${t.ref} nhận ${t.amount}đ nhưng chưa cấp được: ${msg} — cần admin duyệt tay`);
+      return note(failNote, 'error', payment.id);
     }
   }
 

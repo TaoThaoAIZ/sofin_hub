@@ -66,7 +66,7 @@ export function QuizEditor({ communityId, lessonId }: { communityId: string; les
   return (
     <section className="rounded-xl border border-[#ece5df] bg-[#faf7f4] p-3.5" aria-label={t('quizEditor.title')}>
       <div className="flex flex-wrap items-center gap-2">
-        <MaterialIcon name="quiz" size={20} color="#f26a1b" />
+        <MaterialIcon name="quiz" size={20} color="#ff570a" />
         <span className="text-[14px] font-bold">{t('quizEditor.title')}</span>
         <span className="text-[12px] text-stone-500">{t('quizEditor.optional')}</span>
       </div>

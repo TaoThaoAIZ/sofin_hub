@@ -77,7 +77,7 @@ export function MediaField({ value, onChange }: { value: CommunityMediaItem[]; o
             className="grid aspect-[4/3] cursor-pointer place-items-center rounded-xl border-[1.5px] border-dashed border-[#e7c9b2] bg-[#fffaf6] p-2 text-center text-[12.5px] text-stone-500 hover:bg-brand-soft disabled:opacity-60"
           >
             <span className="flex flex-col items-center gap-1">
-              <MaterialIcon name="add_photo_alternate" size={24} color="#f26a1b" />
+              <MaterialIcon name="add_photo_alternate" size={24} color="#ff570a" />
               {uploading ? t('general.mediaUploading') : t('general.mediaAdd')}
             </span>
           </button>

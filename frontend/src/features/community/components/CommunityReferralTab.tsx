@@ -87,7 +87,7 @@ function CommunityProgram() {
       <section className="glass rounded-3xl p-6">
         <div className="flex items-center gap-3">
           <span className="grid size-11 flex-none place-items-center rounded-full bg-[#fff1e6]">
-            <MaterialIcon name="redeem" size={22} filled color="#f26a1b" />
+            <MaterialIcon name="redeem" size={22} filled color="#ff570a" />
           </span>
           <div className="min-w-0">
             <h1 className="m-0 text-[22px] font-extrabold tracking-tight">{t('referral.title')}</h1>

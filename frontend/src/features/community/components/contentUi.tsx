@@ -43,7 +43,7 @@ export function toLocalInput(iso: string): string {
 
 export const inputCls = 'h-10 w-full rounded-xl border border-[rgba(120,60,20,.12)] bg-white px-3.5 text-sm outline-0 focus:border-brand';
 export const areaCls = 'w-full rounded-xl border border-[rgba(120,60,20,.12)] bg-white px-3.5 py-2.5 text-sm outline-0 focus:border-brand';
-export const primaryBtn = 'inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-b from-[#ff8f45] to-brand px-4 text-sm font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,.45),0_8px_18px_rgba(242,106,27,.28)] disabled:opacity-50';
+export const primaryBtn = 'inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-b from-[#ff8f45] to-brand px-4 text-sm font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,.45),0_8px_18px_rgba(255,87,10,.28)] disabled:opacity-50';
 export const ghostBtn =
   'inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[rgba(120,60,20,.12)] bg-white px-4 text-sm font-semibold text-stone-700 hover:bg-stone-50 disabled:opacity-50';
 export const dangerBtn = 'inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-bold text-white disabled:opacity-50';

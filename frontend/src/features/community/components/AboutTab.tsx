@@ -39,7 +39,7 @@ export function AboutTab() {
         <div className="grid grid-cols-4 gap-3 max-md:grid-cols-2">
           {chips.map((c) => (
             <div key={c.t} className="glass flex min-w-0 items-center gap-3 rounded-[18px] px-4 py-3.5">
-              {c.icon && <MaterialIcon name={c.icon} size={28} color="#f26a1b" />}
+              {c.icon && <MaterialIcon name={c.icon} size={28} color="#ff570a" />}
               {c.face && <span className="grid size-[38px] flex-none place-items-center rounded-full bg-[#e7d3c6] text-xs font-bold text-[#7c2d12]">{c.face}</span>}
               <div className="min-w-0">
                 <div className="truncate text-[14.5px] font-semibold">{c.t}</div>
@@ -60,7 +60,7 @@ export function AboutTab() {
         <section className={`${glass} px-6 py-[22px]`}>
           <div className="mb-[18px] flex items-center gap-3.5">
             <span className="grid size-[42px] place-items-center rounded-full bg-brand/10">
-              <MaterialIcon name="bolt" size={24} filled color="#f26a1b" />
+              <MaterialIcon name="bolt" size={24} filled color="#ff570a" />
             </span>
             <span className="text-[21px] font-extrabold">{t('about.whatYouGet')}</span>
           </div>
@@ -68,7 +68,7 @@ export function AboutTab() {
             {course.gains.map((g, i) => (
               <div key={g.title} className="flex items-center gap-[18px]">
                 <span className="grid size-[60px] flex-none place-items-center rounded-2xl bg-brand/10">
-                  <MaterialIcon name={GAIN_ICONS[i % GAIN_ICONS.length]!} size={28} filled color="#f26a1b" />
+                  <MaterialIcon name={GAIN_ICONS[i % GAIN_ICONS.length]!} size={28} filled color="#ff570a" />
                 </span>
                 <div>
                   <div className="text-[15px] leading-normal font-semibold text-stone-800">{g.title}</div>
@@ -82,7 +82,7 @@ export function AboutTab() {
 
         <section className={`${glass} px-6 pt-[22px] pb-[18px]`}>
           <div className="mb-4 flex items-center gap-3.5">
-            <MaterialIcon name="menu_book" size={32} filled color="#f26a1b" />
+            <MaterialIcon name="menu_book" size={32} filled color="#ff570a" />
             <span className="text-[21px] font-extrabold">{t('about.highlights')}</span>
           </div>
           <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4">
@@ -108,7 +108,7 @@ export function AboutTab() {
               {course.priceUsd === 0 && <div className="py-1 text-[14.5px] text-stone-500">{t('about.communityFree')}</div>}
               {course.priceNotes.map((x) => (
                 <div key={x} className="flex items-start gap-3 py-1 text-[14.5px] text-stone-800">
-                  <MaterialIcon name="check" size={20} color="#f26a1b" />
+                  <MaterialIcon name="check" size={20} color="#ff570a" />
                   {x}
                 </div>
               ))}

@@ -21,7 +21,7 @@ const COMPONENTS = {
 export function FaqPage() {
   const { t } = useTranslation('legal');
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen">
       <Header />
 
       <div className="mx-auto max-w-[860px] px-4 pt-10 pb-16 md:px-10">

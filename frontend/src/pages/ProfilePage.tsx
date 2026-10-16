@@ -29,7 +29,7 @@ function ProfileContent() {
   const { data: profile, isPending, error } = usePublicProfile(id);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen">
       <Header />
       <main className="mx-auto flex w-full max-w-[860px] flex-col gap-6 px-4 py-8 md:py-12">
         {isPending && <p className="py-16 text-center text-stone-500">{t('profile.loading')}</p>}

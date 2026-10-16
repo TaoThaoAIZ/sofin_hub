@@ -135,7 +135,7 @@ export function SearchBox({ placeholder }: { placeholder?: string }) {
             </button>
           ))}
           <button type="button" onClick={goSearch} className="flex w-full items-center gap-2 border-t border-[rgba(120,60,20,.08)] px-4 py-2.5 text-left text-[13px] font-semibold text-brand hover:bg-brand/5">
-            <MaterialIcon name="search" size={17} color="#f26a1b" />
+            <MaterialIcon name="search" size={17} color="#ff570a" />
             {t('box.viewAll', { q: q.trim() })}
           </button>
         </div>

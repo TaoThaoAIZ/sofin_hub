@@ -120,7 +120,7 @@ function NotifyForm({ data }: { data: NotifySettings }) {
           )}
           <div className="mt-[18px] flex gap-3.5 border-t border-[#f1ebe6] pt-[18px]">
             <span className="grid size-[38px] flex-none place-items-center rounded-full bg-[#fff1e6]">
-              <MaterialIcon name="bedtime" size={20} filled color="#f26a1b" />
+              <MaterialIcon name="bedtime" size={20} filled color="#ff570a" />
             </span>
             <div className="min-w-0 flex-1">
               <div className="text-[15px] font-bold">{t('notifyTab.quietTitle')}</div>
@@ -141,7 +141,7 @@ function NotifyForm({ data }: { data: NotifySettings }) {
           {DM_ROWS.map((m) => (
             <div key={m.key} className="flex items-center gap-3.5 border-t border-[#f1ebe6] py-3.5">
               <span className="grid size-[38px] flex-none place-items-center rounded-full bg-[#fff1e6]">
-                <MaterialIcon name={m.icon} size={20} color="#f26a1b" />
+                <MaterialIcon name={m.icon} size={20} color="#ff570a" />
               </span>
               <div className="min-w-0 flex-1">
                 <div className="text-[15px] font-bold">{t(m.title)}</div>

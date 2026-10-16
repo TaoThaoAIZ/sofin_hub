@@ -71,13 +71,13 @@ export function LessonList({ communityId, courseId, moduleId, unlock, canManage 
           </Link>
           {l.locked ? (
             unlock ? (
-              <UnlockControl unlock={unlock} label={t('classroom.unlockBuy')} className="grid size-8 flex-none place-items-center rounded-full bg-brand/10 hover:bg-brand/20"><MaterialIcon name="lock" size={16} filled color="#f26a1b" /></UnlockControl>
+              <UnlockControl unlock={unlock} label={t('classroom.unlockBuy')} className="grid size-8 flex-none place-items-center rounded-full bg-brand/10 hover:bg-brand/20"><MaterialIcon name="lock" size={16} filled color="#ff570a" /></UnlockControl>
             ) : (
               <span className="grid size-8 flex-none place-items-center rounded-full bg-stone-100"><MaterialIcon name="lock" size={16} filled color="#a8a29e" /></span>
             )
           ) : (
             <Link to={lessonPath(communityId, l.id)} aria-label={t('classroom.lessonList.learn', { title: l.title })} className="grid size-8 flex-none place-items-center rounded-full bg-brand/10 hover:bg-brand/20">
-              <MaterialIcon name="play_arrow" size={18} filled color="#f26a1b" />
+              <MaterialIcon name="play_arrow" size={18} filled color="#ff570a" />
             </Link>
           )}
           {canManage && (
@@ -174,7 +174,7 @@ export function ClassroomTab() {
         <ToastHost />
         <div className="glass flex flex-col items-center gap-2 rounded-3xl px-6 py-12 text-center">
           <span className="grid size-14 place-items-center rounded-full bg-brand/10">
-            <MaterialIcon name="school" size={30} filled color="#f26a1b" />
+            <MaterialIcon name="school" size={30} filled color="#ff570a" />
           </span>
           <h1 className="m-0 text-[22px] font-extrabold">{t('classroom.noCourses')}</h1>
           <p className="m-0 max-w-md text-sm text-stone-600">
@@ -219,7 +219,7 @@ export function ClassroomTab() {
             { icon: 'group', value: formatCompact(community?.stats.members ?? 0), label: t('classroom.statStudents') },
           ].map((s) => (
             <div key={s.label} className="flex items-center gap-2.5 px-5 first:pl-0 last:pr-0">
-              <MaterialIcon name={s.icon} size={24} color="#f26a1b" />
+              <MaterialIcon name={s.icon} size={24} color="#ff570a" />
               <div>
                 <div className="text-[17px] leading-tight font-extrabold">{s.value}</div>
                 <div className="mt-0.5 text-xs text-stone-600">{s.label}</div>
@@ -250,7 +250,7 @@ export function ClassroomTab() {
                 className={`glass flex w-[250px] flex-none items-center gap-3 rounded-2xl p-2.5 text-left transition-transform hover:-translate-y-0.5 ${active ? 'ring-2 ring-brand' : ''}`}
               >
                 <span className="grid size-[52px] flex-none place-items-center overflow-hidden rounded-xl bg-brand/10">
-                  {thumb ? <img src={thumb} alt="" className="size-full object-cover" /> : <MaterialIcon name="school" size={26} filled color="#f26a1b" />}
+                  {thumb ? <img src={thumb} alt="" className="size-full object-cover" /> : <MaterialIcon name="school" size={26} filled color="#ff570a" />}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[13.5px] font-bold">{c.title}</span>
@@ -302,7 +302,7 @@ export function ClassroomTab() {
             onClick={() => claim.mutate(undefined, { onSuccess: setCert, onError: (e) => toast(errText(e), 'error') })}
             className={ghostBtn}
           >
-            <MaterialIcon name="workspace_premium" size={19} filled color="#f26a1b" />
+            <MaterialIcon name="workspace_premium" size={19} filled color="#ff570a" />
             {claim.isPending ? t('classroom.issuing') : t('classroom.claim')}
           </button>
         )}
@@ -380,16 +380,16 @@ export function ClassroomTab() {
                   </div>
                   {unlockOf(m) ? (
                     <UnlockControl unlock={unlockOf(m)!} label={t('classroom.unlockBuy')} className="grid size-[42px] flex-none place-items-center rounded-[14px] bg-brand/10 hover:bg-brand/20">
-                      <MaterialIcon name="lock_open" size={22} color="#f26a1b" />
+                      <MaterialIcon name="lock_open" size={22} color="#ff570a" />
                     </UnlockControl>
                   ) : (
                   m.locked ? (
                     <span title={lockText(m)} className="grid size-[42px] flex-none cursor-not-allowed place-items-center rounded-[14px] bg-brand/10 opacity-50">
-                      <MaterialIcon name="arrow_forward" size={22} color="#f26a1b" />
+                      <MaterialIcon name="arrow_forward" size={22} color="#ff570a" />
                     </span>
                   ) : (
                     <button type="button" disabled={opening === m.id} onClick={() => void openModule(m)} aria-label={t('classroom.openAria', { title: m.title })} className="grid size-[42px] flex-none place-items-center rounded-[14px] bg-brand/10 hover:bg-brand/20">
-                      <MaterialIcon name="arrow_forward" size={22} color="#f26a1b" />
+                      <MaterialIcon name="arrow_forward" size={22} color="#ff570a" />
                     </button>
                   )
                   )}

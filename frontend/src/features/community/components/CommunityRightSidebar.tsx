@@ -91,7 +91,7 @@ export function CommunityRightSidebar({ course }: { course: CommunityDetail }) {
               disabled
               className="flex h-[42px] flex-1 items-center justify-center gap-2 rounded-2xl bg-brand/10 text-[13.5px] font-bold text-brand disabled:cursor-default"
             >
-              <MaterialIcon name="check_circle" size={20} filled color="#f26a1b" />
+              <MaterialIcon name="check_circle" size={20} filled color="#ff570a" />
               {t('rightSidebar.joined')}
             </button>
           </div>
@@ -146,13 +146,13 @@ export function CommunityRightSidebar({ course }: { course: CommunityDetail }) {
           <div className="text-[14.5px] font-extrabold">{t('rightSidebar.premiumTitle')}</div>
           <div className="mt-2.5 flex flex-col gap-1.5 text-left text-[12.5px] text-stone-600">
             <span className="flex items-center gap-2">
-              <MaterialIcon name="check" size={16} color="#f26a1b" /> {t('rightSidebar.premium1')}
+              <MaterialIcon name="check" size={16} color="#ff570a" /> {t('rightSidebar.premium1')}
             </span>
             <span className="flex items-center gap-2">
-              <MaterialIcon name="check" size={16} color="#f26a1b" /> {t('rightSidebar.premium2')}
+              <MaterialIcon name="check" size={16} color="#ff570a" /> {t('rightSidebar.premium2')}
             </span>
             <span className="flex items-center gap-2">
-              <MaterialIcon name="check" size={16} color="#f26a1b" /> {t('rightSidebar.premium3')}
+              <MaterialIcon name="check" size={16} color="#ff570a" /> {t('rightSidebar.premium3')}
             </span>
           </div>
         </div>

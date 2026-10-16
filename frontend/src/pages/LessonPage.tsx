@@ -46,7 +46,7 @@ function LessonAttachmentLink({ a }: { a: { name: string; url: string; size?: nu
       download
       className="flex items-center gap-3 rounded-xl border border-[rgba(120,60,20,.1)] bg-white px-3.5 py-2.5 text-[13.5px] hover:border-brand"
     >
-      <MaterialIcon name="download" size={20} color="#f26a1b" />
+      <MaterialIcon name="download" size={20} color="#ff570a" />
       <span className="min-w-0 flex-1 truncate font-medium">{a.name}</span>
       <span className="text-xs text-stone-400">{fmtSize(a.size)}</span>
     </a>
@@ -79,7 +79,7 @@ export function LessonPage() {
     return (
       <div className="glass mx-auto flex max-w-xl flex-col items-center gap-3 rounded-3xl p-8 text-center">
         <span className="grid size-14 place-items-center rounded-full bg-brand/10">
-          <MaterialIcon name={locked ? 'lock' : 'error'} size={30} filled color="#f26a1b" />
+          <MaterialIcon name={locked ? 'lock' : 'error'} size={30} filled color="#ff570a" />
         </span>
         <h1 className="m-0 text-xl font-extrabold">{locked ? t('lesson.lockedTitle') : t('lesson.openFailed')}</h1>
         <p className="m-0 text-sm text-stone-600">
@@ -191,7 +191,7 @@ export function LessonPage() {
             {slideFiles.length > 0 && (
               <div className="mt-5">
                 <div className="mb-2 flex items-center gap-1.5 text-[13.5px] font-bold">
-                  <MaterialIcon name="slideshow" size={18} color="#f26a1b" /> {t('lesson.slides')}
+                  <MaterialIcon name="slideshow" size={18} color="#ff570a" /> {t('lesson.slides')}
                 </div>
                 <ul className="m-0 flex list-none flex-col gap-2 p-0">
                   {slideFiles.map((a) => (
@@ -248,7 +248,7 @@ export function LessonPage() {
           </div>
           {canManage && courseId && (
             <button type="button" onClick={() => setEditing('new')} aria-label={tc('editor.row.addLesson')} title={tc('editor.row.addLesson')} className="grid size-8 flex-none place-items-center rounded-full bg-brand/10 hover:bg-brand/20">
-              <MaterialIcon name="add" size={18} color="#f26a1b" />
+              <MaterialIcon name="add" size={18} color="#ff570a" />
             </button>
           )}
         </div>
@@ -264,7 +264,7 @@ export function LessonPage() {
               onClick={(e) => s.locked && e.preventDefault()}
               className={`flex min-w-0 flex-1 items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] ${s.id === l.id ? 'bg-brand-soft font-semibold text-brand' : 'hover:bg-white'} ${s.locked ? 'cursor-not-allowed opacity-60' : ''}`}
             >
-              <MaterialIcon name={s.locked ? 'lock' : s.completed ? 'check_circle' : 'radio_button_unchecked'} size={18} filled={s.completed && !s.locked} color={s.completed && !s.locked ? '#f26a1b' : '#a8a29e'} />
+              <MaterialIcon name={s.locked ? 'lock' : s.completed ? 'check_circle' : 'radio_button_unchecked'} size={18} filled={s.completed && !s.locked} color={s.completed && !s.locked ? '#ff570a' : '#a8a29e'} />
               <span className="min-w-0 flex-1 truncate">{s.title}</span>
               <span className="text-[11px] text-stone-400">{s.durationMin}'</span>
             </Link>

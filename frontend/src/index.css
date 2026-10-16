@@ -1,22 +1,29 @@
 @import 'tailwindcss';
-@import '@fontsource-variable/manrope';
+@import '@fontsource-variable/plus-jakarta-sans';
 
 @theme {
-  --font-sans: 'Manrope Variable', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-sans: 'Plus Jakarta Sans Variable', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 
   /* Màu thương hiệu (lấy từ bản UI Liquid Glass) */
-  --color-brand: #f26a1b;
-  --color-brand-dark: #d9570d;
+  --color-brand: #ff570a;
+  --color-brand-dark: #e04a05;
   --color-brand-light: #ff8f45;
-  --color-brand-soft: #fff4ec;
+  --color-brand-soft: #fff1e9;
 
   /* Toàn bộ shadow dưới đây KHÔNG dùng inset — tránh viền sáng/tối bên trong tạo cảm giác nút/thẻ "nổi khối 3D" */
   --shadow-glass: 0 8px 24px rgba(120, 60, 20, 0.08);
   --shadow-chip: 0 4px 14px rgba(120, 60, 20, 0.06);
-  --shadow-brand: 0 4px 12px rgba(242, 106, 27, 0.22);
-  --shadow-brand-chip: 0 3px 8px rgba(242, 106, 27, 0.18);
+  --shadow-brand: 0 4px 12px rgba(255,87,10, 0.22);
+  --shadow-brand-chip: 0 3px 8px rgba(255,87,10, 0.18);
   --shadow-card-hover: 0 14px 32px rgba(120, 60, 20, 0.14);
+  /* Bóng mềm của thẻ/chip/nút trong bản thiết kế Figma (Trang chủ). */
+  --shadow-soft: 1px 6px 30px 2px rgba(121, 81, 54, 0.08);
+  --shadow-soft-lg: 1px 6px 30px 2px rgba(121, 81, 54, 0.1);
+  --shadow-nav: 6px 8px 30px 0 rgba(121, 81, 54, 0.08);
 }
+
+/* Giao diện tối: bật bằng class `dark` trên <html> (xem features/theme/ThemeProvider.tsx). */
+@custom-variant dark (&:where(.dark, .dark *));
 
 /* Kính mờ: khung lớn (header, card, dropdown...). Đổi nền bằng [--glass-bg:...] */
 @utility glass {
@@ -42,6 +49,11 @@
 @layer base {
   body {
     @apply bg-white font-sans text-stone-900 antialiased;
+    /* Dải màu mờ ở đầu mọi trang trong (Figma "image 205" ở khung sáng, "bg" ở khung tối). Trang chủ/đăng nhập tự phủ nền riêng. */
+    background-image: url('/images/home/light/guest_bg.webp');
+    background-repeat: no-repeat;
+    background-position: top center;
+    background-size: 100% auto;
     /* Trang trí (SVG blur, bóng) lòi ra ngoài không được sinh thanh cuộn ngang; clip không phá position: sticky. */
     overflow-x: clip;
   }
@@ -64,11 +76,11 @@
 /* Lưới khóa học: 4 cột (dạng lưới) hoặc 2 cột (dạng danh sách) */
 .course-grid {
   display: grid;
-  gap: 20px;
-  grid-template-columns: repeat(auto-fill, minmax(max(270px, calc((100% - 60px) / 4)), 1fr));
+  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(max(270px, calc((100% - 72px) / 4)), 1fr));
 }
 .course-grid[data-view='list'] {
-  grid-template-columns: repeat(auto-fill, minmax(max(480px, calc((100% - 20px) / 2)), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(max(480px, calc((100% - 24px) / 2)), 1fr));
 }
 @media (max-width: 560px) {
   .course-grid,
@@ -130,8 +142,8 @@
     border-color 0.3s ease;
 }
 .tool-card[data-badge='true'] {
-  border-color: rgba(242, 106, 27, 0.4);
-  box-shadow: 0 0 24px rgba(242, 106, 27, 0.14);
+  border-color: rgba(255,87,10, 0.4);
+  box-shadow: 0 0 24px rgba(255,87,10, 0.14);
 }
 .tool-card::before {
   content: '';
@@ -140,15 +152,165 @@
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.3s ease;
-  background: radial-gradient(60% 60% at 50% 0%, rgba(242, 106, 27, 0.3) 0%, transparent 70%);
+  background: radial-gradient(60% 60% at 50% 0%, rgba(255,87,10, 0.3) 0%, transparent 70%);
 }
 .tool-card:hover {
   transform: translateY(-6px) scale(1.02);
-  border-color: rgba(242, 106, 27, 0.6);
+  border-color: rgba(255,87,10, 0.6);
   box-shadow:
-    0 0 42px rgba(242, 106, 27, 0.28),
-    0 0 14px rgba(242, 106, 27, 0.35);
+    0 0 42px rgba(255,87,10, 0.28),
+    0 0 14px rgba(255,87,10, 0.35);
 }
 .tool-card:hover::before {
   opacity: 1;
+}
+
+
+/* ============================================================================================
+   GIAO DIỆN TỐI (bản thiết kế Figma "Microdrama AI Studio" - Trang chủ, khung dark).
+   Nền #0c1013, mặt thẻ/chip rgba(63,63,63,.3), chữ trắng, chữ phụ #bababa, cam #ff570a.
+   Trang chủ + Header + Footer dùng biến thể `dark:` trực tiếp. Các trang còn lại (nhiều class màu cứng như bg-white,
+   text-stone-*, border-[rgba(120,60,20,..)]) được "đảo bảng màu" bằng khối dưới đây để không phải sửa từng file.
+   ============================================================================================ */
+:root.dark {
+  color-scheme: dark;
+  --surface: #171b1f;
+  --surface-glass: rgba(63, 63, 63, 0.3);
+  --line: rgba(255, 255, 255, 0.1);
+
+  /* Thang xám đảo chiều: stone-900 (chữ chính) -> trắng, stone-50 (nền hover nhạt) -> gần nền trang. */
+  --color-stone-50: #161a1e;
+  --color-stone-100: #1c2125;
+  --color-stone-200: #2a3036;
+  --color-stone-300: #3b424a;
+  --color-stone-400: #7d858e;
+  --color-stone-500: #9aa1a9;
+  --color-stone-600: #bababa;
+  --color-stone-700: #d0d3d6;
+  --color-stone-800: #e4e6e8;
+  --color-stone-900: #ffffff;
+  --color-stone-950: #ffffff;
+
+  --color-brand-soft: rgba(255, 87, 10, 0.14);
+  /* Figma khung tối: thẻ có quầng sáng trắng rất nhẹ thay vì bóng đen. */
+  --shadow-glass: 1px 6px 30px 2px rgba(255, 255, 255, 0.08);
+  --shadow-chip: 0 10px 36px rgba(121, 81, 54, 0.05);
+  --shadow-soft: 1px 6px 30px 2px rgba(0, 0, 0, 0.35);
+  --shadow-soft-lg: 1px 6px 30px 2px rgba(0, 0, 0, 0.4);
+  --shadow-nav: 0 8px 30px rgba(0, 0, 0, 0.4);
+  --shadow-card-hover: 0 14px 32px rgba(0, 0, 0, 0.5);
+}
+.dark body:not([class*='dark:bg-']) {
+  background-color: #0c1013;
+  background-image: url('/images/home/dark/guest_bg.webp');
+  color: #fff;
+}
+.dark .glass:not([class*='dark:bg-']) {
+  background: var(--surface-glass);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+.dark .glass-chip:not([class*='dark:bg-']) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: transparent;
+}
+/* Mặt phẳng trắng -> mặt tối. (Không đụng text-white nên nút cam/overlay vẫn chữ trắng.) */
+.dark .bg-white:not([class*='dark:bg-']),
+.dark .hover\:bg-white:not([class*='dark:bg-']):hover {
+  background-color: var(--surface);
+}
+.dark [class*='bg-white/4']:not([class*='dark:bg-']),
+.dark [class*='bg-white/5']:not([class*='dark:bg-']),
+.dark [class*='bg-white/6']:not([class*='dark:bg-']),
+.dark [class*='bg-white/7']:not([class*='dark:bg-']),
+.dark [class*='bg-white/8']:not([class*='dark:bg-']),
+.dark [class*='bg-white/9']:not([class*='dark:bg-']) {
+  background-color: var(--surface-glass);
+}
+.dark .bg-brand-soft:not([class*='dark:bg-']) {
+  background-color: rgba(255, 87, 10, 0.14);
+}
+/* Nền ấm nhạt (cam/kem) -> cam mờ; nền trung tính ấm -> trắng mờ. */
+.dark :is([class~='bg-[#fff1e6]'], [class~='bg-[#fff7f0]'], [class~='bg-[#fff4ec]'], [class~='bg-[#fffaf6]'], [class~='bg-[#fff9f4]'], [class~='bg-[#fff6f0]'], [class~='bg-[#fff7f1]'], [class~='bg-[#ffe7d4]']):not([class*='dark:bg-']) {
+  background-color: rgba(255, 87, 10, 0.12);
+}
+.dark :is([class~='bg-[#faf7f4]'], [class~='bg-[#f5f1ed]'], [class~='bg-[#f5f2ef]'], [class~='bg-[#faf8f6]'], [class~='bg-[#f7f4f1]'], [class~='bg-[#fbf9f7]'], [class~='bg-[#fdfbf9]'], [class~='bg-[#faf5f1]'], [class~='bg-[#f1efed]'], [class~='bg-[#fdfbfa]']):not([class*='dark:bg-']) {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+.dark [class~='bg-[#e7e0da]']:not([class*='dark:bg-']) {
+  background-color: rgba(255, 255, 255, 0.16);
+}
+.dark :is([class~='bg-[#fef2f2]'], [class~='bg-[#fee2e2]'], [class~='bg-[#fff5f5]']):not([class*='dark:bg-']) {
+  background-color: rgba(220, 38, 38, 0.16);
+}
+.dark [class~='bg-[#dcfce7]']:not([class*='dark:bg-']) {
+  background-color: rgba(22, 163, 74, 0.18);
+}
+.dark [class~='bg-[#fef3c7]']:not([class*='dark:bg-']) {
+  background-color: rgba(245, 158, 11, 0.18);
+}
+.dark :is([class*='bg-[rgba(120,60,20,.0'], [class*='bg-[rgba(120,60,20,.1']):not([class*='dark:bg-']) {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+.dark :is([class*='from-[#fff'], [class*='from-[#ffe'], [class*='from-[#eef'], .from-brand-soft):not([class*='dark:from-']) {
+  --tw-gradient-from: rgba(255, 87, 10, 0.16);
+  --tw-gradient-to: rgba(255, 87, 10, 0.05);
+}
+/* Chữ màu trạng thái (đỏ/xanh/cam đậm) -> sáng hơn để đọc được trên nền tối. */
+.dark :is([class~='text-[#b91c1c]'], [class~='text-[#991b1b]']):not([class*='dark:text-']) {
+  color: #fca5a5;
+}
+.dark [class~='text-[#dc2626]']:not([class*='dark:text-']) {
+  color: #f87171;
+}
+.dark :is([class~='text-[#15803d]'], [class~='text-[#16a34a]'], [class~='text-[#166534]']):not([class*='dark:text-']) {
+  color: #4ade80;
+}
+.dark :is([class~='text-[#c2410c]'], [class~='text-[#7c2d12]'], [class~='text-[#9a3412]'], [class~='text-[#9a3d0a]']):not([class*='dark:text-']) {
+  color: #fdba74;
+}
+.dark [class~='text-[#e8590c]']:not([class*='dark:text-']) {
+  color: #ff8a4c;
+}
+.dark :is([class~='text-[#b45309]'], [class~='text-[#92400e]'], [class~='text-[#78350f]']):not([class*='dark:text-']) {
+  color: #fcd34d;
+}
+.dark [class~='text-[#3730a3]']:not([class*='dark:text-']) {
+  color: #a5b4fc;
+}
+/* Viền */
+.dark [class*='border-[rgba(120,60,20']:not([class*='dark:border-']) {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+.dark :is([class~='border-[#e7e0da]'], [class~='border-[#f0ebe6]'], [class~='border-[#ece5df]'], [class~='border-[#f1ebe6]'], [class~='border-[#f3eee9]'], [class~='border-[#f4efeb]'], [class~='border-[#f6f1ed]'], [class~='border-[#f1e9e3]'], [class~='border-[#efe9e4]'], [class~='border-[#efe7e1]'], [class~='border-[#f0e2d7]'], [class~='border-[#dbe8fb]']):not([class*='dark:border-']) {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+.dark :is([class~='border-[#fdba74]'], [class~='border-[#fde3cf]'], [class~='border-[#fde4d2]'], [class~='border-[#fdd5b8]'], [class~='border-[#fdba8c]'], [class~='border-[#e7c9b2]']):not([class*='dark:border-']) {
+  border-color: rgba(255, 87, 10, 0.45);
+}
+.dark :is([class~='border-[#fecaca]'], [class~='border-[#fca5a5]']):not([class*='dark:border-']) {
+  border-color: rgba(248, 113, 113, 0.4);
+}
+.dark :is(input, textarea, select)::placeholder {
+  color: #7d858e;
+}
+.dark ::selection {
+  background: rgba(255, 87, 10, 0.4);
+}
+.dark [class~='via-white'] {
+  --tw-gradient-via: rgba(255, 255, 255, 0.04);
+}
+/* Nền gradient viết tay (JoinDialog...): bản sáng dùng kem -> trắng, bản tối dùng cam mờ. */
+.dark [class*='bg-[linear-gradient('][class*='#fff']:not([class*='dark:bg-']) {
+  background-image: linear-gradient(180deg, rgba(255, 87, 10, 0.12), rgba(255, 87, 10, 0.04));
+}
+
+/* Nền ấm nhạt cho trang đơn giản (quên mật khẩu, pháp lý); giao diện tối để trống cho nền trang. */
+.page-warm-bg {
+  background:
+    radial-gradient(800px 600px at 10% 80%, rgba(255, 160, 100, 0.35), transparent 70%),
+    radial-gradient(700px 500px at 90% 10%, rgba(255, 200, 160, 0.3), transparent 70%),
+    linear-gradient(135deg, #fff7f1 0%, #fff 50%, #fff4ec 100%);
+}
+.dark .page-warm-bg {
+  background: none;
 }

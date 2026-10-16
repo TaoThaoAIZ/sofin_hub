@@ -121,7 +121,7 @@ export function LaunchView({
         <section className="rounded-[18px] border border-[#f0ebe6] bg-white p-5 shadow-[0_4px_16px_rgba(120,60,20,.04)]">
           <div className="flex items-center gap-3">
             <span className="grid size-[38px] place-items-center rounded-full bg-[#fff1e6]">
-              <MaterialIcon name="storefront" size={20} color="#f26a1b" filled />
+              <MaterialIcon name="storefront" size={20} color="#ff570a" filled />
             </span>
             <span className="flex-1 text-[17px] font-extrabold">{t('launch.checklistTitle')}</span>
             <span className="text-[15px] text-stone-500">
@@ -129,7 +129,7 @@ export function LaunchView({
             </span>
           </div>
           <div className="mt-4 mb-1.5 h-[7px] overflow-hidden rounded-full bg-[#efeae6]">
-            <div className="h-full rounded-full bg-[linear-gradient(90deg,#ff8f45,#f26a1b)] transition-[width]" style={{ width: `${(done / total) * 100}%` }} />
+            <div className="h-full rounded-full bg-[linear-gradient(90deg,#ff8f45,#ff570a)] transition-[width]" style={{ width: `${(done / total) * 100}%` }} />
           </div>
           {loading && <p className="text-sm text-stone-500">{t('launch.loading')}</p>}
           {error && <p role="alert" className="text-sm font-medium text-red-600">{error}</p>}
@@ -169,7 +169,7 @@ export function LaunchView({
           <section className="rounded-[18px] border border-[#f0ebe6] bg-white p-5 shadow-[0_4px_16px_rgba(120,60,20,.04)]">
             <div className="mb-4 flex items-center gap-3">
               <span className="grid size-[38px] place-items-center rounded-full bg-[#fff1e6]">
-                <MaterialIcon name="link" size={20} color="#f26a1b" />
+                <MaterialIcon name="link" size={20} color="#ff570a" />
               </span>
               <span className="text-[17px] font-extrabold">{t('launch.inviteLink')}</span>
             </div>
@@ -186,7 +186,7 @@ export function LaunchView({
           <section className="rounded-[18px] border border-[#f0ebe6] bg-white p-5 shadow-[0_4px_16px_rgba(120,60,20,.04)]">
             <div className="mb-2.5 flex items-center gap-3">
               <span className="grid size-[38px] place-items-center rounded-full bg-[#fff1e6]">
-                <MaterialIcon name="rocket_launch" size={20} color="#f26a1b" filled />
+                <MaterialIcon name="rocket_launch" size={20} color="#ff570a" filled />
               </span>
               <span className="text-[17px] font-extrabold">{t('launch.discoverTitle')}</span>
             </div>

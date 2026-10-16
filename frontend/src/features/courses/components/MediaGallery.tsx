@@ -11,7 +11,7 @@ export function MediaGallery({
   items,
   fallback,
   alt,
-  className = 'aspect-[16/8]',
+  className = 'aspect-[1135/600]',
   overlay,
 }: {
   items: CommunityMediaItem[];
@@ -25,8 +25,8 @@ export function MediaGallery({
   const cur = list[Math.min(i, list.length - 1)]!;
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className={`relative overflow-hidden rounded-3xl bg-[#2a1a10] shadow-[0_20px_50px_rgba(120,60,20,.16)] ${className}`}>
+    <div className="flex flex-col gap-4">
+      <div className={`relative overflow-hidden rounded-3xl bg-[#2a1a10] shadow-[1px_6px_30px_2px_rgba(121,81,54,0.1)] dark:shadow-none ${className}`}>
         {cur.type === 'video' ? (
           <video key={cur.url} src={resolveApiPath(cur.url)} controls playsInline preload="metadata" className="size-full bg-black object-contain" />
         ) : (
@@ -35,7 +35,7 @@ export function MediaGallery({
         {overlay}
       </div>
       {list.length > 1 && (
-        <div className="flex gap-2.5 overflow-x-auto pb-1" role="tablist">
+        <div className="no-scrollbar flex gap-4 overflow-x-auto pb-1" role="tablist">
           {list.map((m, idx) => (
             <button
               key={m.url}
@@ -44,7 +44,7 @@ export function MediaGallery({
               aria-selected={idx === i}
               aria-label={`${alt} ${idx + 1}`}
               onClick={() => setI(idx)}
-              className={`relative h-[72px] w-[104px] flex-none overflow-hidden rounded-xl border-2 bg-[#1c130e] p-0 ${idx === i ? 'border-brand' : 'border-transparent opacity-80 hover:opacity-100'}`}
+              className={`relative aspect-[188/100] w-[clamp(120px,10.4vw,188px)] flex-none overflow-hidden rounded-2xl border bg-[#1c130e] p-0 ${idx === i ? 'border-brand ring-1 ring-brand' : 'border-[#dfdfdf] opacity-90 hover:opacity-100 dark:border-white/10'}`}
             >
               {m.type === 'video' ? (
                 <>

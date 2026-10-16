@@ -1,3 +1,4 @@
+import { BrandLogo } from '../../components/ui/BrandLogo';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -45,7 +46,7 @@ export function LegalLayout({
 
   if (!consentMode) {
     return (
-      <div className="min-h-screen bg-white">
+      <div className="page-warm-bg min-h-screen">
         <Header />
         <div className="mx-auto max-w-[760px] px-4 pt-10 pb-16 sm:px-6">
           <h1 className="m-0 text-[clamp(28px,3.4vw,44px)] font-extrabold tracking-[-1px]">{title}</h1>
@@ -60,15 +61,11 @@ export function LegalLayout({
   return (
     <div
       className="min-h-screen"
-      style={{
-        background:
-          'radial-gradient(800px 600px at 10% 80%, rgba(255,160,100,.35), transparent 70%), radial-gradient(700px 500px at 90% 10%, rgba(255,200,160,.3), transparent 70%), linear-gradient(135deg, #fff7f1 0%, #fff 50%, #fff4ec 100%)',
-      }}
     >
       <div className="mx-auto max-w-[760px] px-4 py-8 sm:px-6 md:py-12">
         <div className="flex items-center justify-between gap-4">
           <Link to="/" className="block leading-none">
-            <img src="/images/logo.png" alt="SofinHub" className="h-9 w-auto" />
+            <BrandLogo className="h-9" />
           </Link>
           <Link
             to="/register"

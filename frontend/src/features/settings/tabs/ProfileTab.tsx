@@ -266,7 +266,7 @@ export function ProfileTab() {
         <section className={SECTION}>
           <div className="flex items-start gap-4">
             <span className="grid size-[46px] flex-none place-items-center rounded-full bg-[#fff1e6]">
-              <MaterialIcon name="link" size={24} weight={600} color="#f26a1b" />
+              <MaterialIcon name="link" size={24} weight={600} color="#ff570a" />
             </span>
             <div>
               <div className="text-xl font-extrabold">{t('profileTab.linksTitle')}</div>

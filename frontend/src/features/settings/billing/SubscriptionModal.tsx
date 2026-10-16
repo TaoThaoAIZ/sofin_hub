@@ -73,7 +73,7 @@ export function SubscriptionModal({ sub, onClose, onRefund }: { sub: Subscriptio
     <SettingsModal title={title} body={body} onClose={onClose} busy={pending}>
       {live && !canceling && (
         <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-[#f0ebe6] px-3.5 py-3 text-[13.5px]">
-          <input type="checkbox" checked={now} onChange={(e) => setNow(e.target.checked)} className="mt-0.5 accent-[#f26a1b]" />
+          <input type="checkbox" checked={now} onChange={(e) => setNow(e.target.checked)} className="mt-0.5 accent-[#ff570a]" />
           <span>
             <b className="block font-bold">{t('subscription.cancelNow')}</b>
             <span className="text-stone-500">{t('subscription.cancelNowHint')}</span>

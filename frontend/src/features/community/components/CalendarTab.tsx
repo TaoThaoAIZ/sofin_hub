@@ -123,7 +123,7 @@ export function CalendarTab() {
                 onClick={() => setView(v)}
                 className={`h-9 rounded-[10px] px-[22px] text-[14.5px] ${
                   view === v
-                    ? 'bg-gradient-to-b from-[#fff1e6] to-[#ffe4d1] font-semibold text-brand shadow-[inset_0_0_0_1px_rgba(242,106,27,.2)]'
+                    ? 'bg-gradient-to-b from-[#fff1e6] to-[#ffe4d1] font-semibold text-brand shadow-[inset_0_0_0_1px_rgba(255,87,10,.2)]'
                     : 'font-medium text-stone-600'
                 }`}
               >
@@ -149,7 +149,7 @@ export function CalendarTab() {
                     className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[13.5px] hover:bg-stone-50 ${filter === f ? 'font-semibold text-brand' : ''}`}
                   >
                     {t(`calendar.filters.${f}`)}
-                    {filter === f && <MaterialIcon name="check" size={17} color="#f26a1b" />}
+                    {filter === f && <MaterialIcon name="check" size={17} color="#ff570a" />}
                   </button>
                 ))}
               </div>
@@ -242,7 +242,7 @@ export function CalendarTab() {
                   <span
                     className={
                       isToday
-                        ? '-mt-1.5 -ml-1 grid size-[34px] place-items-center rounded-full bg-gradient-to-b from-[#ff8f45] to-brand text-[13.5px] font-bold text-white shadow-[0_6px_14px_rgba(242,106,27,.35)]'
+                        ? '-mt-1.5 -ml-1 grid size-[34px] place-items-center rounded-full bg-gradient-to-b from-[#ff8f45] to-brand text-[13.5px] font-bold text-white shadow-[0_6px_14px_rgba(255,87,10,.35)]'
                         : `text-[13.5px] font-medium ${out ? 'text-stone-400' : 'text-stone-900'}`
                     }
                   >
@@ -385,7 +385,7 @@ function EventDialog({
       <div role="dialog" aria-label={ev.title} onClick={(e) => e.stopPropagation()} className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl">
         <div className="flex items-start gap-3">
           <span className="grid size-12 flex-none place-items-center rounded-xl bg-brand/10">
-            <MaterialIcon name="event" size={26} filled color="#f26a1b" />
+            <MaterialIcon name="event" size={26} filled color="#ff570a" />
           </span>
           <div className="min-w-0 flex-1">
             <div className="text-lg font-extrabold">{ev.title}</div>
@@ -420,7 +420,7 @@ function EventDialog({
             disabled={rsvpPending || full}
             className={`mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-xl text-sm font-bold disabled:opacity-60 ${ev.viewerRsvped ? 'bg-brand/10 text-brand' : 'bg-brand text-white'}`}
           >
-            {ev.viewerRsvped && <MaterialIcon name="check" size={18} color="#f26a1b" />}
+            {ev.viewerRsvped && <MaterialIcon name="check" size={18} color="#ff570a" />}
             {rsvpPending ? t('calendar.processing') : full ? t('calendar.full') : ev.viewerRsvped ? t('calendar.rsvpCancel') : t('calendar.rsvp')}
           </button>
         ) : (

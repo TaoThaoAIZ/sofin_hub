@@ -95,7 +95,7 @@ export function ShellFooter({ children }: { children: ReactNode }) {
 export const shellGhostBtn =
   'h-[42px] rounded-[10px] border-[1.5px] border-[#e7e0da] bg-white px-4 text-[13.5px] font-bold text-stone-900 hover:bg-stone-50 disabled:opacity-50';
 export const shellPrimaryBtn =
-  'h-[42px] rounded-[10px] bg-gradient-to-b from-[#ff8f45] to-[#e85d10] px-[18px] text-[13.5px] font-bold text-white shadow-[0_8px_18px_rgba(242,106,27,.3)] disabled:cursor-not-allowed disabled:opacity-50';
+  'h-[42px] rounded-[10px] bg-gradient-to-b from-[#ff8f45] to-[#e85d10] px-[18px] text-[13.5px] font-bold text-white shadow-[0_8px_18px_rgba(255,87,10,.3)] disabled:cursor-not-allowed disabled:opacity-50';
 
 /** Công tắc bật/tắt theo thiết kế (track 40×23). */
 export function Toggle({ on }: { on: boolean }) {

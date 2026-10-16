@@ -84,7 +84,7 @@ export function ModalActions({
         type="button"
         onClick={onOk}
         disabled={pending || disabled}
-        className={`h-[46px] flex-1 rounded-xl border-0 text-sm font-bold text-white disabled:opacity-60 ${danger ? 'bg-[#dc2626]' : 'bg-gradient-to-b from-[#ff8f45] to-[#f26a1b]'}`}
+        className={`h-[46px] flex-1 rounded-xl border-0 text-sm font-bold text-white disabled:opacity-60 ${danger ? 'bg-[#dc2626]' : 'bg-gradient-to-b from-[#ff8f45] to-[#ff570a]'}`}
       >
         {pending ? t('common.processing') : okLabel}
       </button>

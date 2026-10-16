@@ -76,7 +76,7 @@ export function ModulePurchaseDialog({ communityId, module: mod, onClose }: { co
           </button>
           <div className="bg-[linear-gradient(180deg,#fff1e6,#fff)] px-6 pt-8 pb-5 text-center">
             <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-brand/10">
-              <MaterialIcon name={done ? 'lock_open' : 'lock'} size={30} filled color="#f26a1b" />
+              <MaterialIcon name={done ? 'lock_open' : 'lock'} size={30} filled color="#ff570a" />
             </span>
             <h2 className="mt-3 mb-0 text-xl font-extrabold tracking-[-0.3px]">{done ? t('modulePurchase.unlocked') : t('modulePurchase.title')}</h2>
             <p className="mt-1 mb-0 text-sm font-semibold text-stone-800">{quote?.title ?? mod.title}</p>
@@ -133,7 +133,7 @@ export function ModulePurchaseDialog({ communityId, module: mod, onClose }: { co
                 </div>
                 <div className="mt-3 flex items-start gap-3 rounded-2xl border border-[#f0ebe6] bg-[#fdfbf9] p-3.5">
                   <span className="grid size-10 flex-none place-items-center rounded-xl bg-[#fff1e6]">
-                    <MaterialIcon name="qr_code_2" size={24} filled color="#f26a1b" />
+                    <MaterialIcon name="qr_code_2" size={24} filled color="#ff570a" />
                   </span>
                   <div className="text-[13px] leading-relaxed text-stone-600">
                     <div className="text-sm font-bold text-stone-900">{t('join.bankMethod')}</div>

@@ -192,7 +192,7 @@ export function ReferralTab() {
                 }}
                 className={`flex h-11 items-center gap-2 rounded-[11px] border-[1.5px] px-[18px] text-[15px] font-semibold whitespace-nowrap ${on ? 'border-[#fdba74] bg-white text-brand' : 'border-transparent bg-transparent text-stone-600'}`}
               >
-                {on && <MaterialIcon name="settings" size={19} filled color="#f26a1b" />}
+                {on && <MaterialIcon name="settings" size={19} filled color="#ff570a" />}
                 {t(k.label)}
               </button>
             );
@@ -208,7 +208,7 @@ export function ReferralTab() {
 
       <section className="relative flex flex-wrap items-end gap-6 overflow-hidden rounded-[20px] border border-[#fde3cf] px-[30px] py-7" style={{ background: 'linear-gradient(110deg,#fff6ef 0%,#ffe3cd 100%)' }}>
         <span className="pointer-events-none absolute top-4 right-6 opacity-90">
-          <MaterialIcon name="redeem" size={60} filled color="#f26a1b" />
+          <MaterialIcon name="redeem" size={60} filled color="#ff570a" />
         </span>
         <div className="min-w-0 flex-[1_1_420px] pr-[72px]">
           <h1 className="m-0 text-[clamp(26px,2.6vw,34px)] leading-[1.2] font-extrabold tracking-[-.02em]">
@@ -231,7 +231,7 @@ export function ReferralTab() {
               type="button"
               onClick={copy}
               disabled={!link}
-              className="h-[50px] rounded-xl border-0 bg-gradient-to-b from-[#ff8f45] to-[#f26a1b] px-7 text-[15px] font-bold text-white shadow-[0_8px_20px_rgba(242,106,27,.3)] disabled:opacity-60"
+              className="h-[50px] rounded-xl border-0 bg-gradient-to-b from-[#ff8f45] to-[#ff570a] px-7 text-[15px] font-bold text-white shadow-[0_8px_20px_rgba(255,87,10,.3)] disabled:opacity-60"
             >
               {t('referral.copyBtn')}
             </button>
@@ -243,7 +243,7 @@ export function ReferralTab() {
         {kpis.map((k) => (
           <div key={k.label} className="flex min-w-0 gap-3.5 rounded-[20px] border border-[rgba(120,60,20,.07)] bg-white px-5 py-[18px]">
             <span className="grid size-11 flex-none place-items-center rounded-xl bg-[#fff1e6]">
-              <MaterialIcon name={k.icon} size={23} filled color="#f26a1b" />
+              <MaterialIcon name={k.icon} size={23} filled color="#ff570a" />
             </span>
             <div className="min-w-0">
               <div className="text-sm text-stone-700">{k.label}</div>
@@ -279,7 +279,7 @@ export function ReferralTab() {
             total > 4 ? (
               <button type="button" onClick={() => setAll((v) => !v)} className="flex items-center gap-1.5 border-0 bg-transparent p-0 text-[15px] font-bold text-[#15803d] underline">
                 {all ? t('referral.collapse') : t('referral.viewAll', { total })}
-                <MaterialIcon name="arrow_forward" size={19} color="#f26a1b" />
+                <MaterialIcon name="arrow_forward" size={19} color="#ff570a" />
               </button>
             ) : undefined
           }
@@ -357,7 +357,7 @@ function StepItem({ step, arrow }: { step: { n: string; t: string; s: string }; 
       </div>
       {arrow && (
         <span className="hidden min-[1100px]:block">
-          <MaterialIcon name="arrow_forward" size={22} color="#f26a1b" />
+          <MaterialIcon name="arrow_forward" size={22} color="#ff570a" />
         </span>
       )}
     </>

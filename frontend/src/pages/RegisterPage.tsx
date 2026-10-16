@@ -1,3 +1,4 @@
+import { BrandLogo } from '../components/ui/BrandLogo';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
@@ -113,12 +114,11 @@ export function RegisterPage() {
 
   return (
     <div
-      className="relative flex min-h-screen flex-wrap items-center justify-between gap-10 overflow-hidden px-6 py-12 sm:px-10 md:px-[8vw] lg:py-[7vh]"
-      style={{ background: "url('/images/background_login.png') center / cover no-repeat" }}
+      className="relative flex min-h-screen flex-wrap bg-[url(/images/background_login.png)] bg-cover bg-center bg-no-repeat dark:bg-[url(/images/auth/login_dark.webp)] items-center justify-between gap-10 overflow-hidden px-6 py-12 sm:px-10 md:px-[8vw] lg:py-[7vh]"
     >
       <div className="pointer-events-none relative z-10 flex min-w-0 max-w-[640px] flex-1 basis-[460px] flex-col gap-6 self-start">
         {/* <Link to="/" className="pointer-events-auto block self-start leading-none">
-          <img src="/images/logo.png" alt="SofinHub" className="h-9 w-auto" />
+          <BrandLogo className="h-9" />
         </Link>
         <div>
           <h1 className="m-0 text-[clamp(38px,5.2vw,86px)] leading-[1.08] font-extrabold tracking-[-2.5px] text-balance">
@@ -132,9 +132,9 @@ export function RegisterPage() {
         </div> */}
       </div>
 
-      <div className="relative z-10 flex min-w-[min(100%,380px)] flex-1 basis-[630px] flex-col gap-[22px] rounded-[28px] border border-white/95 bg-white/70 p-6 shadow-[0_30px_70px_rgba(120,60,20,.12)] backdrop-blur-[26px] backdrop-saturate-[180%] sm:p-10 md:p-[clamp(28px,4vw,60px)]">
+      <div className="relative z-10 flex min-w-[min(100%,380px)] flex-1 basis-[630px] flex-col gap-[22px] rounded-[28px] border border-white/95 bg-white/70 dark:border-white/10 dark:bg-black/40 p-6 shadow-[0_30px_70px_rgba(120,60,20,.12)] backdrop-blur-[26px] backdrop-saturate-[180%] sm:p-10 md:p-[clamp(28px,4vw,60px)]">
         <div className="flex flex-col items-center gap-3 text-center">
-          <img src="/images/logo.png" alt="SofinHub" className="mb-1 h-11 w-auto" />
+          <BrandLogo className="mb-1 h-11" />
           <h2 className="m-0 text-[clamp(28px,2.6vw,38px)] font-bold tracking-[-.5px]">{t('register.title')}</h2>
           <p className="m-0 max-w-[380px] text-base leading-[1.6] text-stone-600 text-pretty">
             {t('register.intro')}

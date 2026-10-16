@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preload" href="/fonts/material-symbols-rounded.woff2" as="font" type="font/woff2" crossorigin />
+    <script>
+      // Áp giao diện sáng/tối trước khi vẽ (cùng khóa với features/theme/ThemeProvider.tsx) để không bị chớp khi tải lại trang.
+      try {
+        var t = localStorage.getItem('sofinhub.theme');
+        if (t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) document.documentElement.classList.add('dark');
+      } catch (e) {}
+    </script>
     <title>SofinHub – Học kỹ năng mới, phát triển cùng cộng đồng</title>
     <meta name="description" content="Hàng ngàn khóa học thực tế từ chuyên gia trong nhiều lĩnh vực. Học nhanh hơn, ứng dụng ngay và tạo giá trị cho bản thân." />
   </head>

@@ -12,7 +12,7 @@ export function RequireLogin({ children, active = 'discover' }: { children: Reac
   const location = useLocation();
   if (status === 'authenticated') return <>{children}</>;
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen">
       <Header active={active} />
       <div className="mx-auto max-w-md px-4 py-24 text-center">
         {status === 'loading' ? (

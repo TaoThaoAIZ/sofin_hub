@@ -128,7 +128,7 @@ export function PointsSection({ communities }: { communities: MyCommunity[] }) {
           </div>
           <div className="rounded-2xl border border-[#f0ebe6] p-4">
             <div className="mb-2 flex items-center gap-2 font-bold">
-              <MaterialIcon name="history" size={20} color="#f26a1b" />
+              <MaterialIcon name="history" size={20} color="#ff570a" />
               {t('communities.points.recent')}
             </div>
             {p.recent.length === 0 ? (

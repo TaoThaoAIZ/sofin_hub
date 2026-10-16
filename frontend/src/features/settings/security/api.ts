@@ -7,7 +7,7 @@ export interface Preferences {
   theme?: 'light' | 'dark' | 'system';
 }
 
-/** Chỉ LƯU tùy chọn: ứng dụng chưa có đa ngôn ngữ / giao diện tối (xem docs/features/settings-profile-security.md). */
+/** Lưu tùy chọn tài khoản. `theme` được áp dụng thật bởi features/theme/ThemeProvider.tsx (class `dark` trên <html>). */
 export const updatePreferences = (p: Preferences) => apiPatch<{ data: AuthUser }>('/auth/me/preferences', p).then((r) => r.data);
 
 export const changeEmail = (newEmail: string, password: string) =>

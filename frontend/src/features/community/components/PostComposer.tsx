@@ -175,7 +175,7 @@ export function PostComposer({ courseId }: { courseId: string }) {
               <span key={tg} className="flex items-center gap-1 rounded-lg bg-brand/10 px-2.5 py-1 text-[12.5px] font-semibold text-brand">
                 #{tg}
                 <button type="button" aria-label={t('composer.removeTag', { tag: tg })} onClick={() => setTags(tags.filter((x) => x !== tg))}>
-                  <MaterialIcon name="close" size={14} color="#f26a1b" />
+                  <MaterialIcon name="close" size={14} color="#ff570a" />
                 </button>
               </span>
             ))}
@@ -231,7 +231,7 @@ export function PostComposer({ courseId }: { courseId: string }) {
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px]">
             {pollOptions.length < 6 && (
               <button type="button" onClick={() => setPollOptions([...pollOptions, ''])} className="flex items-center gap-1 font-semibold text-brand">
-                <MaterialIcon name="add" size={17} color="#f26a1b" /> {t('composer.addOption')}
+                <MaterialIcon name="add" size={17} color="#ff570a" /> {t('composer.addOption')}
               </button>
             )}
             <label className="flex items-center gap-2">

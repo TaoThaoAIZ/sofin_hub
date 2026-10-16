@@ -107,7 +107,7 @@ export function MembersTab() {
                   }}
                   className={`flex h-10 items-center gap-2 rounded-xl border px-4 text-[13.5px] whitespace-nowrap ${
                     on
-                      ? 'border-transparent bg-gradient-to-b from-[#ff8f45] to-brand font-bold text-white shadow-[0_8px_18px_-6px_rgba(242,106,27,.5)]'
+                      ? 'border-transparent bg-gradient-to-b from-[#ff8f45] to-brand font-bold text-white shadow-[0_8px_18px_-6px_rgba(255,87,10,.5)]'
                       : 'border-[rgba(120,60,20,.12)] bg-white font-medium text-stone-800'
                   }`}
                 >
@@ -141,7 +141,7 @@ export function MembersTab() {
                   onClick={() => setSortOpen((o) => !o)}
                   className="grid size-10 flex-none place-items-center rounded-[10px] border border-[rgba(120,60,20,.12)] bg-white hover:bg-[#fff7f0]"
                 >
-                  <MaterialIcon name="tune" size={20} color={sort !== 'active' ? '#f26a1b' : '#1c1917'} />
+                  <MaterialIcon name="tune" size={20} color={sort !== 'active' ? '#ff570a' : '#1c1917'} />
                 </button>
                 {sortOpen && (
                   <div className="glass absolute right-0 z-10 mt-2 w-52 rounded-xl bg-white p-1.5 shadow-lg [--glass-bg:#fff]">
@@ -157,7 +157,7 @@ export function MembersTab() {
                         className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[13.5px] hover:bg-stone-50 ${sort === s.key ? 'font-semibold text-brand' : ''}`}
                       >
                         {t(s.labelKey)}
-                        {sort === s.key && <MaterialIcon name="check" size={17} color="#f26a1b" />}
+                        {sort === s.key && <MaterialIcon name="check" size={17} color="#ff570a" />}
                       </button>
                     ))}
                   </div>
@@ -247,7 +247,7 @@ export function MembersTab() {
                   key={n}
                   onClick={() => setPage(n)}
                   className={`h-[34px] min-w-[34px] rounded-full px-1.5 text-[13.5px] font-semibold ${
-                    n === page ? 'bg-gradient-to-b from-[#ff8f45] to-brand text-white shadow-[0_6px_14px_rgba(242,106,27,.35)]' : 'text-stone-800'
+                    n === page ? 'bg-gradient-to-b from-[#ff8f45] to-brand text-white shadow-[0_6px_14px_rgba(255,87,10,.35)]' : 'text-stone-800'
                   }`}
                 >
                   {n}

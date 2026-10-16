@@ -31,7 +31,7 @@ export function Modal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="grid size-12 place-items-center rounded-2xl bg-brand/10">
-          <MaterialIcon name={icon} size={24} color="#f26a1b" />
+          <MaterialIcon name={icon} size={24} color="#ff570a" />
         </div>
         <h2 className="mt-3.5 text-lg font-extrabold">{title}</h2>
         <div className="mt-2 text-sm leading-relaxed text-stone-600">{children}</div>

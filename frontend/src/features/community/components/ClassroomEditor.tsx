@@ -144,7 +144,7 @@ function ModuleRow({
             </div>
           ))}
           <button type="button" onClick={() => setEditingLesson('new')} className="mt-2 flex items-center gap-1.5 text-[13px] font-bold text-brand">
-            <MaterialIcon name="add" size={18} color="#f26a1b" /> {t('editor.row.addLesson')}
+            <MaterialIcon name="add" size={18} color="#ff570a" /> {t('editor.row.addLesson')}
           </button>
         </div>
       )}

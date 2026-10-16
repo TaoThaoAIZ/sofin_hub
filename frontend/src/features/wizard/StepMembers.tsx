@@ -64,10 +64,10 @@ export function StepMembers({
             const on = form.visibility === id;
             return (
               <button key={id} type="button" role="radio" aria-checked={on} onClick={() => set({ visibility: id })} className={`flex gap-3 rounded-[14px] p-[18px] text-left ${on ? 'border-2 border-brand bg-[#fff7f1]' : 'border-[1.5px] border-[#ece5df] bg-white'}`}>
-                <MaterialIcon name={on ? 'radio_button_checked' : 'radio_button_unchecked'} size={22} color={on ? '#f26a1b' : '#c7bfb8'} />
+                <MaterialIcon name={on ? 'radio_button_checked' : 'radio_button_unchecked'} size={22} color={on ? '#ff570a' : '#c7bfb8'} />
                 <span>
                   <span className="flex items-center gap-2 text-[15.5px] font-bold">
-                    <MaterialIcon name={icon} size={22} color="#f26a1b" filled />
+                    <MaterialIcon name={icon} size={22} color="#ff570a" filled />
                     {label}
                   </span>
                   <span className="mt-1.5 block text-[13.5px] leading-[1.55] text-stone-600">{sub}</span>
@@ -151,7 +151,7 @@ export function StepMembers({
       <div className="grid gap-4 md:grid-cols-2">
         <div className="rounded-[18px] border border-[#fdd5b8] bg-[linear-gradient(160deg,#fff7f0,#ffeede)] p-[22px]">
           <div className="flex items-center gap-3">
-            <MaterialIcon name={payout?.status === 'connected' ? 'check_circle' : 'account_balance_wallet'} size={28} color="#f26a1b" filled />
+            <MaterialIcon name={payout?.status === 'connected' ? 'check_circle' : 'account_balance_wallet'} size={28} color="#ff570a" filled />
             <span className="text-[16.5px] font-extrabold">{t('members.payoutTitle')}</span>
           </div>
           <p className="mt-3 mb-0 text-sm leading-relaxed text-stone-600">

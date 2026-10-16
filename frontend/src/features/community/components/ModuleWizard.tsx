@@ -37,7 +37,7 @@ function MemberPicker({ communityId, value, onChange }: { communityId: string; v
                   else next[m.id] = m.name;
                   onChange(next);
                 }}
-                className="accent-[#f26a1b]"
+                className="accent-[#ff570a]"
               />
               <span className="min-w-0 flex-1 truncate">{m.name}</span>
             </label>

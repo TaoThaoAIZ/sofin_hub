@@ -82,7 +82,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
           >
             <button type="button" onClick={() => { open(n); setToasts((t) => t.filter((x) => x.key !== key)); }} className="flex min-w-0 flex-1 items-start gap-3 text-left">
               <span className="grid size-9 flex-none place-items-center rounded-full bg-brand/10">
-                <MaterialIcon name={NOTIFICATION_TYPE_ICON[n.type] ?? 'notifications'} size={19} color="#f26a1b" />
+                <MaterialIcon name={NOTIFICATION_TYPE_ICON[n.type] ?? 'notifications'} size={19} color="#ff570a" />
               </span>
               <span className="min-w-0">
                 <span className="block truncate text-[13.5px] font-semibold">{n.title}</span>

@@ -21,8 +21,8 @@ function pageItems(page: number, total: number): (number | '…')[] {
 }
 
 const btn = (on: boolean) =>
-  `grid h-10 min-w-10 place-items-center rounded-[10px] px-3 text-sm font-semibold ${
-    on ? 'bg-brand-gradient border border-white/35 text-white backdrop-blur-[20px]' : 'glass-chip text-stone-900'
+  `grid size-[42px] place-items-center rounded-full text-sm font-semibold ${
+    on ? 'bg-brand text-white shadow-[0_6px_14px_rgba(255,87,10,.25)]' : 'bg-white text-[#201e1c] shadow-soft dark:bg-[rgba(63,63,63,.3)] dark:text-white'
   }`;
 
 export function Pagination({ page, totalPages, onChange }: Props) {
@@ -32,7 +32,7 @@ export function Pagination({ page, totalPages, onChange }: Props) {
   return (
     <nav
       aria-label={t('list.pagination')}
-      className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-center gap-2 px-4 pt-10 pb-14 md:px-10"
+      className="flex flex-wrap items-center justify-center gap-2 pt-6 pb-[clamp(40px,4.4vw,80px)]"
     >
       <button
         type="button"
@@ -46,7 +46,7 @@ export function Pagination({ page, totalPages, onChange }: Props) {
 
       {pageItems(page, totalPages).map((n, i) =>
         n === '…' ? (
-          <span key={`gap-${i}`} className="grid h-10 min-w-10 place-items-center text-sm font-medium text-stone-500">
+          <span key={`gap-${i}`} className="grid size-[42px] place-items-center text-sm font-medium text-stone-500">
             …
           </span>
         ) : (

@@ -8,7 +8,9 @@
     "messages": "Messages",
     "notifications": "Notifications",
     "createCommunity": "Create community",
-    "language": "Language"
+    "language": "Language",
+    "themeToDark": "Switch to dark mode",
+    "themeToLight": "Switch to light mode"
   },
   "time": {
     "justNow": "just now",

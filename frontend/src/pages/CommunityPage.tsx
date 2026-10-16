@@ -13,7 +13,7 @@ export function CommunityPage() {
 
   if (isPending) {
     return (
-      <div className="min-h-screen bg-white">
+      <div className="min-h-screen">
         <Header active="myCommunities" />
         <p className="py-24 text-center text-stone-500">{t('page.loading')}</p>
       </div>
@@ -26,7 +26,7 @@ export function CommunityPage() {
   if (!course.viewerEnrolled && course.viewerRole !== 'platform_admin') return <Navigate to={`/communities/${id}`} replace />;
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen">
       <Header active="myCommunities" />
       <div className="mx-auto grid w-[calc(100%-32px)] max-w-[1320px] grid-cols-[248px_minmax(0,1fr)] items-start gap-6 pt-3 pb-10 md:w-[calc(100%-80px)] max-md:grid-cols-1">
         <CommunitySidebar courseTitle={course.title} />

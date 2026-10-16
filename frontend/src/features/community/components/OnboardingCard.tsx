@@ -21,7 +21,7 @@ function Ring({ done, total }: { done: number; total: number }) {
     <div className="relative size-[116px] flex-none">
       <svg viewBox="0 0 116 116" className="size-full -rotate-90" aria-hidden>
         <circle cx="58" cy="58" r={r} fill="#fff" stroke="rgba(120,60,20,.1)" strokeWidth="11" />
-        <circle cx="58" cy="58" r={r} fill="none" stroke="#f26a1b" strokeWidth="11" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - pct)} className="transition-[stroke-dashoffset]" />
+        <circle cx="58" cy="58" r={r} fill="none" stroke="#ff570a" strokeWidth="11" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - pct)} className="transition-[stroke-dashoffset]" />
       </svg>
       <div className="absolute inset-0 grid place-items-center text-[28px] font-extrabold tracking-tight">
         {done}/{total}
@@ -42,12 +42,12 @@ function RocketArt() {
       <ellipse cx="50" cy="146" rx="34" ry="14" fill="#fff" opacity=".9" />
       <g transform="rotate(30 80 80)">
         <path d="M80 12c22 18 30 44 26 78H54c-4-34 4-60 26-78z" fill="#fff" stroke="#fdba74" strokeWidth="2" />
-        <circle cx="80" cy="56" r="11" fill="#f26a1b" />
+        <circle cx="80" cy="56" r="11" fill="#ff570a" />
         <circle cx="80" cy="56" r="5" fill="#fff" />
-        <path d="M54 76L36 100l22-6zM106 76l18 24-22-6z" fill="#f26a1b" />
+        <path d="M54 76L36 100l22-6zM106 76l18 24-22-6z" fill="#ff570a" />
         <path d="M68 92h24l-12 28z" fill="#fdba74" />
       </g>
-      <path d="M118 22l3 7 7 3-7 3-3 7-3-7-7-3 7-3z" fill="#f26a1b" />
+      <path d="M118 22l3 7 7 3-7 3-3 7-3-7-7-3 7-3z" fill="#ff570a" />
     </svg>
   );
 }
@@ -82,8 +82,8 @@ export function OnboardingCard({ communityId, data, onExplore }: { communityId: 
   };
 
   return (
-    <section aria-label={t('onboarding.title')} className="relative overflow-hidden rounded-[24px] border border-brand/15 bg-gradient-to-br from-[#fff6ef] to-[#ffe6d4] p-6">
-      <img src="/images/community-welcome-art.webp" alt="" className="pointer-events-none absolute inset-0 size-full object-cover opacity-60" />
+    <section aria-label={t('onboarding.title')} className="relative overflow-hidden rounded-[24px] border border-brand/15 bg-gradient-to-br from-[#fff6ef] to-[#ffe6d4] p-6 dark:border-[rgba(255,220,197,.1)] dark:from-[rgba(63,63,63,.3)] dark:to-[rgba(74,29,0,.3)]">
+      <img src="/images/community-welcome-art.webp" alt="" className="pointer-events-none absolute inset-0 size-full object-cover opacity-60 dark:hidden" />
       <div className="relative z-10">
         <h2 className="m-0 text-[24px] font-extrabold tracking-tight">{t('onboarding.title')}</h2>
         <p className="mt-1 mb-4 text-[14px] text-stone-600">{t('onboarding.sub', { count: left })}</p>

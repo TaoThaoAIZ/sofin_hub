@@ -54,7 +54,7 @@
       "overview": "Tổng quan",
       "content": "Nội dung",
       "reviews": "Đánh giá",
-      "faq": "Câu hỏi thường gặp"
+      "faq": "Câu hỏi"
     },
     "perkLessons": "{{n}} bài học trong lớp học",
     "perkDiscuss": "Thảo luận và kết nối cùng thành viên cộng đồng",
@@ -103,7 +103,25 @@
     "leave": "Rời khỏi cộng đồng",
     "leaving": "Đang rời…",
     "leftToast": "Bạn đã rời khỏi cộng đồng",
-    "approvedPay": "Đã được duyệt – thanh toán để tham gia"
+    "approvedPay": "Đã được duyệt – thanh toán để tham gia",
+    "perks": {
+      "instant": {
+        "title": "Truy cập ngay lập tức",
+        "desc": "Sau khi thanh toán"
+      },
+      "anywhere": {
+        "title": "Học mọi lúc, mọi nơi",
+        "desc": "Trên web, mobile, tablet"
+      },
+      "updates": {
+        "title": "Cập nhật nội dung liên tục",
+        "desc": "Luôn được nâng cấp"
+      },
+      "support": {
+        "title": "Hỗ trợ từ cộng đồng",
+        "desc": "Hỏi đáp, chia sẻ kinh nghiệm"
+      }
+    }
   },
   "lesson": {
     "loadingAttachment": "{{name}} (đang tải…)",

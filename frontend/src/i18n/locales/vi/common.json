@@ -8,7 +8,9 @@
     "messages": "Tin nhắn",
     "notifications": "Thông báo",
     "createCommunity": "Tạo cộng đồng",
-    "language": "Ngôn ngữ"
+    "language": "Ngôn ngữ",
+    "themeToDark": "Chuyển sang giao diện tối",
+    "themeToLight": "Chuyển sang giao diện sáng"
   },
   "time": {
     "justNow": "vừa xong",

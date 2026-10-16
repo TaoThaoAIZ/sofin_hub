@@ -36,7 +36,7 @@ export const GlobeIcon = (p: IconProps) => (
 );
 
 export const GraduationCapIcon = (p: IconProps) => (
-  <Svg fill="#f26a1b" {...p}>
+  <Svg fill="#ff570a" {...p}>
     <path d="M12 3 1 9l11 6 9-4.9V17h2V9z" />
     <path d="M5 13.2V17c0 1.7 3.1 3 7 3s7-1.3 7-3v-3.8L12 17z" />
   </Svg>

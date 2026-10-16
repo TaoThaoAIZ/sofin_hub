@@ -88,7 +88,7 @@ export function StepBasics({
         <div role="radiogroup" aria-label={t('basics.category')} className="flex flex-wrap gap-2.5">
           {categories.map((c) => {
             const on = form.category === c.id;
-            const ui = CATEGORY_UI[c.id] ?? { icon: 'sell', color: '#f26a1b' };
+            const ui = CATEGORY_UI[c.id] ?? { icon: 'sell', color: '#ff570a' };
             return (
               <button
                 key={c.id}
@@ -96,7 +96,7 @@ export function StepBasics({
                 role="radio"
                 aria-checked={on}
                 onClick={() => set({ category: c.id }, ['category'])}
-                className={`flex h-10 items-center gap-2 rounded-full px-4 text-sm font-semibold ${on ? 'bg-brand-gradient border-0 text-white shadow-[0_6px_14px_rgba(242,106,27,.28)]' : 'border-[1.5px] border-[#ece5df] bg-white text-stone-800'}`}
+                className={`flex h-10 items-center gap-2 rounded-full px-4 text-sm font-semibold ${on ? 'bg-brand-gradient border-0 text-white shadow-[0_6px_14px_rgba(255,87,10,.28)]' : 'border-[1.5px] border-[#ece5df] bg-white text-stone-800'}`}
               >
                 <MaterialIcon name={ui.icon} size={19} filled color={on ? '#fff' : ui.color} />
                 {c.name}
