@@ -23,14 +23,13 @@
       "calendar": "Events",
       "members": "Members",
       "leaderboard": "Leaderboard",
-      "about": "About"
+      "about": "About",
+      "tools": "Support tools",
+      "referral": "Referrals & commission"
     },
     "moderation": "Moderation",
     "revenue": "Revenue & payouts",
-    "settings": "Settings",
-    "ctaTitle": "Build your own community",
-    "ctaDesc": "Bring people together around your passion and get paid.",
-    "ctaButton": "Get started"
+    "settings": "Settings"
   },
   "rightSidebar": {
     "by": "By {{name}}",
@@ -135,7 +134,16 @@
     "emptyTag": "No posts tagged #{{tag}} yet.",
     "empty": "No posts yet. Be the first to post!",
     "loadMore": "Load more posts ({{loaded}}/{{total}})",
-    "loadMoreFailed": "Could not load more"
+    "loadMoreFailed": "Could not load more",
+    "progress": {
+      "title": "Course progress",
+      "count": "{{done}}/{{total}} lessons",
+      "next": "Up next: {{title}}",
+      "allDone": "You completed the whole course 🎉",
+      "start": "Start learning",
+      "continue": "Continue",
+      "review": "Review"
+    }
   },
   "leaderboard": {
     "top7": "Top members (7 days)",
@@ -429,9 +437,14 @@
       "urlPh": "or paste a URL https://…",
       "urlAria": "File URL",
       "add": "Add",
-      "uploadVideo": "Upload video from device (mp4)",
+      "uploadVideo": "Upload video from device (mp4, webm, mov)",
       "videoUploaded": "Video uploaded",
-      "bodyMin": "Article content needs at least {{min}} characters (currently {{n}})."
+      "bodyMin": "Article content needs at least {{min}} characters (currently {{n}}).",
+      "quizAfterSave": "Save the lesson first, then reopen it to add a quiz (optional).",
+      "slideDrop": "Upload lecture slides",
+      "slideHint": "PDF, PPT, PPTX, PPSX · up to 200MB",
+      "cancelUpload": "Cancel",
+      "tooManyFiles": "Up to {{max}} files (slides included)"
     },
     "row": {
       "collapse": "Collapse",
@@ -733,9 +746,9 @@
       "name": "Lesson name",
       "namePh": "E.g. Write captions with AI in 5 minutes",
       "videoDrop": "Paste a YouTube/Vimeo link or upload a video",
-      "videoHint": "Supports youtube.com, youtu.be, vimeo.com or an mp4 file (max 25 MB)",
+      "videoHint": "Supports youtube.com, youtu.be, vimeo.com or upload a video (mp4, webm, mov · up to 2GB)",
       "fileDrop": "Upload lesson documents",
-      "fileHint": "PDF, DOCX, ZIP · up to 25MB",
+      "fileHint": "PDF, DOCX, XLSX, PPT/PPTX, CSV, ZIP… · up to 25MB",
       "chooseFile": "Choose file",
       "note": "Notes for learners",
       "notePh": "Summary, reference links, homework...",
@@ -792,5 +805,65 @@
       "draft": "Draft"
     },
     "requiredHint": "Required field"
+  },
+  "referral": {
+    "loading": "Loading…",
+    "loadFail": "Could not load the referral program.",
+    "title": "Referral program",
+    "subOn": "Invite friends to this community and earn {{pct}} commission on each payment they make.",
+    "subOff": "The community owner has not turned on the referral program.",
+    "ownerTitle": "Referral commission (community owner)",
+    "ownerHint": "The commission is deducted from your share of each referred member payment (the platform keeps its own fee). Up to {{max}}; set 0% to turn off. Applies to new payments only.",
+    "rateLabel": "Commission",
+    "save": "Save",
+    "saving": "Saving…",
+    "turnOff": "Turn off",
+    "saved": "Saved",
+    "rateErr": "Enter a percentage from 0 to {{max}}",
+    "ownerReferrers": "Active referrers",
+    "ownerReferred": "People invited",
+    "ownerCommission": "Commission generated",
+    "yourLink": "Your referral link",
+    "copy": "Copy",
+    "copied": "Copied",
+    "howItWorks": "People who open your link and then pay for this community are credited to you; you earn {{pct}} of what they pay (including renewals).",
+    "disabledMember": "Once the owner turns the program on, your personal invite link will appear here.",
+    "kpiReferred": "People invited",
+    "kpiPaying": "Paid",
+    "kpiCommission": "Commission",
+    "kpiPending": "Pending payout",
+    "payoutOn": "Payout on {{date}}",
+    "listTitle": "People you invited",
+    "listEmpty": "Nobody has joined through your link yet.",
+    "statusPaid": "Paid",
+    "statusNone": "Not paid",
+    "tabCommunity": "In this community",
+    "tabPlatform": "SofinHub platform referral"
+  },
+  "onboarding": {
+    "title": "Start your journey",
+    "sub_one": "Just {{count}} more step and you are ready to explore every feature!",
+    "sub_other": "Just {{count}} more steps and you are ready to explore every feature!",
+    "completed": "Completed",
+    "done": "Done",
+    "todo": "Not done",
+    "noVideo": "This community has no intro video yet.",
+    "steps": {
+      "video": {
+        "title": "Watch the intro video",
+        "cta": "Watch",
+        "again": "Watch again"
+      },
+      "comment": {
+        "title": "Find a post you like and leave a comment",
+        "cta": "Explore",
+        "again": "Explore"
+      },
+      "app": {
+        "title": "Get the SofinHub app",
+        "cta": "Get it",
+        "again": "Get again"
+      }
+    }
   }
 }

@@ -216,7 +216,8 @@
       "chatbot": "AI assistant",
       "invites": "Invites",
       "bans": "Banned members",
-      "danger": "Danger zone"
+      "danger": "Danger zone",
+      "plan": "Plan & billing"
     },
     "back": "Go back",
     "loading": "Loading…",
@@ -257,5 +258,20 @@
     "members": "{{n}} members",
     "remainingUses_one": "{{count}} use remaining. ",
     "remainingUses_other": "{{count}} uses remaining. "
+  },
+  "hostingPlan": {
+    "title": "Hosting plan",
+    "loading": "Loading…",
+    "loadFail": "Could not load plan info.",
+    "none": "This community has not chosen a hosting plan.",
+    "pro": "Professional plan",
+    "start": "Starter plan (free)",
+    "monthly": "month",
+    "annual": "year",
+    "price": "{{price}} / {{cycle}}",
+    "trialUntil": "Trial until {{date}}. After the trial you will receive a bank-transfer invoice.",
+    "paidUntil": "Paid until {{date}}",
+    "invoiceTitle": "Invoice due: {{amount}}",
+    "invoiceBody": "Transfer the exact amount with the content below. The plan renews automatically once the money arrives; if unpaid past the deadline, the community returns to the Starter plan."
   }
 }

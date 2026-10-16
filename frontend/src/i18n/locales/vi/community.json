@@ -23,14 +23,13 @@
       "calendar": "Lịch sự kiện",
       "members": "Thành viên",
       "leaderboard": "Bảng xếp hạng",
-      "about": "Giới thiệu"
+      "about": "Giới thiệu",
+      "tools": "Công cụ hỗ trợ",
+      "referral": "Giới thiệu & hoa hồng"
     },
     "moderation": "Kiểm duyệt",
     "revenue": "Doanh thu & rút tiền",
-    "settings": "Cài đặt",
-    "ctaTitle": "Xây dựng cộng đồng của riêng bạn",
-    "ctaDesc": "Kết nối mọi người xung quanh đam mê của bạn và nhận tiền.",
-    "ctaButton": "Bắt đầu"
+    "settings": "Cài đặt"
   },
   "rightSidebar": {
     "by": "Bởi {{name}}",
@@ -135,7 +134,16 @@
     "emptyTag": "Chưa có bài viết nào gắn thẻ #{{tag}}.",
     "empty": "Chưa có bài viết nào. Hãy là người đăng đầu tiên!",
     "loadMore": "Tải thêm bài viết ({{loaded}}/{{total}})",
-    "loadMoreFailed": "Không tải thêm được"
+    "loadMoreFailed": "Không tải thêm được",
+    "progress": {
+      "title": "Tiến độ khóa học",
+      "count": "{{done}}/{{total}} bài",
+      "next": "Bài kế tiếp: {{title}}",
+      "allDone": "Bạn đã hoàn thành toàn bộ khóa học 🎉",
+      "start": "Bắt đầu học",
+      "continue": "Tiếp tục học",
+      "review": "Ôn lại"
+    }
   },
   "leaderboard": {
     "top7": "Top thành viên (7 ngày)",
@@ -429,9 +437,14 @@
       "urlPh": "hoặc dán URL https://…",
       "urlAria": "URL tệp",
       "add": "Thêm",
-      "uploadVideo": "Tải video từ máy lên (mp4)",
+      "uploadVideo": "Tải video từ máy lên (mp4, webm, mov)",
       "videoUploaded": "Đã tải video lên",
-      "bodyMin": "Nội dung bài viết cần tối thiểu {{min}} ký tự (hiện có {{n}})."
+      "bodyMin": "Nội dung bài viết cần tối thiểu {{min}} ký tự (hiện có {{n}}).",
+      "quizAfterSave": "Lưu bài học trước, rồi mở lại để thêm trắc nghiệm (không bắt buộc).",
+      "slideDrop": "Tải slide bài giảng",
+      "slideHint": "PDF, PPT, PPTX, PPSX · tối đa 200MB",
+      "cancelUpload": "Hủy",
+      "tooManyFiles": "Tối đa {{max}} tệp (gồm cả slide)"
     },
     "row": {
       "collapse": "Thu gọn",
@@ -733,9 +746,9 @@
       "name": "Tên bài học",
       "namePh": "Ví dụ: Viết caption bằng AI trong 5 phút",
       "videoDrop": "Dán link YouTube/Vimeo hoặc tải video từ máy",
-      "videoHint": "Hỗ trợ youtube.com, youtu.be, vimeo.com hoặc tệp mp4 (tối đa 25 MB)",
+      "videoHint": "Hỗ trợ youtube.com, youtu.be, vimeo.com hoặc tải video từ máy (mp4, webm, mov · tối đa 2GB)",
       "fileDrop": "Tải tài liệu cho bài học",
-      "fileHint": "PDF, DOCX, ZIP · tối đa 25MB",
+      "fileHint": "PDF, DOCX, XLSX, PPT/PPTX, CSV, ZIP… · tối đa 25MB",
       "chooseFile": "Chọn tệp",
       "note": "Ghi chú cho học viên",
       "notePh": "Tóm tắt, link tham khảo, bài tập về nhà...",
@@ -792,5 +805,65 @@
       "draft": "Bản nháp"
     },
     "requiredHint": "Trường bắt buộc"
+  },
+  "referral": {
+    "loading": "Đang tải…",
+    "loadFail": "Không tải được chương trình giới thiệu.",
+    "title": "Chương trình giới thiệu",
+    "subOn": "Mời bạn bè vào cộng đồng và nhận {{pct}} hoa hồng trên mỗi thanh toán của người bạn mời.",
+    "subOff": "Chủ cộng đồng chưa bật chương trình giới thiệu.",
+    "ownerTitle": "Hoa hồng giới thiệu (dành cho chủ cộng đồng)",
+    "ownerHint": "Hoa hồng được trừ vào phần bạn nhận từ mỗi thanh toán của người được mời (nền tảng vẫn giữ phí của mình). Tối đa {{max}}; đặt 0% để tắt. Chỉ áp cho thanh toán mới.",
+    "rateLabel": "Hoa hồng",
+    "save": "Lưu",
+    "saving": "Đang lưu…",
+    "turnOff": "Tắt chương trình",
+    "saved": "Đã lưu",
+    "rateErr": "Nhập phần trăm từ 0 đến {{max}}",
+    "ownerReferrers": "Người đang giới thiệu",
+    "ownerReferred": "Người được mời",
+    "ownerCommission": "Hoa hồng đã phát sinh",
+    "yourLink": "Link giới thiệu của bạn",
+    "copy": "Sao chép",
+    "copied": "Đã chép",
+    "howItWorks": "Người bấm link rồi thanh toán gói của cộng đồng sẽ được ghi nhận cho bạn; bạn nhận {{pct}} số tiền họ thanh toán (cả các kỳ gia hạn).",
+    "disabledMember": "Khi chủ cộng đồng bật chương trình, bạn sẽ có link riêng để mời bạn bè tại đây.",
+    "kpiReferred": "Người đã mời",
+    "kpiPaying": "Đã thanh toán",
+    "kpiCommission": "Hoa hồng",
+    "kpiPending": "Chờ chi trả",
+    "payoutOn": "Chi trả ngày {{date}}",
+    "listTitle": "Người bạn đã mời",
+    "listEmpty": "Chưa có ai đăng ký qua link của bạn.",
+    "statusPaid": "Đã thanh toán",
+    "statusNone": "Chưa thanh toán",
+    "tabCommunity": "Trong cộng đồng này",
+    "tabPlatform": "Giới thiệu nền tảng SofinHub"
+  },
+  "onboarding": {
+    "title": "Bắt đầu hành trình của bạn",
+    "sub_one": "Chỉ còn {{count}} bước nữa là bạn đã sẵn sàng khám phá tất cả tính năng!",
+    "sub_other": "Chỉ còn {{count}} bước nữa là bạn đã sẵn sàng khám phá tất cả tính năng!",
+    "completed": "Đã hoàn thành",
+    "done": "Đã xong",
+    "todo": "Chưa xong",
+    "noVideo": "Cộng đồng này chưa có video giới thiệu.",
+    "steps": {
+      "video": {
+        "title": "Xem video giới thiệu",
+        "cta": "Xem ngay",
+        "again": "Xem lại"
+      },
+      "comment": {
+        "title": "Tìm một bài viết bạn thích và để lại bình luận",
+        "cta": "Khám phá",
+        "again": "Khám phá"
+      },
+      "app": {
+        "title": "Tải ứng dụng SofinHub",
+        "cta": "Tải ngay",
+        "again": "Tải lại"
+      }
+    }
   }
 }

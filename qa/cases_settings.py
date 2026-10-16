@@ -961,8 +961,8 @@ def load_setb_more(add):
 # ====================================================================================================================
 def load_setr(add):
     A = _mk(add, "SETR", "Cài đặt - Giới thiệu")
-    UI = BASE + " Đăng nhập UI member1@sofinhub.test / " + PW + " rồi mở /settings/gioi-thieu."
-    UINEW = BASE + " " + NEWU + " Đăng nhập UI bằng tài khoản mới đó, mở /settings/gioi-thieu."
+    UI = BASE + " Đăng nhập UI member1@sofinhub.test / " + PW + " rồi vào một cộng đồng đã tham gia > menu 'Giới thiệu & hoa hồng' > tab 'Giới thiệu nền tảng SofinHub' (trước đây là /settings/gioi-thieu, nay URL cũ chuyển về /me/communities)."
+    UINEW = BASE + " " + NEWU + " Đăng nhập UI bằng tài khoản mới đó, vào một cộng đồng đã tham gia > menu 'Giới thiệu & hoa hồng' > tab 'Giới thiệu nền tảng SofinHub' (URL cũ /settings/gioi-thieu nay chuyển về /me/communities)."
     UIM = UINEW + " " + MUTATE
     REF = (" Người giới thiệu R (tài khoản mới) lấy link ở tab này; người được giới thiệu F đăng ký bằng link (cửa sổ ẩn danh) - xem case 'Ghi nhận khi đăng ký'. "
            "Cộng đồng có phí PC ($10/tháng) do owner khác tạo để F thanh toán (checkout rồi confirm bằng API hoặc UI).")

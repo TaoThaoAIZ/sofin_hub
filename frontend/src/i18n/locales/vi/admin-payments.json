@@ -286,7 +286,8 @@
     "initial": "Lần đầu",
     "renewal": "Gia hạn",
     "oldest": "Cũ nhất",
-    "highestAmount": "Số tiền cao nhất"
+    "highestAmount": "Số tiền cao nhất",
+    "hosting": "Phí hosting"
   },
   "bank": {
     "pageTitle": "Tiền vào ngân hàng",
@@ -301,6 +302,9 @@
     "tableSub": "{{count}} giao dịch",
     "empty": "Chưa có giao dịch tiền vào nào. Tiền chuyển khoản về sẽ hiện ở đây (kể cả khoản đã tự khớp).",
     "colDate": "Thời gian",
+    "colTxId": "Mã giao dịch",
+    "colAccount": "Số tài khoản",
+    "searchPlaceholder": "Tìm theo mã giao dịch, số tài khoản, mã tham chiếu, nội dung…",
     "colDesc": "Nội dung",
     "colRef": "Mã tham chiếu",
     "colBank": "Ngân hàng",
@@ -317,5 +321,43 @@
     "statusPending": "Chưa ghi có",
     "tabPending": "Chưa ghi có",
     "tabCredited": "Đã ghi có"
+  },
+  "referrals": {
+    "pageTitle": "Giao dịch giới thiệu",
+    "pageSubtitle": "Ai giới thiệu ai và hoa hồng phát sinh từ các giao dịch của người được giới thiệu.",
+    "tabCommissions": "Hoa hồng",
+    "tabReferrals": "Lượt giới thiệu",
+    "tableCommissions": "Hoa hồng giới thiệu",
+    "tableReferrals": "Người được giới thiệu",
+    "searchPlaceholder": "Tìm theo tên, email người giới thiệu / được giới thiệu, mã giới thiệu…",
+    "empty": "Chưa có giao dịch giới thiệu nào.",
+    "kpiReferrals": "Lượt giới thiệu",
+    "kpiCommissions": "Khoản hoa hồng",
+    "kpiPending": "Chờ chi trả",
+    "kpiPaid": "Đã chi trả",
+    "colDate": "Thời gian",
+    "colReferrer": "Người giới thiệu",
+    "colReferred": "Người được giới thiệu",
+    "colKind": "Loại",
+    "colBase": "Giao dịch gốc",
+    "colRate": "Tỷ lệ",
+    "colCommission": "Hoa hồng",
+    "colPayoutOn": "Ngày chi trả",
+    "colSource": "Nguồn",
+    "colCode": "Mã giới thiệu",
+    "colSignup": "Ngày đăng ký",
+    "colWindow": "Hiệu lực",
+    "colCount": "Số khoản",
+    "colTotal": "Tổng hoa hồng",
+    "kindMember": "Thành viên",
+    "kindCreator": "Người tạo cộng đồng",
+    "windowActive": "Còn đến {{date}}",
+    "windowExpired": "Hết hạn",
+    "status": {
+      "pending": "Chờ chi trả",
+      "paid": "Đã chi trả",
+      "void": "Đã hủy"
+    },
+    "kindCommunity": "Giới thiệu trong cộng đồng"
   }
 }

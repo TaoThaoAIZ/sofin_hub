@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { ButtonLink } from '../../../components/ui/Button';
-import { ArrowRightIcon, StarIcon, UserIcon } from '../../../components/ui/icons';
+import { Link } from 'react-router-dom';
+import { StarIcon, UserIcon } from '../../../components/ui/icons';
 import { formatCompact } from '../../../lib/format';
 import { TAG_UI } from '../constants';
 import type { Course } from '../types';
@@ -14,7 +14,7 @@ export function CourseCard({ course, view }: { course: Course; view: ViewMode })
 
   return (
     <article
-      className={`glass flex overflow-hidden rounded-3xl p-2 transition duration-200 hover:-translate-y-[3px] hover:shadow-card-hover ${
+      className={`glass relative flex cursor-pointer overflow-hidden rounded-3xl p-2 transition duration-200 hover:-translate-y-[3px] hover:shadow-card-hover ${
         list ? 'flex-row' : 'flex-col'
       }`}
     >
@@ -35,7 +35,10 @@ export function CourseCard({ course, view }: { course: Course; view: ViewMode })
       <div className="flex min-w-0 flex-1 flex-col gap-4 px-2.5 pt-3.5 pb-1.5">
         <div className="min-w-0">
           <h3 title={course.title} className="m-0 truncate text-[17px] font-bold">
-            {course.title}
+            {/* Stretched link: ::after phủ cả thẻ (thẻ là phần tử `relative`) nên bấm bất kỳ đâu trên thẻ đều vào trang chi tiết; vẫn là liên kết thật cho bàn phím/trình đọc màn hình. */}
+            <Link to={`/courses/${course.id}`} className="after:absolute after:inset-0 after:z-10 after:rounded-3xl after:content-['']">
+              {course.title}
+            </Link>
           </h3>
           <p className="mt-1 line-clamp-2 text-sm leading-normal text-stone-600">{course.description}</p>
         </div>
@@ -65,13 +68,6 @@ export function CourseCard({ course, view }: { course: Course; view: ViewMode })
                 {course.rating} ({course.ratingCount})
               </span>
             </div>
-            <ButtonLink
-              to={`/courses/${course.id}`}
-              aria-label={t('list.view', { title: course.title })}
-              className="size-[38px] rounded-full"
-            >
-              <ArrowRightIcon size={16} />
-            </ButtonLink>
           </div>
         </div>
       </div>

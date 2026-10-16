@@ -216,7 +216,8 @@
       "chatbot": "Trợ lý AI",
       "invites": "Lời mời",
       "bans": "Thành viên bị cấm",
-      "danger": "Vùng nguy hiểm"
+      "danger": "Vùng nguy hiểm",
+      "plan": "Gói & thanh toán"
     },
     "back": "Quay lại",
     "loading": "Đang tải…",
@@ -257,5 +258,20 @@
     "members": "{{n}} thành viên",
     "remainingUses_one": "Còn {{count}} lượt sử dụng. ",
     "remainingUses_other": "Còn {{count}} lượt sử dụng. "
+  },
+  "hostingPlan": {
+    "title": "Gói hosting",
+    "loading": "Đang tải…",
+    "loadFail": "Không tải được thông tin gói.",
+    "none": "Cộng đồng này chưa chọn gói hosting.",
+    "pro": "Gói Chuyên nghiệp",
+    "start": "Gói Khởi đầu (miễn phí)",
+    "monthly": "tháng",
+    "annual": "năm",
+    "price": "{{price}} / {{cycle}}",
+    "trialUntil": "Dùng thử đến {{date}}. Hết dùng thử bạn sẽ nhận hóa đơn chuyển khoản.",
+    "paidUntil": "Đã thanh toán đến {{date}}",
+    "invoiceTitle": "Hóa đơn cần thanh toán: {{amount}}",
+    "invoiceBody": "Chuyển khoản đúng số tiền và nội dung bên dưới. Gói được gia hạn tự động ngay khi tiền về; quá hạn không thanh toán, cộng đồng sẽ trở về gói Khởi đầu."
   }
 }

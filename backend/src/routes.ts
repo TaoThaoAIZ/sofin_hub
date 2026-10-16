@@ -31,6 +31,9 @@ import { adminChatbotRouter } from './modules/chatbot/admin-chatbot.routes.js';
 import { chatbotRouter } from './modules/chatbot/chatbot.routes.js';
 import { communityBotRouter } from './modules/community-bot/community-bot.routes.js';
 import { greetingsRouter } from './modules/community-greetings/greetings.routes.js';
+import { onboardingRouter } from './modules/onboarding/onboarding.routes.js';
+import { quizRouter } from './modules/quiz/quiz.routes.js';
+import { communityReferralRouter } from './modules/referrals/community-referral.routes.js';
 
 export const apiRouter = Router();
 
@@ -53,6 +56,9 @@ apiRouter.use('/', metaRouter);
 apiRouter.use('/', postsRouter);
 apiRouter.use('/', moderationRouter);
 apiRouter.use('/', classroomRouter);
+apiRouter.use('/', quizRouter);
+apiRouter.use('/', onboardingRouter);
+apiRouter.use('/', communityReferralRouter);
 apiRouter.use('/', eventsRouter);
 apiRouter.use('/', communityRouter);
 apiRouter.use('/', paymentsRouter);

@@ -263,6 +263,8 @@ export interface LessonAttachment {
   name: string;
   url: string;
   size?: number;
+  /** 'slide' = slide bài giảng (hiện ở mục riêng); bỏ trống = tệp đính kèm thường. */
+  kind?: 'slide';
 }
 
 export interface LessonDetail extends ClassroomLesson {
@@ -272,6 +274,52 @@ export interface LessonDetail extends ClassroomLesson {
   learningCourseId?: string;
   prevLessonId: string | null;
   nextLessonId: string | null;
+  prevLessonLocked: boolean;
+  nextLessonLocked: boolean;
+  /** Trắc nghiệm của bài (null = không có). required = phải đạt điểm mới hoàn thành bài (mod+ không bị bắt buộc). */
+  quiz: { questionCount: number; passPercent: number; passed: boolean; required: boolean } | null;
+}
+
+export type OnboardingStepKey = 'video' | 'comment' | 'app';
+export interface Onboarding {
+  steps: Array<{ key: OnboardingStepKey; done: boolean }>;
+  done: number;
+  total: number;
+  completed: boolean;
+  videoUrl: string | null;
+}
+
+export interface QuizQuestionView {
+  id: string;
+  text: string;
+  options: string[];
+  /** Chỉ có khi người xem là mod+ (để chỉnh sửa). */
+  correctIndex?: number;
+}
+export interface QuizView {
+  canEdit: boolean;
+  quiz: null | {
+    id: string;
+    passPercent: number;
+    questionCount: number;
+    questions: QuizQuestionView[];
+    attempts: number;
+    bestPercent: number | null;
+    passed: boolean;
+  };
+}
+export interface QuizAttemptResult {
+  scorePercent: number;
+  correctCount: number;
+  total: number;
+  passPercent: number;
+  passed: boolean;
+  /** correctIndex chỉ có khi học viên đã đạt. */
+  results: Array<{ questionId: string; correct: boolean; correctIndex?: number }>;
+}
+export interface QuizInput {
+  passPercent: number;
+  questions: Array<{ text: string; options: string[]; correctIndex: number }>;
 }
 
 export interface CourseProgress {

@@ -85,6 +85,7 @@ export const ADMIN_NAV: NavGroup[] = [
     get label() { return tl('nav.groups.payments'); },
     kids: [
       kid('payments', 'tx'),
+      kid('payments', 'referrals'),
       kid('payments', 'subs'),
       kid('payments', 'refunds'),
       kid('payments', 'chargebacks'),

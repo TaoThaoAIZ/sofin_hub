@@ -207,9 +207,10 @@ export function createReferralsService() {
      * Cửa sổ ghi nhận (`expiresAt`) chỉ xét tại LẦN THANH TOÁN ĐẦU của người được giới thiệu; đã có hoa hồng member trước đó thì các kỳ sau
      * (gia hạn hằng tháng) vẫn được tính dù cửa sổ đã hết — đúng mô tả "hoa hồng định kỳ".
      */
-    async onPaymentSucceeded(p: { id: string; userId: string; communityId: string; amountCents: number; confirmedAt?: string }): Promise<void> {
+    async onPaymentSucceeded(p: { id: string; userId: string; communityId: string; amountCents: number; confirmedAt?: string; kind?: string }): Promise<void> {
       await isolate('onPaymentSucceeded', async () => {
         if (p.amountCents <= 0) return;
+        if (p.kind === 'hosting') return; // phí hosting tính hoa hồng "creator" (onHostingCharge), không phải hoa hồng thành viên
         const ref = await repo.findReferralOf(p.userId);
         if (!ref) return;
         const sourceRef = `payment:${p.id}`;
@@ -237,9 +238,8 @@ export function createReferralsService() {
     },
 
     /**
-     * Hoa hồng "creator": người được giới thiệu trả phí gói hosting cho cộng đồng của họ. CHƯA có luồng trừ tiền gói hosting (A16 mô phỏng) nên
-     * chưa có nơi nào gọi hàm này; khi có job/cổng trừ tiền thật, gọi sau mỗi lần trừ thành công với `chargeRef` duy nhất (vd. id giao dịch hosting).
-     * `amount` theo đơn vị nhỏ nhất của owner.currency.
+     * Hoa hồng "creator": người được giới thiệu trả phí gói hosting cho cộng đồng của họ. Gọi sau commit khi hóa đơn hosting
+     * (Payment kind = hosting, thu qua chuyển khoản) được thanh toán, với `chargeRef` = id giao dịch. `amount` theo đồng (VND).
      */
     async onHostingCharge(c: { ownerId: string; communityId: string; chargeRef: string; amount: number; at?: Date }): Promise<void> {
       await isolate('onHostingCharge', async () => {
@@ -274,6 +274,8 @@ export function createReferralsService() {
     async voidForPayment(paymentId: string): Promise<void> {
       await isolate('voidForPayment', async () => {
         await repo.voidPendingBySource(`payment:${paymentId}`);
+        await repo.voidPendingBySource(`hosting:${paymentId}`); // hóa đơn hosting được hoàn tiền
+        await repo.voidPendingBySource(`cpayment:${paymentId}`); // hoa hồng giới thiệu của cộng đồng
       });
     },
 
@@ -284,6 +286,11 @@ export function createReferralsService() {
       for (const { id } of rows) {
         const p = await repo.findPayment(id);
         if (!p) continue;
+        if (p.kind === 'hosting') {
+          await this.onHostingCharge({ ownerId: p.userId, communityId: p.communityId, chargeRef: p.id, amount: p.amountCents, at: p.confirmedAt ?? undefined });
+          if (await repo.findCommissionBySource(`hosting:${id}`)) created++;
+          continue;
+        }
         await this.onPaymentSucceeded({ id: p.id, userId: p.userId, communityId: p.communityId, amountCents: p.amountCents, confirmedAt: p.confirmedAt?.toISOString() });
         if (await repo.findCommissionBySource(`payment:${id}`)) created++;
       }

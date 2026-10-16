@@ -1,4 +1,5 @@
 export { BankInflowView as AdminBankInflowPage } from '../../features/admin/pages/BankViews';
+export { ReferralTxView as AdminReferralTxPage } from '../../features/admin/pages/ReferralTxViews';
 export {
   ChargebacksView as AdminChargebacksPage,
   CreatorDetailView as AdminCreatorDetailPage,

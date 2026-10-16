@@ -86,6 +86,24 @@ describe('cộng đồng: tạo, tham gia, vai trò, lời mời', () => {
     assert.equal(r2.body.error.code, 'JOIN_REQUEST_REQUIRED');
   });
 
+  it('riêng tư CÓ PHÍ: đã được duyệt nhưng chưa trả → enroll trả 402 PAYMENT_REQUIRED (không phải JOIN_REQUEST_REQUIRED)', async () => {
+    const owner = await c.registerUser('o');
+    const u = await c.registerUser('u');
+    const priv = await make(owner, { title: 'Nhóm kín có phí', visibility: 'private', priceUsd: 9 });
+    const before = await c.call('POST', `/courses/${priv}/enroll`, { token: u.token });
+    assert.equal(before.body.error.code, 'JOIN_REQUEST_REQUIRED');
+
+    const req = await c.call('POST', `/courses/${priv}/join-requests`, { token: u.token, body: {} });
+    assert.equal(req.status, 201, JSON.stringify(req.body));
+    assert.equal((await c.call('POST', `/join-requests/${req.body.data.id}/approve`, { token: owner.token })).status, 200);
+
+    const d = await c.call('GET', `/courses/${priv}`, { token: u.token });
+    assert.equal(d.body.data.viewerApproved, true);
+    const after = await c.call('POST', `/courses/${priv}/enroll`, { token: u.token });
+    assert.equal(after.status, 402, JSON.stringify(after.body));
+    assert.equal(after.body.error.code, 'PAYMENT_REQUIRED');
+  });
+
   it('công khai có phí: sau checkout/confirm thì vào được và rời được', async () => {
     const owner = await c.registerUser('o');
     const u = await c.registerUser('u');

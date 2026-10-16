@@ -1,3 +1,4 @@
+import { readCommunityRef } from '../referral/communityRef';
 import { apiGet, apiPost } from '../../lib/api';
 import type {
   CheckoutQuote,
@@ -22,7 +23,7 @@ export interface CheckoutInput {
 export const checkout = (courseId: string, input: CheckoutInput, token: string, idempotencyKey?: string) =>
   apiPost<{ data: PaymentIntent }>(
     `/communities/${courseId}/checkout`,
-    { interval: input.interval },
+    { interval: input.interval, referralCode: readCommunityRef(courseId) },
     { token, headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined },
   ).then((r) => r.data);
 

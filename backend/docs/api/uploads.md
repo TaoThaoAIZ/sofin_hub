@@ -28,8 +28,17 @@ Module: `src/modules/uploads/`. Tất cả đường dẫn nằm dưới tiền 
 | post_image | jpeg, png, webp, gif | `UPLOAD_MAX_IMAGE_MB` = 5MB |
 | avatar | ảnh | `UPLOAD_MAX_AVATAR_MB` = 3MB |
 | cover | ảnh | `UPLOAD_MAX_COVER_MB` = 8MB |
-| post_file, lesson_attachment | pdf, zip, docx, xlsx, pptx, txt, mp4 | `UPLOAD_MAX_FILE_MB` = 25MB |
-| message_attachment | ảnh + pdf, zip, docx, xlsx, pptx, txt | 25MB |
+| post_file, lesson_attachment | pdf, zip, docx, xlsx, pptx, ppsx, doc, ppt, xls, txt, csv, mp4 | `UPLOAD_MAX_FILE_MB` = 25MB |
+| message_attachment | ảnh + pdf, zip, docx, xlsx, pptx, ppsx, doc, ppt, xls, txt, csv | 25MB |
+| **lesson_video** | mp4, webm, mov (H.264) | `UPLOAD_MAX_VIDEO_MB` = **2048MB**, upload dạng **stream** |
+| **lesson_slide** | pdf, ppt, pptx, ppsx | `UPLOAD_MAX_SLIDE_MB` = 200MB, upload dạng **stream** |
+
+**lesson_video / lesson_slide** (video dài, slide lớn):
+- Chỉ mod+ của cộng đồng (`communityId` bắt buộc); thành viên cộng đồng mới xem được. Slide lưu trong `attachments` của bài với `kind: "slide"` (không cần cột mới).
+- `PUT /uploads/:key` **bắt buộc có Content-Length** (thiếu = 411). Backend KHÔNG nạp cả file vào RAM: kiểm magic bytes ở khúc đầu, đếm byte (vượt vé = 413, lệch Content-Length = 400) rồi ghi thẳng xuống kho (đĩa: `createWriteStream`; S3: `PutObject` stream, tối đa 5GB). Lỗi giữa chừng thì dọn file dở và hủy yêu cầu.
+- `GET /files/:key` hỗ trợ **Range** (206/416, `Accept-Ranges: bytes`) để tua video; URL ký của lesson_video sống **4 giờ** (video dài), file khác 300s.
+- Node `server.requestTimeout` = 3 giờ (mặc định 300s sẽ cắt video lớn trên mạng chậm).
+- **NGINX trên server phải cho body lớn** cho đường dẫn upload: trong `/opt/app/nginx/default.conf` thêm `location /api/uploads/ { client_max_body_size 2100m; proxy_request_buffering off; proxy_read_timeout 3h; proxy_send_timeout 3h; ... }` (mẫu đầy đủ ở `deploy/aws/nginx/default.conf` và `https.conf.example`). `remote-deploy.sh` KHÔNG ghi đè file này nên phải sửa tay một lần rồi `docker compose up -d --build web`. Hạn mức lưu trữ mỗi người `UPLOAD_USER_QUOTA_MB` mặc định nâng lên 10240MB.
 
 Hạn mức mỗi người: `UPLOAD_USER_QUOTA_MB` = 200MB (tính file đã upload + yêu cầu presign còn hạn). SVG và HTML KHÔNG có trong whitelist (chống XSS).
 

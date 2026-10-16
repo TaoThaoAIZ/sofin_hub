@@ -287,7 +287,7 @@ export const adminCommunitiesService = {
       prisma.post.count({ where: { communityId: id, hidden: true } }),
       prisma.communityEvent.count({ where: { communityId: id } }),
       prisma.subscription.count({ where: { communityId: id, status: 'active' } }),
-      prisma.payment.aggregate({ where: { communityId: id, status: { in: paid } }, _sum: { amountCents: true, refundedCents: true } }),
+      prisma.payment.aggregate({ where: { communityId: id, kind: { not: 'hosting' }, status: { in: paid } }, _sum: { amountCents: true, refundedCents: true } }),
       prisma.report.count({ where: { communityId: id, createdAt: { gte: since30 } } }),
       prisma.report.count({ where: { communityId: id, status: { in: ['open', 'under_review'] } } }),
       prisma.report.findMany({ where: { communityId: id }, orderBy: { createdAt: 'desc' }, take: 5, include: caseInclude }),

@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Link, NavLink, useParams } from 'react-router-dom';
+import { NavLink, useParams } from 'react-router-dom';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { useCommunityDetail } from '../../courses/queries';
 import { isAtLeast } from '../../communities/types';
@@ -13,6 +13,8 @@ const NAV_ICONS = {
   members: 'group',
   leaderboard: 'leaderboard',
   about: 'info',
+  tools: 'handyman',
+  referral: 'redeem',
 };
 
 export interface CommunityNavItem {
@@ -31,6 +33,8 @@ export const COMMUNITY_NAV_ITEMS: CommunityNavItem[] = [
   { key: 'members', to: 'thanh-vien', labelKey: 'sidebar.nav.members', icon: 'members' },
   { key: 'leaderboard', to: 'xep-hang', labelKey: 'sidebar.nav.leaderboard', icon: 'leaderboard' },
   { key: 'about', to: 'gioi-thieu', labelKey: 'sidebar.nav.about', icon: 'about' },
+  { key: 'referral', to: 'chuong-trinh-gioi-thieu', labelKey: 'sidebar.nav.referral', icon: 'referral' },
+  { key: 'tools', to: 'cong-cu', labelKey: 'sidebar.nav.tools', icon: 'tools' },
 ];
 
 export function CommunitySidebar({ courseTitle }: { courseTitle: string }) {
@@ -107,104 +111,6 @@ export function CommunitySidebar({ courseTitle }: { courseTitle: string }) {
           </NavLink>
         )}
       </nav>
-
-      <div className="relative mt-auto flex-none overflow-hidden rounded-2xl border border-white/90 bg-gradient-to-br from-brand-soft to-[#ffe0cb] p-4 text-center">
-        <div className="relative mx-auto mt-1 mb-2.5 max-[900px]:hidden [@media(max-height:820px)]:hidden" style={{ width: 150, height: 88 }}>
-          <div
-            className="absolute"
-            style={{ left: 4, top: 44, width: 142, height: 36, borderRadius: '50%', border: '3px solid rgba(255,190,140,.55)', transform: 'rotate(-8deg)' }}
-          />
-          <div
-            className="absolute"
-            style={{
-              left: 28,
-              top: 20,
-              width: 22,
-              height: 22,
-              borderRadius: '50%',
-              background: 'radial-gradient(circle at 32% 28%,#ffd2a8 0%,#ff9a4d 45%,#e8520c 100%)',
-              boxShadow: 'inset -3px -4px 8px rgba(160,40,0,.25), 0 4px 10px rgba(242,106,27,.25)',
-            }}
-          />
-          <div
-            className="absolute"
-            style={{
-              left: 20,
-              top: 42,
-              width: 38,
-              height: 30,
-              borderRadius: '19px 19px 8px 8px',
-              background: 'radial-gradient(ellipse at 35% 20%,#ffcfa3 0%,#ff9a4d 50%,#e8520c 100%)',
-              boxShadow: 'inset -4px -5px 10px rgba(160,40,0,.22), 0 6px 14px rgba(242,106,27,.25)',
-            }}
-          />
-          <div
-            className="absolute"
-            style={{
-              left: 98,
-              top: 20,
-              width: 22,
-              height: 22,
-              borderRadius: '50%',
-              background: 'radial-gradient(circle at 32% 28%,#ffd2a8 0%,#ff9a4d 45%,#e8520c 100%)',
-              boxShadow: 'inset -3px -4px 8px rgba(160,40,0,.25), 0 4px 10px rgba(242,106,27,.25)',
-            }}
-          />
-          <div
-            className="absolute"
-            style={{
-              left: 92,
-              top: 42,
-              width: 38,
-              height: 30,
-              borderRadius: '19px 19px 8px 8px',
-              background: 'radial-gradient(ellipse at 35% 20%,#ffcfa3 0%,#ff9a4d 50%,#e8520c 100%)',
-              boxShadow: 'inset -4px -5px 10px rgba(160,40,0,.22), 0 6px 14px rgba(242,106,27,.25)',
-            }}
-          />
-          <div
-            className="absolute"
-            style={{
-              left: 58,
-              top: 4,
-              width: 32,
-              height: 32,
-              borderRadius: '50%',
-              background: 'radial-gradient(circle at 32% 28%,#ffd2a8 0%,#ff8a3d 45%,#e8520c 100%)',
-              boxShadow: 'inset -3px -4px 8px rgba(160,40,0,.25), 0 4px 10px rgba(242,106,27,.25)',
-            }}
-          />
-          <div
-            className="absolute"
-            style={{
-              left: 46,
-              top: 38,
-              width: 58,
-              height: 38,
-              borderRadius: '29px 29px 8px 8px',
-              background: 'radial-gradient(ellipse at 35% 20%,#ffcfa3 0%,#ff7a2b 50%,#e8520c 100%)',
-              boxShadow: 'inset -4px -5px 10px rgba(160,40,0,.22), 0 6px 14px rgba(242,106,27,.25)',
-            }}
-          />
-          <span className="absolute" style={{ left: 6, top: 0 }}>
-            <MaterialIcon name="auto_awesome" size={22} filled color="#ffae5e" />
-          </span>
-          <span className="absolute" style={{ right: 4, top: 10, transform: 'rotate(12deg)', filter: 'drop-shadow(0 3px 5px rgba(242,106,27,.35))' }}>
-            <MaterialIcon name="favorite" size={22} filled color="#ff8a3d" />
-          </span>
-        </div>
-        <div className="mt-2.5 text-[14px] font-extrabold text-stone-900">{t('sidebar.ctaTitle')}</div>
-        <p className="mt-1 text-[12px] leading-relaxed text-stone-600">
-          {t('sidebar.ctaDesc')}
-        </p>
-        <Link
-          to="/communities/new"
-          className="mt-3 flex h-10 w-full items-center justify-center gap-1.5 rounded-xl bg-brand text-[13.5px] font-bold text-white hover:bg-brand-dark"
-        >
-          {t('sidebar.ctaButton')}
-          <MaterialIcon name="arrow_forward" size={17} color="#fff" />
-        </Link>
-      </div>
     </aside>
   );
 }

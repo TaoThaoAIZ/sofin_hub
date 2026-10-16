@@ -30,6 +30,8 @@ export const createCheckoutBody = z.object({
   method: z.enum(PAYMENT_METHODS).default('bank_transfer'),
   interval: intervalField.default('monthly'),
   paymentMethod: paymentMethodInput.optional(),
+  /** Mã giới thiệu từ link cộng đồng (?cref=). Mã lạ/chương trình tắt bị bỏ qua êm. */
+  referralCode: z.string().trim().toLowerCase().max(64).optional(),
 });
 export type CreateCheckoutBody = z.infer<typeof createCheckoutBody>;
 
@@ -91,6 +93,7 @@ export const listBankTransactionsQuery = paginationQuery.extend({
     .enum(['true', 'false'])
     .transform((v) => v === 'true')
     .optional(),
+  q: z.string().trim().max(100).optional(),
 });
 
 export const approveBankPaymentBody = z.object({

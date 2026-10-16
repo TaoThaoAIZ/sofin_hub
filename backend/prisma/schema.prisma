@@ -236,6 +236,8 @@ enum PaymentKind {
   renewal
   /// Mua lẻ MỘT module trả phí (một lần, không phải gói thành viên). `Payment.moduleId` trỏ module được mua.
   module
+  /// Phí gói hosting (Pro) của chủ cộng đồng trả cho nền tảng. Không phải doanh thu của creator: loại khỏi số dư/rút tiền. `Payment.hostingPlanId` trỏ gói.
+  hosting
 }
 
 enum SubscriptionStatus {
@@ -329,6 +331,10 @@ enum UploadPurpose {
   lesson_attachment
   message_attachment
   community_media
+  /// Video bài học tải từ máy (mp4/webm/mov, tới UPLOAD_MAX_VIDEO_MB, upload dạng stream).
+  lesson_video
+  /// Slide bài giảng (pdf/ppt/pptx/ppsx).
+  lesson_slide
 }
 
 enum UploadStatus {
@@ -397,67 +403,71 @@ model User {
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
 
-  sessions             Session[]
-  referralCode         ReferralCode?               @relation("ReferralCodeOwner")
-  referralsMade        Referral[]                  @relation("ReferralReferrer")
-  referredBy           Referral?                   @relation("ReferralReferred")
-  commissionsEarned    ReferralCommission[]        @relation("CommissionReferrer")
-  commissionsCaused    ReferralCommission[]        @relation("CommissionReferred")
-  oneTimeTokens        OneTimeToken[]
-  emailOtps            EmailOtp[]
-  socialAccounts       SocialAccount[]
-  ownedCommunities     Community[]                 @relation("CourseOwner")
-  enrollments          Enrollment[]
-  bansReceived         CommunityBan[]              @relation("BanTarget")
-  bansIssued           CommunityBan[]              @relation("BanIssuer")
-  joinRequests         JoinRequest[]               @relation("JoinRequester")
-  joinRequestsDecided  JoinRequest[]               @relation("JoinDecider")
-  invitesCreated       Invite[]
-  reviews              Review[]
-  posts                Post[]
-  comments             PostComment[]
-  likes                PostLike[]
-  likeNotices          PostLikeNotice[]
-  pollVotes            PollVote[]
-  hostedEvents         CommunityEvent[]
-  eventRsvps           EventRsvp[]
-  pointEvents          PointEvent[]
-  lessonProgress       LessonProgress[]
-  moduleAccess         ModuleAccess[]
-  certificates         Certificate[]
-  notifications        Notification[]
-  notificationPrefs    NotificationPreference?
-  conversationsAsA     Conversation[]              @relation("ConversationUserA")
-  conversationsAsB     Conversation[]              @relation("ConversationUserB")
-  messagesSent         Message[]
-  blocksMade           UserBlock[]                 @relation("Blocker")
-  blocksReceived       UserBlock[]                 @relation("BlockTarget")
-  reportsFiled         Report[]                    @relation("ReportReporter")
-  reportsAgainst       Report[]                    @relation("ReportTargetUser")
-  reportsResolved      Report[]                    @relation("ReportResolver")
-  reportsAssigned      Report[]                    @relation("ReportAssignee")
-  reportEvents         ReportEvent[]
-  auditLogs            AdminAuditLog[]             @relation("AuditActor")
-  payments             Payment[]
-  paymentCards         PaymentCard[]
-  payoutAccountsOwned  PayoutAccount[]
-  subscriptions        Subscription[]
-  refundRequests       RefundRequest[]             @relation("RefundRequester")
-  refundsResolved      RefundRequest[]             @relation("RefundResolver")
-  payouts              Payout[]
-  chargebacks          Chargeback[]
-  idempotencyKeys      IdempotencyKey[]
-  uploads              Upload[]
-  ticketsRequested     SupportTicket[]             @relation("TicketRequester")
-  ticketsAssigned      SupportTicket[]             @relation("TicketAssignee")
-  adminAccount         AdminAccount?               @relation("AdminAccountUser")
-  chatbotConversations ChatbotConversation[]
-  botPersonaPrefs      CommunityBotMemberPref[]
-  welcomesSeen         CommunityWelcomeSeen[]
-  announcements        CommunityAnnouncement[]
-  announcementsSeen    CommunityAnnouncementSeen[]
+  sessions                   Session[]
+  referralCode               ReferralCode?               @relation("ReferralCodeOwner")
+  referralsMade              Referral[]                  @relation("ReferralReferrer")
+  referredBy                 Referral?                   @relation("ReferralReferred")
+  commissionsEarned          ReferralCommission[]        @relation("CommissionReferrer")
+  commissionsCaused          ReferralCommission[]        @relation("CommissionReferred")
+  oneTimeTokens              OneTimeToken[]
+  emailOtps                  EmailOtp[]
+  socialAccounts             SocialAccount[]
+  ownedCommunities           Community[]                 @relation("CourseOwner")
+  enrollments                Enrollment[]
+  bansReceived               CommunityBan[]              @relation("BanTarget")
+  bansIssued                 CommunityBan[]              @relation("BanIssuer")
+  joinRequests               JoinRequest[]               @relation("JoinRequester")
+  joinRequestsDecided        JoinRequest[]               @relation("JoinDecider")
+  invitesCreated             Invite[]
+  reviews                    Review[]
+  posts                      Post[]
+  comments                   PostComment[]
+  likes                      PostLike[]
+  likeNotices                PostLikeNotice[]
+  pollVotes                  PollVote[]
+  hostedEvents               CommunityEvent[]
+  eventRsvps                 EventRsvp[]
+  pointEvents                PointEvent[]
+  lessonProgress             LessonProgress[]
+  moduleAccess               ModuleAccess[]
+  certificates               Certificate[]
+  notifications              Notification[]
+  notificationPrefs          NotificationPreference?
+  conversationsAsA           Conversation[]              @relation("ConversationUserA")
+  conversationsAsB           Conversation[]              @relation("ConversationUserB")
+  messagesSent               Message[]
+  blocksMade                 UserBlock[]                 @relation("Blocker")
+  blocksReceived             UserBlock[]                 @relation("BlockTarget")
+  reportsFiled               Report[]                    @relation("ReportReporter")
+  reportsAgainst             Report[]                    @relation("ReportTargetUser")
+  reportsResolved            Report[]                    @relation("ReportResolver")
+  reportsAssigned            Report[]                    @relation("ReportAssignee")
+  reportEvents               ReportEvent[]
+  auditLogs                  AdminAuditLog[]             @relation("AuditActor")
+  payments                   Payment[]
+  paymentCards               PaymentCard[]
+  payoutAccountsOwned        PayoutAccount[]
+  subscriptions              Subscription[]
+  refundRequests             RefundRequest[]             @relation("RefundRequester")
+  refundsResolved            RefundRequest[]             @relation("RefundResolver")
+  payouts                    Payout[]
+  chargebacks                Chargeback[]
+  idempotencyKeys            IdempotencyKey[]
+  uploads                    Upload[]
+  ticketsRequested           SupportTicket[]             @relation("TicketRequester")
+  ticketsAssigned            SupportTicket[]             @relation("TicketAssignee")
+  adminAccount               AdminAccount?               @relation("AdminAccountUser")
+  chatbotConversations       ChatbotConversation[]
+  botPersonaPrefs            CommunityBotMemberPref[]
+  welcomesSeen               CommunityWelcomeSeen[]
+  announcements              CommunityAnnouncement[]
+  announcementsSeen          CommunityAnnouncementSeen[]
   /// Cột GENERATED ALWAYS (họ tên đã gập dấu).
-  searchVector         Unsupported("tsvector")?
+  searchVector               Unsupported("tsvector")?
+  quizAttempts               QuizAttempt[]
+  communityOnboardings       CommunityOnboarding[]
+  communityReferralsGiven    CommunityReferral[]         @relation("CommunityReferralReferrer")
+  communityReferralsReceived CommunityReferral[]         @relation("CommunityReferralReferred")
 
   @@index([isDemo])
   @@index([status])
@@ -583,6 +593,8 @@ model Community {
   trendingRank          Int?
   /// null = cộng đồng seed mẫu (chưa có chủ).
   ownerId               String?
+  /// Chương trình giới thiệu của cộng đồng: % (basis point, 0 = tắt, tối đa 5000) trên mỗi thanh toán của người được thành viên giới thiệu; trừ vào phần creator nhận.
+  referralRateBps       Int                  @default(0)
   /// Bị Platform Admin khóa.
   locked                Boolean              @default(false)
   lockReason            String?
@@ -610,43 +622,45 @@ model Community {
 
   owner User? @relation("CourseOwner", fields: [ownerId], references: [id], onDelete: SetNull)
 
-  enrollments       Enrollment[]
-  bans              CommunityBan[]
-  joinRequests      JoinRequest[]
-  invites           Invite[]
-  reviews           Review[]
-  posts             Post[]
-  events            CommunityEvent[]
-  pointEvents       PointEvent[]
-  learningCourses   Course[]
-  modules           ClassroomModule[]
-  lessonsList       ClassroomLesson[]
-  classroomSettings ClassroomSettings?
-  certificates      Certificate[]
-  notifications     Notification[]
-  reports           Report[]
-  payments          Payment[]
-  subscriptions     Subscription[]
-  refundRequests    RefundRequest[]
-  payouts           Payout[]
-  uploads           Upload[]
-  chargebacks       Chargeback[]
-  discoveryFeatures DiscoveryFeature[]
-  ownerLedger       OwnerBalanceLedger[]
-  hostingPlan       HostingPlan?
-  payoutAccount     PayoutAccount?
+  enrollments        Enrollment[]
+  bans               CommunityBan[]
+  joinRequests       JoinRequest[]
+  invites            Invite[]
+  reviews            Review[]
+  posts              Post[]
+  events             CommunityEvent[]
+  pointEvents        PointEvent[]
+  learningCourses    Course[]
+  modules            ClassroomModule[]
+  lessonsList        ClassroomLesson[]
+  classroomSettings  ClassroomSettings?
+  certificates       Certificate[]
+  notifications      Notification[]
+  reports            Report[]
+  payments           Payment[]
+  subscriptions      Subscription[]
+  refundRequests     RefundRequest[]
+  payouts            Payout[]
+  uploads            Upload[]
+  chargebacks        Chargeback[]
+  discoveryFeatures  DiscoveryFeature[]
+  ownerLedger        OwnerBalanceLedger[]
+  hostingPlan        HostingPlan?
+  payoutAccount      PayoutAccount?
   /// Chatbot riêng của cộng đồng (chatbot.md): cấu hình + kho Q&A/tài liệu/hội thoại có communityId.
-  bot               CommunityBot?
-  botMemberPrefs    CommunityBotMemberPref[]
+  bot                CommunityBot?
+  botMemberPrefs     CommunityBotMemberPref[]
   /// Lời chào thành viên mới + thông báo popup của chủ (docs/features/community-greetings.md).
-  welcome           CommunityWelcome?
-  welcomesSeen      CommunityWelcomeSeen[]
-  announcements     CommunityAnnouncement[]
-  chatbotQas        ChatbotQA[]
-  chatbotDocuments  ChatbotDocument[]
-  chatbotConvs      ChatbotConversation[]
+  welcome            CommunityWelcome?
+  welcomesSeen       CommunityWelcomeSeen[]
+  announcements      CommunityAnnouncement[]
+  chatbotQas         ChatbotQA[]
+  chatbotDocuments   ChatbotDocument[]
+  chatbotConvs       ChatbotConversation[]
   /// Cột GENERATED ALWAYS (title A + description B, đã gập dấu).
-  searchVector      Unsupported("tsvector")?
+  searchVector       Unsupported("tsvector")?
+  communityReferrals CommunityReferral[]
+  onboardings        CommunityOnboarding[]
 
   @@index([category])
   @@index([ownerId])
@@ -1044,6 +1058,7 @@ model ClassroomLesson {
   module    ClassroomModule  @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   community Community        @relation(fields: [communityId], references: [id], onDelete: Cascade)
   progress  LessonProgress[]
+  quiz      LessonQuiz?
 
   @@index([moduleId, index])
   @@index([communityId])
@@ -1319,6 +1334,8 @@ model Payment {
   subscriptionId  String?
   /// Chỉ có khi kind = module: module được mua lẻ (cấp ModuleAccess source 'purchase' khi thanh toán thành công, thu hồi khi hoàn tiền).
   moduleId        String?
+  /// Chỉ có khi kind = hosting: gói hosting đang được thanh toán (kỳ thanh toán = periodStart..periodEnd).
+  hostingPlanId   String?
   /// INV-YYYY-NNNNNN (cấp từ InvoiceSequence khi thanh toán thành công).
   invoiceNumber   String?         @unique
   gatewayChargeId String?
@@ -1340,6 +1357,7 @@ model Payment {
   subscription Subscription?    @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
   paymentCard  PaymentCard?     @relation(fields: [paymentCardId], references: [id], onDelete: SetNull)
   module       ClassroomModule? @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  hostingPlan  HostingPlan?     @relation(fields: [hostingPlanId], references: [id], onDelete: SetNull)
 
   refunds     RefundRequest[]
   chargebacks Chargeback[]
@@ -1349,6 +1367,7 @@ model Payment {
   @@index([subscriptionId])
   @@index([paymentCardId])
   @@index([moduleId])
+  @@index([hostingPlanId])
   @@index([status])
 }
 
@@ -1816,23 +1835,26 @@ model PaymentCard {
 
 /// MÔ PHỎNG (A16 chưa chốt): gói hosting của owner cho 1 cộng đồng. Chưa có job/cổng trừ tiền khi hết dùng thử.
 model HostingPlan {
-  id             String            @id @default(uuid())
-  communityId    String            @unique @map("courseId")
-  ownerId        String
-  planKey        HostingPlanKey
-  cycle          BillingInterval   @default(monthly)
+  id               String            @id @default(uuid())
+  communityId      String            @unique @map("courseId")
+  ownerId          String
+  planKey          HostingPlanKey
+  cycle            BillingInterval   @default(monthly)
   /// Giá chụp lúc chọn (đơn vị nhỏ nhất của `currency`, VND không có phần thập phân).
-  priceAmount    Int
-  currency       String
-  status         HostingPlanStatus
-  trialStartedAt DateTime?
-  trialEndsAt    DateTime?
-  paymentCardId  String?
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
+  priceAmount      Int
+  currency         String
+  status           HostingPlanStatus
+  trialStartedAt   DateTime?
+  trialEndsAt      DateTime?
+  /// Hết kỳ đã thanh toán (gói Pro sau khi trả hóa đơn hosting). null = chưa trả kỳ nào (đang dùng thử / gói miễn phí).
+  currentPeriodEnd DateTime?
+  paymentCardId    String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
   community   Community    @relation(fields: [communityId], references: [id], onDelete: Cascade)
   paymentCard PaymentCard? @relation(fields: [paymentCardId], references: [id], onDelete: SetNull)
+  payments    Payment[]
 
   @@index([ownerId])
   @@index([paymentCardId])
@@ -1866,6 +1888,8 @@ enum ReferralKind {
   creator
   /// Người được giới thiệu tham gia cộng đồng trả phí.
   member
+  /// Thành viên mời người khác vào MỘT cộng đồng riêng: hoa hồng theo % do chủ cộng đồng đặt, trừ vào phần creator nhận (Community.referralRateBps).
+  community
 }
 
 enum CommissionStatus {
@@ -1920,8 +1944,7 @@ model ReferralCommission {
   @@index([referredUserId])
 }
 
-// ============================================================================
-// CHATBOT HỖ TRỢ (chatbot.md) — kho câu hỏi mẫu, tài liệu tri thức, hội thoại
+// =====================================================================// CHATBOT HỖ TRỢ (chatbot.md) — kho câu hỏi mẫu, tài liệu tri thức, hội thoại
 // ============================================================================
 
 enum ChatbotQaStatus {
@@ -2138,6 +2161,75 @@ model CommunityWelcomeSeen {
   userId      String
   communityId String   @map("courseId")
   seenAt      DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@id([userId, communityId])
+  @@index([communityId])
+}
+
+/// Trắc nghiệm của MỘT bài học (không bắt buộc). Có ít nhất 1 câu thì thành viên (không phải mod+) phải ĐẠT điểm (>= passPercent) mới đánh dấu hoàn thành bài.
+/// `questions` = [{ id, text, options: string[2..6], correctIndex }] — đáp án đúng KHÔNG gửi cho học viên trước khi họ đạt.
+model LessonQuiz {
+  id          String   @id @default(uuid())
+  lessonId    String   @unique
+  passPercent Int      @default(70)
+  questions   Json     @default("[]")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  lesson   ClassroomLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  attempts QuizAttempt[]
+}
+
+/// Một lượt nộp bài trắc nghiệm. Sửa bộ câu hỏi thì các lượt cũ bị xóa (yêu cầu đạt điểm tính lại; bài đã hoàn thành trước đó giữ nguyên).
+model QuizAttempt {
+  id           String   @id @default(uuid())
+  quizId       String
+  userId       String
+  scorePercent Int
+  correctCount Int
+  total        Int
+  passed       Boolean
+  answers      Json
+  createdAt    DateTime @default(now())
+
+  quiz LessonQuiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([quizId, userId, createdAt])
+  @@index([userId])
+}
+
+/// Ghi nhận ai giới thiệu ai vào MỘT cộng đồng (người đầu tiên thắng; ghi lúc người được mời tạo thanh toán qua link có mã). Hoa hồng ở ReferralCommission (kind = community).
+model CommunityReferral {
+  id             String   @id @default(uuid())
+  communityId    String   @map("courseId")
+  referrerId     String
+  referredUserId String
+  code           String
+  createdAt      DateTime @default(now())
+
+  community    Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  referrer     User      @relation("CommunityReferralReferrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  referredUser User      @relation("CommunityReferralReferred", fields: [referredUserId], references: [id], onDelete: Cascade)
+
+  @@unique([communityId, referredUserId])
+  @@index([communityId, referrerId])
+  @@index([referrerId])
+  @@index([referredUserId])
+}
+
+/// Tiến độ "Bắt đầu hành trình của bạn" của MỘT thành viên trong MỘT cộng đồng. Bước bình luận được TÍNH từ PostComment (không lưu);
+/// video (xem video giới thiệu) và app (bấm tải ứng dụng) do người dùng bấm nên lưu thời điểm ở đây.
+model CommunityOnboarding {
+  userId      String
+  communityId String    @map("courseId")
+  videoAt     DateTime?
+  appAt       DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   community Community @relation(fields: [communityId], references: [id], onDelete: Cascade)

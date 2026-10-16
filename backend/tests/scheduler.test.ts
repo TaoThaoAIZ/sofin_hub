@@ -140,10 +140,10 @@ describe('scheduler: nhiều instance, mỗi job chỉ chạy ở 1', () => {
     assert.equal(started, before, 'sau stop() không lên lịch thêm');
   });
 
-  it('allJobs() khai báo đủ job nền (gia hạn, đối soát, nhắc lịch, dọn tài khoản chưa xác thực) với tên duy nhất', async () => {
+  it('allJobs() khai báo đủ job nền (gia hạn, thu phí hosting, đối soát, nhắc lịch, dọn tài khoản chưa xác thực) với tên duy nhất', async () => {
     const { allJobs } = await import('../src/jobs.js');
     const names = allJobs().map((j) => j.name);
-    assert.deepEqual([...names].sort(), ['auth.purgeUnverified', 'chatbot.codexCleanup', 'chatbot.learn', 'events.reminders', 'payments.bankScan', 'payments.reconcile', 'payments.renewalInvoices', 'payments.subscriptions', 'payments.trialReminders', 'referrals.reconcile']);
+    assert.deepEqual([...names].sort(), ['auth.purgeUnverified', 'chatbot.codexCleanup', 'chatbot.learn', 'events.reminders', 'payments.bankScan', 'payments.hostingBilling', 'payments.reconcile', 'payments.renewalInvoices', 'payments.subscriptions', 'payments.trialReminders', 'referrals.reconcile']);
     assert.equal(new Set(names).size, names.length);
   });
 });

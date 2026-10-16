@@ -10,6 +10,7 @@ import type {
   ModuleInput,
   Post,
   PostQuery,
+  QuizInput,
   ReportAction,
   ReportReason,
   ReportStatus,
@@ -395,6 +396,62 @@ export const useLesson = (cid: string, lessonId: string) => {
     queryFn: ({ signal }) => api.fetchLesson(cid, lessonId, accessToken!, signal),
     enabled: !!accessToken && !!lessonId,
     retry: false,
+  });
+};
+
+export const useOnboarding = (cid: string) => {
+  const { accessToken } = useAuth();
+  return useQuery({
+    queryKey: ['community', cid, 'onboarding'] as const,
+    queryFn: ({ signal }) => api.fetchOnboarding(cid, accessToken!, signal),
+    enabled: !!accessToken && !!cid,
+    retry: false,
+  });
+};
+
+export const useMarkOnboarding = (cid: string) => {
+  const token = useToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (step: 'video' | 'app') => api.markOnboarding(cid, step, token),
+    onSuccess: (data) => qc.setQueryData(['community', cid, 'onboarding'], data),
+  });
+};
+
+const quizKey = (cid: string, lessonId: string) => ['community', cid, 'quiz', lessonId] as const;
+
+export const useQuiz = (cid: string, lessonId: string) => {
+  const { accessToken } = useAuth();
+  return useQuery({
+    queryKey: quizKey(cid, lessonId),
+    queryFn: ({ signal }) => api.fetchQuiz(cid, lessonId, accessToken!, signal),
+    enabled: !!accessToken && !!lessonId,
+    retry: false,
+  });
+};
+
+/** Nộp bài: làm mới trạng thái đạt của trắc nghiệm + chi tiết bài (nút Hoàn thành). */
+export const useAttemptQuiz = (cid: string, lessonId: string) => {
+  const token = useToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { answers: Array<number | null> }) => api.attemptQuiz(cid, lessonId, input.answers, token),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: quizKey(cid, lessonId) });
+      qc.invalidateQueries({ queryKey: ['community', cid, 'lesson'] });
+    },
+  });
+};
+
+export const usePutQuiz = (cid: string, lessonId: string) => {
+  const token = useToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: QuizInput) => api.putQuiz(cid, lessonId, body, token),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: quizKey(cid, lessonId) });
+      qc.invalidateQueries({ queryKey: ['community', cid, 'lesson'] });
+    },
   });
 };
 

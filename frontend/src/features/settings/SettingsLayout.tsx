@@ -19,7 +19,6 @@ const NAV: NavItem[] = [
   { to: '/settings/bao-mat', icon: 'lock', labelKey: 'layout.security' },
   { to: '/settings/thanh-toan', icon: 'credit_card', labelKey: 'layout.billing' },
   { to: '/settings/cong-dong', icon: 'group', labelKey: 'layout.communities', divider: true },
-  { to: '/settings/gioi-thieu', icon: 'redeem', labelKey: 'layout.referral' },
 ];
 
 function SideNav() {

@@ -1,3 +1,4 @@
+import { CommunityReferralTab } from './features/community/components/CommunityReferralTab';
 import { lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, Route, Routes, useParams } from 'react-router-dom';
@@ -29,7 +30,6 @@ import { MyCommunitiesPage } from './pages/MyCommunitiesPage';
 import { CommunitiesTab } from './features/settings/tabs/CommunitiesTab';
 import { NotifyTab } from './features/settings/tabs/NotifyTab';
 import { ProfileTab } from './features/settings/tabs/ProfileTab';
-import { ReferralTab } from './features/settings/tabs/ReferralTab';
 import { SecurityTab } from './features/settings/tabs/SecurityTab';
 import { VerifyEmailPage } from './pages/VerifyEmailPage';
 import { HomePage } from './pages/HomePage';
@@ -38,7 +38,7 @@ import { NotFoundPage } from './pages/NotFoundPage';
 import { PrivacyPage } from './pages/PrivacyPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { TermsPage } from './pages/TermsPage';
-import { ToolsPage } from './pages/ToolsPage';
+import { ToolsContent, ToolsPage } from './pages/ToolsPage';
 import { CertificateVerifyPage } from './pages/CertificateVerifyPage';
 import { LessonPage } from './pages/LessonPage';
 import { VerifyOtpPage } from './pages/VerifyOtpPage';
@@ -85,6 +85,8 @@ export default function App() {
           <Route path="thanh-vien" element={<MembersTab />} />
           <Route path="xep-hang" element={<LeaderboardTab />} />
           <Route path="gioi-thieu" element={<AboutTab />} />
+          <Route path="cong-cu" element={<ToolsContent />} />
+          <Route path="chuong-trinh-gioi-thieu" element={<CommunityReferralTab />} />
           <Route path="doanh-thu" element={<RevenuePage />} />
         </Route>
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -96,7 +98,7 @@ export default function App() {
           <Route path="bao-mat" element={<SecurityTab />} />
           <Route path="thanh-toan" element={<BillingTab />} />
           <Route path="cong-dong" element={<CommunitiesTab />} />
-          <Route path="gioi-thieu" element={<ReferralTab />} />
+          <Route path="gioi-thieu" element={<Navigate to="/me/communities" replace />} />
         </Route>
         <Route path="/users/:id" element={<ProfilePage />} />
         <Route path="/me/communities" element={<MyCommunitiesPage />} />

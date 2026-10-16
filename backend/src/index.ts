@@ -14,6 +14,8 @@ import { refreshConfig } from './modules/settings/settings.service.js';
 const server = createApp().listen(env.PORT, () => {
   console.log(`API listening on :${env.PORT} (${env.NODE_ENV})`);
 });
+// Upload video dài: Node mặc định ngắt request nhận quá 300s; nới lên 3 giờ (headersTimeout giữ mặc định để vẫn chống slowloris ở bước header).
+server.requestTimeout = 3 * 60 * 60 * 1000;
 
 // Nạp cấu hình nền tảng (Global Settings) ngay khi khởi động; lỗi thì dùng mặc định từ env.
 void refreshConfig().catch((e) => console.error('[settings] không nạp được cấu hình:', e));

@@ -6,7 +6,7 @@ import { communityCheckout, lessonPath } from '../../../lib/paths';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { useCommunityDetail } from '../../courses/queries';
 import { formatCompact } from '../../../lib/format';
-import { useClaimCertificate, useCourseList, useDeleteLesson, useFirstLessonId, useLessons, useModules, useProgress, useToggleLessonComplete } from '../queries';
+import { useClaimCertificate, useCourseList, useDeleteLesson, useDeleteModule, useFirstLessonId, useLessons, useModules, useProgress, useToggleLessonComplete } from '../queries';
 import type { Certificate, ClassroomModule } from '../types';
 import { ModulePurchaseDialog } from '../../payments/components/ModulePurchaseDialog';
 import { CertificateDialog } from './CertificateCard';
@@ -153,6 +153,8 @@ export function ClassroomTab() {
     }
   };
   const [buying, setBuying] = useState<ClassroomModule | null>(null);
+  const removeModule = useDeleteModule(communityId, courseId ?? '');
+  const [deletingModule, setDeletingModule] = useState<ClassroomModule | null>(null);
 
   const role = community?.viewerRole;
   const canEdit = isModPlus(role);
@@ -324,18 +326,29 @@ export function ClassroomTab() {
               key={m.id}
               className={`glass flex flex-col overflow-hidden rounded-[20px] transition-transform hover:-translate-y-0.5`}
             >
-              <div className="relative h-[156px] overflow-hidden bg-[#110d0b]">
+              <div className="relative aspect-video w-full overflow-hidden bg-[#110d0b]">
                 <img src={thumb} alt={m.title} className="size-full object-cover" />
                 {canEdit && (
-                  <button
-                    type="button"
-                    onClick={() => setWizard(m)}
-                    title={t('classroom.editModuleTitle')}
-                    className="absolute top-3 right-3 z-[3] flex h-[34px] items-center gap-1.5 rounded-[10px] bg-white/95 px-3 text-[13px] font-bold shadow-[0_6px_16px_rgba(0,0,0,.18)] hover:bg-white hover:text-brand"
-                  >
-                    <MaterialIcon name="edit" size={17} />
-                    {t('classroom.editBtn')}
-                  </button>
+                  <div className="absolute top-3 right-3 z-[3] flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setWizard(m)}
+                      title={t('classroom.editModuleTitle')}
+                      className="flex h-[34px] items-center gap-1.5 rounded-[10px] bg-white/95 px-3 text-[13px] font-bold shadow-[0_6px_16px_rgba(0,0,0,.18)] hover:bg-white hover:text-brand"
+                    >
+                      <MaterialIcon name="edit" size={17} />
+                      {t('classroom.editBtn')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeletingModule(m)}
+                      title={t('editor.row.deleteModule')}
+                      aria-label={t('editor.row.deleteModule')}
+                      className="grid size-[34px] place-items-center rounded-[10px] bg-white/95 text-stone-700 shadow-[0_6px_16px_rgba(0,0,0,.18)] hover:bg-white hover:text-red-600"
+                    >
+                      <MaterialIcon name="delete" size={17} />
+                    </button>
+                  </div>
                 )}
                 {m.publishStatus === 'draft' && (
                   <span className="absolute top-3 left-3 z-[3] rounded-lg bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800">{t('modWizard.lock.draft')}</span>
@@ -401,6 +414,17 @@ export function ClassroomTab() {
       </div>
 
       {wizard && <ModuleWizard communityId={communityId} courseId={courseId} module={wizard === 'new' ? null : wizard} onClose={() => setWizard(null)} />}
+      {deletingModule && (
+        <ConfirmDialog
+          title={t('editor.deleteModuleTitle')}
+          message={t('editor.deleteModuleMsg', { title: deletingModule.title, lessons: deletingModule.lessonsCount })}
+          confirmLabel={t('editor.deleteModuleConfirm')}
+          pending={removeModule.isPending}
+          error={removeModule.isError ? errText(removeModule.error) : null}
+          onClose={() => setDeletingModule(null)}
+          onConfirm={() => removeModule.mutate(deletingModule.id, { onSuccess: () => { setDeletingModule(null); toast(t('editor.moduleDeleted')); } })}
+        />
+      )}
       {cert && <CertificateDialog cert={cert} onClose={() => setCert(null)} />}
       {buying && <ModulePurchaseDialog communityId={communityId} module={buying} onClose={() => setBuying(null)} />}
     </div>

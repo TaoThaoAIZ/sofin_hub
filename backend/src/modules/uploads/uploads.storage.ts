@@ -1,7 +1,8 @@
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
-import { createReadStream } from 'node:fs';
+import { createReadStream, createWriteStream } from 'node:fs';
 import { mkdir, rename, stat, unlink, writeFile } from 'node:fs/promises';
 import { isAbsolute, join, resolve } from 'node:path';
+import { pipeline } from 'node:stream/promises';
 import type { Readable } from 'node:stream';
 import { env } from '../../config/env.js';
 import { HttpError } from '../../utils/http-error.js';
@@ -19,10 +20,23 @@ export interface UploadTarget {
  * Trừu tượng hóa nơi lưu file. Hiện dùng LocalDiskStorage; sau này đổi sang S3/MinIO chỉ cần hiện thực interface này
  * (createUploadTarget trả presigned PUT của S3, put/getStream/delete gọi SDK) — xem docs/api/uploads.md.
  */
+/** Khoảng byte (đã bao gồm đầu mút) cho Range request. */
+export interface ByteRange {
+  start: number;
+  end: number;
+}
+export interface StoredStream {
+  stream: Readable;
+  /** TỔNG dung lượng file (không phải độ dài đoạn trả về). */
+  size: number;
+}
+
 export interface StorageProvider {
   createUploadTarget(input: { key: string; contentType: string; maxSize: number; userId: string }): UploadTarget;
   put(key: string, data: Buffer, meta: { contentType: string }): Promise<void>;
-  getStream(key: string): Promise<{ stream: Readable; size: number } | null>;
+  /** Ghi file từ stream (video dài/slide lớn) không nạp vào RAM. `size` = đúng số byte sẽ nhận. Lỗi giữa chừng thì dọn file dở. */
+  putStream(key: string, stream: Readable, meta: { contentType: string; size: number }): Promise<void>;
+  getStream(key: string, range?: ByteRange): Promise<StoredStream | null>;
   delete(key: string): Promise<void>;
   publicUrl(key: string): string;
 }
@@ -63,7 +77,20 @@ export class LocalDiskStorage implements StorageProvider {
     await rename(tmp, target);
   }
 
-  async getStream(key: string) {
+  async putStream(key: string, stream: Readable): Promise<void> {
+    const target = this.path(key);
+    await mkdir(this.root, { recursive: true });
+    const tmp = `${target}.part`;
+    try {
+      await pipeline(stream, createWriteStream(tmp));
+      await rename(tmp, target);
+    } catch (e) {
+      await unlink(tmp).catch(() => undefined);
+      throw e;
+    }
+  }
+
+  async getStream(key: string, range?: ByteRange) {
     let target: string;
     try {
       target = this.path(key);
@@ -73,7 +100,7 @@ export class LocalDiskStorage implements StorageProvider {
     try {
       const s = await stat(target);
       if (!s.isFile()) return null;
-      return { stream: createReadStream(target), size: s.size };
+      return { stream: createReadStream(target, range ? { start: range.start, end: range.end } : undefined), size: s.size };
     } catch {
       return null;
     }
@@ -115,16 +142,24 @@ export class S3Storage implements StorageProvider {
     await this.client.send(new PutObjectCommand({ Bucket: this.bucket, Key: key, Body: data, ContentType: meta.contentType }));
   }
 
-  async getStream(key: string) {
+  async putStream(key: string, stream: Readable, meta: { contentType: string; size: number }): Promise<void> {
+    assertKey(key);
+    // PutObject với stream + ContentLength (tối đa 5GB): SDK đẩy từng khúc, không giữ cả file trong RAM.
+    await this.client.send(new PutObjectCommand({ Bucket: this.bucket, Key: key, Body: stream, ContentLength: meta.size, ContentType: meta.contentType }));
+  }
+
+  async getStream(key: string, range?: ByteRange) {
     try {
       assertKey(key);
     } catch {
       return null;
     }
     try {
-      const out = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
+      const out = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key, ...(range ? { Range: `bytes=${range.start}-${range.end}` } : {}) }));
       if (!out.Body) return null;
-      return { stream: out.Body as Readable, size: out.ContentLength ?? 0 };
+      // Có Range thì ContentLength là độ dài ĐOẠN; tổng dung lượng nằm ở ContentRange ("bytes a-b/total").
+      const total = range ? Number(/\/(\d+)$/.exec(out.ContentRange ?? '')?.[1] ?? 0) : (out.ContentLength ?? 0);
+      return { stream: out.Body as Readable, size: total };
     } catch (e) {
       // Chỉ "không có object" mới là 404; lỗi quyền/mạng phải nổi lên (500) để không che sự cố cấu hình IAM.
       const name = (e as { name?: string }).name;

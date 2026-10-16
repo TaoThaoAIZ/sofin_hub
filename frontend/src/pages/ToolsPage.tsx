@@ -7,7 +7,8 @@ import { useTools } from '../features/tools/queries';
 import { ToolCard } from '../features/tools/ToolCard';
 import { ToolLeadForm } from '../features/tools/ToolLeadForm';
 
-export function ToolsPage() {
+/** Nội dung trang công cụ (bộ lọc + thẻ + form mua): dùng ở /tools và ở mục "Công cụ hỗ trợ" trong cộng đồng. */
+export function ToolsContent() {
   const { t } = useTranslation('tools');
   const [category, setCategory] = useState<string>(ALL_CATEGORY);
   const [buying, setBuying] = useState<DownloadTool | null>(null);
@@ -17,9 +18,8 @@ export function ToolsPage() {
   const list = category === ALL_CATEGORY ? tools : tools.filter((x) => x.category === category);
 
   return (
-    <div className="min-h-screen bg-white">
-      <Header active="tools" />
-      <main className="mx-auto flex w-full max-w-[1320px] flex-col gap-6 px-4 py-8 md:px-10 md:py-12">
+    <>
+      <div className="flex w-full min-w-0 flex-col gap-6">
         <section className="glass rounded-3xl p-6">
           <h1 className="m-0 text-[clamp(26px,3vw,36px)] font-extrabold tracking-[-1px] uppercase">{t('title')}</h1>
           <p className="mt-2 mb-0 text-stone-600">{t('subtitle')}</p>
@@ -64,9 +64,20 @@ export function ToolsPage() {
             ))}
           </div>
         )}
+      </div>
+      {buying && <ToolLeadForm tool={buying} onClose={() => setBuying(null)} />}
+    </>
+  );
+}
+
+export function ToolsPage() {
+  return (
+    <div className="min-h-screen bg-white">
+      <Header active="tools" />
+      <main className="mx-auto w-full max-w-[1320px] px-4 py-8 md:px-10 md:py-12">
+        <ToolsContent />
       </main>
       <Footer />
-      {buying && <ToolLeadForm tool={buying} onClose={() => setBuying(null)} />}
     </div>
   );
 }

@@ -27,6 +27,10 @@ import { isAtLeast } from '../features/communities/types';
 import { usePopup } from '../components/ui/usePopup';
 
 import { formatCents } from '../lib/datetime';
+import { TOOLS } from '../features/tools/catalog';
+
+// Icon cờ lê (lucide "wrench") cho ô "Công cụ hỗ trợ".
+const WRENCH_ICON = 'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94z';
 type TabKey = 'overview' | 'content' | 'faq';
 const TABS: { key: TabKey | 'reviews' }[] = [{ key: 'overview' }, { key: 'content' }, { key: 'reviews' }, { key: 'faq' }];
 
@@ -275,7 +279,9 @@ export function CourseDetailPage() {
           </div>
 
           <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-3">
-            {course.facts.map((f) => (
+            {course.facts
+              .map((f) => (f.label === 'Chi phí tham gia' ? { ...f, label: t('detail.toolsFact'), value: String(TOOLS.length), icon: WRENCH_ICON } : f))
+              .map((f) => (
               <div
                 key={f.label}
                 className="glass-chip flex items-center gap-3 rounded-[18px] p-3.5"

@@ -189,4 +189,26 @@ describe('lớp học: truy cập module', () => {
     assert.equal(((await list(b.token)).body.data as any[]).length, before);
     await call('DELETE', `/modules/${id}`, mod.token);
   });
+  it('bài trả phí: hoàn thành bài trước vẫn khóa bài sau (xem + đánh dấu bị chặn), nút sau báo khóa; mua xong thì mở', async () => {
+    const free = await newModule({});
+    const paid = await newModule({ accessMode: 'paid', priceCents: 99_000 });
+    const l1 = await newLesson(free);
+    const l2 = await newLesson(paid);
+    assert.equal((await call('POST', `/lessons/${l1}/complete`, a.token)).status, 200);
+    const d1 = await call('GET', `/lessons/${l1}`, a.token);
+    assert.equal(d1.body.data.nextLessonId, l2);
+    assert.equal(d1.body.data.nextLessonLocked, true);
+    const d2 = await call('GET', `/lessons/${l2}`, a.token);
+    assert.ok(d2.status === 403 || d2.status === 402 || d2.status === 423, `status ${d2.status}`);
+    assert.notEqual((await call('POST', `/lessons/${l2}/complete`, a.token)).status, 200);
+    const list = (await call('GET', `/modules/${paid}/lessons`, a.token)).body.data;
+    assert.equal(list[0].locked, true);
+    assert.equal(list[0].body, '');
+    // owner/mod không bị khóa
+    assert.equal((await call('GET', `/lessons/${l2}`, mod.token)).status, 200);
+    const { prisma } = await import('../src/db/prisma.js');
+    await prisma.moduleAccess.create({ data: { moduleId: paid, userId: a.id, source: 'purchase' } });
+    assert.equal((await call('GET', `/lessons/${l2}`, a.token)).status, 200);
+    assert.equal((await call('GET', `/lessons/${l1}`, a.token)).body.data.nextLessonLocked, false);
+  });
 });

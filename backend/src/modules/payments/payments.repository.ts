@@ -8,7 +8,7 @@ import type {
   Subscription as SubscriptionRow,
 } from '../../generated/prisma/client.js';
 import { HttpError } from '../../utils/http-error.js';
-import type { PaymentIntent, PaymentStatus, Payout, RefundRequest, Subscription } from './payments.types.js';
+import type { BillingInterval, PaymentIntent, PaymentStatus, Payout, RefundRequest, Subscription } from './payments.types.js';
 
 /**
  * Dữ liệu thanh toán trên Postgres (Prisma). Mọi số tiền là Int cent.
@@ -93,6 +93,8 @@ export interface StoredBankTransaction {
   id: string;
   externalId: string;
   gateway?: string;
+  /** Số tài khoản nhận tiền (của hệ thống) theo SePay. */
+  accountNumber?: string;
   amount: number;
   description: string;
   referenceCode?: string;
@@ -134,9 +136,33 @@ export interface RevenueTotals {
   platformCommissionCents: number;
   gatewayFeeCents: number;
   netCents: number;
+  /** Hoa hồng giới thiệu của cộng đồng (% do chủ đặt) đã trừ khỏi phần creator nhận. */
+  referralCommissionCents: number;
 }
 
+/** Gói hosting ở dạng tối thiểu cho thu phí (đơn vị tiền = đồng, chỉ VND thu được qua chuyển khoản). */
+export interface HostingPlanBilling {
+  id: string;
+  communityId: string;
+  ownerId: string;
+  planKey: 'start' | 'pro';
+  cycle: BillingInterval;
+  priceAmount: number;
+  currency: string;
+  status: 'trialing' | 'active' | 'canceled';
+  trialEndsAt: Date | null;
+  currentPeriodEnd: Date | null;
+}
+export type HostingPlanPatch = Partial<Pick<HostingPlanBilling, 'planKey' | 'status' | 'priceAmount' | 'currentPeriodEnd'>> & { paymentCardId?: string | null };
+
 export interface PaymentsOps {
+  // --- hosting
+  findHostingPlan(id: string): Promise<HostingPlanBilling | undefined>;
+  updateHostingPlan(id: string, patch: HostingPlanPatch): Promise<void>;
+  /** Gói Pro đang dùng thử/hoạt động (kể cả chưa đến hạn) để job thu phí xét. */
+  listProHostingPlans(limit: number): Promise<HostingPlanBilling[]>;
+  /** Hóa đơn hosting gần nhất của gói (mọi trạng thái). */
+  latestHostingInvoice(planId: string): Promise<PaymentIntent | undefined>;
   // --- payments
   create(data: NewPayment): Promise<PaymentIntent>;
   findById(id: string): Promise<PaymentIntent | undefined>;
@@ -154,7 +180,7 @@ export interface PaymentsOps {
   /** Ghi giao dịch tiền vào (INSERT ... ON CONFLICT externalId DO NOTHING). created=false ⇒ đã thấy trước đó (webhook + quét trùng). */
   recordBankTransaction(tx: NewBankTransaction): Promise<{ row: StoredBankTransaction; created: boolean }>;
   markBankTransaction(externalId: string, patch: { credited?: boolean; matchedPaymentId?: string | null; note?: string | null }): Promise<void>;
-  listBankTransactions(filter: { credited?: boolean }, page: number, limit: number): Promise<Page<StoredBankTransaction>>;
+  listBankTransactions(filter: { credited?: boolean; q?: string }, page: number, limit: number): Promise<Page<StoredBankTransaction>>;
   /** Phiên chuyển khoản còn `pending` nhưng đã quá `expiresAt` (job dọn). */
   listExpiredPending(now: Date, limit: number): Promise<PaymentIntent[]>;
   /** Gói active (không hủy cuối kỳ) sắp hết kỳ trong `windowDays` ngày mà CHƯA có hóa đơn gia hạn pending/succeeded cho kỳ kế tiếp. */
@@ -291,6 +317,7 @@ function toPayment(r: PaymentRow): PaymentIntent {
     kind: r.kind,
     subscriptionId: r.subscriptionId ?? undefined,
     moduleId: r.moduleId ?? undefined,
+    hostingPlanId: r.hostingPlanId ?? undefined,
     invoiceNumber: r.invoiceNumber ?? undefined,
     gatewayChargeId: r.gatewayChargeId ?? undefined,
     refCode: r.refCode ?? undefined,
@@ -328,11 +355,12 @@ function toCard(r: { id: string; userId: string; gatewayToken: string; brand: st
   return { id: r.id, userId: r.userId, gatewayToken: r.gatewayToken, brand: r.brand, last4: r.last4, expMonth: r.expMonth, expYear: r.expYear, createdAt: r.createdAt.toISOString() };
 }
 
-function toBankTx(r: { id: string; externalId: string; gateway: string | null; amount: number; description: string; referenceCode: string | null; transactionDate: Date; matchedPaymentId: string | null; credited: boolean; note: string | null; createdAt: Date }): StoredBankTransaction {
+function toBankTx(r: { id: string; externalId: string; gateway: string | null; accountNumber: string | null; amount: number; description: string; referenceCode: string | null; transactionDate: Date; matchedPaymentId: string | null; credited: boolean; note: string | null; createdAt: Date }): StoredBankTransaction {
   return {
     id: r.id,
     externalId: r.externalId,
     gateway: r.gateway ?? undefined,
+    accountNumber: r.accountNumber ?? undefined,
     amount: r.amount,
     description: r.description,
     referenceCode: r.referenceCode ?? undefined,
@@ -403,6 +431,20 @@ type Db = Tx | typeof prisma;
 
 function makeOps(db: Db): PaymentsOps {
   const ops: PaymentsOps = {
+    async findHostingPlan(id) {
+      const p = await db.hostingPlan.findUnique({ where: { id } });
+      return p ?? undefined;
+    },
+    async updateHostingPlan(id, patch) {
+      await db.hostingPlan.update({ where: { id }, data: patch });
+    },
+    async listProHostingPlans(limit) {
+      return db.hostingPlan.findMany({ where: { planKey: 'pro', status: { in: ['trialing', 'active'] } }, orderBy: { createdAt: 'asc' }, take: limit });
+    },
+    async latestHostingInvoice(planId) {
+      const row = await db.payment.findFirst({ where: { hostingPlanId: planId, kind: 'hosting' }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }] });
+      return row ? toPayment(row) : undefined;
+    },
     async create(data) {
       const row = await db.payment.create({
         data: {
@@ -417,6 +459,7 @@ function makeOps(db: Db): PaymentsOps {
           kind: data.kind ?? 'initial',
           subscriptionId: data.subscriptionId,
           moduleId: data.moduleId,
+          hostingPlanId: data.hostingPlanId,
           invoiceNumber: data.invoiceNumber,
           gatewayChargeId: data.gatewayChargeId,
           refCode: data.refCode,
@@ -492,7 +535,21 @@ function makeOps(db: Db): PaymentsOps {
       await db.bankTransaction.updateMany({ where: { externalId }, data: { credited: patch.credited, matchedPaymentId: patch.matchedPaymentId, note: patch.note } });
     },
     async listBankTransactions(filter, page, limit) {
-      const where = filter.credited === undefined ? {} : { credited: filter.credited };
+      const q = filter.q?.trim();
+      // Tìm theo mã giao dịch / số tài khoản / mã tham chiếu / nội dung (không phân biệt hoa thường) để admin dò nhanh khi duyệt tay.
+      const where: Prisma.BankTransactionWhereInput = {
+        ...(filter.credited === undefined ? {} : { credited: filter.credited }),
+        ...(q
+          ? {
+              OR: [
+                { externalId: { contains: q, mode: 'insensitive' } },
+                { accountNumber: { contains: q, mode: 'insensitive' } },
+                { referenceCode: { contains: q, mode: 'insensitive' } },
+                { description: { contains: q, mode: 'insensitive' } },
+              ],
+            }
+          : {}),
+      };
       const [rows, total] = await Promise.all([
         db.bankTransaction.findMany({ where, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], skip: (page - 1) * limit, take: limit }),
         db.bankTransaction.count({ where }),
@@ -818,12 +875,18 @@ function makeOps(db: Db): PaymentsOps {
                COALESCE(SUM((("amountCents" - "refundedCents")::bigint * ${rates.commissionBp} + 5000) / 10000), 0)::bigint AS commission,
                COALESCE(SUM((("amountCents"::bigint * ${rates.gatewayFeeBp} + 5000) / 10000) + ${rates.gatewayFeeFixedCents}), 0)::bigint AS fee
         FROM "Payment"
-        WHERE "courseId" = ${communityId} AND "status" IN ('succeeded', 'refunded') ${from} ${to}`;
+        WHERE "courseId" = ${communityId} AND "kind" <> 'hosting' AND "status" IN ('succeeded', 'refunded') ${from} ${to}`;
+      const cFrom = range.from ? Prisma.sql`AND "createdAt" >= ${ts(range.from)}` : Prisma.empty;
+      const cTo = range.to ? Prisma.sql`AND "createdAt" <= ${ts(range.to)}` : Prisma.empty;
+      const [rc] = await db.$queryRaw<{ total: bigint }[]>`
+        SELECT COALESCE(SUM("amountCents"), 0)::bigint AS total FROM "ReferralCommission"
+        WHERE "communityId" = ${communityId} AND "kind" = 'community' AND "status" <> 'void' ${cFrom} ${cTo}`;
       const gross = num(r?.gross);
       const refunds = num(r?.refunds);
       const commission = num(r?.commission);
       const fee = num(r?.fee);
-      return { grossCents: gross, refundsCents: refunds, platformCommissionCents: commission, gatewayFeeCents: fee, netCents: gross - refunds - commission - fee };
+      const referral = num(rc?.total);
+      return { grossCents: gross, refundsCents: refunds, platformCommissionCents: commission, gatewayFeeCents: fee, referralCommissionCents: referral, netCents: gross - refunds - commission - fee - referral };
     },
     async balance(communityId, rates, policy) {
       // `n` = net của từng giao dịch (đã trừ hoàn tiền, hoa hồng trên phần giữ lại, phí cổng). Giao dịch đủ điều kiện rút khi đã qua
@@ -838,10 +901,15 @@ function makeOps(db: Db): PaymentsOps {
                  ("amountCents" - "refundedCents"
                    - ((("amountCents" - "refundedCents")::bigint * ${rates.commissionBp} + 5000) / 10000)
                    - ((("amountCents"::bigint * ${rates.gatewayFeeBp} + 5000) / 10000) + ${rates.gatewayFeeFixedCents}))::bigint AS "n"
-          FROM "Payment" WHERE "courseId" = ${communityId} AND "status" IN ('succeeded', 'refunded')
+          FROM "Payment" WHERE "courseId" = ${communityId} AND "kind" <> 'hosting' AND "status" IN ('succeeded', 'refunded')
         ) t`;
-      const net = num(r?.net);
-      return { net, requested: num(r?.requested), eligible: policy ? num(r?.eligible) : net };
+      // Hoa hồng giới thiệu của cộng đồng là khoản phải trả cho người mời, lấy từ phần creator nhận: trừ ngay (không chờ holding period).
+      const [rc] = await db.$queryRaw<{ total: bigint }[]>`
+        SELECT COALESCE(SUM("amountCents"), 0)::bigint AS total FROM "ReferralCommission"
+        WHERE "communityId" = ${communityId} AND "kind" = 'community' AND "status" <> 'void'`;
+      const referral = num(rc?.total);
+      const net = num(r?.net) - referral;
+      return { net, requested: num(r?.requested), eligible: policy ? num(r?.eligible) - referral : net };
     },
     async addLedgerEntry(e) {
       await db.ownerBalanceLedger.create({
@@ -862,7 +930,7 @@ function makeOps(db: Db): PaymentsOps {
     },
     async recentPaid(communityId, limit) {
       const rows = await db.payment.findMany({
-        where: { communityId, status: { in: ['succeeded', 'refunded'] } },
+        where: { communityId, kind: { not: 'hosting' }, status: { in: ['succeeded', 'refunded'] } },
         orderBy: [{ confirmedAt: { sort: 'desc', nulls: 'last' } }, { createdAt: 'desc' }],
         take: limit,
       });

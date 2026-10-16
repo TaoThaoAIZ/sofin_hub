@@ -1,11 +1,16 @@
 import { useTranslation } from 'react-i18next';
-import { Link, useParams } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { MaterialIcon } from '../components/ui/MaterialIcon';
 import { ApiError } from '../lib/api';
 import { classroomPath, lessonPath } from '../lib/paths';
 import { fileKeyOf, useFileUrl } from '../lib/files';
-import { errText, ErrorNote, ghostBtn, primaryBtn, safeUrl, toast, ToastHost } from '../features/community/components/contentUi';
-import { useCourseList, useLesson, useLessons, useProgress, useToggleLessonComplete } from '../features/community/queries';
+import { QuizPanel } from '../features/community/components/QuizPanel';
+import { ConfirmDialog, errText, ErrorNote, ghostBtn, isModPlus, primaryBtn, safeUrl, toast, ToastHost } from '../features/community/components/contentUi';
+import { LessonFormDialog } from '../features/community/components/ClassroomEditor';
+import { useCommunityDetail } from '../features/courses/queries';
+import type { ClassroomLesson } from '../features/community/types';
+import { useCourseList, useDeleteLesson, useLesson, useLessons, useProgress, useToggleLessonComplete } from '../features/community/queries';
 
 // Chỉ nhúng iframe từ các host video đã biết (BE đã dựng lại embedUrl từ ID hợp lệ; FE kiểm tra thêm lần nữa).
 const EMBED_PREFIXES = ['https://www.youtube.com/embed/', 'https://www.youtube-nocookie.com/embed/', 'https://player.vimeo.com/video/'];
@@ -59,6 +64,12 @@ export function LessonPage() {
   const siblings = useLessons(communityId, courseId, data?.moduleId ?? null);
   const toggle = useToggleLessonComplete(communityId);
   const back = classroomPath(communityId, courseId);
+  const { t: tc } = useTranslation('community');
+  const navigate = useNavigate();
+  const canManage = isModPlus(useCommunityDetail(communityId).data?.viewerRole);
+  const removeLesson = useDeleteLesson(communityId);
+  const [editing, setEditing] = useState<ClassroomLesson | 'new' | null>(null);
+  const [deleting, setDeleting] = useState<ClassroomLesson | null>(null);
 
   if (lesson.isPending) return <p className="py-10 text-center text-stone-400">{t('lesson.loading')}</p>;
 
@@ -85,7 +96,11 @@ export function LessonPage() {
 
   const l = lesson.data;
   const embed = isSafeEmbed(l.embedUrl) ? l.embedUrl! : null;
+  const slideFiles = (l.attachments ?? []).filter((a) => a.kind === 'slide');
+  const docFiles = (l.attachments ?? []).filter((a) => a.kind !== 'slide');
   const pct = progress.data?.percent ?? 0;
+  // Bài có trắc nghiệm bắt buộc: chưa đạt thì chưa được đánh dấu hoàn thành (bỏ đánh dấu thì vẫn được).
+  const quizBlocks = !!l.quiz?.required && !l.quiz.passed && !l.completed;
 
   const onToggle = () =>
     toggle.mutate(l.id, {
@@ -155,8 +170,9 @@ export function LessonPage() {
               <button
                 type="button"
                 onClick={onToggle}
-                disabled={toggle.isPending}
-                className={l.completed ? ghostBtn : primaryBtn}
+                disabled={toggle.isPending || quizBlocks}
+                title={quizBlocks ? t('quiz.needPass', { pct: l.quiz?.passPercent }) : undefined}
+                className={`${l.completed ? ghostBtn : primaryBtn} disabled:cursor-not-allowed disabled:opacity-60`}
               >
                 <MaterialIcon name={l.completed ? 'undo' : 'check_circle'} size={19} color={l.completed ? undefined : '#fff'} />
                 {toggle.isPending ? t('lesson.saving') : l.completed ? t('lesson.uncomplete') : t('lesson.complete')}
@@ -169,11 +185,29 @@ export function LessonPage() {
             )}
             {l.body && <div className="mt-4 text-[14.5px] leading-[1.7] break-words whitespace-pre-wrap text-stone-800">{l.body}</div>}
 
-            {l.attachments && l.attachments.length > 0 && (
+            {l.quiz && <QuizPanel communityId={communityId} lessonId={l.id} />}
+            {quizBlocks && <p className="mt-2 mb-0 text-[12.5px] text-stone-500">{t('quiz.needPass', { pct: l.quiz?.passPercent })}</p>}
+
+            {slideFiles.length > 0 && (
+              <div className="mt-5">
+                <div className="mb-2 flex items-center gap-1.5 text-[13.5px] font-bold">
+                  <MaterialIcon name="slideshow" size={18} color="#f26a1b" /> {t('lesson.slides')}
+                </div>
+                <ul className="m-0 flex list-none flex-col gap-2 p-0">
+                  {slideFiles.map((a) => (
+                    <li key={a.url}>
+                      <LessonAttachmentLink a={a} />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {docFiles.length > 0 && (
               <div className="mt-5">
                 <div className="mb-2 text-[13.5px] font-bold">{t('lesson.attachments')}</div>
                 <ul className="m-0 flex list-none flex-col gap-2 p-0">
-                  {l.attachments.map((a) => (
+                  {docFiles.map((a) => (
                     <li key={a.url}>
                       <LessonAttachmentLink a={a} />
                     </li>
@@ -188,14 +222,14 @@ export function LessonPage() {
         </article>
 
         <div className="flex items-center justify-between gap-3">
-          {l.prevLessonId ? (
+          {l.prevLessonId && !l.prevLessonLocked ? (
             <Link to={lessonPath(communityId, l.prevLessonId)} className={ghostBtn}>
               <MaterialIcon name="arrow_back" size={19} /> {t('lesson.prev')}
             </Link>
           ) : (
             <span />
           )}
-          {l.nextLessonId ? (
+          {l.nextLessonId && !l.nextLessonLocked ? (
             <Link to={lessonPath(communityId, l.nextLessonId)} className={primaryBtn}>
               {t('lesson.next')} <MaterialIcon name="arrow_forward" size={19} color="#fff" />
             </Link>
@@ -208,25 +242,73 @@ export function LessonPage() {
       </main>
 
       <aside className="glass sticky top-[76px] rounded-2xl p-3 max-[1100px]:static">
-        <div className="px-2 pb-2 text-[14px] font-bold">
-          #{l.moduleIndex - 1}: {l.moduleTitle}
+        <div className="flex items-center gap-2 px-2 pb-2">
+          <div className="min-w-0 flex-1 text-[14px] font-bold">
+            #{l.moduleIndex - 1}: {l.moduleTitle}
+          </div>
+          {canManage && courseId && (
+            <button type="button" onClick={() => setEditing('new')} aria-label={tc('editor.row.addLesson')} title={tc('editor.row.addLesson')} className="grid size-8 flex-none place-items-center rounded-full bg-brand/10 hover:bg-brand/20">
+              <MaterialIcon name="add" size={18} color="#f26a1b" />
+            </button>
+          )}
         </div>
         {siblings.isPending && <p className="px-2 text-sm text-stone-400">{t('lesson.loadingShort')}</p>}
         <div className="flex flex-col gap-1">
           {siblings.data?.map((s) => (
+            <div key={s.id} className="flex items-center gap-1">
             <Link
-              key={s.id}
               to={lessonPath(communityId, s.id)}
               aria-current={s.id === l.id ? 'page' : undefined}
-              className={`flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] ${s.id === l.id ? 'bg-brand-soft font-semibold text-brand' : 'hover:bg-white'}`}
+              aria-disabled={s.locked}
+              tabIndex={s.locked ? -1 : undefined}
+              onClick={(e) => s.locked && e.preventDefault()}
+              className={`flex min-w-0 flex-1 items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] ${s.id === l.id ? 'bg-brand-soft font-semibold text-brand' : 'hover:bg-white'} ${s.locked ? 'cursor-not-allowed opacity-60' : ''}`}
             >
-              <MaterialIcon name={s.completed ? 'check_circle' : 'radio_button_unchecked'} size={18} filled={s.completed} color={s.completed ? '#f26a1b' : '#a8a29e'} />
+              <MaterialIcon name={s.locked ? 'lock' : s.completed ? 'check_circle' : 'radio_button_unchecked'} size={18} filled={s.completed && !s.locked} color={s.completed && !s.locked ? '#f26a1b' : '#a8a29e'} />
               <span className="min-w-0 flex-1 truncate">{s.title}</span>
               <span className="text-[11px] text-stone-400">{s.durationMin}'</span>
             </Link>
+            {canManage && (
+              <>
+                <button type="button" onClick={() => setEditing(s)} aria-label={tc('editor.row.editLesson')} title={tc('editor.row.editLesson')} className="grid size-7 flex-none place-items-center rounded-lg text-stone-500 hover:bg-white hover:text-brand">
+                  <MaterialIcon name="edit" size={16} />
+                </button>
+                <button type="button" onClick={() => setDeleting(s)} aria-label={tc('editor.row.deleteLesson')} title={tc('editor.row.deleteLesson')} className="grid size-7 flex-none place-items-center rounded-lg text-stone-500 hover:bg-white hover:text-red-600">
+                  <MaterialIcon name="delete" size={16} />
+                </button>
+              </>
+            )}
+            </div>
           ))}
         </div>
       </aside>
+      {editing && courseId && (
+        <LessonFormDialog communityId={communityId} courseId={courseId} moduleId={l.moduleId} lesson={editing === 'new' ? undefined : editing} onClose={() => setEditing(null)} />
+      )}
+      {deleting && (
+        <ConfirmDialog
+          title={tc('editor.row.deleteLessonTitle')}
+          message={tc('editor.row.deleteLessonMsg', { title: deleting.title })}
+          confirmLabel={tc('editor.row.deleteLessonConfirm')}
+          pending={removeLesson.isPending}
+          error={removeLesson.isError ? errText(removeLesson.error) : null}
+          onClose={() => setDeleting(null)}
+          onConfirm={() =>
+            removeLesson.mutate(deleting.id, {
+              onSuccess: () => {
+                const wasCurrent = deleting.id === l.id;
+                setDeleting(null);
+                toast(tc('editor.row.lessonDeleted'));
+                // Xóa đúng bài đang xem thì chuyển sang bài kế/bài trước, hết bài thì về Lớp học.
+                if (wasCurrent) {
+                  const next = l.nextLessonId ?? l.prevLessonId;
+                  navigate(next ? lessonPath(communityId, next) : back, { replace: true });
+                }
+              },
+            })
+          }
+        />
+      )}
     </div>
   );
 }

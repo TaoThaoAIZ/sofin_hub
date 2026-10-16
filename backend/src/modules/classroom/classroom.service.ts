@@ -7,6 +7,7 @@ import { atLeast, getRole } from '../permissions/policy.js';
 import { levelFor } from '../points/points.levels.js';
 import { pointsService } from '../points/points.service.js';
 import { postsService } from '../posts/posts.service.js';
+import { quizStore } from '../quiz/quiz.store.js';
 import { toEmbedUrl, uploadedVideoPath } from './classroom.schema.js';
 import { classroomRepository, type ClassroomRepository, type LessonPatch, type ModulePatch } from './classroom.repository.js';
 import {
@@ -404,6 +405,21 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
       return lessons.map((l) => (s.lockedLessons.has(l.id) ? lockedLessonView(l, doneIds) : lessonView(l, doneIds)));
     },
 
+    /** Bài thuộc cộng đồng (mod+ thao tác trên nội dung kể cả bản nháp). 404 nếu không. */
+    async assertLessonInCommunity(communityId: string, lessonId: string) {
+      await requireLesson(communityId, lessonId, true);
+    },
+
+    /** Người xem mở được bài (khóa module/tuần tự ⇒ lỗi khóa như xem bài). Trả vai trò staff để nơi gọi phân quyền hiển thị. */
+    async assertLessonAccessible(communityId: string, lessonId: string, userId: string) {
+      const { lesson, course, staff } = await lessonContext(communityId, lessonId, userId);
+      const { states } = await state(communityId, course, userId, staff);
+      const s = states.find((x) => x.module.id === lesson.moduleId);
+      if (!s) throw HttpError.notFound('Không tìm thấy module');
+      assertLessonOpen(s, lesson);
+      return { lesson, staff };
+    },
+
     async getLesson(communityId: string, lessonId: string, userId: string): Promise<ClassroomLessonDetail> {
       const { lesson, course, staff } = await lessonContext(communityId, lessonId, userId);
       const { states, modules, doneIds } = await state(communityId, course, userId, staff);
@@ -412,6 +428,10 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
       assertLessonOpen(s, lesson);
       const flat = flatLessonIds(modules);
       const i = flat.indexOf(lessonId);
+      const isLocked = (id: string | undefined) => !!id && states.some((x) => x.lockedLessons.has(id));
+      // Tóm tắt trắc nghiệm đi kèm truy vấn findLesson (không thêm truy vấn khi bài không có trắc nghiệm).
+      const q = lesson.quiz;
+      const quiz = q ? { questionCount: q.questionCount, passPercent: q.passPercent, passed: await quizStore.hasPassed(q.id, userId), required: !staff } : null;
       return {
         ...lessonView(lesson, doneIds),
         learningCourseId: course.id,
@@ -421,16 +441,26 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
         moduleIndex: s.module.index,
         prevLessonId: flat[i - 1] ?? null,
         nextLessonId: flat[i + 1] ?? null,
+        prevLessonLocked: isLocked(flat[i - 1]),
+        nextLessonLocked: isLocked(flat[i + 1]),
+        quiz,
       };
     },
 
     async toggleLessonComplete(communityId: string, lessonId: string, userId: string) {
       const { lesson, course, staff } = await lessonContext(communityId, lessonId, userId);
-      const { states } = await state(communityId, course, userId, staff);
+      const { states, doneIds } = await state(communityId, course, userId, staff);
       // Không tin FE: bài đang khóa (module khóa / học tuần tự) thì không được đánh dấu.
       const s = states.find((x) => x.module.id === lesson.moduleId);
       if (!s) throw HttpError.notFound('Không tìm thấy module');
       assertLessonOpen(s, lesson);
+      // Bài có trắc nghiệm: muốn ĐÁNH DẤU hoàn thành phải đã đạt điểm (bỏ đánh dấu thì không cần). Mod+ không bị bắt buộc.
+      if (!staff && !doneIds.has(lessonId)) {
+        const q = lesson.quiz;
+        if (q && !(await quizStore.hasPassed(q.id, userId))) {
+          throw HttpError.coded(409, 'QUIZ_REQUIRED', `Bạn cần đạt tối thiểu ${q.passPercent}% bài trắc nghiệm để hoàn thành bài học này`);
+        }
+      }
       // firstTime chỉ true đúng một lần (dòng LessonProgress được tạo nguyên tử) => điểm không bị cộng đôi kể cả gọi song song.
       const { completed, firstTime } = await repo.toggleCompleted(userId, lessonId);
       if (completed && firstTime) await pointsService.award(userId, communityId, 'lesson_complete', { type: 'lesson', id: lessonId });
