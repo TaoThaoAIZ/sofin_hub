@@ -5,7 +5,8 @@ server {
   listen 80 default_server;
   server_name _;
   location /.well-known/acme-challenge/ { root /var/www/certbot; }
-  location / { return 301 https://__HOST__$request_uri; }
+  # Theo domain người dùng gõ (không cố định về __HOST__) để thêm domain thứ hai bằng add-domain.sh mà không phải sửa tay.
+  location / { return 301 https://$host$request_uri; }
 }
 
 server {
