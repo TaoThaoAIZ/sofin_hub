@@ -128,6 +128,31 @@ export function parseSepay(raw: Record<string, unknown>): ParsedTransfer | null 
   };
 }
 
+/**
+ * Giao dịch tiền RA (webhook transferType='out' hoặc list có amount_out > 0): dùng đối soát yêu cầu RÚT HOA HỒNG theo mã tham chiếu.
+ * Trả null cho tiền vào hoặc dòng không dùng được.
+ */
+export function parseSepayOut(raw: Record<string, unknown>): ParsedTransfer | null {
+  const externalId = str(raw.id ?? raw.transactionID ?? raw.transaction_id).trim();
+  if (!externalId) return null;
+  const type = str(raw.transferType).toLowerCase();
+  const amountOut = raw.amount_out !== undefined ? Number(raw.amount_out) : undefined;
+  const isOut = type === 'out' || (amountOut !== undefined && amountOut > 0);
+  if (!isOut) return null;
+  const amount = Math.round(amountOut ?? Number(raw.transferAmount ?? raw.amount ?? 0));
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+  const description = str(raw.transaction_content ?? raw.content ?? raw.description ?? raw.transferContent);
+  return {
+    externalId,
+    gateway: str(raw.bank_brand_name ?? raw.gateway ?? raw.bankBrandName) || undefined,
+    accountNumber: str(raw.account_number ?? raw.accountNumber) || undefined,
+    amount,
+    description,
+    ref: extractRef(raw.code, description, raw.description, raw.content),
+    transactionDate: parseDate(raw.transaction_date ?? raw.transactionDate),
+  };
+}
+
 /** Header SePay: `Authorization: Apikey <key>` (mặc định) hoặc `Bearer <key>`. So sánh timing-safe. */
 export function webhookAuthorized(authHeader: string | undefined): boolean {
   const key = env.SEPAY_WEBHOOK_KEY;
@@ -148,6 +173,8 @@ export interface BankDeps {
   settle: (intent: PaymentIntent, externalRef: string) => Promise<PaymentIntent>;
   alert?: (msg: string) => void;
   http?: typeof fetch;
+  /** Tiền RA khớp mã rút hoa hồng -> đánh dấu đã chuyển (referralWithdrawalsService.settleByBank). Trả kết quả để ghi log. */
+  settleOutgoing?: (t: ParsedTransfer) => Promise<string>;
   /** Mặc định env.SEPAY_API_TOKEN (test truyền token giả để thử đường quét). */
   apiToken?: string;
 }
@@ -236,7 +263,14 @@ export function createBankReconciler(deps: BankDeps) {
     async handleWebhook(authHeader: string | undefined, body: Record<string, unknown>) {
       if (!webhookAuthorized(authHeader)) throw HttpError.unauthorized('Unauthorized');
       const t = parseSepay(body);
-      if (!t) return { success: true, message: 'bỏ qua (không phải tiền vào)' };
+      if (!t) {
+        const out = parseSepayOut(body);
+        if (out && deps.settleOutgoing) {
+          const r = await deps.settleOutgoing(out);
+          return { success: true, message: `tiền ra: ${r}` };
+        }
+        return { success: true, message: 'bỏ qua (không phải tiền vào)' };
+      }
       const r = await processTransfer(t, body);
       return { success: r.outcome !== 'error', message: r.outcome };
     },
@@ -262,7 +296,11 @@ export function createBankReconciler(deps: BankDeps) {
       }
       for (const raw of list) {
         const t = parseSepay(raw);
-        if (!t) continue; // chỉ xét tiền VÀO
+        if (!t) {
+          const o = deps.settleOutgoing ? parseSepayOut(raw) : null;
+          if (o) await deps.settleOutgoing!(o).catch((err) => console.error(`[payments] quét: tiền ra ${o.externalId} lỗi:`, err));
+          continue;
+        }
         out.scanned++;
         try {
           const r = await processTransfer(t, raw);

@@ -12,6 +12,8 @@ import { ModalActions, SettingsModal } from '../billing/Modal';
 import { useCommissions, useReferral, useReferralUsers, useRemind } from '../referral/queries';
 import type { ReferralKind, ReferralRow, ReferralRowStatus } from '../referral/types';
 import { SCard, SHead } from '../ui';
+import { WithdrawCard, WithdrawProcess } from '../referral/Withdraw';
+import { ShareButtons } from '../referral/Share';
 
 const errText = (e: unknown) => (e instanceof ApiError ? e.message : i18n.t('common.genericError', { ns: 'settings' }));
 
@@ -50,6 +52,8 @@ const initials = (name: string) =>
     .toUpperCase();
 
 const COLS = 'grid-cols-[minmax(200px,1.3fr)_minmax(200px,1.4fr)_140px_160px_140px_40px]';
+/** Bảng hẹp hơn khi có thẻ Rút tiền ở bên cạnh. */
+const COLS_NARROW = 'grid-cols-[minmax(120px,1.3fr)_minmax(80px,1fr)_84px_118px_92px_24px]';
 
 async function copyText(text: string): Promise<boolean> {
   try {
@@ -101,8 +105,9 @@ function CommissionModal({ row, kind, currency, onClose }: { row: ReferralRow; k
   );
 }
 
+/** `withdraw`: hiện thẻ "Rút tiền hoa hồng" cạnh bảng người được giới thiệu + "Quy trình rút tiền" (số dư là chung cho mọi loại hoa hồng nên chỉ bật ở MỘT khối trên trang). */
 /** `kind` cố định: ẩn thanh chọn loại (dùng khi gộp nhiều chương trình trên một trang); `showPayoutLink` bật link "Cài đặt nhận tiền" ở chế độ đó. */
-export function ReferralTab({ kind: fixedKind, showPayoutLink = true }: { kind?: ReferralKind; showPayoutLink?: boolean } = {}) {
+export function ReferralTab({ kind: fixedKind, showPayoutLink = true, withdraw = false }: { kind?: ReferralKind; showPayoutLink?: boolean; withdraw?: boolean } = {}) {
   const { t } = useTranslation('settings');
   const toast = useToast();
   const [pickedKind, setKind] = useState<ReferralKind>('creator');
@@ -151,12 +156,6 @@ export function ReferralTab({ kind: fixedKind, showPayoutLink = true }: { kind?:
     { icon: 'account_balance_wallet', label: t('referral.kpiPending'), v: money(o?.kpis.pendingPayout.cents ?? 0, currency), delta: '', down: false, note: o ? t('referral.payoutOn', { date: formatDate(o.kpis.pendingPayout.payoutOn) }) : '' },
   ];
 
-  const steps = [
-    { n: '1', t: t('referral.step1Title'), s: t('referral.step1Body', { days: o?.rates.attributionDays ?? 60 }) },
-    { n: '2', t: kind === 'creator' ? t('referral.step2Creator') : t('referral.step2Member'), s: t('referral.step2Body') },
-    { n: '3', t: t('referral.step3Title'), s: t('referral.step3Body', { rate }) },
-  ];
-
   const rowMenu = (e: React.MouseEvent<HTMLElement>, r: ReferralRow) =>
     openMenu(
       e,
@@ -179,6 +178,7 @@ export function ReferralTab({ kind: fixedKind, showPayoutLink = true }: { kind?:
 
   return (
     <main className="flex min-w-0 flex-col gap-[18px]">
+      {(!fixedKind || showPayoutLink) && (
       <div className="flex flex-wrap items-center gap-3.5">
         {fixedKind ? (
           <h2 className="m-0 text-[20px] font-extrabold">{t(KINDS.find((k) => k.id === fixedKind)!.label)}</h2>
@@ -214,12 +214,11 @@ export function ReferralTab({ kind: fixedKind, showPayoutLink = true }: { kind?:
           </Link>
         )}
       </div>
+      )}
 
       <section className="relative flex flex-wrap items-end gap-6 overflow-hidden rounded-[20px] border border-[#fde3cf] bg-[linear-gradient(110deg,#fff6ef_0%,#ffe3cd_100%)] px-[30px] py-7 dark:border-[rgba(255,220,197,.1)] dark:bg-[linear-gradient(110deg,rgba(63,63,63,.3)_0%,rgba(74,29,0,.3)_100%)]">
-        <span className="pointer-events-none absolute top-4 right-6 opacity-90">
-          <MaterialIcon name="redeem" size={60} filled color="#ff570a" />
-        </span>
-        <div className="min-w-0 flex-[1_1_420px] pr-[72px]">
+        <div className="flex min-w-0 flex-[1_1_420px] items-center gap-5">
+        <div className="min-w-0 flex-1">
           <h1 className="m-0 text-[clamp(26px,2.6vw,34px)] leading-[1.2] font-extrabold tracking-[-.02em]">
             {t('referral.heroGet')} <span className="text-brand">{rate}</span> {kind === 'creator' ? t('referral.heroCreator') : t('referral.heroMember')}
           </h1>
@@ -227,8 +226,12 @@ export function ReferralTab({ kind: fixedKind, showPayoutLink = true }: { kind?:
             {kind === 'creator' ? t('referral.heroSubCreator') : t('referral.heroSubMember')}
           </div>
         </div>
-        <div className="relative min-w-[280px] flex-[0_1_460px]">
-          <div className="mb-2 text-sm text-stone-700">{t('referral.yourLink')}</div>
+        <span aria-hidden className="hidden flex-none opacity-90 min-[1280px]:block">
+          <MaterialIcon name="redeem" size={84} filled color="#ff570a" />
+        </span>
+        </div>
+        <div className="relative min-w-[280px] flex-[0_1_460px] rounded-2xl bg-white/85 p-4 dark:bg-black/25">
+          <div className="mb-2 text-sm font-semibold text-stone-800">{t('referral.yourLink')}</div>
           <div className="flex gap-3">
             <div className="flex h-[50px] min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-[#f0e2d7] bg-white px-4 dark:border-white/10 dark:bg-black/30">
               <span className="min-w-0 flex-1 truncate text-[14.5px]">{link ? link.replace(/^https?:\/\//, '') : overview.isError ? t('referral.linkFail') : '…'}</span>
@@ -245,6 +248,7 @@ export function ReferralTab({ kind: fixedKind, showPayoutLink = true }: { kind?:
               {t('referral.copyBtn')}
             </button>
           </div>
+          {link && <ShareButtons link={link} onCopy={copy} />}
         </div>
       </section>
 
@@ -271,12 +275,7 @@ export function ReferralTab({ kind: fixedKind, showPayoutLink = true }: { kind?:
         ))}
       </div>
 
-      <section className="grid min-w-0 items-center gap-4 rounded-[20px] border border-[rgba(120,60,20,.07)] bg-white px-6 py-5 min-[1100px]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)]">
-        {steps.map((st, i) => (
-          <StepItem key={st.n} step={st} arrow={i < steps.length - 1} />
-        ))}
-      </section>
-
+      <div className={withdraw ? 'grid min-w-0 items-start gap-[18px] min-[1100px]:grid-cols-[minmax(0,1fr)_372px]' : ''}>
       <SCard>
         <SHead
           icon="group_add"
@@ -284,18 +283,10 @@ export function ReferralTab({ kind: fixedKind, showPayoutLink = true }: { kind?:
           title={t('referral.listTitle')}
           sub={t('referral.listSub')}
           className="mb-4"
-          action={
-            total > 4 ? (
-              <button type="button" onClick={() => setAll((v) => !v)} className="flex items-center gap-1.5 border-0 bg-transparent p-0 text-[15px] font-bold text-[#15803d] underline">
-                {all ? t('referral.collapse') : t('referral.viewAll', { total })}
-                <MaterialIcon name="arrow_forward" size={19} color="#ff570a" />
-              </button>
-            ) : undefined
-          }
         />
         <div className="overflow-x-auto">
-          <div className="min-w-[820px]">
-            <div className={`grid ${COLS} gap-3 rounded-xl bg-[#f7f4f1] px-4 py-3.5 text-[13.5px] text-stone-600`}>
+          <div className={withdraw ? 'min-w-[560px]' : 'min-w-[820px]'}>
+            <div className={`grid ${withdraw ? COLS_NARROW : COLS} gap-3 rounded-xl bg-[#f7f4f1] px-4 py-3.5 text-[13.5px] text-stone-600`}>
               <span>{t('referral.colUser')}</span>
               <span>{t('referral.colCommunity')}</span>
               <span>{t('referral.colSignup')}</span>
@@ -346,29 +337,21 @@ export function ReferralTab({ kind: fixedKind, showPayoutLink = true }: { kind?:
             })}
           </div>
         </div>
+        {total > 4 && (
+          <div className="mt-3 text-center">
+            <button type="button" onClick={() => setAll((v) => !v)} className="inline-flex items-center gap-1.5 border-0 bg-transparent p-0 text-[14px] font-bold text-brand underline">
+              {all ? t('referral.collapse') : t('referral.viewAll', { total })}
+              <MaterialIcon name="arrow_forward" size={17} color="#ff570a" />
+            </button>
+          </div>
+        )}
       </SCard>
+        {withdraw && <WithdrawCard />}
+      </div>
+      {withdraw && <WithdrawProcess />}
 
       {menuEl}
       {detail && <CommissionModal row={detail} kind={kind} currency={currency} onClose={() => setDetail(null)} />}
     </main>
-  );
-}
-
-function StepItem({ step, arrow }: { step: { n: string; t: string; s: string }; arrow: boolean }) {
-  return (
-    <>
-      <div className="flex items-start gap-3.5">
-        <span className="grid size-11 flex-none place-items-center rounded-full bg-[#fff1e6] text-xl font-extrabold text-brand">{step.n}</span>
-        <div>
-          <div className="text-[16.5px] font-extrabold">{step.t}</div>
-          <div className="mt-1 text-[13.5px] leading-normal text-stone-500">{step.s}</div>
-        </div>
-      </div>
-      {arrow && (
-        <span className="hidden min-[1100px]:block">
-          <MaterialIcon name="arrow_forward" size={22} color="#ff570a" />
-        </span>
-      )}
-    </>
   );
 }

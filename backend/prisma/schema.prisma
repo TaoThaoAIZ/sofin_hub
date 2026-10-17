@@ -409,6 +409,8 @@ model User {
   referredBy                 Referral?                   @relation("ReferralReferred")
   commissionsEarned          ReferralCommission[]        @relation("CommissionReferrer")
   commissionsCaused          ReferralCommission[]        @relation("CommissionReferred")
+  referralPayoutAccount      ReferralPayoutAccount?
+  referralWithdrawals        ReferralWithdrawal[]
   oneTimeTokens              OneTimeToken[]
   emailOtps                  EmailOtp[]
   socialAccounts             SocialAccount[]
@@ -1942,6 +1944,54 @@ model ReferralCommission {
 
   @@index([referrerId, createdAt])
   @@index([referredUserId])
+}
+
+enum ReferralWithdrawalStatus {
+  /// Đã tạo, chờ admin chuyển khoản (hoặc SePay báo tiền ra khớp mã).
+  requested
+  paid
+  rejected
+}
+
+/// Tài khoản nhận hoa hồng của MỘT người dùng. Số tài khoản mã hóa AES-256-GCM (accountNumberEnc); giao diện chỉ thấy 4 số cuối.
+model ReferralPayoutAccount {
+  userId           String   @id
+  bankBin          String
+  bankName         String
+  accountHolder    String
+  accountNumberEnc String
+  accountLast4     String
+  updatedAt        DateTime @updatedAt
+  createdAt        DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// Yêu cầu rút hoa hồng giới thiệu. Cơ chế giống nạp: mã tham chiếu `refCode` (nội dung CK), trạng thái requested -> paid,
+/// SePay báo TIỀN RA khớp mã + số tiền thì tự chuyển paid (bankTxExternalId = id giao dịch). Số dư rút được = hoa hồng (trừ void) − các yêu cầu chưa bị từ chối.
+/// Ảnh chụp tài khoản nhận (bankBin/bankName/accountHolder/accountNumberEnc) giữ nguyên dù người dùng đổi tài khoản sau đó.
+model ReferralWithdrawal {
+  id                String                   @id @default(uuid())
+  userId            String
+  amountCents       Int
+  refCode           String                   @unique
+  status            ReferralWithdrawalStatus @default(requested)
+  bankBin           String
+  bankName          String
+  accountHolder     String
+  accountNumberEnc  String
+  accountLast4      String
+  note              String?
+  bankTxExternalId  String?                  @unique
+  resolvedById      String?
+  paidAt            DateTime?
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
 }
 
 // =====================================================================// CHATBOT HỖ TRỢ (chatbot.md) — kho câu hỏi mẫu, tài liệu tri thức, hội thoại

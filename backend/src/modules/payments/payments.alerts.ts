@@ -58,6 +58,19 @@ export async function alertMoneyIssue(message: string): Promise<void> {
   }
 }
 
+/** Có yêu cầu rút hoa hồng mới: báo admin (chuông + Telegram) kèm mã để chuyển khoản. */
+export async function announceWithdrawal(w: { id: string; amountCents: number; refCode: string; who: string; bankName: string }): Promise<void> {
+  try {
+    const body = `${w.who} yêu cầu rút ${vnd(w.amountCents)} về ${w.bankName} (mã ${w.refCode}). Chuyển khoản với nội dung là mã này để hệ thống tự đối soát.`;
+    await Promise.allSettled([
+      tellAdmins(`Yêu cầu rút hoa hồng: ${vnd(w.amountCents)}`, body, '/admin/payments/referrals'),
+      sendTelegram(`🏧 <b>YÊU CẦU RÚT HOA HỒNG ${esc(vnd(w.amountCents))}</b>\n👤 ${esc(w.who)}\n🏦 ${esc(w.bankName)}\n🔖 Nội dung CK: <code>${esc(w.refCode)}</code>`),
+    ]);
+  } catch (err) {
+    console.error('[referrals] announceWithdrawal lỗi:', err);
+  }
+}
+
 const KIND_LABEL: Record<PaymentIntent['kind'], string> = { initial: 'Gói thành viên', renewal: 'Gia hạn gói', module: 'Mua module', hosting: 'Gói hosting Pro' };
 
 /** Có thanh toán thành công (đã commit): báo admin (chuông + Telegram) và owner cộng đồng. */

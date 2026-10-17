@@ -63,6 +63,9 @@ const schema = z.object({
   FACEBOOK_APP_ID: z.string().optional().transform((v) => v?.trim() || undefined),
   FACEBOOK_APP_SECRET: z.string().optional().transform((v) => v?.trim() || undefined),
 
+  // Khóa mã hóa số tài khoản nhận hoa hồng (AES-256-GCM). Trống = dẫn xuất từ UPLOAD_SIGNING_SECRET. KHÔNG đổi sau khi đã có dữ liệu.
+  PAYOUT_ENC_KEY: z.string().optional().transform((v) => v?.trim() || undefined),
+
   // --- Upload file (module uploads) ---
   UPLOAD_DIR: z.string().default('data/uploads'),
   // Bí mật ký vé upload (HMAC). BẮT BUỘC đặt riêng khi production.

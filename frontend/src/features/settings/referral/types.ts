@@ -37,3 +37,44 @@ export interface CommissionDetail {
   totalCents: number;
   data: { id: string; createdAt: string; baseCents: number; rateBps: number; amountCents: number; status: 'pending' | 'paid' | 'void'; communityId: string | null }[];
 }
+
+export type WithdrawalStatus = 'requested' | 'paid' | 'rejected';
+
+export interface Withdrawal {
+  id: string;
+  amountCents: number;
+  refCode: string;
+  status: WithdrawalStatus;
+  bankName: string;
+  accountHolder: string;
+  accountLast4: string;
+  note: string | null;
+  createdAt: string;
+  paidAt: string | null;
+}
+
+export interface PayoutAccount {
+  bankBin: string;
+  bankName: string;
+  accountHolder: string;
+  accountLast4: string;
+  accountMasked: string;
+}
+
+/** Rút hoa hồng luôn bằng VND (đồng). */
+export interface WithdrawOverview {
+  currency: 'VND';
+  minCents: number;
+  earnedCents: number;
+  pendingCents: number;
+  paidCents: number;
+  withdrawableCents: number;
+  account: PayoutAccount | null;
+  withdrawals: Withdrawal[];
+}
+
+export interface Bank {
+  bin: string;
+  short: string;
+  name: string;
+}

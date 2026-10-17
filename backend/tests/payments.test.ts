@@ -384,7 +384,7 @@ describe('thanh toán chuyển khoản, gói thành viên, hoàn tiền, webhook
 
       const out = await c.bankWebhook({ ...c.sepayTx({ id: txId('O'), refCode: f.body.data.refCode, amount: 1000 }), transferType: 'out' });
       assert.equal(out.status, 200);
-      assert.equal(out.body.message, 'bỏ qua (không phải tiền vào)');
+      assert.equal(out.body.message, 'tiền ra: unmatched');
       const noId = await c.bankWebhook({ transferType: 'in', transferAmount: 1000, content: 'x' });
       assert.equal(noId.status, 200);
       assert.equal(noId.body.message, 'bỏ qua (không phải tiền vào)');

@@ -7,6 +7,7 @@ import { DataTable, MainCell, MonoCell, MutedCell, NumCell, TextCell, type Colum
 import { PageHeader } from '../components/PageHeader';
 import { StatusBadge, fmtNum, type Tone } from '../components/ui';
 import { useAdminData, useAdminList } from '../queries.batch2';
+import { ReferralWithdrawalsPanel } from './ReferralWithdrawalsPanel';
 
 const LIMIT = 20;
 
@@ -53,7 +54,7 @@ const personCell = (p: Person | null) => (p ? <MainCell name={p.name} sub={p.ema
 const STATUS_TONE: Record<CommissionRow['status'], Tone> = { pending: 'o', paid: 'g', void: 'x' };
 const pct = (bps: number) => `${(bps / 100).toLocaleString('vi-VN', { maximumFractionDigits: 2 })}%`;
 
-type View = 'commissions' | 'referrals';
+type View = 'commissions' | 'referrals' | 'withdrawals';
 
 /** Admin > Thanh toán > Giao dịch giới thiệu: hoa hồng phát sinh + danh sách ai giới thiệu ai. */
 export function ReferralTxView() {
@@ -62,7 +63,7 @@ export function ReferralTxView() {
   const ts = useTableState({ kind: '', status: '' }, '');
   const summary = useAdminData<Summary>('payments', '/payments/referrals/summary');
   const list = useAdminList<CommissionRow | ReferralRow>('payments-referrals', '/payments/referrals', {
-    view,
+    view: view === 'withdrawals' ? 'commissions' : view,
     q: ts.q || undefined,
     kind: view === 'commissions' ? ts.f.kind || undefined : undefined,
     status: view === 'commissions' ? ts.f.status || undefined : undefined,
@@ -106,6 +107,7 @@ export function ReferralTxView() {
     tabs: [
       { key: 'commissions', label: t('referrals.tabCommissions') },
       { key: 'referrals', label: t('referrals.tabReferrals') },
+      { key: 'withdrawals', label: t('referrals.tabWithdrawals') },
     ],
     tab: view,
     onTab: (k: string) => {
@@ -131,7 +133,15 @@ export function ReferralTxView() {
           { icon: 'paid', label: t('referrals.kpiPaid'), value: s ? formatCents(s.paidCents) : '—' },
         ]}
       />
-      {view === 'commissions' ? (
+      {view === 'withdrawals' ? (
+        <ReferralWithdrawalsPanel
+          viewTabs={common.tabs}
+          onViewTab={(k) => {
+            setView(k as View);
+            ts.clear();
+          }}
+        />
+      ) : view === 'commissions' ? (
         <DataTable<CommissionRow>
           {...common}
           rows={(list.data?.data ?? []) as CommissionRow[]}

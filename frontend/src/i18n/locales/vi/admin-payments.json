@@ -358,6 +358,38 @@
       "paid": "Đã chi trả",
       "void": "Đã hủy"
     },
-    "kindCommunity": "Giới thiệu trong cộng đồng"
+    "kindCommunity": "Giới thiệu trong cộng đồng",
+    "tabWithdrawals": "Yêu cầu rút"
+  },
+  "refWithdrawals": {
+    "tableTitle": "Yêu cầu rút hoa hồng",
+    "tableSub": "{{count}} yêu cầu",
+    "colDate": "Thời gian",
+    "colUser": "Người rút",
+    "colNote": "Ghi chú",
+    "bank": "Ngân hàng",
+    "accountNo": "Số tài khoản",
+    "holder": "Chủ tài khoản",
+    "amount": "Số tiền (đ)",
+    "content": "Nội dung CK / mã",
+    "transfer": "Chuyển tiền",
+    "reject": "Từ chối",
+    "markPaid": "Đã chuyển",
+    "transferTitle": "Chuyển hoa hồng",
+    "transferBody": "Chuyển {{amount}} cho {{name}}. Quét QR (đã điền sẵn số tiền và nội dung) hoặc nhập tay.",
+    "autoNote": "Giữ nguyên nội dung chuyển khoản: khi SePay báo tiền ra khớp mã và số tiền, hệ thống tự chuyển sang Đã chuyển. Cũng có thể bấm Đã chuyển để xác nhận tay.",
+    "clickCopy": "Bấm để sao chép",
+    "copied": "Đã sao chép",
+    "paidDone": "Đã đánh dấu đã chuyển",
+    "rejectTitle": "Từ chối yêu cầu rút",
+    "rejectBody": "Từ chối rút {{amount}} của {{name}}. Số tiền được hoàn lại vào số dư của họ và họ nhận thông báo.",
+    "reason": "Lý do (hiện cho người dùng)",
+    "rejectedDone": "Đã từ chối yêu cầu",
+    "empty": "Chưa có yêu cầu rút nào",
+    "status": {
+      "requested": "Chờ chuyển",
+      "paid": "Đã chuyển",
+      "rejected": "Từ chối"
+    }
   }
 }

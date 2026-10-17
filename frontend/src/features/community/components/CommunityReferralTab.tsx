@@ -69,6 +69,8 @@ function CommunityProgram() {
     return <p role="alert" className="py-10 text-center text-red-600">{q.error instanceof ApiError ? q.error.message : t('referral.loadFail')}</p>;
   }
   const p = q.data;
+  // Cộng đồng chưa bật chương trình và mình không phải chủ: khỏi chiếm chỗ bằng thẻ "chưa bật" (trang gọn như thiết kế).
+  if (!p.enabled && !p.isOwner) return null;
   const rateText = rate ?? bpsToPct(p.rateBps);
   const rateNum = Number(rateText);
   const rateBps = Math.round(rateNum * 100);
@@ -219,14 +221,30 @@ export function CommunityReferralTab() {
     document.body.classList.add('no-page-bg');
     return () => document.body.classList.remove('no-page-bg');
   }, []);
+  const { t } = useTranslation('settings');
+  const [creatorOpen, setCreatorOpen] = useState(false);
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-[18px]">
       <CommunityProgram />
       <ToastProvider>
-        <div className="flex flex-col gap-8">
-          <PlatformReferral kind="creator" />
-          <PlatformReferral kind="member" showPayoutLink={false} />
-        </div>
+        <PlatformReferral kind="member" withdraw showPayoutLink={false} />
+        {/* Chương trình "người tạo cộng đồng" thu gọn mặc định: trang chính chỉ còn một chương trình như thiết kế. */}
+        <section className="rounded-[20px] border border-[rgba(120,60,20,.07)] bg-white">
+          <button
+            type="button"
+            aria-expanded={creatorOpen}
+            onClick={() => setCreatorOpen((v) => !v)}
+            className="flex w-full items-center justify-between gap-3 rounded-[20px] border-0 bg-transparent px-6 py-4 text-left text-[16px] font-extrabold"
+          >
+            {t('referral.kindCreator')}
+            <MaterialIcon name={creatorOpen ? 'expand_less' : 'expand_more'} size={24} />
+          </button>
+          {creatorOpen && (
+            <div className="px-4 pb-4">
+              <PlatformReferral kind="creator" showPayoutLink={false} />
+            </div>
+          )}
+        </section>
       </ToastProvider>
     </div>
   );

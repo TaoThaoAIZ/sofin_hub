@@ -9,6 +9,7 @@ import { annualSavingsPct, type Community } from '../catalog/community.types.js'
 import { getRole, atLeast, isCommunityOwner, requireRole, requireStaff } from '../permissions/policy.js';
 import { paymentGateway, type PaymentGateway } from './payments.gateway.js';
 import { announcePaid, alertMoneyIssue } from './payments.alerts.js';
+import { referralWithdrawalsService } from '../referrals/referral-withdrawals.service.js';
 import { bankConfigured, createBankReconciler, makeRefCode, SESSION_TTL_MS, transferInfoFor } from './payments.bank.js';
 import {
   isUniqueViolation,
@@ -389,7 +390,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
   }
 
   /** Đối soát chuyển khoản: webhook / quét / duyệt tay đều cấp quyền qua CÙNG `settleAndVoid`. */
-  const bank = createBankReconciler({ repo, settle: (intent, ref) => settleAndVoid(intent, ref, false), alert: (m) => void alertMoneyIssue(m), http: deps.http, apiToken: deps.sepayToken });
+  const bank = createBankReconciler({ repo, settleOutgoing: (t) => referralWithdrawalsService.settleByBank(t.ref, t.amount, t.externalId), settle: (intent, ref) => settleAndVoid(intent, ref, false), alert: (m) => void alertMoneyIssue(m), http: deps.http, apiToken: deps.sepayToken });
 
   async function failPayment(intent: PaymentIntent, reason: string) {
     const failed = await repo.transition(intent.id, ['pending'], { status: 'failed', failureReason: reason });
