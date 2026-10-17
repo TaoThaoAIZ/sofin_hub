@@ -69,6 +69,11 @@ export interface DirectUpload {
 }
 
 export interface StorageProvider {
+  /**
+   * URL đọc trực tiếp từ kho (S3 presigned GET, hỗ trợ Range): trình duyệt tải thẳng, không đi qua backend. Dùng cho video lớn.
+   * Không có (đĩa local) = phục vụ qua GET /files/:key.
+   */
+  signedReadUrl?(key: string, opts: { ttlSec: number; contentType: string }): Promise<string>;
   /** Có = trình duyệt upload thẳng lên kho (không đi qua backend). Không có (đĩa local) = luồng vé HMAC qua backend. */
   direct?: DirectUpload;
   createUploadTarget(input: { key: string; contentType: string; maxSize: number; userId: string }): UploadTarget;
@@ -169,10 +174,26 @@ const DIRECT_URL_TTL_SEC = 2 * 3600;
 export class S3Storage implements StorageProvider {
   constructor(
     private readonly bucket: string,
-    private readonly client: Pick<S3Client, 'send'> = new S3Client({ region: env.S3_REGION }),
+    private readonly client: Pick<S3Client, 'send'> = new S3Client({
+      region: env.S3_REGION,
+      // Không để một lệnh S3 treo vô hạn (trình duyệt sẽ đứng ở bước /complete): nối kết tối đa 5s, im lặng quá 2 phút thì hủy và thử lại.
+      requestHandler: { connectionTimeout: 5_000, requestTimeout: 120_000 },
+      maxAttempts: 3,
+      // SDK mới mặc định thêm checksum CRC32 vào mọi request/URL presigned: URL PUT của trình duyệt bị lệch checksum; chỉ tính khi S3 bắt buộc.
+      requestChecksumCalculation: 'WHEN_REQUIRED',
+      responseChecksumValidation: 'WHEN_REQUIRED',
+    }),
     /** Ký URL: mặc định dùng presigner của SDK; test truyền bản giả. */
     private readonly sign: (cmd: object, ttlSec: number) => Promise<string> = (cmd, ttlSec) => getSignedUrl(client as S3Client, cmd as never, { expiresIn: ttlSec }),
   ) {}
+
+  signedReadUrl = (key: string, opts: { ttlSec: number; contentType: string }): Promise<string> => {
+    assertKey(key);
+    return this.sign(
+      new GetObjectCommand({ Bucket: this.bucket, Key: key, ResponseContentType: opts.contentType, ResponseCacheControl: 'private, max-age=3600' }),
+      opts.ttlSec,
+    );
+  };
 
   readonly direct: DirectUpload = {
     plan: async ({ key, contentType, size }) => {
@@ -215,8 +236,11 @@ export class S3Storage implements StorageProvider {
     readHead: async (key, bytes) => {
       assertKey(key);
       const out = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key, Range: `bytes=0-${bytes - 1}` }));
+      // transformToByteArray đọc hết + đóng socket đúng cách (tránh socket treo khi chỉ đọc đầu file).
+      const body = out.Body as { transformToByteArray?: () => Promise<Uint8Array> } & Readable;
+      if (typeof body.transformToByteArray === 'function') return Buffer.from(await body.transformToByteArray());
       const chunks: Buffer[] = [];
-      for await (const c of out.Body as Readable) chunks.push(Buffer.from(c as Buffer));
+      for await (const c of body) chunks.push(Buffer.from(c as Buffer));
       return Buffer.concat(chunks);
     },
   };

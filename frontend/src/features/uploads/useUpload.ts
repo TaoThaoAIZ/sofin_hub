@@ -224,7 +224,8 @@ export function useUpload() {
               const res = await putWithProgress(presign.uploadUrl, { ...presign.headers, 'Content-Type': contentType }, file, (l, t) => pct(Math.floor((l / t) * 100)), opts.signal);
               if (res.status < 200 || res.status >= 300) throw new ApiError(res.status, i18n.t('upload.failedStatus', { ns: 'misc', status: res.status }));
             }
-            await apiPost(`/uploads/${presign.key}/complete`, { ...(uploadId ? { uploadId, parts } : {}) });
+            // Backend ghép phần + kiểm file có thể mất vài phút với video lớn; quá 10 phút coi là treo để người dùng thấy lỗi thay vì đứng mãi.
+            await apiPost(`/uploads/${presign.key}/complete`, { ...(uploadId ? { uploadId, parts } : {}) }, { signal: AbortSignal.timeout(10 * 60_000) });
           } catch (err) {
             void apiPost(`/uploads/${presign.key}/abort`, { ...(uploadId ? { uploadId } : {}) }).catch(() => undefined);
             throw err;

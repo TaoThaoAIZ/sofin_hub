@@ -1,10 +1,10 @@
 import { useTranslation } from 'react-i18next';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { MaterialIcon } from '../components/ui/MaterialIcon';
 import { ApiError } from '../lib/api';
 import { classroomPath, lessonPath } from '../lib/paths';
-import { fileKeyOf, useFileUrl } from '../lib/files';
+import { fileKeyOf, refreshFileUrl, useFileUrl } from '../lib/files';
 import { QuizPanel } from '../features/community/components/QuizPanel';
 import { ConfirmDialog, errText, ErrorNote, ghostBtn, isModPlus, primaryBtn, safeUrl, toast, ToastHost } from '../features/community/components/contentUi';
 import { LessonFormDialog } from '../features/community/components/ClassroomEditor';
@@ -21,12 +21,37 @@ const fmtSize = (n?: number) => (n === undefined ? '' : n > 1024 * 1024 ? `${(n 
 /** Video do chủ cộng đồng tải lên (mp4): file riêng tư theo khóa học nên phát bằng URL ký hạn ngắn. */
 function UploadedVideo({ url, title }: { url: string; title: string }) {
   const { t } = useTranslation('course');
-  const src = useFileUrl(url);
+  const initial = useFileUrl(url);
+  const [fresh, setFresh] = useState<{ for: string; src: string } | null>(null);
+  const retried = useRef(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const src = fresh?.for === url ? fresh.src : initial;
   if (src === undefined) return <div className="grid aspect-video w-full place-items-center bg-stone-100 text-sm text-stone-500">{t('lesson.loadingAttachment', { name: title })}</div>;
   if (!src) return <div className="grid aspect-video w-full place-items-center bg-stone-100 text-sm text-stone-500">{t('lesson.noVideo')}</div>;
   return (
     <div className="aspect-video w-full bg-black">
-      <video src={src} title={title} controls controlsList="nodownload" playsInline preload="metadata" className="size-full" />
+      <video
+        ref={videoRef}
+        src={src}
+        title={title}
+        controls
+        controlsList="nodownload"
+        playsInline
+        preload="metadata"
+        className="size-full"
+        onError={(e) => {
+          // URL ký hết hạn (xem dở rồi để lâu): xin URL mới đúng 1 lần và phát lại từ vị trí cũ.
+          if (retried.current) return;
+          retried.current = true;
+          const at = e.currentTarget.currentTime;
+          void refreshFileUrl(url).then((s) => {
+            setFresh({ for: url, src: s });
+            requestAnimationFrame(() => {
+              if (videoRef.current) videoRef.current.currentTime = at;
+            });
+          });
+        }}
+      />
     </div>
   );
 }

@@ -127,17 +127,23 @@ export function createUploadService(repo: UploadRepository = prismaUploadReposit
         await storage.delete(key).catch(() => undefined);
         await repo.delete(key);
       };
+      const t0 = Date.now();
+      const step = (name: string) => console.info(`[uploads] complete ${key} ${name} +${Date.now() - t0}ms`);
       try {
         if (input.uploadId) {
           if (!input.parts?.length) throw HttpError.badRequest('Thiếu danh sách phần đã tải lên');
           await direct.completeMultipart(key, input.uploadId, input.parts);
+          step('đã ghép phần');
         }
         const size = await direct.head(key);
+        step(`head size=${size}`);
         if (size === null) throw HttpError.badRequest('File chưa được tải lên kho lưu trữ');
         if (size === 0) throw HttpError.badRequest('File rỗng');
         if (size !== rec.size) throw HttpError.badRequest('Dung lượng file tải lên không khớp với khai báo');
         if (!matchesMagic(rec.contentType, await direct.readHead(key, 64))) throw HttpError.badRequest('Nội dung file không khớp với loại file khai báo');
+        step('đã kiểm magic bytes');
       } catch (e) {
+        console.error(`[uploads] complete ${key} lỗi +${Date.now() - t0}ms:`, e instanceof Error ? `${e.name}: ${e.message}` : e);
         await discard();
         throw e;
       }
@@ -240,6 +246,16 @@ export function createUploadService(repo: UploadRepository = prismaUploadReposit
       const f = await storage.getStream(key, opts.range);
       if (!f) return null;
       return { ...f, contentType, isImage: contentType in IMAGE_TYPES, filename: rec.filename, record: rec };
+    },
+
+    /**
+     * Video bài học trên S3: trả URL presigned GET để trình duyệt tải thẳng từ S3 (tua/đệm nhanh, không qua backend + không kiểm quyền DB
+     * ở từng Range). Gọi SAU khi đã kiểm quyền. null = không áp dụng (đĩa local / loại file khác) -> dùng URL ký qua backend.
+     */
+    async directReadUrl(rec: UploadRecord, ttlSec: number): Promise<{ url: string; expiresAt: string } | null> {
+      if (!storage.signedReadUrl || rec.purpose !== 'lesson_video') return null;
+      const url = await storage.signedReadUrl(rec.key, { ttlSec, contentType: rec.contentType });
+      return { url, expiresAt: new Date(Date.now() + ttlSec * 1000).toISOString() };
     },
 
     /** Bản ghi của file đã upload xong và chưa bị gỡ; undefined nếu không phục vụ được. */

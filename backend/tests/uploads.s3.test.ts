@@ -118,4 +118,17 @@ describe('S3Storage', () => {
     assert.deepEqual([...(await s.direct.readHead(KEY, 64))], [1, 2, 3]);
     assert.equal(sent.at(-1)!.input.Range, 'bytes=0-63');
   });
+
+  it('signedReadUrl: ký GetObject có ResponseContentType (trình duyệt tải thẳng từ S3, hỗ trợ Range)', async () => {
+    const { client } = fakeClient(() => ({}));
+    let seen: { constructor: { name: string }; input: Record<string, unknown> } | undefined;
+    const s = new S3Storage('bkt', client as never, async (cmd) => {
+      seen = cmd as never;
+      return 'https://s3/x';
+    });
+    assert.equal(await s.signedReadUrl(KEY, { ttlSec: 60, contentType: 'video/mp4' }), 'https://s3/x');
+    assert.equal(seen!.constructor.name, 'GetObjectCommand');
+    assert.equal(seen!.input.ResponseContentType, 'video/mp4');
+    assert.equal(seen!.input.Key, KEY);
+  });
 });

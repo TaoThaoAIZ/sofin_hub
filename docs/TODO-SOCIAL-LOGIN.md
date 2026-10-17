@@ -1,16 +1,18 @@
-# TODO: bật lại đăng nhập Google / Facebook
+# Đăng nhập Google / Facebook
 
-> Ghi chú 2026-10-07. Nút Google/Facebook đang **TẠM ẨN** ở trang đăng nhập và đăng ký. Code backend + frontend đã làm xong và có test, chỉ chưa có khoá OAuth.
+> Cập nhật 2026-10-17. **Google đã bật** (nút hiện mặc định, tắt bằng `VITE_SOCIAL_LOGIN=0` khi build). **Facebook vẫn ẩn** (cần `VITE_FACEBOOK_LOGIN=1` + app review).
 
-## Đang ẩn thế nào
-- Frontend: cờ `SOCIAL_LOGIN_ENABLED` trong `frontend/src/features/auth/SocialButtons.tsx` (= `VITE_SOCIAL_LOGIN === '1'`). Mặc định tắt: ẩn cả nút lẫn dòng "hoặc đăng nhập/đăng ký với".
-- Backend: route `/api/auth/oauth/:provider/start|callback` vẫn mount; nhà cung cấp thiếu khoá thì tự trả `error=not_configured`.
+## Google — cấu hình
+1. Google Cloud Console > project `SofinHub` > Google Auth Platform: Branding, Audience = External và **Publish app** (nếu để *Testing* thì chỉ test user đăng nhập được), Data Access chỉ `openid email profile` (không cần xét duyệt).
+2. Clients > OAuth client kiểu Web application. **Authorized redirect URIs** (khớp từng ký tự):
+   - `https://hub.taothaoai.com/api/auth/oauth/google/callback`
+   - `http://localhost:4000/api/auth/oauth/google/callback` (dev)
+3. Biến môi trường backend (dev: `backend/.env`; production: `/opt/app/.env`, chmod 600; KHÔNG commit):
+   `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `OAUTH_REDIRECT_BASE` (URL công khai của backend, production = `https://hub.taothaoai.com`), `FRONTEND_URL`.
+4. Áp dụng trên server: `cd /opt/app && docker compose up -d --force-recreate backend`.
+5. Thiếu khoá => backend trả `error=not_configured`. Lỗi `redirect_uri_mismatch` => URI ở bước 2 lệch `OAUTH_REDIRECT_BASE`.
 
-## Để bật lại
-1. Tạo OAuth app Google và Facebook (hướng dẫn từng bước đã trao đổi trong chat; redirect URI = `<OAUTH_REDIRECT_BASE>/api/auth/oauth/<provider>/callback`).
-2. Điền vào `backend/.env` (và biến môi trường trên Render): `GOOGLE_CLIENT_ID/SECRET`, `FACEBOOK_APP_ID/SECRET`, `OAUTH_REDIRECT_BASE` (URL công khai của BE).
-3. Điền `VITE_SOCIAL_LOGIN=1` ở frontend (`frontend/.env` hoặc biến build trên Vercel), build lại FE.
-4. Thử thật: đăng ký mới, đăng nhập lại, trùng email với tài khoản có sẵn, tài khoản bật 2FA.
-5. Facebook: app mới ở chế độ Development chỉ cho tài khoản có vai trò; muốn người lạ dùng phải app review + bật Live. Tài khoản FB không có email xác nhận sẽ bị từ chối (`oauth_no_email`).
+## Facebook (chưa bật)
+Tạo app Facebook, điền `FACEBOOK_APP_ID/SECRET`, `VITE_FACEBOOK_LOGIN=1`. App ở chế độ Development chỉ cho tài khoản có vai trò; muốn người lạ dùng phải app review + Live. Tài khoản không có email xác nhận bị từ chối (`oauth_no_email`).
 
 Thiết kế chi tiết: `backend/docs/api/identity.md`.

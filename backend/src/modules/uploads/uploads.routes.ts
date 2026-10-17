@@ -5,7 +5,7 @@ import { authenticateAccessToken } from '../auth/tokens.js';
 import { FILE_URL_TTL_SEC, canReadPrivateFile, signFileUrl, verifyFileUrl } from './uploads.access.js';
 
 /** URL ký cho video bài học sống lâu hơn (video dài: tua/đệm tiếp sau vài phút vẫn phải còn hiệu lực). */
-const VIDEO_URL_TTL_SEC = 4 * 3600;
+const VIDEO_URL_TTL_SEC = 2 * 3600;
 
 /** `Range: bytes=a-b | a- | -n` (một đoạn) → khoảng byte hợp lệ trong file `size`; null = không có/không hỗ trợ Range; 'invalid' = không thỏa. */
 export function parseRange(header: string | undefined, size: number): { start: number; end: number } | null | 'invalid' {
@@ -136,5 +136,10 @@ uploadsRouter.post('/files/:key/url', requireAuth, async (req, res) => {
   }
   if (!(await canReadPrivateFile(req.userId!, rec))) throw HttpError.forbidden('Bạn không có quyền xem file này');
   res.setHeader('Cache-Control', 'private, no-store');
+  const direct = rec.purpose === 'lesson_video' ? await uploadService.directReadUrl(rec, VIDEO_URL_TTL_SEC) : null;
+  if (direct) {
+    res.json({ data: direct });
+    return;
+  }
   res.json({ data: signFileUrl(key, req.userId!, rec.purpose === 'lesson_video' ? VIDEO_URL_TTL_SEC : FILE_URL_TTL_SEC) });
 });
