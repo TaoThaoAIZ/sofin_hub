@@ -350,3 +350,29 @@
 .dark .hover\:bg-amber-100:not([class*='dark:hover:bg-']):hover {
   background-color: rgba(245, 158, 11, 0.2);
 }
+
+/* Icon (MaterialIcon) viết cứng màu chữ tối (#292524, #1c1917, #57534e, #78716c) -> mờ/mất trên nền tối: đưa về màu chữ phụ sáng. */
+.dark .material-symbols-rounded:is([style*='color: rgb(41, 37, 36)'], [style*='color: rgb(28, 25, 23)'], [style*='color: rgb(32, 30, 28)']) {
+  color: #e4e6e8 !important;
+}
+.dark .material-symbols-rounded:is([style*='color: rgb(87, 83, 78)'], [style*='color: rgb(120, 113, 108)'], [style*='color: rgb(168, 162, 158)']) {
+  color: #9aa1a9 !important;
+}
+/* Hover nền sáng có độ trong suốt (vd. hover:bg-[#fff7f0]/80) -> không để nền sáng + chữ trắng. */
+.dark [class*='hover:bg-[#f']:not([class*='dark:hover:bg-']):hover {
+  background-color: rgba(255, 87, 10, 0.14);
+}
+.dark [class*='hover:bg-[#fa']:not([class*='dark:hover:bg-']):hover,
+.dark [class*='hover:bg-[#f5']:not([class*='dark:hover:bg-']):hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+/* Icon xanh navy (vd. biểu tượng "Tối" ở Giao diện) -> xanh nhạt để đọc được trên nền tối. */
+.dark .material-symbols-rounded[style*='color: rgb(30, 58, 138)'] {
+  color: #93c5fd !important;
+}
+
+/* Trang không dùng dải ảnh nền đầu trang (vd. Giới thiệu & hoa hồng trong cộng đồng). */
+body.no-page-bg,
+.dark body.no-page-bg:not([class*='dark:bg-']) {
+  background-image: none;
+}

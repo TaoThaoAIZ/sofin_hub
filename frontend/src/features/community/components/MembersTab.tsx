@@ -177,7 +177,7 @@ export function MembersTab() {
               </div>
               {members.isPending && <p className="py-8 text-center text-stone-400">{t('members.loading')}</p>}
               {members.data?.data.map((m, i) => (
-                <div key={m.id} className={`${GRID} items-center border-b border-[rgba(120,60,20,.06)] px-3 py-2.5 hover:bg-[#fff7f0]/80`}>
+                <div key={m.id} className={`${GRID} items-center border-b border-[rgba(120,60,20,.06)] px-3 py-2.5 hover:bg-[#fff7f0]`}>
                   <div className="flex min-w-0 items-center gap-3">
                     <Avatar url={m.avatarUrl} name={m.name} size={40} text={initials(m.name)} className="text-stone-700" style={{ background: AVATAR_PALETTE[i % AVATAR_PALETTE.length] }} />
                     <div className="min-w-0">

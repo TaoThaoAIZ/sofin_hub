@@ -43,6 +43,7 @@ export function createEventsService(repo: EventsRepository = eventsRepository) {
 
     async create(communityId: string, hostId: string, body: CreateEventBody) {
       const { inviteeIds: rawInvitees, ...fields } = body;
+      if (new Date(fields.startAt).getTime() < Date.now()) throw HttpError.badRequest('Không thể đặt lịch sự kiện ở thời điểm đã qua');
       const inviteeIds = [...new Set(rawInvitees)].filter((id) => id !== hostId);
       for (const id of inviteeIds) {
         if (!(await enrollmentService.getActiveRole(id, communityId))) throw HttpError.badRequest('Chỉ có thể mời thành viên đang tham gia cộng đồng');
@@ -90,6 +91,9 @@ export function createEventsService(repo: EventsRepository = eventsRepository) {
     async update(eventId: string, body: UpdateEventBody, viewerId: string) {
       const event = await this.getOrThrow(eventId);
       const { meetingLink, capacity, ...rest } = body;
+      if (body.startAt && new Date(body.startAt).getTime() !== new Date(event.startAt).getTime() && new Date(body.startAt).getTime() < Date.now()) {
+        throw HttpError.badRequest('Không thể đặt lịch sự kiện ở thời điểm đã qua');
+      }
       if (capacity != null && capacity < (await repo.rsvpCount(eventId))) {
         throw HttpError.conflict('Sức chứa không được nhỏ hơn số người đã đăng ký');
       }

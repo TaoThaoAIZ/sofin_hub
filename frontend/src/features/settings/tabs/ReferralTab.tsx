@@ -101,10 +101,12 @@ function CommissionModal({ row, kind, currency, onClose }: { row: ReferralRow; k
   );
 }
 
-export function ReferralTab() {
+/** `kind` cố định: ẩn thanh chọn loại (dùng khi gộp nhiều chương trình trên một trang); `showPayoutLink` bật link "Cài đặt nhận tiền" ở chế độ đó. */
+export function ReferralTab({ kind: fixedKind, showPayoutLink = true }: { kind?: ReferralKind; showPayoutLink?: boolean } = {}) {
   const { t } = useTranslation('settings');
   const toast = useToast();
-  const [kind, setKind] = useState<ReferralKind>('creator');
+  const [pickedKind, setKind] = useState<ReferralKind>('creator');
+  const kind = fixedKind ?? pickedKind;
   const [all, setAll] = useState(false);
   const [detail, setDetail] = useState<ReferralRow | null>(null);
   const overview = useReferral(kind);
@@ -124,7 +126,8 @@ export function ReferralTab() {
   const currency = o?.currency ?? (kind === 'creator' ? 'VND' : 'USD');
   const rows = users.data?.data ?? [];
   const total = users.data?.meta.total ?? 0;
-  const rate = pct(o?.rates.rateBps ?? (kind === 'creator' ? 3000 : 1000));
+  // % hoa hồng do admin cấu hình (Cấu hình hệ thống) — chưa tải xong thì hiện '…', không dùng số cứng.
+  const rate = o ? pct(o.rates.rateBps) : '…';
   // Link dựng từ origin của trang đang mở: mở được ở mọi môi trường, không phụ thuộc biến FRONTEND_URL trên server.
   const link = o?.code ? `${window.location.origin}/gioi-thieu/${o.code}` : '';
 
@@ -177,6 +180,9 @@ export function ReferralTab() {
   return (
     <main className="flex min-w-0 flex-col gap-[18px]">
       <div className="flex flex-wrap items-center gap-3.5">
+        {fixedKind ? (
+          <h2 className="m-0 text-[20px] font-extrabold">{t(KINDS.find((k) => k.id === fixedKind)!.label)}</h2>
+        ) : (
         <div role="tablist" className="flex max-w-full overflow-x-auto rounded-[14px] bg-[#f5f2ef] p-1">
           {KINDS.map((k) => {
             const on = k.id === kind;
@@ -198,12 +204,15 @@ export function ReferralTab() {
             );
           })}
         </div>
+        )}
         <div className="flex-1" />
-        <Link to="/settings/thanh-toan" className="flex items-center gap-2 text-[15px] font-semibold text-brand underline">
-          <MaterialIcon name="settings" size={21} />
-          {t('referral.payoutSettings')}
-          <MaterialIcon name="arrow_forward" size={19} />
-        </Link>
+        {showPayoutLink && (
+          <Link to="/settings/thanh-toan" className="flex items-center gap-2 text-[15px] font-semibold text-brand underline">
+            <MaterialIcon name="settings" size={21} />
+            {t('referral.payoutSettings')}
+            <MaterialIcon name="arrow_forward" size={19} />
+          </Link>
+        )}
       </div>
 
       <section className="relative flex flex-wrap items-end gap-6 overflow-hidden rounded-[20px] border border-[#fde3cf] bg-[linear-gradient(110deg,#fff6ef_0%,#ffe3cd_100%)] px-[30px] py-7 dark:border-[rgba(255,220,197,.1)] dark:bg-[linear-gradient(110deg,rgba(63,63,63,.3)_0%,rgba(74,29,0,.3)_100%)]">

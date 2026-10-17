@@ -34,7 +34,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         <div
           key={toast.id}
           role={toast.kind === 'error' ? 'alert' : 'status'}
-          className="fixed right-6 bottom-6 z-[90] flex max-w-[calc(100vw-48px)] items-center gap-2.5 rounded-[14px] bg-[#1c1917] px-[18px] py-[13px] text-sm font-medium text-white shadow-[0_16px_40px_rgba(28,25,23,.3)]"
+          className="fixed right-6 bottom-6 z-[90] flex max-w-[calc(100vw-48px)] items-center gap-2.5 rounded-[14px] bg-[#1c1917] px-[18px] py-[13px] text-sm dark:border dark:border-white/10 dark:bg-[#2a3036] font-medium text-white shadow-[0_16px_40px_rgba(28,25,23,.3)]"
         >
           <MaterialIcon name={toast.kind === 'error' ? 'error' : 'check_circle'} size={20} filled color={toast.kind === 'error' ? '#f87171' : '#4ade80'} />
           <span className="min-w-0 break-words">{toast.message}</span>

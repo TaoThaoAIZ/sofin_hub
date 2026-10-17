@@ -587,7 +587,7 @@ export function CreateWizard() {
       </div>
 
       {toast && (
-        <div role="status" className="fixed right-6 bottom-6 z-50 rounded-[14px] bg-stone-900 px-[18px] py-[13px] text-sm font-medium text-white shadow-[0_16px_40px_rgba(28,25,23,.3)]">
+        <div role="status" className="fixed right-6 bottom-6 z-50 rounded-[14px] bg-[#1c1917] px-[18px] dark:border dark:border-white/10 dark:bg-[#2a3036] py-[13px] text-sm font-medium text-white shadow-[0_16px_40px_rgba(28,25,23,.3)]">
           {toast}
         </div>
       )}

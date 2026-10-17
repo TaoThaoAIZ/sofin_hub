@@ -82,7 +82,7 @@ export function ToastHost() {
         <div
           key={t.id}
           className={`pointer-events-auto flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-lg ${
-            t.kind === 'ok' ? 'bg-stone-900' : 'bg-red-600'
+            t.kind === 'ok' ? 'bg-[#1c1917] dark:border dark:border-white/10 dark:bg-[#2a3036]' : 'bg-red-600'
           }`}
         >
           <MaterialIcon name={t.kind === 'ok' ? 'check_circle' : 'error'} size={18} color="#fff" />

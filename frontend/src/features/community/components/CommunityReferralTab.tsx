@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
@@ -214,35 +214,20 @@ function Kpi({ label, value, note }: { label: string; value: string; note?: stri
  *  - "Giới thiệu nền tảng": mời người mở cộng đồng / tham gia cộng đồng trả phí trên SofinHub (trước đây nằm ở Cài đặt).
  */
 export function CommunityReferralTab() {
-  const { t } = useTranslation('community');
-  const [view, setView] = useState<'community' | 'platform'>('community');
-  const tabs = [
-    { key: 'community', label: t('referral.tabCommunity') },
-    { key: 'platform', label: t('referral.tabPlatform') },
-  ] as const;
+  // Trang này không dùng ảnh nền đầu trang (xem body.no-page-bg ở index.css).
+  useEffect(() => {
+    document.body.classList.add('no-page-bg');
+    return () => document.body.classList.remove('no-page-bg');
+  }, []);
   return (
-    <div className="flex flex-col gap-4">
-      <div role="tablist" aria-label={t('referral.title')} className="inline-flex w-fit gap-1 rounded-2xl border border-[#ece5df] bg-[#f5f2ef] p-1">
-        {tabs.map((tb) => (
-          <button
-            key={tb.key}
-            type="button"
-            role="tab"
-            aria-selected={view === tb.key}
-            onClick={() => setView(tb.key)}
-            className={`h-10 rounded-xl px-4 text-[14px] font-semibold ${view === tb.key ? 'bg-white text-brand shadow-[0_1px_4px_rgba(0,0,0,.08)]' : 'text-stone-500 hover:text-stone-800'}`}
-          >
-            {tb.label}
-          </button>
-        ))}
-      </div>
-      {view === 'community' ? (
-        <CommunityProgram />
-      ) : (
-        <ToastProvider>
-          <PlatformReferral />
-        </ToastProvider>
-      )}
+    <div className="flex flex-col gap-8">
+      <CommunityProgram />
+      <ToastProvider>
+        <div className="flex flex-col gap-8">
+          <PlatformReferral kind="creator" />
+          <PlatformReferral kind="member" showPayoutLink={false} />
+        </div>
+      </ToastProvider>
     </div>
   );
 }

@@ -318,6 +318,7 @@
     "processing": "Đang xử lý…",
     "rsvpCancel": "Đã đăng ký — bấm để hủy",
     "rsvp": "Đăng ký tham gia",
+    "pastDateError": "Không thể đặt lịch ở thời điểm đã qua",
     "pastEvent": "Sự kiện đã diễn ra",
     "icsEventToast": "Đã tải file lịch (.ics)",
     "addToCal": "Tải lịch xuống (.ics)",

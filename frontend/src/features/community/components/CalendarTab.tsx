@@ -58,6 +58,7 @@ export function CalendarTab() {
   const downloadIcs = useDownloadIcs();
 
   const today = useMemo(() => new Date(), []);
+  const minStart = toLocalInput(new Date().toISOString());
   const [view, setView] = useState<View>('month');
   const [cur, setCur] = useState(today);
   const [filter, setFilter] = useState<EventFilter>('all');
@@ -178,6 +179,10 @@ export function CalendarTab() {
             onSubmit={(e) => {
               e.preventDefault();
               if (!title.trim() || !date) return;
+              if (new Date(date).getTime() < Date.now()) {
+                toast(t('calendar.pastDateError'), 'error');
+                return;
+              }
               createEvent.mutate(
                 {
                   title,
@@ -205,7 +210,7 @@ export function CalendarTab() {
             className="mb-4 grid gap-3 rounded-2xl border border-[rgba(120,60,20,.1)] bg-white p-3 sm:grid-cols-2"
           >
             <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('calendar.eventName')} aria-label={t('calendar.eventName')} required maxLength={160} className={inputCls} />
-            <input type="datetime-local" value={date} onChange={(e) => setDate(e.target.value)} aria-label={t('calendar.startTime')} required className={inputCls} />
+            <input type="datetime-local" value={date} min={minStart} onChange={(e) => setDate(e.target.value)} aria-label={t('calendar.startTime')} required className={inputCls} />
             <input value={meetingLink} onChange={(e) => setMeetingLink(e.target.value)} placeholder={t('calendar.meetingLinkOpt')} aria-label={t('calendar.meetingLink')} className={inputCls} />
             <input type="number" min={1} value={capacity} onChange={(e) => setCapacity(e.target.value)} placeholder={t('calendar.capacityPh')} aria-label={t('calendar.capacity')} className={inputCls} />
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} maxLength={2000} placeholder={t('calendar.descPh')} aria-label={t('calendar.desc')} className={`${areaCls} sm:col-span-2`} />
@@ -335,7 +340,9 @@ function EventDialog({
               disabled={update.isPending || !title.trim() || !startAt}
               className={primaryBtn}
               onClick={() =>
-                update.mutate(
+                startAt !== toLocalInput(ev.startAt) && new Date(startAt).getTime() < Date.now()
+                  ? toast(t('calendar.pastDateError'), 'error')
+                  : update.mutate(
                   {
                     eventId: ev.id,
                     body: {
@@ -362,7 +369,7 @@ function EventDialog({
       >
         <div className="flex flex-col gap-2.5">
           <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={160} aria-label={t('calendar.eventName')} placeholder={t('calendar.eventName')} className={inputCls} />
-          <input type="datetime-local" value={startAt} onChange={(e) => setStartAt(e.target.value)} aria-label={t('calendar.startTime')} className={inputCls} />
+          <input type="datetime-local" value={startAt} min={toLocalInput(new Date().toISOString())} onChange={(e) => setStartAt(e.target.value)} aria-label={t('calendar.startTime')} className={inputCls} />
           <input value={meetingLink} onChange={(e) => setMeetingLink(e.target.value)} aria-label={t('calendar.meetingLink')} placeholder={t('calendar.meetingLinkClear')} className={inputCls} />
           <input
             type="number"
@@ -382,13 +389,13 @@ function EventDialog({
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4" onClick={onClose}>
-      <div role="dialog" aria-label={ev.title} onClick={(e) => e.stopPropagation()} className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl">
+      <div role="dialog" aria-label={ev.title} onClick={(e) => e.stopPropagation()} className="max-h-[92vh] w-full max-w-md overflow-x-hidden overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl">
         <div className="flex items-start gap-3">
           <span className="grid size-12 flex-none place-items-center rounded-xl bg-brand/10">
             <MaterialIcon name="event" size={26} filled color="#ff570a" />
           </span>
           <div className="min-w-0 flex-1">
-            <div className="text-lg font-extrabold">{ev.title}</div>
+            <div className="line-clamp-2 text-lg font-extrabold break-words" title={ev.title}>{ev.title}</div>
             <div className="mt-0.5 text-[13px] text-stone-500">
               {new Date(ev.startAt).toLocaleString(currentLocale(), { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
             </div>
@@ -397,7 +404,7 @@ function EventDialog({
             <MaterialIcon name="close" size={22} />
           </button>
         </div>
-        {ev.description && <p className="mt-3 text-sm whitespace-pre-wrap text-stone-700">{ev.description}</p>}
+        {ev.description && <p className="mt-3 line-clamp-4 text-sm break-words whitespace-pre-wrap text-stone-700" title={ev.description}>{ev.description}</p>}
         <div className="mt-3 flex flex-wrap items-center gap-2 text-[13px] text-stone-600">
           <span>
             {t('calendar.registered', { n: ev.rsvpCount, capacity: ev.capacity ? `/${ev.capacity}` : '' })}

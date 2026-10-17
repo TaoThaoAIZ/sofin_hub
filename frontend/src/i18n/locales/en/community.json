@@ -318,6 +318,7 @@
     "processing": "Processing…",
     "rsvpCancel": "Registered — click to cancel",
     "rsvp": "Register to attend",
+    "pastDateError": "You cannot schedule an event in the past",
     "pastEvent": "This event has passed",
     "icsEventToast": "Calendar file downloaded (.ics)",
     "addToCal": "Download calendar (.ics)",

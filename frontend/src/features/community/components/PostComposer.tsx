@@ -269,7 +269,7 @@ export function PostComposer({ courseId }: { courseId: string }) {
           type="button"
           onClick={submit}
           disabled={!canSubmit}
-          className="ml-auto flex h-10 flex-none items-center gap-2 rounded-xl bg-brand px-4 text-sm font-bold text-white max-md:size-9 max-md:justify-center max-md:p-0 disabled:opacity-50"
+          className="relative ml-auto flex h-10 flex-none items-center gap-2 rounded-xl bg-brand px-4 text-sm font-bold text-white max-md:size-9 max-md:justify-center max-md:p-0 disabled:opacity-50"
         >
           <MaterialIcon name="send" size={17} color="#fff" />
           <span className="max-md:sr-only">{createPost.isPending ? t('composer.posting') : uploading ? t('composer.uploading') : t('composer.submit')}</span>

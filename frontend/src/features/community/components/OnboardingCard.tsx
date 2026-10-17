@@ -20,10 +20,10 @@ function Ring({ done, total }: { done: number; total: number }) {
   return (
     <div className="relative size-[116px] flex-none">
       <svg viewBox="0 0 116 116" className="size-full -rotate-90" aria-hidden>
-        <circle cx="58" cy="58" r={r} fill="#fff" stroke="rgba(120,60,20,.1)" strokeWidth="11" />
+        <circle cx="58" cy="58" r={r} strokeWidth="11" className="fill-white stroke-[rgba(120,60,20,.1)] dark:fill-transparent dark:stroke-white/20" />
         <circle cx="58" cy="58" r={r} fill="none" stroke="#ff570a" strokeWidth="11" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - pct)} className="transition-[stroke-dashoffset]" />
       </svg>
-      <div className="absolute inset-0 grid place-items-center text-[28px] font-extrabold tracking-tight">
+      <div className="absolute inset-0 grid place-items-center text-[28px] font-extrabold tracking-tight text-stone-900">
         {done}/{total}
       </div>
     </div>
@@ -95,7 +95,7 @@ export function OnboardingCard({ communityId, data, onExplore }: { communityId: 
           <ul className="m-0 flex min-w-[260px] max-w-[460px] flex-1 list-none flex-col gap-2.5 p-0 pr-[170px] max-[900px]:pr-0">
             {data.steps.map((s) => (
               <li key={s.key} className="flex items-center gap-3 rounded-2xl bg-white/90 px-3.5 py-2.5 shadow-[0_6px_18px_rgba(120,60,20,.08)]">
-                <span aria-hidden className={`grid size-6 flex-none place-items-center rounded-full ${s.done ? 'bg-brand' : 'border-[1.5px] border-stone-300 bg-white'}`}>
+                <span aria-hidden className={`grid size-6 flex-none place-items-center rounded-full ${s.done ? 'bg-brand' : 'border-[1.5px] border-stone-300 bg-white dark:border-white/40 dark:bg-transparent'}`}>
                   {s.done && <MaterialIcon name="check" size={16} color="#fff" weight={700} />}
                 </span>
                 <span className="sr-only">{s.done ? t('onboarding.done') : t('onboarding.todo')}</span>

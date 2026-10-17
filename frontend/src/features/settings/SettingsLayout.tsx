@@ -49,10 +49,10 @@ function SideNav() {
                 <>
                   <span
                     className={`grid size-[38px] flex-none place-items-center rounded-full ${
-                      isActive ? 'bg-gradient-to-b from-[#ff8f45] to-[#ff570a]' : 'border border-[#efe9e4] bg-white'
+                      isActive ? 'bg-gradient-to-b from-[#ff8f45] to-[#ff570a]' : 'border border-[#efe9e4] bg-white text-stone-800'
                     }`}
                   >
-                    <MaterialIcon name={n.icon} size={21} filled={isActive} color={isActive ? '#fff' : '#292524'} />
+                    <MaterialIcon name={n.icon} size={21} filled={isActive} color={isActive ? '#fff' : 'currentColor'} />
                   </span>
                   {t(n.labelKey)}
                 </>
@@ -78,7 +78,7 @@ export function SettingsLayout() {
         <div className="flex min-h-screen flex-col bg-[#faf8f6]">
           <Header active="" />
           <div
-            className={`mx-auto grid w-[calc(100%-32px)] max-w-[1320px] flex-1 items-start gap-[18px] pt-5 pb-7 md:w-[calc(100%-80px)] min-[900px]:grid-cols-[250px_minmax(0,1fr)] min-[1240px]:grid-cols-[280px_minmax(0,1fr)] ${
+            className={`mx-auto grid w-[calc(100%-32px)] max-w-[1320px] flex-1 grid-cols-[minmax(0,1fr)] items-start gap-[18px] pt-5 pb-7 md:w-[calc(100%-80px)] min-[900px]:grid-cols-[250px_minmax(0,1fr)] min-[1240px]:grid-cols-[280px_minmax(0,1fr)] ${
               isProfile ? 'min-[1240px]:grid-cols-[280px_minmax(0,1fr)_380px]' : ''
             }`}
           >

@@ -265,7 +265,7 @@ export function MobileTabBar() {
 
   return (
     <nav aria-label={t('mobile.tabs.aria')} className="pointer-events-none fixed inset-x-0 bottom-0 z-40 bg-gradient-to-t from-black/25 to-transparent px-4 pt-6 pb-3 md:hidden">
-      <div className="pointer-events-auto relative flex h-[70px] items-center justify-center gap-6 overflow-hidden rounded-[20px] bg-[rgba(72,72,72,.62)] shadow-[inset_0_0_0_1px_rgba(255,255,255,.12)] backdrop-blur-[22px] backdrop-saturate-150">
+      <div className="pointer-events-auto relative flex h-[70px] items-center justify-around gap-1 overflow-hidden px-2 rounded-[20px] bg-[rgba(72,72,72,.62)] shadow-[inset_0_0_0_1px_rgba(255,255,255,.12)] backdrop-blur-[22px] backdrop-saturate-150">
         {tabs.map((tab) => {
           const on = tab.key === active;
           return (
@@ -273,9 +273,9 @@ export function MobileTabBar() {
               key={tab.key}
               to={tab.to}
               aria-current={on ? 'page' : undefined}
-              className={`relative flex h-[46px] w-[60px] flex-col items-center justify-center gap-0.5 rounded-[50px] text-[12px] leading-[18px] no-underline ${on ? 'font-semibold text-white' : 'font-medium text-[#dedede]'}`}
+              className={`relative flex h-[46px] min-w-[60px] flex-none flex-col whitespace-nowrap px-1 items-center justify-center gap-0.5 rounded-[50px] text-[12px] leading-[18px] no-underline ${on ? 'font-semibold text-white' : 'font-medium text-[#dedede]'}`}
             >
-              {on && <span aria-hidden="true" className="absolute top-[-5px] left-0 h-[54px] w-[60px] rounded-[41px] bg-[rgba(255,87,10,.8)] blur-[10px]" />}
+              {on && <span aria-hidden="true" className="absolute top-[-5px] left-0 h-[54px] w-full rounded-[41px] bg-[rgba(255,87,10,.8)] blur-[10px]" />}
               <span className="relative">
                 <MaterialIcon name={tab.icon} size={24} filled color="currentColor" />
                 {tab.badge ? (

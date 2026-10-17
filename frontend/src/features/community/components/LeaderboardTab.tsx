@@ -108,7 +108,8 @@ export function LeaderboardTab() {
   return (
     <main className="flex min-w-0 flex-col gap-4">
       <section className="relative flex flex-wrap items-stretch gap-[18px] overflow-hidden rounded-[28px] border border-brand/15 bg-gradient-to-r from-[#fff7f0] via-[#ffe9d9] to-[#ffdcc4] p-[18px]">
-        <img src="/images/community/lb-hero-bg.webp" alt="" className="pointer-events-none absolute inset-0 size-full object-cover" />
+        <img src="/images/community/lb-hero-bg.webp" alt="" className="pointer-events-none absolute inset-0 size-full object-cover dark:hidden" />
+        <img src="/images/community/lb-hero-bg-darkmode.jpg" alt="" className="pointer-events-none absolute inset-0 hidden size-full object-cover dark:block" />
 
         <div className="relative z-10 flex flex-[1_1_300px] flex-col items-center justify-center gap-2 py-2.5">
           <div className="relative size-[200px]">
