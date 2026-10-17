@@ -84,4 +84,38 @@ describe('S3Storage', () => {
     await assert.rejects(() => s.delete('../x.png'));
     assert.equal(sent.length, 0);
   });
+
+  it('direct.plan: file nhỏ = 1 presigned PUT; file lớn = multipart đủ số phần, mỗi phần một URL', async () => {
+    const { client, sent } = fakeClient((cmd) => (cmd.constructor.name === 'CreateMultipartUploadCommand' ? { UploadId: 'up1' } : {}));
+    const signed: string[] = [];
+    const s = new S3Storage('bkt', client as never, async (cmd) => {
+      const n = (cmd as { constructor: { name: string }; input: { PartNumber?: number } });
+      const url = `https://s3/x?${n.constructor.name}&p=${n.input.PartNumber ?? 0}`;
+      signed.push(url);
+      return url;
+    });
+    const small = await s.direct.plan({ key: KEY, contentType: 'image/png', size: 1024 });
+    assert.ok(small.uploadUrl?.includes('PutObjectCommand'));
+    assert.equal(small.multipart, undefined);
+    assert.equal(sent.length, 0);
+
+    const big = await s.direct.plan({ key: KEY, contentType: 'video/mp4', size: 40 * 1024 * 1024 });
+    assert.equal(big.multipart?.uploadId, 'up1');
+    assert.equal(big.multipart?.partUrls.length, 3); // 40MB / 16MB
+    assert.equal(sent[0]!.name, 'CreateMultipartUploadCommand');
+  });
+
+  it('direct.completeMultipart: sắp xếp phần theo số thứ tự; head null khi NotFound; readHead dùng Range', async () => {
+    const { client, sent } = fakeClient((cmd) => {
+      if (cmd.constructor.name === 'HeadObjectCommand') throw Object.assign(new Error('x'), { name: 'NotFound' });
+      if (cmd.constructor.name === 'GetObjectCommand') return { Body: Readable.from([Buffer.from([1, 2, 3])]) };
+      return {};
+    });
+    const s = new S3Storage('bkt', client as never);
+    await s.direct.completeMultipart(KEY, 'up1', [{ partNumber: 2, etag: 'b' }, { partNumber: 1, etag: 'a' }]);
+    assert.deepEqual((sent[0]!.input.MultipartUpload as { Parts: { PartNumber: number }[] }).Parts.map((p) => p.PartNumber), [1, 2]);
+    assert.equal(await s.direct.head(KEY), null);
+    assert.deepEqual([...(await s.direct.readHead(KEY, 64))], [1, 2, 3]);
+    assert.equal(sent.at(-1)!.input.Range, 'bytes=0-63');
+  });
 });

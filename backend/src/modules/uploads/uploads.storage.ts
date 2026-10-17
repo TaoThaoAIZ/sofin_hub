@@ -1,4 +1,15 @@
-import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import {
+  AbortMultipartUploadCommand,
+  CompleteMultipartUploadCommand,
+  CreateMultipartUploadCommand,
+  DeleteObjectCommand,
+  GetObjectCommand,
+  HeadObjectCommand,
+  PutObjectCommand,
+  S3Client,
+  UploadPartCommand,
+} from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { createReadStream, createWriteStream } from 'node:fs';
 import { mkdir, rename, stat, unlink, writeFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
@@ -33,7 +44,33 @@ export interface StoredStream {
   size: number;
 }
 
+/** Kế hoạch upload TRỰC TIẾP từ trình duyệt lên kho (S3): một PUT presigned, hoặc multipart (chia phần, upload song song). */
+export interface DirectUploadPlan {
+  headers: Record<string, string>;
+  expiresAt: string;
+  /** PUT một lần (file nhỏ). */
+  uploadUrl?: string;
+  /** Multipart (file lớn): FE PUT từng phần `partSize` byte vào `partUrls[i]` rồi gửi ETag từng phần ở bước complete. */
+  multipart?: { uploadId: string; partSize: number; partUrls: string[] };
+}
+export interface CompletedPart {
+  partNumber: number;
+  etag: string;
+}
+export interface DirectUpload {
+  plan(input: { key: string; contentType: string; size: number }): Promise<DirectUploadPlan>;
+  /** Ghép các phần (multipart). PUT đơn không cần gọi. */
+  completeMultipart(key: string, uploadId: string, parts: CompletedPart[]): Promise<void>;
+  abortMultipart(key: string, uploadId: string): Promise<void>;
+  /** Dung lượng object trên kho; null nếu chưa có. */
+  head(key: string): Promise<number | null>;
+  /** Đọc `bytes` byte đầu (kiểm magic bytes). */
+  readHead(key: string, bytes: number): Promise<Buffer>;
+}
+
 export interface StorageProvider {
+  /** Có = trình duyệt upload thẳng lên kho (không đi qua backend). Không có (đĩa local) = luồng vé HMAC qua backend. */
+  direct?: DirectUpload;
   createUploadTarget(input: { key: string; contentType: string; maxSize: number; userId: string }): UploadTarget;
   put(key: string, data: Buffer, meta: { contentType: string }): Promise<void>;
   /** Ghi file từ stream (video dài/slide lớn) không nạp vào RAM. `size` = đúng số byte sẽ nhận. Lỗi giữa chừng thì dọn file dở. */
@@ -122,11 +159,67 @@ export class LocalDiskStorage implements StorageProvider {
  * rồi mới ghi lên S3; mọi lần GET đều đi qua backend để kiểm quyền (bucket không bao giờ công khai, không cần CORS bucket).
  * File tối đa vài chục MB nên việc backend làm trung gian chấp nhận được.
  */
+/** Phần multipart: S3 yêu cầu ≥ 5MB (trừ phần cuối). 16MB cho video 2GB = 128 phần (giới hạn S3 là 10.000). */
+export const MULTIPART_PART_SIZE = 16 * 1024 * 1024;
+/** File từ ngưỡng này trở lên dùng multipart; nhỏ hơn dùng một presigned PUT. */
+export const MULTIPART_THRESHOLD = 32 * 1024 * 1024;
+/** URL presigned sống đủ lâu cho video lớn trên mạng chậm (bị giới hạn thêm bởi thời hạn credential IAM role). */
+const DIRECT_URL_TTL_SEC = 2 * 3600;
+
 export class S3Storage implements StorageProvider {
   constructor(
     private readonly bucket: string,
     private readonly client: Pick<S3Client, 'send'> = new S3Client({ region: env.S3_REGION }),
+    /** Ký URL: mặc định dùng presigner của SDK; test truyền bản giả. */
+    private readonly sign: (cmd: object, ttlSec: number) => Promise<string> = (cmd, ttlSec) => getSignedUrl(client as S3Client, cmd as never, { expiresIn: ttlSec }),
   ) {}
+
+  readonly direct: DirectUpload = {
+    plan: async ({ key, contentType, size }) => {
+      assertKey(key);
+      const expiresAt = new Date(Date.now() + DIRECT_URL_TTL_SEC * 1000).toISOString();
+      const headers = { 'Content-Type': contentType };
+      if (size < MULTIPART_THRESHOLD) {
+        const uploadUrl = await this.sign(new PutObjectCommand({ Bucket: this.bucket, Key: key, ContentType: contentType }), DIRECT_URL_TTL_SEC);
+        return { headers, expiresAt, uploadUrl };
+      }
+      const created = await this.client.send(new CreateMultipartUploadCommand({ Bucket: this.bucket, Key: key, ContentType: contentType }));
+      const uploadId = created.UploadId;
+      if (!uploadId) throw new Error('S3 không trả UploadId');
+      const count = Math.ceil(size / MULTIPART_PART_SIZE);
+      const partUrls = await Promise.all(
+        Array.from({ length: count }, (_, i) => this.sign(new UploadPartCommand({ Bucket: this.bucket, Key: key, UploadId: uploadId, PartNumber: i + 1 }), DIRECT_URL_TTL_SEC)),
+      );
+      return { headers, expiresAt, multipart: { uploadId, partSize: MULTIPART_PART_SIZE, partUrls } };
+    },
+    completeMultipart: async (key, uploadId, parts) => {
+      assertKey(key);
+      const sorted = [...parts].sort((a, b) => a.partNumber - b.partNumber).map((p) => ({ PartNumber: p.partNumber, ETag: p.etag }));
+      await this.client.send(new CompleteMultipartUploadCommand({ Bucket: this.bucket, Key: key, UploadId: uploadId, MultipartUpload: { Parts: sorted } }));
+    },
+    abortMultipart: async (key, uploadId) => {
+      assertKey(key);
+      await this.client.send(new AbortMultipartUploadCommand({ Bucket: this.bucket, Key: key, UploadId: uploadId })).catch(() => undefined);
+    },
+    head: async (key) => {
+      assertKey(key);
+      try {
+        const out = await this.client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: key }));
+        return out.ContentLength ?? 0;
+      } catch (e) {
+        const name = (e as { name?: string }).name;
+        if (name === 'NotFound' || name === 'NoSuchKey') return null;
+        throw e;
+      }
+    },
+    readHead: async (key, bytes) => {
+      assertKey(key);
+      const out = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key, Range: `bytes=0-${bytes - 1}` }));
+      const chunks: Buffer[] = [];
+      for await (const c of out.Body as Readable) chunks.push(Buffer.from(c as Buffer));
+      return Buffer.concat(chunks);
+    },
+  };
 
   createUploadTarget({ key, contentType, maxSize, userId }: { key: string; contentType: string; maxSize: number; userId: string }): UploadTarget {
     assertKey(key);

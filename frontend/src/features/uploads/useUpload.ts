@@ -112,28 +112,75 @@ export function validateUpload(file: File, purpose: UploadPurpose): string | nul
 }
 
 interface PresignResponse {
-  data: { uploadUrl: string; method: 'PUT'; headers: Record<string, string>; fileUrl: string; key: string; expiresAt: string };
+  data: {
+    /** `direct` = PUT thẳng lên S3 (presigned); `proxy` (hoặc thiếu) = PUT qua backend bằng vé HMAC. */
+    mode?: 'direct' | 'proxy';
+    uploadUrl: string;
+    method: 'PUT';
+    headers: Record<string, string>;
+    fileUrl: string;
+    key: string;
+    expiresAt: string;
+    multipart?: { uploadId: string; partSize: number; partUrls: string[] };
+  };
 }
 
-/** PUT file bằng XMLHttpRequest để có tiến độ (fetch không báo tiến độ upload) và hủy được. Trả về `{status, body}`. */
-function putWithProgress(url: string, headers: Record<string, string>, file: File, onProgress: (pct: number) => void, signal?: AbortSignal) {
-  return new Promise<{ status: number; body: string }>((resolve, reject) => {
+/** PUT file bằng XMLHttpRequest để có tiến độ (fetch không báo tiến độ upload) và hủy được. Trả về `{status, body, etag}`. */
+function putWithProgress(url: string, headers: Record<string, string>, body: Blob, onProgress: (loaded: number, total: number) => void, signal?: AbortSignal) {
+  return new Promise<{ status: number; body: string; etag: string | null }>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('PUT', url);
     for (const [k, v] of Object.entries(headers)) xhr.setRequestHeader(k, v);
     xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) onProgress(Math.min(99, Math.floor((e.loaded / e.total) * 100)));
+      if (e.lengthComputable) onProgress(e.loaded, e.total);
     };
     xhr.onload = () => {
-      onProgress(100);
-      resolve({ status: xhr.status, body: xhr.responseText });
+      onProgress(body.size, body.size);
+      resolve({ status: xhr.status, body: xhr.responseText, etag: xhr.getResponseHeader('ETag') });
     };
     xhr.onerror = () => reject(new Error('network'));
     xhr.onabort = () => reject(new DOMException('Aborted', 'AbortError'));
     xhr.ontimeout = () => reject(new Error('timeout'));
     signal?.addEventListener('abort', () => xhr.abort(), { once: true });
-    xhr.send(file);
+    xhr.send(body);
   });
+}
+
+const PART_CONCURRENCY = 4;
+const PART_RETRIES = 3;
+
+/** Upload multipart: chia file thành phần, PUT song song (PART_CONCURRENCY), mỗi phần thử lại tối đa PART_RETRIES lần. Trả ETag từng phần. */
+async function uploadParts(file: File, mp: { partSize: number; partUrls: string[] }, onProgress: (pct: number) => void, signal?: AbortSignal) {
+  const loaded = new Array<number>(mp.partUrls.length).fill(0);
+  const etags = new Array<string>(mp.partUrls.length);
+  const report = () => onProgress(Math.min(99, Math.floor((loaded.reduce((a, b) => a + b, 0) / file.size) * 100)));
+  let next = 0;
+  const worker = async () => {
+    while (next < mp.partUrls.length) {
+      const i = next++;
+      const blob = file.slice(i * mp.partSize, Math.min(file.size, (i + 1) * mp.partSize));
+      for (let attempt = 1; ; attempt++) {
+        try {
+          const res = await putWithProgress(mp.partUrls[i]!, {}, blob, (l) => {
+            loaded[i] = l;
+            report();
+          }, signal);
+          if (res.status < 200 || res.status >= 300) throw new ApiError(res.status, i18n.t('upload.failedStatus', { ns: 'misc', status: res.status }));
+          if (!res.etag) throw new Error('missing-etag'); // bucket thiếu CORS ExposeHeaders: ETag
+          etags[i] = res.etag;
+          loaded[i] = blob.size;
+          report();
+          break;
+        } catch (err) {
+          if ((err instanceof DOMException && err.name === 'AbortError') || attempt >= PART_RETRIES) throw err;
+          loaded[i] = 0;
+          await new Promise((r) => setTimeout(r, 500 * attempt));
+        }
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(PART_CONCURRENCY, mp.partUrls.length) }, worker));
+  return etags.map((etag, i) => ({ partNumber: i + 1, etag }));
 }
 
 /**
@@ -165,7 +212,29 @@ export function useUpload() {
           ...(opts.courseId ? { courseId: opts.courseId } : {}),
         }).then((r) => r.data);
 
-        const res = await putWithProgress(resolveApiPath(presign.uploadUrl), { ...presign.headers, 'Content-Type': contentType }, file, setProgress, opts.signal);
+        const pct = (p: number) => setProgress(Math.min(99, p));
+        if (presign.mode === 'direct') {
+          // Upload thẳng lên S3 rồi báo backend xác nhận (ghép phần, kiểm dung lượng + magic bytes).
+          const uploadId = presign.multipart?.uploadId;
+          try {
+            let parts: { partNumber: number; etag: string }[] | undefined;
+            if (presign.multipart) {
+              parts = await uploadParts(file, presign.multipart, pct, opts.signal);
+            } else {
+              const res = await putWithProgress(presign.uploadUrl, { ...presign.headers, 'Content-Type': contentType }, file, (l, t) => pct(Math.floor((l / t) * 100)), opts.signal);
+              if (res.status < 200 || res.status >= 300) throw new ApiError(res.status, i18n.t('upload.failedStatus', { ns: 'misc', status: res.status }));
+            }
+            await apiPost(`/uploads/${presign.key}/complete`, { ...(uploadId ? { uploadId, parts } : {}) });
+          } catch (err) {
+            void apiPost(`/uploads/${presign.key}/abort`, { ...(uploadId ? { uploadId } : {}) }).catch(() => undefined);
+            throw err;
+          }
+          setProgress(100);
+          return { url: presign.fileUrl, key: presign.key, name: file.name, contentType, size: file.size };
+        }
+
+        const res = await putWithProgress(resolveApiPath(presign.uploadUrl), { ...presign.headers, 'Content-Type': contentType }, file, (l, t) => pct(Math.floor((l / t) * 100)), opts.signal);
+        setProgress(100);
         if (res.status < 200 || res.status >= 300) {
           const body = (() => {
             try {

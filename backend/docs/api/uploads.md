@@ -61,11 +61,15 @@ Hạn mức mỗi người: `UPLOAD_USER_QUOTA_MB` = 200MB (tính file đã uplo
 
 Đặt `S3_BUCKET` (và `S3_REGION`) thì `uploads.storage.ts` dùng `S3Storage`; bỏ trống thì dùng `LocalDiskStorage` như cũ (dev/test không cần AWS).
 
-- **Luồng không đổi**: FE `POST /uploads/presign` -> `PUT /api/uploads/:key?token=` (vé HMAC) -> backend kiểm magic bytes + quota rồi `PutObject` lên S3. `GET /api/files/:key` kiểm quyền rồi stream từ `GetObject`. Bucket **luôn private**, không cần CORS bucket, không cần endpoint "complete". Đổi lại mọi byte đi qua backend (giới hạn 25MB/file nên chấp nhận được).
+- **Luồng upload TRỰC TIẾP (mặc định khi có `S3_BUCKET`)**: FE `POST /uploads/presign` -> nhận `mode:'direct'` -> PUT **thẳng lên S3** (không qua backend) -> `POST /uploads/:key/complete` để backend xác nhận. File < 32MB: một presigned PUT. File ≥ 32MB (video/slide): **multipart** — FE chia phần 16MB, PUT 4 phần song song, mỗi phần thử lại 3 lần, rồi gửi `{uploadId, parts:[{partNumber, etag}]}` cho `complete`. `complete` ghép phần, kiểm dung lượng thật = khai báo, đọc 64 byte đầu (Range) kiểm magic bytes; sai thì xóa object + bản ghi. Lỗi/hủy: FE gọi `POST /uploads/:key/abort` để dọn. Không dùng S3 (đĩa local) thì giữ luồng vé HMAC qua backend (`mode:'proxy'`). URL presigned sống 2 giờ (bị giới hạn thêm bởi thời hạn credential của IAM role). `GET /api/files/:key` vẫn kiểm quyền qua backend; bucket vẫn **private**.
+- **Cấu hình bucket bắt buộc** (nếu thiếu, trình duyệt báo lỗi mạng/thiếu ETag):
+  - CORS: `AllowedOrigins` = origin FE (vd. `https://app.sofinhub.com`, thêm `http://localhost:5173` khi dev), `AllowedMethods` = `PUT`, `AllowedHeaders` = `*`, **`ExposeHeaders` = `ETag`** (bắt buộc cho multipart), `MaxAgeSeconds` = 3000.
+  - Lifecycle: rule *Abort incomplete multipart uploads* sau 1 ngày (dọn phần mồ côi nếu người dùng đóng tab giữa chừng).
+  - IAM role của backend cần thêm `s3:AbortMultipartUpload`, `s3:ListMultipartUploadParts` (ngoài Get/Put/Delete).
 - **Credentials**: chuỗi mặc định của AWS SDK, tức IAM role gắn vào EC2/ECS. Không đặt access key vào `.env`. Role chỉ cần `s3:GetObject/PutObject/DeleteObject` trên `arn:aws:s3:::<bucket>/*` và `s3:ListBucket` trên bucket. Chạy trong Docker trên EC2 thì instance metadata phải có `HttpPutResponseHopLimit=2`, nếu không container không lấy được credentials.
 - **Lỗi**: `NoSuchKey/NotFound` -> 404; lỗi khác (AccessDenied, mạng) được ném lên thành 500 để không che sai cấu hình IAM.
 - Test: `tests/uploads.s3.test.ts` (client giả, không cần AWS).
-- Chưa làm: presigned PUT/GET trực tiếp từ trình duyệt (bỏ qua backend), CloudFront, chuyển file cũ từ ổ đĩa sang S3 (copy tay `UPLOAD_DIR/*` lên bucket với cùng tên key là đủ vì bản ghi `Upload` giữ nguyên).
+- Chưa làm: presigned GET trực tiếp (tải về vẫn qua backend), CloudFront, chuyển file cũ từ ổ đĩa sang S3 (copy tay `UPLOAD_DIR/*` lên bucket với cùng tên key là đủ vì bản ghi `Upload` giữ nguyên).
 
 ## Giới hạn hiện tại / Chưa làm
 

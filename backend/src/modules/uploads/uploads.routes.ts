@@ -27,7 +27,7 @@ export function parseRange(header: string | undefined, size: number): { start: n
   return { start, end };
 }
 import { FILE_URL_PREFIX, isPublicPurpose, isStreamedPurpose } from './uploads.types.js';
-import { presignSchema } from './uploads.schema.js';
+import { abortSchema, completeSchema, presignSchema } from './uploads.schema.js';
 import { uploadService } from './uploads.service.js';
 
 export const uploadsRouter = Router();
@@ -46,6 +46,16 @@ function readRawBody(req: Request, res: Response, limit: number): Promise<Buffer
 uploadsRouter.post('/uploads/presign', requireAuth, async (req, res) => {
   const input = presignSchema.parse(req.body);
   res.status(201).json({ data: await uploadService.presign(req.userId!, input) });
+});
+
+// Upload thẳng lên S3 xong -> backend ghép multipart, kiểm dung lượng + magic bytes rồi mới coi file là hợp lệ.
+uploadsRouter.post('/uploads/:key/complete', requireAuth, async (req, res) => {
+  res.json({ data: await uploadService.completeDirect(req.userId!, req.params.key as string, completeSchema.parse(req.body ?? {})) });
+});
+
+uploadsRouter.post('/uploads/:key/abort', requireAuth, async (req, res) => {
+  await uploadService.abortDirect(req.userId!, req.params.key as string, abortSchema.parse(req.body ?? {}).uploadId);
+  res.json({ data: { aborted: true } });
 });
 
 // Upload trực tiếp qua vé ký HMAC (không cần Bearer). Sau này với S3, FE PUT thẳng lên S3 và route này không còn dùng.

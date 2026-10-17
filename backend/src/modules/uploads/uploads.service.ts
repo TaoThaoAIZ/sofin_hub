@@ -5,7 +5,7 @@ import { HttpError } from '../../utils/http-error.js';
 import { catalogService } from '../catalog/catalog.service.js';
 import { isPlatformAdmin, requireRole } from '../permissions/policy.js';
 import { prismaUploadRepository, type UploadRepository } from './uploads.repository.js';
-import type { PresignInput } from './uploads.schema.js';
+import type { CompleteInput, PresignInput } from './uploads.schema.js';
 import { storage as defaultStorage, type ByteRange, type StorageProvider } from './uploads.storage.js';
 import { consumeTicket, isTicketUsed, verifyUploadTicket, type UploadTicket } from './uploads.ticket.js';
 import { isReferencedByLiveMessage } from './uploads.access.js';
@@ -91,8 +91,66 @@ export function createUploadService(repo: UploadRepository = prismaUploadReposit
         createdAt: new Date().toISOString(),
       };
       await repo.create(rec);
+      if (storage.direct) {
+        // S3: trình duyệt PUT thẳng lên S3 (không qua backend); sau đó gọi POST /uploads/:key/complete để backend xác nhận.
+        try {
+          const plan = await storage.direct.plan({ key, contentType, size: input.size });
+          return {
+            mode: 'direct' as const,
+            uploadUrl: plan.uploadUrl,
+            method: 'PUT' as const,
+            headers: plan.headers,
+            expiresAt: plan.expiresAt,
+            multipart: plan.multipart,
+            fileUrl: storage.publicUrl(key),
+            key,
+          };
+        } catch (e) {
+          await repo.delete(key);
+          throw e;
+        }
+      }
       const target = storage.createUploadTarget({ key, contentType, maxSize: input.size, userId });
-      return { ...target, fileUrl: storage.publicUrl(key), key };
+      return { mode: 'proxy' as const, ...target, fileUrl: storage.publicUrl(key), key };
+    },
+
+    /**
+     * Bước xác nhận của luồng upload trực tiếp S3: ghép multipart (nếu có), kiểm dung lượng thật = đã khai báo, kiểm magic bytes ở khúc đầu.
+     * Sai thì xóa object + bản ghi (không bao giờ phục vụ file chưa kiểm).
+     */
+    async completeDirect(userId: string, key: string, input: CompleteInput) {
+      const direct = storage.direct;
+      const rec = KEY_PATTERN.test(key) ? await repo.get(key) : undefined;
+      if (!direct || !rec || rec.ownerId !== userId || rec.status !== 'pending') throw HttpError.notFound('Không tìm thấy yêu cầu upload');
+      const discard = async () => {
+        if (input.uploadId) await direct.abortMultipart(key, input.uploadId);
+        await storage.delete(key).catch(() => undefined);
+        await repo.delete(key);
+      };
+      try {
+        if (input.uploadId) {
+          if (!input.parts?.length) throw HttpError.badRequest('Thiếu danh sách phần đã tải lên');
+          await direct.completeMultipart(key, input.uploadId, input.parts);
+        }
+        const size = await direct.head(key);
+        if (size === null) throw HttpError.badRequest('File chưa được tải lên kho lưu trữ');
+        if (size === 0) throw HttpError.badRequest('File rỗng');
+        if (size !== rec.size) throw HttpError.badRequest('Dung lượng file tải lên không khớp với khai báo');
+        if (!matchesMagic(rec.contentType, await direct.readHead(key, 64))) throw HttpError.badRequest('Nội dung file không khớp với loại file khai báo');
+      } catch (e) {
+        await discard();
+        throw e;
+      }
+      await repo.update(key, { status: 'uploaded', size: rec.size });
+      return { key, fileUrl: storage.publicUrl(key), size: rec.size, contentType: rec.contentType };
+    },
+
+    /** Hủy upload trực tiếp đang dở (FE gọi khi lỗi/hủy): dọn phần multipart + bản ghi pending của chính chủ. */
+    async abortDirect(userId: string, key: string, uploadId?: string) {
+      const rec = KEY_PATTERN.test(key) ? await repo.get(key) : undefined;
+      if (!rec || rec.ownerId !== userId || rec.status !== 'pending') return;
+      if (uploadId) await storage.direct?.abortMultipart(key, uploadId);
+      await repo.delete(key);
     },
 
     /** Bước 1 của PUT: xác thực vé + ràng buộc; nếu đạt thì đánh dấu vé đã dùng (dùng 1 lần). */
