@@ -122,6 +122,11 @@ uploadsRouter.get('/files/:key', async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename="download"; filename*=UTF-8''${encodeURIComponent(f.filename)}`);
   }
   f.stream.on('error', () => res.destroy());
+  // Trình duyệt ngắt giữa chừng (tua video, đổi trang, hủy): pipe KHÔNG tự đóng nguồn. Không destroy thì socket tới S3 bị giữ mãi,
+  // đủ 50 socket (maxSockets mặc định của SDK) là mọi thao tác S3 khác (presign, complete...) xếp hàng chờ vô hạn.
+  res.on('close', () => {
+    if (!f.stream.destroyed) f.stream.destroy();
+  });
   f.stream.pipe(res);
 });
 

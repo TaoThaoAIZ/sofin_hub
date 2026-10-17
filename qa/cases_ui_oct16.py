@@ -304,3 +304,6 @@ def load(add):
       ["Mở chuông thông báo, rê chuột qua từng dòng", "Mở Cộng đồng > Giới thiệu & hoa hồng"], "-", "Dòng hover nền cam mờ; banner nền xám->nâu mờ, tiêu đề trắng + số % cam, ô link nền tối.")
     Mo("Hạ tầng dev", "Backend local không chạy gây 502 mọi API qua proxy Vite: khởi động lại backend :4000 thì hết lỗi", "Chức năng", "Thấp", "Máy dev; backend đã dừng.",
       ["Mở http://localhost:5173 khi backend tắt (thấy 502)", "Chạy npm run dev (hoặc npm --prefix backend run dev)"], "-", "API trả dữ liệu lại bình thường; /health trả 200.", pw="Không")
+    Mo("Hạ tầng upload", "Phát/tua video hoặc ảnh rồi ngắt giữa chừng không làm rò socket S3: sau đó upload/complete vẫn chạy bình thường", "Chức năng", "Cao", "Môi trường dùng S3 (production/staging), tài khoản mod+ của cộng đồng có bài học video.",
+      ["Mở bài học có video, tua qua lại / đóng tab giữa lúc đang tải khoảng 50 lần (có thể lặp bằng script Range request rồi hủy)", "Vào 'Thêm bài học' và tải lên 1 video > 32MB", "Quan sát request presign và complete"], "Video > 32MB (multipart)",
+      "Presign trả 201 trong vài giây, upload chạy đến 100%, complete trả 200; log backend KHÔNG có cảnh báo 'socket usage at capacity=50 ... requests are enqueued'; không cần khởi động lại backend.", pw="Một phần")
