@@ -1,4 +1,5 @@
 {
+  "hint": "Got a question? Ask {{name}}!",
   "open": "Open {{name}} assistant",
   "loading": "Loading…",
   "error": "Something went wrong, please try again",

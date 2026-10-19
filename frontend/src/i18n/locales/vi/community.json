@@ -444,7 +444,7 @@
       "bodyMin": "Nội dung bài viết cần tối thiểu {{min}} ký tự (hiện có {{n}}).",
       "quizAfterSave": "Lưu bài học trước, rồi mở lại để thêm trắc nghiệm (không bắt buộc).",
       "slideDrop": "Tải slide bài giảng",
-      "slideHint": "PDF, PPT, PPTX, PPSX · tối đa 200MB",
+      "slideHint": "PDF, PPT, PPTX, PPSX",
       "cancelUpload": "Hủy",
       "tooManyFiles": "Tối đa {{max}} tệp (gồm cả slide)"
     },
@@ -750,7 +750,7 @@
       "videoDrop": "Dán link YouTube/Vimeo hoặc tải video từ máy",
       "videoHint": "Hỗ trợ youtube.com, youtu.be, vimeo.com hoặc tải video từ máy (mp4, webm, mov · tối đa 2GB)",
       "fileDrop": "Tải tài liệu cho bài học",
-      "fileHint": "PDF, DOCX, XLSX, PPT/PPTX, CSV, ZIP… · tối đa 25MB",
+      "fileHint": "PDF, DOCX, XLSX, PPT/PPTX, CSV, ZIP…",
       "chooseFile": "Chọn tệp",
       "note": "Ghi chú cho học viên",
       "notePh": "Tóm tắt, link tham khảo, bài tập về nhà...",

@@ -4,6 +4,7 @@ import { PathIcon } from '../../../components/ui/icons';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { ThemedImg } from '../../../components/ui/ThemedImg';
 import { ALL_CATEGORY_ICON } from '../constants';
+import { useCategoryName } from '../useCategoryName';
 import type { Category, CategoryId } from '../types';
 
 interface Props {
@@ -78,6 +79,7 @@ function TabButton({
 
 export function CategoryTabs({ categories, active, onChange, onToggleFilters, filtersOpen }: Props) {
   const { t } = useTranslation('course');
+  const catName = useCategoryName();
   const scroller = useRef<HTMLDivElement>(null);
 
   // Cuộn ngang bằng bánh xe chuột khi danh sách tràn
@@ -125,7 +127,7 @@ export function CategoryTabs({ categories, active, onChange, onToggleFilters, fi
         {categories.map((c) => (
           <TabButton
             key={c.id}
-            label={c.name}
+            label={catName(c)}
             icon={<CategoryIcon id={c.id} />}
             on={active === c.id}
             data-on={active === c.id ? '1' : '0'}

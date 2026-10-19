@@ -444,7 +444,7 @@
       "bodyMin": "Article content needs at least {{min}} characters (currently {{n}}).",
       "quizAfterSave": "Save the lesson first, then reopen it to add a quiz (optional).",
       "slideDrop": "Upload lecture slides",
-      "slideHint": "PDF, PPT, PPTX, PPSX · up to 200MB",
+      "slideHint": "PDF, PPT, PPTX, PPSX",
       "cancelUpload": "Cancel",
       "tooManyFiles": "Up to {{max}} files (slides included)"
     },
@@ -750,7 +750,7 @@
       "videoDrop": "Paste a YouTube/Vimeo link or upload a video",
       "videoHint": "Supports youtube.com, youtu.be, vimeo.com or upload a video (mp4, webm, mov · up to 2GB)",
       "fileDrop": "Upload lesson documents",
-      "fileHint": "PDF, DOCX, XLSX, PPT/PPTX, CSV, ZIP… · up to 25MB",
+      "fileHint": "PDF, DOCX, XLSX, PPT/PPTX, CSV, ZIP…",
       "chooseFile": "Choose file",
       "note": "Notes for learners",
       "notePh": "Summary, reference links, homework...",

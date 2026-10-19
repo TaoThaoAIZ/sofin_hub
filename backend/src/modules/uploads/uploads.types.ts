@@ -89,8 +89,9 @@ export function purposeRule(purpose: UploadPurpose): PurposeRule {
       return { types: LESSON_VIDEO_TYPES, maxBytes: env.UPLOAD_MAX_VIDEO_MB * MB };
     case 'lesson_slide':
       return { types: SLIDE_TYPES, maxBytes: env.UPLOAD_MAX_SLIDE_MB * MB };
-    case 'post_file':
     case 'lesson_attachment':
+      return { types: { ...DOC_TYPES, ...VIDEO_TYPES }, maxBytes: env.UPLOAD_MAX_VIDEO_MB * MB };
+    case 'post_file':
       return { types: { ...DOC_TYPES, ...VIDEO_TYPES }, maxBytes: file };
     case 'message_attachment':
       return { types: { ...IMAGE_TYPES, ...DOC_TYPES }, maxBytes: file };
@@ -98,7 +99,7 @@ export function purposeRule(purpose: UploadPurpose): PurposeRule {
 }
 
 /** Mục đích upload dạng STREAM (không nạp cả file vào RAM): video dài, slide lớn. Bắt buộc có Content-Length. */
-export const STREAMED_PURPOSES: readonly UploadPurpose[] = ['lesson_video', 'lesson_slide'];
+export const STREAMED_PURPOSES: readonly UploadPurpose[] = ['lesson_video', 'lesson_slide', 'lesson_attachment'];
 export const isStreamedPurpose = (p: UploadPurpose) => STREAMED_PURPOSES.includes(p);
 /** Mục đích gắn với một cộng đồng (mod+ mới được upload; thành viên cộng đồng mới được xem). */
 export const COMMUNITY_PURPOSES: readonly UploadPurpose[] = ['lesson_attachment', 'lesson_video', 'lesson_slide'];

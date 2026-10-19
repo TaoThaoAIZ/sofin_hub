@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { useCategoryName } from '../courses/useCategoryName';
 import { MaterialIcon } from '../../components/ui/MaterialIcon';
 import { FieldError } from '../../components/ui/FieldMessage';
 import type { Category } from '../courses/types';
@@ -41,6 +42,7 @@ export function StepBasics({
   onNameChange: (v: string) => void;
 }) {
   const { t } = useTranslation('wizard');
+  const catName = useCategoryName();
   return (
     <div className="flex flex-col gap-[22px] rounded-[18px] border border-[#f0ebe6] bg-white p-[22px] shadow-[0_4px_16px_rgba(120,60,20,.04)]">
       <WField icon="auto_awesome" label={t('basics.name')} htmlFor="wz-name" error={errors.name} hint={t('basics.nameHint')} right={`${form.name.length}/80`}>
@@ -99,7 +101,7 @@ export function StepBasics({
                 className={`flex h-10 items-center gap-2 rounded-full px-4 text-sm font-semibold ${on ? 'bg-brand-gradient border-0 text-white shadow-[0_6px_14px_rgba(255,87,10,.28)]' : 'border-[1.5px] border-[#ece5df] bg-white text-stone-800'}`}
               >
                 <MaterialIcon name={ui.icon} size={19} filled color={on ? '#fff' : ui.color} />
-                {c.name}
+                {catName(c)}
               </button>
             );
           })}

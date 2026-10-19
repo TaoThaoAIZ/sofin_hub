@@ -49,11 +49,6 @@
 @layer base {
   body {
     @apply bg-white font-sans text-stone-900 antialiased;
-    /* Dải màu mờ ở đầu mọi trang trong (Figma "image 205" ở khung sáng, "bg" ở khung tối). Trang chủ/đăng nhập tự phủ nền riêng. */
-    background-image: url('/images/home/light/guest_bg.webp');
-    background-repeat: no-repeat;
-    background-position: top center;
-    background-size: 100% auto;
     /* Trang trí (SVG blur, bóng) lòi ra ngoài không được sinh thanh cuộn ngang; clip không phá position: sticky. */
     overflow-x: clip;
   }
@@ -202,7 +197,6 @@
 }
 .dark body:not([class*='dark:bg-']) {
   background-color: #0c1013;
-  background-image: url('/images/home/dark/guest_bg.webp');
   color: #fff;
 }
 .dark .glass:not([class*='dark:bg-']) {
@@ -375,4 +369,27 @@
 body.no-page-bg,
 .dark body.no-page-bg:not([class*='dark:bg-']) {
   background-image: none;
+}
+
+/* Linh vật chatbot nổi góc phải: bồng bềnh + phát sáng (mượn từ widget chat của taothao_ai_training). */
+@keyframes mascot-float {
+  0%, 100% { transform: translateY(0) rotate(0) scale(1); filter: drop-shadow(0 2px 8px rgb(255 87 10 / 0.45)); }
+  25% { transform: translateY(-9px) rotate(-6deg) scale(1.1); filter: drop-shadow(0 6px 22px rgb(255 87 10 / 0.95)); }
+  50% { transform: translateY(0) rotate(6deg) scale(1); filter: drop-shadow(0 2px 8px rgb(255 87 10 / 0.45)); }
+  75% { transform: translateY(-5px) rotate(-3deg) scale(1.06); filter: drop-shadow(0 4px 16px rgb(255 87 10 / 0.7)); }
+}
+@keyframes mascot-hint-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.88); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes mascot-hint-bob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -7px; } }
+@keyframes mascot-word-in { from { opacity: 0; filter: blur(4px); } to { opacity: 1; filter: blur(0); } }
+@keyframes mascot-word-hop { 0%, 100% { translate: 0 0; } 50% { translate: 0 -5px; } }
+@keyframes mascot-shimmer { from { transform: translateX(-110%); } to { transform: translateX(210%); } }
+.mascot-float { animation: mascot-float 3s ease-in-out infinite; }
+.mascot-hint { animation: mascot-hint-in 0.4s ease-out both, mascot-hint-bob 3s ease-in-out 0.4s infinite; }
+.mascot-hint-word { display: inline-block; margin-right: 3px; animation: mascot-word-in 0.35s ease-out both, mascot-word-hop 1.6s ease-in-out infinite; }
+.mascot-hint-shimmer { animation: mascot-shimmer 2.2s ease-in-out 1s infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .mascot-float, .mascot-hint, .mascot-hint-word, .mascot-hint-shimmer { animation: none; }
 }

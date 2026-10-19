@@ -8,11 +8,14 @@ import { absoluteUrl, errText, ErrorNote, FieldLabel, inputCls } from './content
 import { shellGhostBtn, shellPrimaryBtn, ShellBody, ShellFooter, Toggle } from './ModalShell';
 import { QuizEditor } from './QuizEditor';
 
-type LessonType = 'video' | 'text' | 'file';
+type LessonType = ClassroomLesson['type'];
 
-/** Bài đã có nội dung? video: có link · tài liệu: có tệp · bài viết: ≥ 30 ký tự. */
-export const lessonHasContent = (l: Pick<ClassroomLesson, 'type' | 'videoUrl' | 'attachments' | 'body'>) =>
-  l.type === 'video' ? !!l.videoUrl : l.type === 'file' ? (l.attachments?.length ?? 0) > 0 : (l.body ?? '').trim().length >= TEXT_MIN;
+/** Bài đã có nội dung? Có video, hoặc có tệp/slide, hoặc bài viết ≥ 30 ký tự. */
+export const lessonHasContent = (l: Pick<ClassroomLesson, 'videoUrl' | 'attachments' | 'body'>) =>
+  !!l.videoUrl || (l.attachments?.length ?? 0) > 0 || (l.body ?? '').trim().length >= TEXT_MIN;
+
+/** Một form duy nhất cho mọi loại nội dung; `type` (BE vẫn lưu) suy ra từ nội dung: có video → video, có tệp/slide → file, còn lại → bài viết. */
+const deriveType = (hasVideo: boolean, hasFiles: boolean): LessonType => (hasVideo ? 'video' : hasFiles ? 'file' : 'text');
 
 /** Số ký tự tối thiểu của nội dung bài viết (khớp điều kiện xuất bản khóa học). */
 export const TEXT_MIN = 30;
@@ -21,8 +24,6 @@ const isUploadedVideo = (u: string) => /\/api\/files\/[a-f0-9]{32}\.(?:mp4|webm|
 
 /** Tối đa tệp (gồm cả slide) cho một bài — khớp BE. */
 const MAX_FILES = 30;
-
-const TYPE_ICON: Record<LessonType, string> = { video: 'smart_display', text: 'article', file: 'attach_file' };
 
 /**
  * Form soạn một bài học (tên, loại, nội dung, xem thử miễn phí) + thân/chân của popup.
@@ -58,7 +59,6 @@ export function LessonEditor({
   const [busy, setBusy] = useState<'video' | 'slide' | 'file' | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const [title, setTitle] = useState(lesson?.title ?? '');
-  const [type, setType] = useState<LessonType>(lesson?.type ?? 'video');
   const [duration, setDuration] = useState(String(lesson?.durationMin ?? 10));
   const [body, setBody] = useState(lesson?.body ?? '');
   const [videoUrl, setVideoUrl] = useState(lesson?.videoUrl ?? '');
@@ -72,8 +72,10 @@ export function LessonEditor({
   // Trường bắt buộc: tên bài; thời lượng hợp lệ; bài viết cần đủ ký tự tối thiểu. Chưa đủ thì khóa nút lưu.
   const durNum = Number(duration);
   // Báo lỗi inline ngay khi đã gõ nhưng chưa đủ ký tự tối thiểu (bài viết).
-  const shortErr = type === 'text' && body.trim().length > 0 && body.trim().length < TEXT_MIN ? t('editor.lesson.bodyMin', { min: TEXT_MIN, n: body.trim().length }) : null;
-  const canSave = !!title.trim() && duration.trim() !== '' && Number.isInteger(durNum) && durNum >= 0 && durNum <= 1000 && (type !== 'text' || body.trim().length >= TEXT_MIN);
+  const hasMedia = !!videoUrl.trim() || slides.length + attachments.length > 0;
+  const textOnly = !hasMedia;
+  const shortErr = textOnly && body.trim().length > 0 && body.trim().length < TEXT_MIN ? t('editor.lesson.bodyMin', { min: TEXT_MIN, n: body.trim().length }) : null;
+  const canSave = !!title.trim() && duration.trim() !== '' && Number.isInteger(durNum) && durNum >= 0 && durNum <= 1000 && (!textOnly || body.trim().length >= TEXT_MIN);
   const err = localErr ?? (create.isError ? errText(create.error) : update.isError ? errText(update.error) : null);
 
   const submit = () => {
@@ -81,19 +83,20 @@ export function LessonEditor({
     if (!title.trim()) return setLocalErr(t('modWizard.lesson.errName'));
     const dur = Number(duration);
     if (!Number.isInteger(dur) || dur < 0 || dur > 1000) return setLocalErr(t('editor.lesson.durationErr'));
-    if (type === 'text' && body.trim().length < TEXT_MIN) {
+    if (textOnly && body.trim().length < TEXT_MIN) {
       setBodyErr(t('editor.lesson.bodyMin', { min: TEXT_MIN, n: body.trim().length }));
       return;
     }
     setBodyErr(null);
     const url = videoUrl.trim();
+    const type = deriveType(!!url, slides.length + attachments.length > 0);
     const done = { onSuccess: () => onSaved() };
     const all: LessonAttachment[] = [...slides.map((s) => ({ ...s, kind: 'slide' as const })), ...attachments.map(({ kind: _k, ...a }) => a)];
     if (all.length > MAX_FILES) return setLocalErr(t('editor.lesson.tooManyFiles', { max: MAX_FILES }));
     if (lesson) {
-      update.mutate({ lessonId: lesson.id, body: { title: title.trim(), type, durationMin: dur, body, videoUrl: type === 'video' && url ? url : null, attachments: all, isPreview } }, done);
+      update.mutate({ lessonId: lesson.id, body: { title: title.trim(), type, durationMin: dur, body, videoUrl: url ? url : null, attachments: all, isPreview } }, done);
     } else {
-      create.mutate({ moduleId, body: { title: title.trim(), type, durationMin: dur, body, ...(type === 'video' && url ? { videoUrl: url } : {}), attachments: all, isPreview } }, done);
+      create.mutate({ moduleId, body: { title: title.trim(), type, durationMin: dur, body, ...(url ? { videoUrl: url } : {}), attachments: all, isPreview } }, done);
     }
   };
 
@@ -106,21 +109,6 @@ export function LessonEditor({
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <div role="tablist" aria-label={t('editor.lesson.typeAria')} className="inline-flex gap-1 rounded-xl border border-[#ece5df] bg-[#f5f2ef] p-1">
-            {(['video', 'text', 'file'] as const).map((k) => (
-              <button
-                key={k}
-                type="button"
-                role="tab"
-                aria-selected={type === k}
-                onClick={() => setType(k)}
-                className={`flex h-[34px] items-center gap-1.5 rounded-[9px] px-3 text-[13px] font-semibold ${type === k ? 'bg-white text-stone-900 shadow-[0_1px_4px_rgba(0,0,0,.08)]' : 'text-stone-500 hover:text-stone-800'}`}
-              >
-                <MaterialIcon name={TYPE_ICON[k]} size={17} color="currentColor" />
-                {t(`modWizard.outline.type.${k}`)}
-              </button>
-            ))}
-          </div>
           <label className="ml-auto flex items-center gap-2 text-[12.5px] font-semibold">
             {t('editor.lesson.duration')}
             <input type="number" min={0} max={1000} value={duration} onChange={(e) => setDuration(e.target.value)} aria-label={t('editor.lesson.durationAria')} className="h-[34px] w-[68px] rounded-[9px] border-[1.5px] border-[#e7e0da] px-2 text-sm outline-0 focus:border-brand" />
@@ -128,7 +116,7 @@ export function LessonEditor({
           </label>
         </div>
 
-        {type === 'video' && (
+        {(
           <div className="flex flex-col items-center gap-1 rounded-xl border-[1.5px] border-dashed border-[#fdba74] bg-[#fff9f4] px-4 py-5 text-center">
             <input
               ref={videoRef}
@@ -262,7 +250,7 @@ export function LessonEditor({
         </div>
 
         <div>
-          <FieldLabel required={type === 'text'}>{type === 'text' ? t('modWizard.lesson.text') : t('modWizard.lesson.note')}</FieldLabel>
+          <FieldLabel required={textOnly}>{textOnly ? t('modWizard.lesson.text') : t('modWizard.lesson.note')}</FieldLabel>
           <textarea
             value={body}
             onChange={(e) => {
@@ -271,13 +259,13 @@ export function LessonEditor({
             }}
             aria-invalid={!!(bodyErr ?? shortErr)}
             maxLength={50000}
-            placeholder={type === 'text' ? t('modWizard.lesson.textPh') : t('modWizard.lesson.notePh')}
-            aria-label={type === 'text' ? t('modWizard.lesson.text') : t('modWizard.lesson.note')}
-            style={{ height: type === 'text' ? 170 : 80 }}
+            placeholder={textOnly ? t('modWizard.lesson.textPh') : t('modWizard.lesson.notePh')}
+            aria-label={textOnly ? t('modWizard.lesson.text') : t('modWizard.lesson.note')}
+            style={{ height: textOnly ? 170 : 80 }}
             className={`w-full resize-y rounded-[10px] border-[1.5px] px-3 py-2.5 text-[13.5px] leading-relaxed outline-0 focus:border-brand ${bodyErr ?? shortErr ? 'border-red-400' : 'border-[#e7e0da]'}`}
           />
           {(bodyErr ?? shortErr) && <p role="alert" className="m-0 mt-1.5 text-[12.5px] font-medium text-red-600">{bodyErr ?? shortErr}</p>}
-          {type === 'text' && !bodyErr && !shortErr && <p className="m-0 mt-1 text-right text-[11.5px] text-stone-400">{body.trim().length}/{TEXT_MIN}+</p>}
+          {textOnly && !bodyErr && !shortErr && <p className="m-0 mt-1 text-right text-[11.5px] text-stone-400">{body.trim().length}/{TEXT_MIN}+</p>}
         </div>
 
         <button type="button" onClick={() => setIsPreview((v) => !v)} aria-pressed={isPreview} className="flex items-center gap-3.5 rounded-xl bg-[#faf7f4] px-3.5 py-3 text-left">

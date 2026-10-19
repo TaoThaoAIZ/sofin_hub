@@ -89,7 +89,7 @@ def load(add):
       "Banner cao ~348 (co theo màn), nhãn 'Dành cho chuyên gia, creator, doanh nghiệp', tiêu đề 38px, mô tả 2 dòng; nút cam 52px; khách bấm nút được chuyển sang /login (hoặc /communities/new nếu đã đăng nhập).")
     A("Trang chủ - sáng", "Footer: logo + 4 biểu tượng mạng xã hội, 3 thẻ liên hệ (email, điện thoại, địa chỉ), liên kết pháp lý, bản quyền", "Giao diện", "Trung bình", GUEST,
       ["Cuộn xuống cuối trang", "Bấm 'Điều khoản sử dụng', 'Chính sách bảo mật'"], "-",
-      "3 thẻ viền xám nhạt bo 16: hello@sofilm.com, 0335 456 789, 216 - 218 Trần Hưng Đạo St., Da Nang; dòng '© 2026 SofinHub …' bên phải; liên kết pháp lý vào /terms, /privacy. Biểu tượng mạng xã hội chỉ hiển thị (chưa có link thật).")
+      "3 thẻ viền xám nhạt bo 16: Contact@sofin.ai, 0335 456 789, 216 - 218 Trần Hưng Đạo St., Da Nang; dòng '© 2026 SofinHub …' bên phải; liên kết pháp lý vào /terms, /privacy. Biểu tượng mạng xã hội chỉ hiển thị (chưa có link thật).")
     A("Trang chủ - sáng", "Responsive: 1440 / 1024 / 768 / 390px không tràn ngang, lưới 4→2→1 cột, chữ co theo màn", "Giao diện", "Trung bình", GUEST,
       ["Đổi độ rộng cửa sổ lần lượt 1440, 1024, 768, 390", "Quan sát Header, hero, lưới, Why, CTA, Footer"], "-",
       "Không thanh cuộn ngang; lưới thẻ 4 cột (≥1440) → 2 cột → 1 cột; tiêu đề hero co dần (~46px ở 1440); Header gọn (mobile ẩn nút tạo/tin nhắn, vào menu avatar); Why 4→2→1 cột; Footer thẻ liên hệ xếp dọc.", pw="Một phần")

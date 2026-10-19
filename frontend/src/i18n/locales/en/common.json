@@ -1,5 +1,10 @@
 {
-  "nav": { "discover": "Discover", "courses": "Courses", "myCommunities": "My communities", "tools": "Download Tools" },
+  "nav": {
+    "discover": "Discover",
+    "courses": "Courses",
+    "myCommunities": "My communities",
+    "tools": "Download Tools"
+  },
   "header": {
     "profileSettings": "Profile settings",
     "admin": "Admin",
@@ -17,5 +22,18 @@
     "minutesAgo": "{{count}} min ago",
     "hoursAgo": "{{count}} h ago",
     "daysAgo": "{{count}} d ago"
+  },
+  "categories": {
+    "business": "Business",
+    "content": "Content creation",
+    "tech": "Technology",
+    "finance": "Finance",
+    "health": "Health",
+    "self": "Self-development",
+    "hobby": "Hobbies",
+    "relationships": "Relationships",
+    "music": "Music",
+    "sports": "Sports",
+    "spirituality": "Spirituality"
   }
 }

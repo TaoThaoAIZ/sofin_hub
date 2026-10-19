@@ -210,11 +210,7 @@ function Kpi({ label, value, note }: { label: string; value: string; note?: stri
   );
 }
 
-/**
- * Trang "Giới thiệu & hoa hồng" trong cộng đồng. Hai chương trình:
- *  - "Trong cộng đồng này": hoa hồng khi người được mời thanh toán gói của cộng đồng (owner đặt %);
- *  - "Giới thiệu nền tảng": mời người mở cộng đồng / tham gia cộng đồng trả phí trên SofinHub (trước đây nằm ở Cài đặt).
- */
+/** Trang "Giới thiệu & hoa hồng" trong cộng đồng: chương trình giới thiệu của CỘNG ĐỒNG này + khối giới thiệu nền tảng (có rút tiền hoa hồng). */
 export function CommunityReferralTab() {
   // Trang này không dùng ảnh nền đầu trang (xem body.no-page-bg ở index.css).
   useEffect(() => {

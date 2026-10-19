@@ -170,4 +170,27 @@ describe('giới thiệu theo cộng đồng: % do chủ đặt, hoa hồng tr�
     await communityReferralService.reconcile(new Date());
     assert.equal(await db.prisma.referralCommission.count({ where: { sourceRef: `cpayment:${pay.id}` } }), 1);
   });
+
+  it('cộng đồng MIỄN PHÍ: vào qua link (enroll) vẫn được ghi nhận người mời; mã lạ/đã là thành viên bị bỏ qua', async () => {
+    const owner = await signup('fown');
+    const cr = await c.call('POST', '/communities', { token: owner.token, body: { title: `Free ${Date.now().toString(36)}${n++}`, description: 'd', category: 'tech', priceUsd: 0, visibility: 'public' } });
+    assert.equal(cr.status, 201, JSON.stringify(cr.body));
+    const id = cr.body.data.id as string;
+    assert.equal((await setRate(id, owner.token, 1000)).status, 200);
+
+    const referrer = await signup('frf');
+    assert.equal((await c.call('POST', `/communities/${id}/enroll`, { token: referrer.token, body: {} })).status, 200);
+    const code = (await program(id, referrer.token)).code as string;
+
+    const guest = await signup('fgu');
+    assert.equal((await c.call('POST', `/communities/${id}/enroll`, { token: guest.token, body: { referralCode: code } })).status, 200);
+    const p = await program(id, referrer.token);
+    assert.equal(p.stats.referred, 1);
+    assert.equal(p.referred[0].userId, guest.id);
+
+    // Mã lạ: vẫn vào được cộng đồng nhưng không ghi nhận.
+    const g2 = await signup('fg2');
+    assert.equal((await c.call('POST', `/communities/${id}/enroll`, { token: g2.token, body: { referralCode: 'khongco' } })).status, 200);
+    assert.equal((await program(id, referrer.token)).stats.referred, 1);
+  });
 });

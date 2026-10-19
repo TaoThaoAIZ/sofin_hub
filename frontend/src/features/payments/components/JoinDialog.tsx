@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useCategoryName } from '../../courses/useCategoryName';
 import { Button } from '../../../components/ui/Button';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { ApiError } from '../../../lib/api';
@@ -28,6 +29,7 @@ export function JoinCheckout({
   onNeedRequest?: () => void;
 }) {
   const { t } = useTranslation('payments');
+  const catName = useCategoryName();
   const courseId = course.id;
   const [interval, setIntervalState] = useState<BillingInterval | null>(null);
   // Mặc định chọn gói năm nếu cộng đồng có bán (như thiết kế), ngược lại gói tháng; người dùng bấm thì theo lựa chọn.
@@ -71,7 +73,7 @@ export function JoinCheckout({
   };
 
   const { data: categories = [] } = useCategories();
-  const categoryName = (categories.find((c) => c.id === course.category)?.name ?? course.category).toLowerCase();
+  const categoryName = (() => { const c = categories.find((x) => x.id === course.category); return (c ? catName(c) : course.category).toLowerCase(); })();
   const ownerName = course.instructor.name;
   const lessons = Number(course.facts.find((f) => f.label === 'Bài học')?.value ?? 0);
   const chips = [

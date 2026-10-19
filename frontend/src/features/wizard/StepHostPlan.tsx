@@ -123,7 +123,7 @@ export function StepHostPlan({
               <CalcRow name={free?.name ?? t('hostPlan.freeFallback')} rule={t('hostPlan.freeRule', { pct: Math.round(fees.freeFeeRate * 1000) / 10 })} value={formatMoney(feeFree, currency)} good={feeFree <= feePro} />
               <CalcRow name={pro.name} rule={t('hostPlan.proRule', { pct: Math.round(fees.proFeeRate * 1000) / 10 })} value={formatMoney(feePro, currency)} good={feePro < feeFree} />
               <div className="flex-1" />
-              <div className="flex gap-3 rounded-[14px] bg-[#fff4e8] p-4 text-sm leading-normal font-bold">
+              <div className="flex gap-3 rounded-[14px] bg-[#fff4e8] p-4 text-sm leading-normal font-bold text-stone-900 dark:bg-[#3a2a1c] dark:text-amber-100">
                 <MaterialIcon name="lightbulb" size={24} color="#f59e0b" filled />
                 <span>
                   {t('hostPlan.tip', { name: pro.name, amount: formatMoney(breakEven, currency) })}

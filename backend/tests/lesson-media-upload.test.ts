@@ -143,14 +143,14 @@ describe('bài học: tải video dài (stream), slide, tài liệu', () => {
     assert.equal((await put(p3.body.data.uploadUrl, data, 'video/mp4')).status, 401);
   });
 
-  it('slide: nhận pdf/pptx/ppt/ppsx (tới 200MB), từ chối loại khác; tài liệu nhận thêm doc/ppt/xls/csv/ppsx', async () => {
+  it('slide: nhận pdf/pptx/ppt/ppsx (tới 2GB), từ chối loại khác; tài liệu nhận thêm doc/ppt/xls/csv/ppsx', async () => {
     const s = (contentType: string, filename: string) => presign(mod.token, { filename, contentType, size: 100, purpose: 'lesson_slide', communityId: 'photo' });
     assert.equal((await s('application/pdf', 'a.pdf')).status, 201);
     assert.equal((await s('application/vnd.openxmlformats-officedocument.presentationml.presentation', 'a.pptx')).status, 201);
     assert.equal((await s('application/vnd.ms-powerpoint', 'a.ppt')).status, 201);
     assert.equal((await s('application/vnd.openxmlformats-officedocument.presentationml.slideshow', 'a.ppsx')).status, 201);
     assert.equal((await s('application/zip', 'a.zip')).status, 400);
-    assert.equal((await presign(mod.token, { filename: 'a.pdf', contentType: 'application/pdf', size: 201 * 1024 * 1024, purpose: 'lesson_slide', communityId: 'photo' })).status, 400);
+    assert.equal((await presign(mod.token, { filename: 'a.pdf', contentType: 'application/pdf', size: 2049 * 1024 * 1024, purpose: 'lesson_slide', communityId: 'photo' })).status, 400);
     assert.equal((await presign(member.token, { filename: 'a.pdf', contentType: 'application/pdf', size: 100, purpose: 'lesson_slide', communityId: 'photo' })).status, 403);
 
     const pdf = await upload(mod.token, 'lesson_slide', 'slide.pdf', 'application/pdf', PDF);

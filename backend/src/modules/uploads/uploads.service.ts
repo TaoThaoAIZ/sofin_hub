@@ -72,7 +72,7 @@ export function createUploadService(repo: UploadRepository = prismaUploadReposit
           await requireRole(userId, input.communityId, 'mod');
         }
       }
-      if ((await usedBytes(userId)) + input.size > env.UPLOAD_USER_QUOTA_MB * MB) {
+      if (env.UPLOAD_USER_QUOTA_MB > 0 && (await usedBytes(userId)) + input.size > env.UPLOAD_USER_QUOTA_MB * MB) {
         throw new HttpError(413, 'QUOTA_EXCEEDED', `Bạn đã vượt hạn mức lưu trữ ${env.UPLOAD_USER_QUOTA_MB}MB, hãy xóa bớt file cũ`);
       }
 

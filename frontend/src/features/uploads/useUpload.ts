@@ -54,11 +54,11 @@ const RULES: Record<UploadPurpose, { types: string[]; maxMb: number; label: Labe
   avatar: { types: IMAGES, maxMb: 3, label: 'images' },
   cover: { types: IMAGES, maxMb: 8, label: 'images' },
   post_file: { types: [...DOCS, 'video/mp4'], maxMb: 25, label: 'files' },
-  lesson_attachment: { types: [...DOCS, 'video/mp4'], maxMb: 25, label: 'files' },
+  lesson_attachment: { types: [...DOCS, 'video/mp4'], maxMb: 2048, label: 'files' },
   message_attachment: { types: [...IMAGES, ...DOCS], maxMb: 25, label: 'message' },
   community_media: { types: [...IMAGES, 'video/mp4'], maxMb: 25, label: 'media' },
   lesson_video: { types: LESSON_VIDEOS, maxMb: 2048, label: 'video' },
-  lesson_slide: { types: SLIDES, maxMb: 200, label: 'slides' },
+  lesson_slide: { types: SLIDES, maxMb: 2048, label: 'slides' },
 };
 
 /** Trình duyệt hay trả type rỗng/octet-stream cho Office cũ, ppsx, csv, mov...: suy từ đuôi tệp. */
