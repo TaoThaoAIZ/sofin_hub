@@ -6,7 +6,7 @@ import { useCreateLesson, useUpdateLesson } from '../queries';
 import type { ClassroomLesson, LessonAttachment } from '../types';
 import { absoluteUrl, errText, ErrorNote, FieldLabel, inputCls } from './contentUi';
 import { shellGhostBtn, shellPrimaryBtn, ShellBody, ShellFooter, Toggle } from './ModalShell';
-import { QuizEditor } from './QuizEditor';
+import { QuizEditor, type DraftEditorHandle } from './QuizEditor';
 import { SurveyEditor } from './SurveyEditor';
 
 type LessonType = ClassroomLesson['type'];
@@ -59,6 +59,9 @@ export function LessonEditor({
   // Đang tải loại nào (để hiện thanh tiến độ đúng khung) + nút hủy.
   const [busy, setBusy] = useState<'video' | 'slide' | 'file' | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  // Trắc nghiệm/khảo sát chỉ được lưu khi bấm "Lưu bài học" (không tự lưu; bấm X là bỏ thay đổi).
+  const quizRef = useRef<DraftEditorHandle>(null);
+  const surveyRef = useRef<DraftEditorHandle>(null);
   const [title, setTitle] = useState(lesson?.title ?? '');
   const [duration, setDuration] = useState(String(lesson?.durationMin ?? 10));
   const [body, setBody] = useState(lesson?.body ?? '');
@@ -89,9 +92,16 @@ export function LessonEditor({
       return;
     }
     setBodyErr(null);
+    const draftErr = quizRef.current?.validate() ?? surveyRef.current?.validate() ?? null;
+    if (draftErr) return setLocalErr(draftErr);
     const url = videoUrl.trim();
     const type = deriveType(!!url, slides.length + attachments.length > 0);
-    const done = { onSuccess: () => onSaved() };
+    const done = {
+      onSuccess: () => {
+        // Bài đã lưu xong mới lưu trắc nghiệm + khảo sát; một trong hai lỗi thì giữ hộp thoại mở để người dùng thấy lỗi.
+        void Promise.all([quizRef.current?.save(), surveyRef.current?.save()]).then(onSaved, (e) => setLocalErr(errText(e)));
+      },
+    };
     const all: LessonAttachment[] = [...slides.map((s) => ({ ...s, kind: 'slide' as const })), ...attachments.map(({ kind: _k, ...a }) => a)];
     if (all.length > MAX_FILES) return setLocalErr(t('editor.lesson.tooManyFiles', { max: MAX_FILES }));
     if (lesson) {
@@ -278,8 +288,8 @@ export function LessonEditor({
         </button>
         {lesson ? (
           <>
-            <QuizEditor communityId={communityId} lessonId={lesson.id} />
-            <SurveyEditor communityId={communityId} lessonId={lesson.id} />
+            <QuizEditor ref={quizRef} communityId={communityId} lessonId={lesson.id} />
+            <SurveyEditor ref={surveyRef} communityId={communityId} lessonId={lesson.id} />
           </>
         ) : (
           <p className="m-0 rounded-xl bg-[#faf7f4] px-3.5 py-2.5 text-[12.5px] text-stone-500">{t('editor.lesson.quizAfterSave')}</p>

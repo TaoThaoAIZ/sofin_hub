@@ -198,22 +198,7 @@ export function LessonPage() {
                   {t('lesson.meta', { n: l.durationMin, type: l.type === 'video' ? t('lesson.typeVideo') : l.type === 'file' ? t('lesson.typeFile') : t('lesson.typeText') })}
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={onToggle}
-                disabled={toggle.isPending || quizBlocks}
-                title={quizBlocks ? t('quiz.needPass', { pct: l.quiz?.passPercent }) : undefined}
-                className={`${l.completed ? ghostBtn : primaryBtn} disabled:cursor-not-allowed disabled:opacity-60`}
-              >
-                <MaterialIcon name={l.completed ? 'undo' : 'check_circle'} size={19} color={l.completed ? undefined : '#fff'} />
-                {toggle.isPending ? t('lesson.saving') : l.completed ? t('lesson.uncomplete') : t('lesson.complete')}
-              </button>
             </div>
-            {l.completed && (
-              <p className="mt-2 mb-0 flex items-center gap-1.5 text-[13px] font-semibold text-emerald-600">
-                <MaterialIcon name="check_circle" size={17} filled color="#059669" /> {t('lesson.youCompleted')}
-              </p>
-            )}
             {slideFiles.length > 0 && (
               <div className="mt-4">
                 <div className="mb-2 flex items-center gap-1.5 text-[13.5px] font-bold">
@@ -244,8 +229,26 @@ export function LessonPage() {
             {l.body && <div className="mt-4 text-[14.5px] leading-[1.7] break-words whitespace-pre-wrap text-stone-800">{l.body}</div>}
 
             {l.quiz && <QuizPanel communityId={communityId} lessonId={l.id} />}
-            {quizBlocks && <p className="mt-2 mb-0 text-[12.5px] text-stone-500">{t('quiz.needPass', { pct: l.quiz?.passPercent })}</p>}
             <SurveyPanel communityId={communityId} lessonId={l.id} />
+
+            <div className="mt-6 flex flex-col items-start gap-2 border-t border-[rgba(120,60,20,.1)] pt-4">
+                <button
+                  type="button"
+                  onClick={onToggle}
+                  disabled={toggle.isPending || quizBlocks}
+                  title={quizBlocks ? t('quiz.needPass', { pct: l.quiz?.passPercent }) : undefined}
+                  className={`${l.completed ? ghostBtn : primaryBtn} disabled:cursor-not-allowed disabled:opacity-60`}
+                >
+                  <MaterialIcon name={l.completed ? 'undo' : 'check_circle'} size={19} color={l.completed ? undefined : '#fff'} />
+                  {toggle.isPending ? t('lesson.saving') : l.completed ? t('lesson.uncomplete') : t('lesson.complete')}
+                </button>
+              {l.completed && (
+                <p className="mt-2 mb-0 flex items-center gap-1.5 text-[13px] font-semibold text-emerald-600">
+                  <MaterialIcon name="check_circle" size={17} filled color="#059669" /> {t('lesson.youCompleted')}
+                </p>
+              )}
+              {quizBlocks && <p className="mt-2 mb-0 text-[12.5px] text-stone-500">{t('quiz.needPass', { pct: l.quiz?.passPercent })}</p>}
+            </div>
 
             <div className="mt-2">
               <ErrorNote message={toggle.isError ? errText(toggle.error) : null} />
