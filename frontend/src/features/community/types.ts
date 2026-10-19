@@ -329,6 +329,7 @@ export interface SurveyQuestion {
   type: SurveyQuestionType;
   options: string[];
   required: boolean;
+  allowText?: boolean;
 }
 export interface SurveyAnswer {
   questionId: string;
@@ -340,7 +341,7 @@ export interface SurveyView {
   survey: null | { id: string; questions: SurveyQuestion[]; myAnswers: SurveyAnswer[] | null; answeredAt: string | null };
 }
 export interface SurveyInput {
-  questions: Array<{ id?: string; text: string; type: SurveyQuestionType; options: string[]; required: boolean }>;
+  questions: Array<{ id?: string; text: string; type: SurveyQuestionType; options: string[]; required: boolean; allowText: boolean }>;
 }
 export interface SurveyUser {
   id: string;
@@ -365,7 +366,7 @@ export interface SurveyOverview {
   moduleTitle: string;
   responseCount: number;
   memberCount: number;
-  questions: Array<{ id: string; text: string; type: SurveyQuestionType; required: boolean; answered: number; options: Array<{ text: string; count: number }> }>;
+  questions: Array<{ id: string; text: string; type: SurveyQuestionType; required: boolean; allowText: boolean; answered: number; options: Array<{ text: string; count: number }> }>;
 }
 export interface SurveyPageMeta {
   page: number;

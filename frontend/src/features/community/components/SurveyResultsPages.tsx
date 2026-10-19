@@ -112,6 +112,7 @@ function OverviewTab({ data }: { data: SurveyOverview }) {
             {q.type === 'text' ? (
               <p className="m-0 mt-2 text-[12.5px] text-stone-500">{t('surveyResults.textQuestionHint')}</p>
             ) : (
+              <>
               <ul className="m-0 mt-3 flex list-none flex-col gap-2 p-0">
                 {options.map((o) => {
                   const pct = q.answered ? Math.round((o.count / q.answered) * 100) : 0;
@@ -128,6 +129,8 @@ function OverviewTab({ data }: { data: SurveyOverview }) {
                   );
                 })}
               </ul>
+              {q.allowText && <p className="m-0 mt-2 text-[12px] text-stone-500">{t('surveyResults.otherHint')}</p>}
+              </>
             )}
           </div>
         );
@@ -138,7 +141,7 @@ function OverviewTab({ data }: { data: SurveyOverview }) {
 
 function TextsTab({ communityId, lessonId, data }: { communityId: string; lessonId: string; data: SurveyOverview }) {
   const { t } = useTranslation('course');
-  const textQs = data.questions.filter((q) => q.type === 'text');
+  const textQs = data.questions.filter((q) => q.allowText);
   const [qid, setQid] = useState(textQs[0]?.id ?? '');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);

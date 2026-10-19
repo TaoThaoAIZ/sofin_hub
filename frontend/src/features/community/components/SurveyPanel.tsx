@@ -89,6 +89,17 @@ export function SurveyPanel({ communityId, lessonId }: { communityId: string; le
                       </label>
                     );
                   })}
+                  {q.allowText && (
+                    <textarea
+                      value={a.text ?? ''}
+                      onChange={(e) => set(q.id, { text: e.target.value })}
+                      maxLength={1000}
+                      rows={2}
+                      placeholder={t('survey.otherPh')}
+                      aria-label={t('survey.otherPh')}
+                      className="mt-1 w-full resize-y rounded-xl border-[1.5px] border-[#e7e0da] bg-white p-3 text-[13.5px] outline-0 focus:border-brand"
+                    />
+                  )}
                 </div>
               )}
             </li>

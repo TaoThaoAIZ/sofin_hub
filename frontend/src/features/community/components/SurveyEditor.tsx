@@ -13,9 +13,10 @@ interface DraftQuestion {
   type: SurveyQuestionType;
   options: string[];
   required: boolean;
+  allowText: boolean;
 }
 
-const blank = (): DraftQuestion => ({ text: '', type: 'single', options: ['', ''], required: false });
+const blank = (): DraftQuestion => ({ text: '', type: 'single', options: ['', ''], required: false, allowText: false });
 const MAX_Q = 30;
 const MAX_OPT = 10;
 const TYPES: SurveyQuestionType[] = ['single', 'multiple', 'text'];
@@ -37,7 +38,7 @@ export function SurveyEditor({ communityId, lessonId }: { communityId: string; l
   useEffect(() => {
     if (surveyQ.isSuccess && !loaded) {
       /* eslint-disable react-hooks/set-state-in-effect */
-      setQuestions((survey?.questions ?? []).map((q) => ({ id: q.id, text: q.text, type: q.type, options: [...q.options], required: q.required })));
+      setQuestions((survey?.questions ?? []).map((q) => ({ id: q.id, text: q.text, type: q.type, options: [...q.options], required: q.required, allowText: !!q.allowText || q.type === 'text' })));
       setLoaded(true);
       /* eslint-enable react-hooks/set-state-in-effect */
     }
@@ -62,7 +63,7 @@ export function SurveyEditor({ communityId, lessonId }: { communityId: string; l
       if (new Set(q.options.map((o) => o.trim().toLowerCase())).size !== q.options.length) return setLocalErr(t('surveyEditor.errDup', { n: i + 1 }));
     }
     put.mutate(
-      { questions: questions.map((q) => ({ ...(q.id ? { id: q.id } : {}), text: q.text.trim(), type: q.type, options: q.type === 'text' ? [] : q.options.map((o) => o.trim()), required: q.required })) },
+      { questions: questions.map((q) => ({ ...(q.id ? { id: q.id } : {}), text: q.text.trim(), type: q.type, options: q.type === 'text' ? [] : q.options.map((o) => o.trim()), required: q.required, allowText: q.type === 'text' ? true : q.allowText })) },
       { onSuccess: () => setSaved(true) },
     );
   };
@@ -93,7 +94,7 @@ export function SurveyEditor({ communityId, lessonId }: { communityId: string; l
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-3">
               <select value={q.type} onChange={(e) => changeType(i, e.target.value as SurveyQuestionType)} aria-label={t('surveyEditor.typeLabel')} className="h-9 rounded-[9px] border-[1.5px] border-[#e7e0da] bg-white px-2 text-[13px] outline-0 focus:border-brand">
-                {TYPES.map((ty) => (
+                {TYPES.filter((ty) => ty !== 'text' || q.type === 'text').map((ty) => (
                   <option key={ty} value={ty}>{t(`surveyEditor.types.${ty}`)}</option>
                 ))}
               </select>
@@ -120,6 +121,11 @@ export function SurveyEditor({ communityId, lessonId }: { communityId: string; l
                   </button>
                 )}
               </div>
+            )}
+            {q.type !== 'text' && (
+              <label className="mt-2 flex items-center gap-1.5 text-[12.5px]">
+                <input type="checkbox" checked={q.allowText} onChange={(e) => edit(i, { allowText: e.target.checked })} className="size-4 accent-brand" /> {t('surveyEditor.allowText')}
+              </label>
             )}
             {q.type === 'text' && <p className="m-0 mt-2 text-[11.5px] text-stone-400">{t('surveyEditor.textHint')}</p>}
           </div>

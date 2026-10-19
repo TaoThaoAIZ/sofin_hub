@@ -22,7 +22,7 @@ export const responsesQuery = z.object({ ...pageQuery, questionId: z.string().tr
 export type TextsQuery = z.infer<typeof textsQuery>;
 export type ResponsesQuery = z.infer<typeof responsesQuery>;
 
-type Q = { id: string; text: string; type: 'single' | 'multiple' | 'text'; options: string[]; required: boolean };
+type Q = { id: string; text: string; type: 'single' | 'multiple' | 'text'; options: string[]; required: boolean; allowText?: boolean };
 type A = { questionId: string; choices: string[]; text?: string };
 const asQuestions = (v: unknown): Q[] => (Array.isArray(v) ? (v as Q[]) : []);
 const asAnswers = (v: unknown): A[] => (Array.isArray(v) ? (v as A[]) : []);
@@ -96,6 +96,7 @@ export const surveyResults = {
         text: q.text,
         type: q.type,
         required: q.required,
+        allowText: q.type === 'text' || !!q.allowText,
         answered: answeredBy.get(q.id) ?? 0,
         options: q.options.map((o) => ({ text: o, count: Number(counts.find((c) => c.qid === q.id && c.choice === o)?.n ?? 0) })),
       })),

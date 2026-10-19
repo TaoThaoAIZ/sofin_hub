@@ -21,6 +21,8 @@ type StoredQuestion = {
   type: QuestionType;
   options: string[];
   required: boolean;
+  /** Câu chọn đáp án có thêm ô học viên tự nhập ý kiến khác (bên dưới các lựa chọn). Câu kiểu 'text' luôn là true. */
+  allowText?: boolean;
 };
 type StoredAnswer = {
   questionId: string;
@@ -35,6 +37,7 @@ const question = z.strictObject({
   type: z.enum(QUESTION_TYPES),
   options: z.array(z.string().trim().min(1, 'Lựa chọn không được để trống').max(200, 'Mỗi lựa chọn tối đa 200 ký tự')).max(MAX_SURVEY_OPTIONS, `Mỗi câu tối đa ${MAX_SURVEY_OPTIONS} lựa chọn`).default([]),
   required: z.boolean().default(false),
+  allowText: z.boolean().default(false),
 });
 
 /** `questions` rỗng = xóa khảo sát của bài. */
@@ -93,7 +96,7 @@ export const surveyService = {
       }
       const id = q.id && knownIds.has(q.id) && !seen.has(q.id) ? q.id : randomUUID();
       seen.add(id);
-      return { id, text: q.text, type: q.type, options: q.type === 'text' ? [] : q.options, required: q.required };
+      return { id, text: q.text, type: q.type, options: q.type === 'text' ? [] : q.options, required: q.required, allowText: q.type === 'text' ? true : q.allowText };
     });
     const saved = await prisma.lessonSurvey.upsert({ where: { lessonId }, create: { lessonId, questions }, update: { questions } });
     return { survey: { id: saved.id, questionCount: questions.length } };
@@ -111,9 +114,8 @@ export const surveyService = {
       const a = byId.get(q.id);
       let choices: string[] = [];
       let text: string | undefined;
-      if (q.type === 'text') {
-        text = a?.text?.trim() || undefined;
-      } else {
+      if (q.type === 'text' || q.allowText) text = a?.text?.trim() || undefined;
+      if (q.type !== 'text') {
         choices = [...new Set(a?.choices ?? [])];
         if (choices.some((c) => !q.options.includes(c))) throw HttpError.badRequest(`Câu ${i + 1}: lựa chọn không hợp lệ`);
         if (q.type === 'single' && choices.length > 1) throw HttpError.badRequest(`Câu ${i + 1}: chỉ được chọn một đáp án`);
