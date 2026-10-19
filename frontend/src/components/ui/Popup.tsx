@@ -98,7 +98,6 @@ export function Popup({
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
-      onClick={dismissible ? onClose : undefined}
     >
       <div
         role="dialog"

@@ -29,7 +29,7 @@ export function SettingsModal({
   }, [onClose, busy]);
 
   return createPortal(
-    <div className="fixed inset-0 z-[80] grid place-items-center overflow-y-auto bg-[rgba(28,25,23,.4)] p-5" onClick={() => !busy && onClose()}>
+    <div className="fixed inset-0 z-[80] grid place-items-center overflow-y-auto bg-[rgba(28,25,23,.4)] p-5">
       <div
         role="dialog"
         aria-modal="true"

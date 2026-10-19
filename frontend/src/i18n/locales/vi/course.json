@@ -199,6 +199,9 @@
     "fillRequired": "Hãy trả lời các câu bắt buộc (*)"
   },
   "surveyEditor": {
+    "saveWithLesson": "Thay đổi sẽ được lưu khi bạn bấm \"Lưu bài học\"",
+    "autoHint": "Tự động lưu khi bạn nhập hoặc xóa",
+    "autoIncomplete": "Hoàn thiện nội dung câu hỏi và các lựa chọn để tự động lưu",
     "title": "Khảo sát cho bài học",
     "optional": "(không bắt buộc)",
     "rule": "Học viên chọn bất kỳ đáp án nào hoặc tự nhập; khảo sát không chặn hoàn thành bài. Lưu lại không xóa câu trả lời đã có.",
@@ -247,6 +250,9 @@
     "needPass": "Cần đạt tối thiểu {{pct}}% bài trắc nghiệm mới hoàn thành được bài học này."
   },
   "quizEditor": {
+    "saveWithLesson": "Thay đổi sẽ được lưu khi bạn bấm \"Lưu bài học\"",
+    "autoHint": "Tự động lưu khi bạn nhập hoặc xóa",
+    "autoIncomplete": "Hoàn thiện nội dung câu hỏi và các lựa chọn để tự động lưu",
     "title": "Trắc nghiệm cho bài học",
     "optional": "(không bắt buộc)",
     "rule": "Có câu hỏi thì học viên phải đạt điểm tối thiểu mới hoàn thành được bài. Lưu lại sẽ xóa các lượt làm cũ; bài đã hoàn thành vẫn giữ nguyên. Để trống toàn bộ rồi lưu = bỏ trắc nghiệm.",

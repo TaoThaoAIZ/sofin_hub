@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { Link } from 'react-router-dom';
@@ -6,6 +6,7 @@ import { communityHome } from '../../../lib/paths';
 import { usePutSurvey, useSurvey } from '../queries';
 import type { SurveyQuestionType } from '../types';
 import { errText, ErrorNote, FieldLabel, inputCls } from './contentUi';
+import type { DraftEditorHandle } from './QuizEditor';
 
 interface DraftQuestion {
   id?: string;
@@ -25,14 +26,13 @@ const TYPES: SurveyQuestionType[] = ['single', 'multiple', 'text'];
  * Soạn khảo sát cho MỘT bài đã lưu (mod+). Không bắt buộc và KHÔNG chặn hoàn thành bài.
  * Học viên chọn bất kỳ đáp án nào (một/nhiều lựa chọn) hoặc tự nhập; chủ cộng đồng xem kết quả ngay bên dưới.
  */
-export function SurveyEditor({ communityId, lessonId }: { communityId: string; lessonId: string }) {
+export const SurveyEditor = forwardRef<DraftEditorHandle, { communityId: string; lessonId: string }>(function SurveyEditor({ communityId, lessonId }, ref) {
   const { t } = useTranslation('course');
   const surveyQ = useSurvey(communityId, lessonId);
   const put = usePutSurvey(communityId, lessonId);
   const [questions, setQuestions] = useState<DraftQuestion[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [localErr, setLocalErr] = useState<string | null>(null);
 
   const survey = surveyQ.data?.survey;
   useEffect(() => {
@@ -44,28 +44,43 @@ export function SurveyEditor({ communityId, lessonId }: { communityId: string; l
     }
   }, [surveyQ.isSuccess, survey, loaded]);
 
-  const edit = (i: number, patch: Partial<DraftQuestion>) => {
+  // KHÔNG tự lưu: thay đổi chỉ được lưu khi người dùng bấm "Lưu bài học" (LessonEditor gọi `save()` qua ref); bấm X là bỏ.
+  const dirty = useRef(false);
+  const touch = () => {
+    dirty.current = true;
     setSaved(false);
+  };
+  const validate = (): string | null => {
+    for (const [i, q] of questions.entries()) {
+      if (!q.text.trim()) return t('surveyEditor.errText', { n: i + 1 });
+      if (q.type === 'text') continue;
+      if (q.options.some((o) => !o.trim())) return t('surveyEditor.errOption', { n: i + 1 });
+      if (new Set(q.options.map((o) => o.trim().toLowerCase())).size !== q.options.length) return t('surveyEditor.errDup', { n: i + 1 });
+    }
+    return null;
+  };
+  useImperativeHandle(ref, () => ({
+    validate: () => (dirty.current ? validate() : null),
+    save: async () => {
+      if (!dirty.current) return;
+      const r = await put.mutateAsync({
+        questions: questions.map((q) => ({ ...(q.id ? { id: q.id } : {}), text: q.text.trim(), type: q.type, options: q.type === 'text' ? [] : q.options.map((o) => o.trim()), required: q.required, allowText: q.type === 'text' ? true : q.allowText })),
+      });
+      dirty.current = false;
+      setSaved(true);
+      // Câu mới được server cấp id: gắn vào bản nháp để lần lưu sau giữ nguyên câu (không mất câu trả lời đã thu).
+      const ids = r.survey?.questionIds;
+      if (ids) setQuestions((qs) => (qs.length === ids.length ? qs.map((q, i) => (q.id ? q : { ...q, id: ids[i] })) : qs));
+    },
+  }));
+
+  const edit = (i: number, patch: Partial<DraftQuestion>) => {
+    touch();
     setQuestions((qs) => qs.map((q, j) => (j === i ? { ...q, ...patch } : q)));
   };
   const changeType = (i: number, type: SurveyQuestionType) => {
     const q = questions[i]!;
     edit(i, { type, options: type === 'text' ? [] : q.options.length >= 2 ? q.options : ['', ''] });
-  };
-
-  const save = () => {
-    setLocalErr(null);
-    setSaved(false);
-    for (const [i, q] of questions.entries()) {
-      if (!q.text.trim()) return setLocalErr(t('surveyEditor.errText', { n: i + 1 }));
-      if (q.type === 'text') continue;
-      if (q.options.some((o) => !o.trim())) return setLocalErr(t('surveyEditor.errOption', { n: i + 1 }));
-      if (new Set(q.options.map((o) => o.trim().toLowerCase())).size !== q.options.length) return setLocalErr(t('surveyEditor.errDup', { n: i + 1 }));
-    }
-    put.mutate(
-      { questions: questions.map((q) => ({ ...(q.id ? { id: q.id } : {}), text: q.text.trim(), type: q.type, options: q.type === 'text' ? [] : q.options.map((o) => o.trim()), required: q.required, allowText: q.type === 'text' ? true : q.allowText })) },
-      { onSuccess: () => setSaved(true) },
-    );
   };
 
   if (surveyQ.isPending) return <p className="text-sm text-stone-400">{t('survey.loading')}</p>;
@@ -88,7 +103,7 @@ export function SurveyEditor({ communityId, lessonId }: { communityId: string; l
                 <FieldLabel required>{t('surveyEditor.question', { n: i + 1 })}</FieldLabel>
                 <input value={q.text} maxLength={500} onChange={(e) => edit(i, { text: e.target.value })} aria-label={t('surveyEditor.question', { n: i + 1 })} className={inputCls} />
               </div>
-              <button type="button" aria-label={t('surveyEditor.removeQuestion', { n: i + 1 })} onClick={() => { setSaved(false); setQuestions((qs) => qs.filter((_, j) => j !== i)); }} className="mt-6 text-stone-400 hover:text-red-600">
+              <button type="button" aria-label={t('surveyEditor.removeQuestion', { n: i + 1 })} onClick={() => { touch(); setQuestions((qs) => qs.filter((_, j) => j !== i)); }} className="mt-6 text-stone-400 hover:text-red-600">
                 <MaterialIcon name="delete" size={20} />
               </button>
             </div>
@@ -133,15 +148,12 @@ export function SurveyEditor({ communityId, lessonId }: { communityId: string; l
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-3">
-        <button type="button" disabled={questions.length >= MAX_Q} onClick={() => { setSaved(false); setQuestions((qs) => [...qs, blank()]); }} className="h-9 rounded-xl border border-[#fdba74] bg-white px-4 text-[13px] font-bold text-[#e8590c] disabled:opacity-60">
+        <button type="button" disabled={questions.length >= MAX_Q} onClick={() => { touch(); setQuestions((qs) => [...qs, blank()]); }} className="h-9 rounded-xl border border-[#fdba74] bg-white px-4 text-[13px] font-bold text-[#e8590c] disabled:opacity-60">
           + {t('surveyEditor.addQuestion')}
         </button>
-        <button type="button" onClick={save} disabled={put.isPending} className="h-9 rounded-xl bg-brand px-4 text-[13px] font-bold text-white disabled:opacity-60">
-          {put.isPending ? t('surveyEditor.saving') : t('surveyEditor.save')}
-        </button>
-        {saved && <span role="status" className="text-[12.5px] font-semibold text-emerald-600">{questions.length ? t('surveyEditor.saved') : t('surveyEditor.removed')}</span>}
+        <span role="status" className="text-[12.5px] text-stone-500">{saved ? t('surveyEditor.saved') : t('surveyEditor.saveWithLesson')}</span>
       </div>
-      <ErrorNote message={localErr ?? (put.isError ? errText(put.error) : null)} />
+      <ErrorNote message={put.isError ? errText(put.error) : null} />
       {survey && (
         <Link to={communityHome(communityId, `khao-sat/${lessonId}`)} className="mt-3 inline-flex items-center gap-1.5 border-t border-[#e7e0da] pt-3 text-[13px] font-bold text-brand">
           <MaterialIcon name="bar_chart" size={18} color="#ff570a" /> {t('surveyEditor.viewResults')}
@@ -149,4 +161,4 @@ export function SurveyEditor({ communityId, lessonId }: { communityId: string; l
       )}
     </section>
   );
-}
+});

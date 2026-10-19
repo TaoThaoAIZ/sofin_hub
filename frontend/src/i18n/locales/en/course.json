@@ -199,6 +199,9 @@
     "fillRequired": "Please answer the required questions (*)"
   },
   "surveyEditor": {
+    "saveWithLesson": "Changes are saved when you click \"Save lesson\"",
+    "autoHint": "Changes are saved automatically",
+    "autoIncomplete": "Complete every question and option to auto-save",
     "title": "Lesson survey",
     "optional": "(optional)",
     "rule": "Learners pick any answers or type their own; the survey never blocks lesson completion. Saving keeps collected answers.",
@@ -247,6 +250,9 @@
     "needPass": "You need at least {{pct}}% on the quiz to complete this lesson."
   },
   "quizEditor": {
+    "saveWithLesson": "Changes are saved when you click \"Save lesson\"",
+    "autoHint": "Changes are saved automatically",
+    "autoIncomplete": "Complete every question and option to auto-save",
     "title": "Lesson quiz",
     "optional": "(optional)",
     "rule": "With questions, learners must reach the pass mark to complete the lesson. Saving clears previous attempts; lessons already completed stay completed. Remove every question and save to delete the quiz.",

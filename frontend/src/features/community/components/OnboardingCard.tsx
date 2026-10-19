@@ -95,7 +95,7 @@ export function OnboardingCard({ communityId, data, onExplore }: { communityId: 
       </div>
 
       {videoOpen && (
-        <div role="dialog" aria-modal="true" aria-label={t('onboarding.steps.video.title')} className="fixed inset-0 z-[80] grid place-items-center bg-black/60 p-4" onClick={() => setVideoOpen(false)}>
+        <div role="dialog" aria-modal="true" aria-label={t('onboarding.steps.video.title')} className="fixed inset-0 z-[80] grid place-items-center bg-black/60 p-4">
           <div className="w-full max-w-[860px] overflow-hidden rounded-2xl bg-black" onClick={(e) => e.stopPropagation()}>
             {isSafeEmbed(data.videoUrl) ? (
               <div className="aspect-video w-full">

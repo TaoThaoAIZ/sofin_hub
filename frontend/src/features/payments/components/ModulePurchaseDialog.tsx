@@ -68,7 +68,7 @@ export function ModulePurchaseDialog({ communityId, module: mod, onClose }: { co
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex overflow-y-auto bg-stone-900/45 p-3 backdrop-blur-[2px] sm:p-4" onClick={() => !purchase.isPending && onClose()}>
+    <div className="fixed inset-0 z-50 flex overflow-y-auto bg-stone-900/45 p-3 backdrop-blur-[2px] sm:p-4">
       <div role="dialog" aria-modal="true" aria-label={t('modulePurchase.title')} className="m-auto w-full max-w-[460px]" onClick={(e) => e.stopPropagation()}>
         <div className="relative overflow-hidden rounded-[28px] bg-white shadow-2xl">
           <button type="button" aria-label={t('join.close')} onClick={onClose} disabled={purchase.isPending} className="absolute top-4 right-4 grid size-9 place-items-center rounded-full border border-[rgba(120,60,20,.1)] bg-white shadow-sm">

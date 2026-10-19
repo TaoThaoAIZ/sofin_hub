@@ -52,7 +52,7 @@ export function CreateCommunityPromo() {
   if (!open) return null;
   return createPortal(
     <div className="fixed inset-0 z-[90] grid place-items-center p-6 md:hidden" role="dialog" aria-modal="true" aria-label={t('mobile.promo.title')}>
-      <button type="button" aria-label={t('mobile.close')} onClick={() => setOpen(false)} className="absolute inset-0 border-0 bg-black/55" />
+      <div aria-hidden className="absolute inset-0 bg-black/55" />
       <div className="relative w-full max-w-[340px] rounded-[32px] bg-gradient-to-b from-[#ffe9dc] to-white px-5 pt-6 pb-5 text-center shadow-[0_24px_60px_rgba(0,0,0,.35)] dark:from-[#2a1a10] dark:to-[#14181c]">
         <button
           type="button"

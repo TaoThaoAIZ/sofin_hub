@@ -63,7 +63,7 @@ export function GreetingPopup({ communityId }: { communityId: string }) {
   const link = current.kind === 'announcement' ? current.link : null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4 backdrop-blur-[2px]" onClick={close}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4 backdrop-blur-[2px]">
       <div
         role="dialog"
         aria-modal="true"

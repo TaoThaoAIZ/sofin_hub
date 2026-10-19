@@ -99,7 +99,7 @@ export const surveyService = {
       return { id, text: q.text, type: q.type, options: q.type === 'text' ? [] : q.options, required: q.required, allowText: q.type === 'text' ? true : q.allowText };
     });
     const saved = await prisma.lessonSurvey.upsert({ where: { lessonId }, create: { lessonId, questions }, update: { questions } });
-    return { survey: { id: saved.id, questionCount: questions.length } };
+    return { survey: { id: saved.id, questionCount: questions.length, questionIds: questions.map((q) => q.id) } };
   },
 
   /** Học viên nộp (hoặc nộp lại, ghi đè) câu trả lời. Chỉ nhận lựa chọn có trong câu hỏi; câu bắt buộc phải có trả lời. */

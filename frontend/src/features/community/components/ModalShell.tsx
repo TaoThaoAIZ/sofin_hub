@@ -29,7 +29,7 @@ export function ModalShell({
 }) {
   const { t } = useTranslation('community');
   return createPortal(
-    <div className="fixed inset-0 z-50 flex overflow-y-auto bg-[rgba(28,25,23,.45)] p-3 sm:p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex overflow-y-auto bg-[rgba(28,25,23,.45)] p-3 sm:p-4">
       <div
         role="dialog"
         aria-modal="true"

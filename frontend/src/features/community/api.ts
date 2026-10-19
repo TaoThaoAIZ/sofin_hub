@@ -200,7 +200,7 @@ export const putQuiz = (cid: string, lessonId: string, body: QuizInput, token: s
 export const fetchSurvey = (cid: string, lessonId: string, token: string, signal?: AbortSignal) =>
   apiGet<{ data: SurveyView }>(`/communities/${cid}/lessons/${lessonId}/survey`, undefined, signal, { token }).then(D);
 export const putSurvey = (cid: string, lessonId: string, body: SurveyInput, token: string) =>
-  apiPut<{ data: unknown }>(`/communities/${cid}/lessons/${lessonId}/survey`, body, { token }).then(D);
+  apiPut<{ data: { survey: null | { id: string; questionCount: number; questionIds: string[] } } }>(`/communities/${cid}/lessons/${lessonId}/survey`, body, { token }).then(D);
 export const submitSurvey = (cid: string, lessonId: string, answers: SurveyAnswer[], token: string) =>
   apiPost<{ data: { saved: boolean } }>(`/communities/${cid}/lessons/${lessonId}/survey/response`, { answers }, { token }).then(D);
 export const fetchSurveyList = (cid: string, token: string, signal?: AbortSignal) =>

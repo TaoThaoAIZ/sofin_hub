@@ -132,7 +132,7 @@ export function Dialog({
   const { t } = useTranslation('community');
   // Portal ra body: các thẻ `glass` (backdrop-filter) biến thành containing block của `fixed` nên dialog bị cắt trong thẻ cha.
   return createPortal(
-    <div className="fixed inset-0 z-50 flex overflow-y-auto bg-black/40 p-3 sm:p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex overflow-y-auto bg-black/40 p-3 sm:p-4">
       <div
         role="dialog"
         aria-modal="true"
