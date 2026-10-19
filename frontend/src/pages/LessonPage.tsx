@@ -6,6 +6,7 @@ import { ApiError } from '../lib/api';
 import { classroomPath, lessonPath } from '../lib/paths';
 import { fileKeyOf, refreshFileUrl, useFileUrl } from '../lib/files';
 import { QuizPanel } from '../features/community/components/QuizPanel';
+import { SurveyPanel } from '../features/community/components/SurveyPanel';
 import { ConfirmDialog, errText, ErrorNote, ghostBtn, isModPlus, primaryBtn, safeUrl, toast, ToastHost } from '../features/community/components/contentUi';
 import { LessonFormDialog } from '../features/community/components/ClassroomEditor';
 import { useCommunityDetail } from '../features/courses/queries';
@@ -213,13 +214,8 @@ export function LessonPage() {
                 <MaterialIcon name="check_circle" size={17} filled color="#059669" /> {t('lesson.youCompleted')}
               </p>
             )}
-            {l.body && <div className="mt-4 text-[14.5px] leading-[1.7] break-words whitespace-pre-wrap text-stone-800">{l.body}</div>}
-
-            {l.quiz && <QuizPanel communityId={communityId} lessonId={l.id} />}
-            {quizBlocks && <p className="mt-2 mb-0 text-[12.5px] text-stone-500">{t('quiz.needPass', { pct: l.quiz?.passPercent })}</p>}
-
             {slideFiles.length > 0 && (
-              <div className="mt-5">
+              <div className="mt-4">
                 <div className="mb-2 flex items-center gap-1.5 text-[13.5px] font-bold">
                   <MaterialIcon name="slideshow" size={18} color="#ff570a" /> {t('lesson.slides')}
                 </div>
@@ -234,7 +230,7 @@ export function LessonPage() {
             )}
 
             {docFiles.length > 0 && (
-              <div className="mt-5">
+              <div className="mt-4">
                 <div className="mb-2 text-[13.5px] font-bold">{t('lesson.attachments')}</div>
                 <ul className="m-0 flex list-none flex-col gap-2 p-0">
                   {docFiles.map((a) => (
@@ -245,6 +241,12 @@ export function LessonPage() {
                 </ul>
               </div>
             )}
+            {l.body && <div className="mt-4 text-[14.5px] leading-[1.7] break-words whitespace-pre-wrap text-stone-800">{l.body}</div>}
+
+            {l.quiz && <QuizPanel communityId={communityId} lessonId={l.id} />}
+            {quizBlocks && <p className="mt-2 mb-0 text-[12.5px] text-stone-500">{t('quiz.needPass', { pct: l.quiz?.passPercent })}</p>}
+            <SurveyPanel communityId={communityId} lessonId={l.id} />
+
             <div className="mt-2">
               <ErrorNote message={toggle.isError ? errText(toggle.error) : null} />
             </div>

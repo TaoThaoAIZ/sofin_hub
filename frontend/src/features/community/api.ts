@@ -19,6 +19,13 @@ import type {
   QuizAttemptResult,
   QuizInput,
   QuizView,
+  SurveyAnswer,
+  SurveyInput,
+  SurveyList,
+  SurveyOverview,
+  SurveyResponses,
+  SurveyTexts,
+  SurveyView,
   PostShare,
   Report,
   ReportAction,
@@ -137,6 +144,8 @@ export const deleteEvent = (eventId: string, token: string) =>
 export const cancelRsvp = (eventId: string, token: string) =>
   apiDelete<{ data: { rsvped: boolean; rsvpCount: number } }>(`/events/${eventId}/rsvp`, { token }).then(D);
 export const downloadEventIcs = (eventId: string, token: string) => apiDownload(`/events/${eventId}/ics`, `su-kien-${eventId}.ics`, { token });
+export const downloadEventDocx = (eventId: string, token: string) => apiDownload(`/events/${eventId}/docx`, `su-kien-${eventId}.docx`, { token });
+export const downloadCommunityDocx = (courseId: string, token: string) => apiDownload(`/communities/${courseId}/events.docx`, `lich-cong-dong-${courseId}.docx`, { token });
 export const downloadCommunityIcs = (courseId: string, token: string) => apiDownload(`/communities/${courseId}/events.ics`, `lich-cong-dong-${courseId}.ics`, { token });
 
 // ==== Lớp học: khóa học (Course) nằm trong cộng đồng ====
@@ -188,6 +197,22 @@ export const fetchQuiz = (cid: string, lessonId: string, token: string, signal?:
   apiGet<{ data: QuizView }>(`/communities/${cid}/lessons/${lessonId}/quiz`, undefined, signal, { token }).then(D);
 export const putQuiz = (cid: string, lessonId: string, body: QuizInput, token: string) =>
   apiPut<{ data: unknown }>(`/communities/${cid}/lessons/${lessonId}/quiz`, body, { token }).then(D);
+export const fetchSurvey = (cid: string, lessonId: string, token: string, signal?: AbortSignal) =>
+  apiGet<{ data: SurveyView }>(`/communities/${cid}/lessons/${lessonId}/survey`, undefined, signal, { token }).then(D);
+export const putSurvey = (cid: string, lessonId: string, body: SurveyInput, token: string) =>
+  apiPut<{ data: unknown }>(`/communities/${cid}/lessons/${lessonId}/survey`, body, { token }).then(D);
+export const submitSurvey = (cid: string, lessonId: string, answers: SurveyAnswer[], token: string) =>
+  apiPost<{ data: { saved: boolean } }>(`/communities/${cid}/lessons/${lessonId}/survey/response`, { answers }, { token }).then(D);
+export const fetchSurveyList = (cid: string, token: string, signal?: AbortSignal) =>
+  apiGet<{ data: SurveyList }>(`/communities/${cid}/surveys`, undefined, signal, { token }).then(D);
+export const fetchSurveyOverview = (cid: string, lessonId: string, token: string, signal?: AbortSignal) =>
+  apiGet<{ data: SurveyOverview | null }>(`/communities/${cid}/lessons/${lessonId}/survey/results`, undefined, signal, { token }).then(D);
+export const fetchSurveyTexts = (cid: string, lessonId: string, query: { questionId: string; q?: string; page?: number }, token: string, signal?: AbortSignal) =>
+  apiGet<SurveyTexts>(`/communities/${cid}/lessons/${lessonId}/survey/texts`, query, signal, { token });
+export const fetchSurveyResponses = (cid: string, lessonId: string, query: { q?: string; questionId?: string; choice?: string; page?: number }, token: string, signal?: AbortSignal) =>
+  apiGet<SurveyResponses>(`/communities/${cid}/lessons/${lessonId}/survey/responses`, query, signal, { token });
+export const downloadSurveyCsv = (cid: string, lessonId: string, token: string) =>
+  apiDownload(`/communities/${cid}/lessons/${lessonId}/survey/export.csv`, `khao-sat-${lessonId}.csv`, { token });
 export const attemptQuiz = (cid: string, lessonId: string, answers: Array<number | null>, token: string) =>
   apiPost<{ data: QuizAttemptResult }>(`/communities/${cid}/lessons/${lessonId}/quiz/attempt`, { answers }, { token }).then(D);
 export const toggleLessonComplete = (cid: string, lessonId: string, token: string) =>

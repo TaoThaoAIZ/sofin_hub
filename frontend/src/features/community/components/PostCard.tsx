@@ -245,17 +245,24 @@ function CommentRow({ courseId, postId, c, viewerId, canModerate }: { courseId: 
 
 // Tệp đính kèm bài viết được chèn vào cuối nội dung dạng "Tệp đính kèm: <tên> — <url>" (xem PostComposer). Tách ra để hiển thị video/tệp đúng dạng.
 const ATTACH_RE = /^(?:Tệp đính kèm|Attachment): (.+?) — (\S+)$/;
+// Thành viên được gắn tên: dòng "Gắn thẻ: [[user:<id>|<tên>]] ..." ở cuối nội dung (xem PostComposer).
+const MENTION_LINE_RE = /^(?:Gắn thẻ|Tagged): (.+)$/;
+const MENTION_RE = /\[\[user:([A-Za-z0-9_-]+)\|([^\]]+)\]\]/g;
 const isVideoName = (n: string, url: string) => /\.mp4$/i.test(n) || /\.mp4(?:[?#]|$)/i.test(url);
 
 function splitContent(content: string) {
   const text: string[] = [];
   const files: { name: string; url: string }[] = [];
+  const mentions: { id: string; name: string }[] = [];
   for (const line of content.split('\n')) {
     const m = ATTACH_RE.exec(line.trim());
+    const tg = MENTION_LINE_RE.exec(line.trim());
+    const found = tg ? [...tg[1]!.matchAll(MENTION_RE)] : [];
     if (m) files.push({ name: m[1]!, url: m[2]! });
+    else if (found.length) mentions.push(...found.map((x) => ({ id: x[1]!, name: x[2]! })));
     else text.push(line);
   }
-  return { text: text.join('\n').trim(), files };
+  return { text: text.join('\n').trim(), files, mentions };
 }
 
 function PostFile({ name, url }: { name: string; url: string }) {
@@ -448,6 +455,16 @@ export function PostCard({
           ) : (
             <>
               {parts.text && <p className="mt-2 text-[14.5px] leading-[1.6] break-words whitespace-pre-wrap text-stone-800">{parts.text}</p>}
+              {parts.mentions.length > 0 && (
+                <p className="mt-2 flex flex-wrap items-center gap-1.5 text-[13px] text-stone-500">
+                  <MaterialIcon name="sell" size={15} color="currentColor" />
+                  {parts.mentions.map((m) => (
+                    <span key={m.id} className="rounded-lg bg-brand/10 px-2 py-0.5 font-semibold text-brand">
+                      @{m.name}
+                    </span>
+                  ))}
+                </p>
+              )}
               {parts.files.length > 0 && (
                 <div className="mt-3 flex flex-col gap-2">
                   {parts.files.map((f, i) => (

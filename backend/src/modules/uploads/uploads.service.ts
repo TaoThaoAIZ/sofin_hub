@@ -9,7 +9,7 @@ import type { CompleteInput, PresignInput } from './uploads.schema.js';
 import { storage as defaultStorage, type ByteRange, type StorageProvider } from './uploads.storage.js';
 import { consumeTicket, isTicketUsed, verifyUploadTicket, type UploadTicket } from './uploads.ticket.js';
 import { isReferencedByLiveMessage } from './uploads.access.js';
-import { EXT_TO_TYPE, FILE_URL_PREFIX, IMAGE_TYPES, KEY_PATTERN, isCommunityPurpose, isStreamedPurpose, purposeRule, type UploadRecord } from './uploads.types.js';
+import { EXT_TO_TYPE, FILE_URL_PREFIX, GENERIC_EXT, GENERIC_TYPE, IMAGE_TYPES, KEY_PATTERN, isCommunityPurpose, isStreamedPurpose, purposeRule, type UploadRecord } from './uploads.types.js';
 
 const MB = 1024 * 1024;
 const baseType = (ct: string) => ct.split(';')[0]!.trim().toLowerCase();
@@ -43,6 +43,8 @@ export function matchesMagic(contentType: string, b: Buffer): boolean {
       return starts([0x66, 0x74, 0x79, 0x70], 4); // "ftyp"
     case 'video/webm':
       return starts([0x1a, 0x45, 0xdf, 0xa3]); // EBML
+    case 'application/octet-stream':
+      return true; // file bất kỳ: không có chữ ký để kiểm; an toàn vì chỉ phục vụ dạng tải về
     case 'text/plain':
     case 'text/csv':
       return !b.includes(0); // văn bản thuần không chứa byte NUL
@@ -57,9 +59,13 @@ export function createUploadService(repo: UploadRepository = prismaUploadReposit
 
   return {
     async presign(userId: string, input: PresignInput) {
-      const contentType = baseType(input.contentType);
       const rule = purposeRule(input.purpose);
-      const ext = rule.types[contentType];
+      let contentType = baseType(input.contentType);
+      let ext = rule.types[contentType];
+      if (!ext && rule.anyType) {
+        contentType = GENERIC_TYPE;
+        ext = GENERIC_EXT;
+      }
       if (!ext) throw HttpError.badRequest('Loại file này không được phép tải lên cho mục đích đã chọn');
       if (input.size > rule.maxBytes) {
         throw HttpError.badRequest(`File quá lớn, tối đa ${Math.round((rule.maxBytes / MB) * 10) / 10}MB cho mục đích này`);

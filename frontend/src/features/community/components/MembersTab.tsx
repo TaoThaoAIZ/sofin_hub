@@ -11,7 +11,7 @@ import { useCommunityDetail } from '../../courses/queries';
 import { useStartConversation } from '../../messages/useStartConversation';
 import { useMembers } from '../queries';
 import type { MemberFilter } from '../types';
-import { AVATAR_PALETTE, CommunityInfoCard, initials, PageBanner } from './shared';
+import { CommunityInfoCard, initials, PageBanner } from './shared';
 
 const SORTS = [
   { key: 'active', labelKey: 'members.sortAsk' },
@@ -176,10 +176,10 @@ export function MembersTab() {
                 <span />
               </div>
               {members.isPending && <p className="py-8 text-center text-stone-400">{t('members.loading')}</p>}
-              {members.data?.data.map((m, i) => (
+              {members.data?.data.map((m) => (
                 <div key={m.id} className={`${GRID} items-center border-b border-[rgba(120,60,20,.06)] px-3 py-2.5 hover:bg-[#fff7f0]`}>
                   <div className="flex min-w-0 items-center gap-3">
-                    <Avatar url={m.avatarUrl} name={m.name} size={40} text={initials(m.name)} className="text-stone-700" style={{ background: AVATAR_PALETTE[i % AVATAR_PALETTE.length] }} />
+                    <Avatar url={m.avatarUrl} name={m.name} size={40} text={initials(m.name)} />
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5 text-sm font-semibold">
                         <span className="truncate">{m.name}</span>
@@ -265,7 +265,7 @@ export function MembersTab() {
         <div
           role="status"
           className={`fixed bottom-6 left-1/2 z-[60] max-w-[92vw] -translate-x-1/2 rounded-xl px-4 py-3 text-sm font-medium text-white shadow-lg ${
-            toast.kind === 'error' ? 'bg-red-600' : 'bg-stone-900'
+            toast.kind === 'error' ? 'bg-red-600' : 'bg-[#1c1917] dark:border dark:border-white/10 dark:bg-[#2a3036]'
           }`}
         >
           {toast.message}

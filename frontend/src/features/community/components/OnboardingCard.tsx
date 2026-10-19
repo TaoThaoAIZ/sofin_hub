@@ -32,26 +32,6 @@ function Ring({ done, total }: { done: number; total: number }) {
 }
 
 /** Minh họa tên lửa: dùng ảnh /images/community-onboarding-rocket.webp nếu có, không thì vẽ SVG đơn giản. */
-function RocketArt() {
-  const [broken, setBroken] = useState(false);
-  if (!broken) {
-    return <img src="/images/community-onboarding-rocket.webp" alt="" onError={() => setBroken(true)} className="pointer-events-none absolute right-2 bottom-0 h-[170px] w-auto max-[900px]:hidden" />;
-  }
-  return (
-    <svg viewBox="0 0 160 170" aria-hidden className="pointer-events-none absolute right-4 bottom-2 h-[150px] w-auto max-[900px]:hidden">
-      <ellipse cx="82" cy="150" rx="62" ry="16" fill="#fff" opacity=".85" />
-      <ellipse cx="50" cy="146" rx="34" ry="14" fill="#fff" opacity=".9" />
-      <g transform="rotate(30 80 80)">
-        <path d="M80 12c22 18 30 44 26 78H54c-4-34 4-60 26-78z" fill="#fff" stroke="#fdba74" strokeWidth="2" />
-        <circle cx="80" cy="56" r="11" fill="#ff570a" />
-        <circle cx="80" cy="56" r="5" fill="#fff" />
-        <path d="M54 76L36 100l22-6zM106 76l18 24-22-6z" fill="#ff570a" />
-        <path d="M68 92h24l-12 28z" fill="#fdba74" />
-      </g>
-      <path d="M118 22l3 7 7 3-7 3-3 7-3-7-7-3 7-3z" fill="#ff570a" />
-    </svg>
-  );
-}
 
 /**
  * "Bắt đầu hành trình của bạn": vòng tiến độ n/total + checklist (xem video giới thiệu · bình luận một bài · tải ứng dụng).
@@ -88,14 +68,14 @@ export function OnboardingCard({ communityId, data, onExplore }: { communityId: 
       <div className="relative z-10">
         <h2 className="m-0 text-[24px] font-extrabold tracking-tight">{t('onboarding.title')}</h2>
         <p className="mt-1 mb-4 text-[14px] text-stone-600">{t('onboarding.sub', { count: left })}</p>
-        <div className="flex flex-wrap items-center gap-6">
+        <div className="flex items-center gap-6 max-sm:flex-col max-sm:items-stretch">
           <div className="flex flex-col items-center gap-2">
             <Ring done={data.done} total={data.total} />
             <span className="text-[12.5px] text-stone-500">{t('onboarding.completed')}</span>
           </div>
-          <ul className="m-0 flex min-w-[260px] max-w-[460px] flex-1 list-none flex-col gap-2.5 p-0 pr-[170px] max-[900px]:pr-0">
+          <ul className="m-0 flex min-w-0 w-full flex-1 list-none flex-col gap-2.5 p-0 pr-[20px] max-[900px]:pr-0">
             {data.steps.map((s) => (
-              <li key={s.key} className="flex items-center gap-3 rounded-2xl bg-white/90 px-3.5 py-2.5 shadow-[0_2px_8px_rgba(120,60,20,.06)]">
+              <li key={s.key} className="flex items-center gap-3 rounded-2xl bg-white/90 dark:bg-white/[.07] px-3.5 py-2.5 shadow-[0_2px_8px_rgba(120,60,20,.06)]">
                 <span aria-hidden className={`grid size-6 flex-none place-items-center rounded-full ${s.done ? 'bg-brand' : 'border-[1.5px] border-stone-300 bg-white dark:border-white/40 dark:bg-transparent'}`}>
                   {s.done && <MaterialIcon name="check" size={16} color="#fff" weight={700} />}
                 </span>
@@ -104,7 +84,7 @@ export function OnboardingCard({ communityId, data, onExplore }: { communityId: 
                 <button
                   type="button"
                   onClick={() => act(s.key)}
-                  className={`h-9 flex-none rounded-xl px-4 text-[13.5px] font-bold ${s.done ? 'bg-[#e8e2dd] text-stone-700 hover:bg-[#ddd5ce]' : 'border-[1.5px] border-brand bg-white text-brand hover:bg-brand-soft'}`}
+                  className={`h-9 flex-none rounded-xl px-4 text-[13.5px] font-bold ${s.done ? 'bg-[#e8e2dd] text-stone-700 hover:bg-[#ddd5ce] dark:bg-white/10 dark:text-white/80 dark:hover:bg-white/15' : 'border-[1.5px] border-brand bg-white text-brand hover:bg-brand-soft dark:bg-transparent'}`}
                 >
                   {t(`onboarding.steps.${STEP_LABEL[s.key]}.${s.done ? 'again' : 'cta'}`)}
                 </button>
@@ -113,7 +93,6 @@ export function OnboardingCard({ communityId, data, onExplore }: { communityId: 
           </ul>
         </div>
       </div>
-      <RocketArt />
 
       {videoOpen && (
         <div role="dialog" aria-modal="true" aria-label={t('onboarding.steps.video.title')} className="fixed inset-0 z-[80] grid place-items-center bg-black/60 p-4" onClick={() => setVideoOpen(false)}>

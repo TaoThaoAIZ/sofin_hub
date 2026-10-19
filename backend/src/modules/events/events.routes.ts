@@ -4,6 +4,7 @@ import { writeRateLimit } from '../../middlewares/rate-limit.js';
 import { catalogService } from '../catalog/catalog.service.js';
 import { enrollmentService } from '../enrollments/enrollments.service.js';
 import { requireRole } from '../permissions/policy.js';
+import { DOCX_MIME } from './events.docx.js';
 import { createEventBody, updateEventBody } from './events.schema.js';
 import { eventsService } from './events.service.js';
 
@@ -14,6 +15,25 @@ function sendIcs(res: Response, filename: string, body: string) {
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   res.send(body);
 }
+
+function sendDocx(res: Response, filename: string, body: Buffer) {
+  res.setHeader('Content-Type', DOCX_MIME);
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.send(body);
+}
+
+eventsRouter.get('/courses/:id/events.docx', requireAuth, async (req, res) => {
+  const communityId = req.params.id as string;
+  await catalogService.getById(communityId);
+  await enrollmentService.requireMembership(req.userId!, communityId);
+  sendDocx(res, `${communityId}-events.docx`, await eventsService.docxForCourse(communityId));
+});
+
+eventsRouter.get('/events/:eventId/docx', requireAuth, async (req, res) => {
+  const event = await eventsService.getOrThrow(req.params.eventId as string);
+  await enrollmentService.requireMembership(req.userId!, event.communityId);
+  sendDocx(res, `event-${event.id}.docx`, await eventsService.docxForEvent(event.id));
+});
 
 eventsRouter.get('/courses/:id/events', requireAuth, async (req, res) => {
   const communityId = req.params.id as string;

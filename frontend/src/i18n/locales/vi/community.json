@@ -29,6 +29,7 @@
     },
     "moderation": "Kiểm duyệt",
     "revenue": "Doanh thu & rút tiền",
+    "surveys": "Khảo sát",
     "settings": "Cài đặt"
   },
   "rightSidebar": {
@@ -284,6 +285,11 @@
     "filterBtn": "Lọc sự kiện",
     "icsToast": "Đã tải lịch cộng đồng (.ics)",
     "icsTitle": "Tải file .ics chứa mọi sự kiện của cộng đồng để nhập vào Google/Apple/Outlook Calendar",
+    "docxToast": "Đã tải lịch cộng đồng (.docx)",
+    "docxTitle": "Tải file Word (.docx) liệt kê mọi sự kiện, mở được bằng Word/Google Docs",
+    "docxAll": "Tải lịch dạng Word",
+    "docxEvent": "Tải file Word (.docx)",
+    "docxEventToast": "Đã tải sự kiện (.docx)",
     "subscribeAll": "Tải lịch cả cộng đồng",
     "close": "Đóng",
     "create": "Tạo sự kiện",
@@ -619,6 +625,13 @@
     "fileNote": "Tệp sẽ được chèn dưới dạng liên kết vào cuối nội dung bài viết.",
     "removeTag": "Bỏ thẻ {{tag}}",
     "tagsFull": "Đã đủ thẻ",
+    "mentionPrefix": "Gắn thẻ",
+    "mentionSearching": "Đang tìm...",
+    "mentionAria": "Tìm thành viên để gắn thẻ",
+    "mentionsFull": "Đã đạt tối đa thành viên được gắn thẻ",
+    "mentionEmpty": "Không tìm thấy thành viên phù hợp",
+    "maxMentions": "Chỉ gắn thẻ tối đa {{max}} thành viên",
+    "removeMention": "Bỏ gắn thẻ {{name}}",
     "tagPh": "Nhập thẻ rồi nhấn Enter",
     "tagAria": "Nhập thẻ",
     "suggest": "Gợi ý:",
@@ -640,7 +653,7 @@
     "submit": "Đăng bài",
     "tooLong": "Nội dung quá dài",
     "video": "Video",
-    "videoHint": "Tải video mp4 từ máy (tối đa 25 MB)"
+    "videoHint": "Tải video mp4 từ máy (tối đa 2GB)"
   },
   "page": {
     "loading": "Đang tải cộng đồng…"

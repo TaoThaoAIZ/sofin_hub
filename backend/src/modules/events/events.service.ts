@@ -5,6 +5,7 @@ import { enrollmentService } from '../enrollments/enrollments.service.js';
 import { notify } from '../notifications/notifications.service.js';
 import { pointsService } from '../points/points.service.js';
 import { buildIcs } from './events.ics.js';
+import { buildEventsDocx } from './events.docx.js';
 import { eventsRepository, type EventPatch, type EventsRepository } from './events.repository.js';
 import type { CommunityEvent, CommunityEventView } from './events.types.js';
 import type { CreateEventBody, UpdateEventBody } from './events.schema.js';
@@ -148,6 +149,18 @@ export function createEventsService(repo: EventsRepository = eventsRepository) {
     async icsForEvent(eventId: string, baseUrl?: string) {
       const event = await this.getOrThrow(eventId);
       return buildIcs([{ event, hostName: await hostName(event), url: baseUrl }], event.title);
+    },
+
+    async docxForEvent(eventId: string) {
+      const event = await this.getOrThrow(eventId);
+      return buildEventsDocx([{ event, hostName: await hostName(event) }], event.title);
+    },
+
+    async docxForCourse(communityId: string) {
+      const course = await catalogService.getById(communityId);
+      const events = await repo.listByCourse(communityId);
+      const names = new Map(await Promise.all([...new Set(events.map((e) => e.hostId))].map(async (id) => [id, (await userBriefView(id)).name] as const)));
+      return buildEventsDocx(events.map((event) => ({ event, hostName: names.get(event.hostId) })), `Lịch sự kiện — ${course.title}`);
     },
 
     async icsForCourse(communityId: string) {

@@ -11,6 +11,8 @@ import type {
   Post,
   PostQuery,
   QuizInput,
+  SurveyAnswer,
+  SurveyInput,
   ReportAction,
   ReportReason,
   ReportStatus,
@@ -133,13 +135,13 @@ export const useToggleRsvp = (courseId: string) => {
 };
 
 // ---- Thành viên ----
-export const useMembers = (courseId: string, query: { q?: string; page?: number; filter?: MemberFilter; sort?: 'active' | 'joined' }) => {
+export const useMembers = (courseId: string, query: { q?: string; page?: number; filter?: MemberFilter; sort?: 'active' | 'joined' }, enabled = true) => {
   const { accessToken, status } = useAuth();
   return useQuery({
     placeholderData: keepPreviousData,
     queryKey: keys.members(courseId, query),
     queryFn: ({ signal }) => api.fetchMembers(courseId, query, accessToken!, signal),
-    enabled: status === 'authenticated',
+    enabled: enabled && status === 'authenticated',
   });
 };
 
@@ -328,6 +330,14 @@ export const useDownloadIcs = () => {
   });
 };
 
+export const useDownloadDocx = () => {
+  const token = useToken();
+  return useMutation({
+    mutationFn: (vars: { eventId?: string; courseId?: string }) =>
+      vars.eventId ? api.downloadEventDocx(vars.eventId, token) : api.downloadCommunityDocx(vars.courseId!, token),
+  });
+};
+
 /** Xác minh chứng nhận công khai — không cần đăng nhập. */
 export const useVerifyCertificate = (code: string) =>
   useQuery({
@@ -453,6 +463,78 @@ export const usePutQuiz = (cid: string, lessonId: string) => {
       qc.invalidateQueries({ queryKey: ['community', cid, 'lesson'] });
     },
   });
+};
+
+const surveyKey = (cid: string, lessonId: string) => ['community', cid, 'survey', lessonId] as const;
+
+export const useSurvey = (cid: string, lessonId: string) => {
+  const { accessToken } = useAuth();
+  return useQuery({
+    queryKey: surveyKey(cid, lessonId),
+    queryFn: ({ signal }) => api.fetchSurvey(cid, lessonId, accessToken!, signal),
+    enabled: !!accessToken && !!lessonId,
+    retry: false,
+  });
+};
+
+export const useSubmitSurvey = (cid: string, lessonId: string) => {
+  const token = useToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (answers: SurveyAnswer[]) => api.submitSurvey(cid, lessonId, answers, token),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: surveyKey(cid, lessonId) });
+      qc.invalidateQueries({ queryKey: staffSurveyKey(cid) });
+    },
+  });
+};
+
+export const usePutSurvey = (cid: string, lessonId: string) => {
+  const token = useToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: SurveyInput) => api.putSurvey(cid, lessonId, body, token),
+    onSuccess: () => qc.invalidateQueries({ queryKey: surveyKey(cid, lessonId) }),
+  });
+};
+
+const staffSurveyKey = (cid: string) => ['community', cid, 'survey-results'] as const;
+
+export const useSurveyList = (cid: string) => {
+  const { accessToken } = useAuth();
+  return useQuery({ queryKey: [...staffSurveyKey(cid), 'list'], queryFn: ({ signal }) => api.fetchSurveyList(cid, accessToken!, signal), enabled: !!accessToken, retry: false });
+};
+
+export const useSurveyOverview = (cid: string, lessonId: string) => {
+  const { accessToken } = useAuth();
+  return useQuery({ queryKey: [...staffSurveyKey(cid), lessonId, 'overview'], queryFn: ({ signal }) => api.fetchSurveyOverview(cid, lessonId, accessToken!, signal), enabled: !!accessToken && !!lessonId, retry: false });
+};
+
+export const useSurveyTexts = (cid: string, lessonId: string, query: { questionId: string; q?: string; page?: number }) => {
+  const { accessToken } = useAuth();
+  return useQuery({
+    queryKey: [...staffSurveyKey(cid), lessonId, 'texts', query],
+    queryFn: ({ signal }) => api.fetchSurveyTexts(cid, lessonId, query, accessToken!, signal),
+    enabled: !!accessToken && !!query.questionId,
+    placeholderData: keepPreviousData,
+    retry: false,
+  });
+};
+
+export const useSurveyResponses = (cid: string, lessonId: string, query: { q?: string; questionId?: string; choice?: string; page?: number }) => {
+  const { accessToken } = useAuth();
+  return useQuery({
+    queryKey: [...staffSurveyKey(cid), lessonId, 'responses', query],
+    queryFn: ({ signal }) => api.fetchSurveyResponses(cid, lessonId, query, accessToken!, signal),
+    enabled: !!accessToken && !!lessonId,
+    placeholderData: keepPreviousData,
+    retry: false,
+  });
+};
+
+export const useDownloadSurveyCsv = (cid: string, lessonId: string) => {
+  const token = useToken();
+  return useMutation({ mutationFn: () => api.downloadSurveyCsv(cid, lessonId, token) });
 };
 
 export const useProgress = (cid: string, courseId: string | null) => {

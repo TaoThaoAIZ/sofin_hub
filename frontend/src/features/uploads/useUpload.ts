@@ -49,14 +49,14 @@ const SLIDES = [
 type Label = 'images' | 'files' | 'message' | 'media' | 'video' | 'slides';
 
 // Khớp bảng whitelist ở backend (uploads.types.ts) — chỉ để báo lỗi sớm; BE vẫn kiểm tra lại. Giới hạn video/slide khớp UPLOAD_MAX_VIDEO_MB / UPLOAD_MAX_SLIDE_MB.
-const RULES: Record<UploadPurpose, { types: string[]; maxMb: number; label: Label }> = {
+const RULES: Record<UploadPurpose, { types: string[]; maxMb: number; label: Label; anyType?: boolean }> = {
   post_image: { types: IMAGES, maxMb: 5, label: 'images' },
   avatar: { types: IMAGES, maxMb: 3, label: 'images' },
   cover: { types: IMAGES, maxMb: 8, label: 'images' },
-  post_file: { types: [...DOCS, 'video/mp4'], maxMb: 25, label: 'files' },
+  post_file: { types: [...DOCS, ...IMAGES, ...LESSON_VIDEOS], maxMb: 2048, label: 'files' },
   lesson_attachment: { types: [...DOCS, 'video/mp4'], maxMb: 2048, label: 'files' },
-  message_attachment: { types: [...IMAGES, ...DOCS], maxMb: 25, label: 'message' },
-  community_media: { types: [...IMAGES, 'video/mp4'], maxMb: 25, label: 'media' },
+  message_attachment: { types: [...IMAGES, ...DOCS, ...LESSON_VIDEOS], maxMb: 2048, label: 'message', anyType: true },
+  community_media: { types: [...IMAGES, 'video/mp4'], maxMb: 2048, label: 'media' },
   lesson_video: { types: LESSON_VIDEOS, maxMb: 2048, label: 'video' },
   lesson_slide: { types: SLIDES, maxMb: 2048, label: 'slides' },
 };
@@ -86,7 +86,14 @@ const EXT_TYPE: Record<string, string> = {
 };
 
 /** Loại nội dung dùng để upload: ưu tiên type của trình duyệt khi hợp lệ, không thì suy từ đuôi tệp. */
-export function resolveContentType(file: File): string {
+export function resolveContentType(file: File, purpose?: UploadPurpose): string {
+  const t = resolveKnownType(file);
+  // Mục đích nhận file bất kỳ: loại lạ (exe, rar, json...) gửi dạng octet-stream (khớp cách backend lưu).
+  if (purpose && RULES[purpose].anyType && !RULES[purpose].types.includes(t)) return 'application/octet-stream';
+  return t;
+}
+
+function resolveKnownType(file: File): string {
   const known = file.type && file.type !== 'application/octet-stream' ? file.type : '';
   if (known === 'application/x-zip-compressed') return 'application/zip';
   if (known) return known;
@@ -107,7 +114,7 @@ export function validateUpload(file: File, purpose: UploadPurpose): string | nul
   const rule = RULES[purpose];
   if (file.size === 0) return i18n.t('upload.empty', { ns: 'misc' });
   if (file.size > rule.maxMb * MB) return i18n.t('upload.tooLarge', { ns: 'misc', max: rule.maxMb });
-  if (!rule.types.includes(resolveContentType(file))) return i18n.t('upload.unsupported', { ns: 'misc', types: i18n.t(`upload.labels.${rule.label}`, { ns: 'misc' }) });
+  if (!rule.anyType && !rule.types.includes(resolveContentType(file))) return i18n.t('upload.unsupported', { ns: 'misc', types: i18n.t(`upload.labels.${rule.label}`, { ns: 'misc' }) });
   return null;
 }
 
@@ -201,7 +208,7 @@ export function useUpload() {
         setError(early);
         throw new Error(early);
       }
-      const contentType = resolveContentType(file);
+      const contentType = resolveContentType(file, opts.purpose);
       setUploading(true);
       try {
         const presign = await apiPost<PresignResponse>('/uploads/presign', {

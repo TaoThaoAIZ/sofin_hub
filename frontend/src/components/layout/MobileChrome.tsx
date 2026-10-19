@@ -30,6 +30,7 @@ const COMMUNITY_TITLES: Record<string, string> = {
   'chuong-trinh-gioi-thieu': 'sidebar.nav.referral',
   'cong-cu': 'sidebar.nav.tools',
   'kiem-duyet': 'sidebar.moderation',
+  'khao-sat': 'sidebar.surveys',
   'doanh-thu': 'sidebar.revenue',
   'cai-dat': 'sidebar.settings',
 };

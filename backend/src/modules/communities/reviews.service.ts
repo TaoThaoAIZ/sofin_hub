@@ -28,15 +28,19 @@ function relativeTime(iso: string): string {
  * trong cùng transaction với ghi/xóa Review (xem recalcCourseRating).
  */
 export function createReviewsService(repo: CommunitiesRepository = communitiesRepository) {
-  const view = async (r: Review) => ({
+  const view = async (r: Review) => {
+    const author = await userBriefView(r.userId);
+    return {
     id: r.id,
     userId: r.userId,
-    name: (await userBriefView(r.userId)).name,
+    name: author.name,
+    avatarUrl: author.avatarUrl ?? null,
     rating: r.rating,
     text: r.text,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,
-  });
+    };
+  };
 
   return {
     async list(communityId: string, page: number, limit: number) {

@@ -27,13 +27,14 @@ export function QuizPanel({ communityId, lessonId }: { communityId: string; less
     );
   };
   const retry = () => {
-    setAnswers({});
+    // Giữ lại các câu đã đúng để học viên chỉ chọn lại các câu sai.
+    setAnswers((a) => Object.fromEntries(Object.entries(a).filter(([qid]) => resultOf(qid)?.correct)));
     setResult(null);
     attempt.reset();
   };
 
   return (
-    <section className="mt-6 rounded-2xl border border-[rgba(120,60,20,.12)] bg-[#fffaf5] p-4" aria-label={t('quiz.title')}>
+    <section className="mt-6 rounded-2xl border border-[rgba(120,60,20,.12)] bg-[#fffaf5] p-4 dark:border-white/10 dark:bg-white/[.05]" aria-label={t('quiz.title')}>
       <div className="flex flex-wrap items-center gap-2">
         <MaterialIcon name="quiz" size={22} filled color="#ff570a" />
         <h2 className="m-0 text-[17px] font-extrabold">{t('quiz.title')}</h2>
@@ -58,7 +59,7 @@ export function QuizPanel({ communityId, lessonId }: { communityId: string; less
                     <label
                       key={oi}
                       className={`flex cursor-pointer items-center gap-2.5 rounded-xl border px-3 py-2 text-[13.5px] ${
-                        isRight ? 'border-emerald-400 bg-emerald-50' : picked ? 'border-brand bg-brand-soft' : 'border-[#ece5df] bg-white hover:border-[#fdba74]'
+                        isRight ? 'border-emerald-400 bg-emerald-50 dark:border-emerald-400 dark:bg-emerald-500/20' : picked ? 'border-brand bg-brand-soft' : 'border-[#ece5df] bg-white hover:border-[#fdba74]'
                       } ${result ? 'cursor-default' : ''}`}
                     >
                       <input

@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { referralCodeField } from '../referrals/referrals.schema.js';
 import { checkHandleFormat } from './handle.js';
 
-const emailField = z.string().trim().toLowerCase().email('Email không hợp lệ').max(30, 'Email tối đa 30 ký tự');
+const emailField = z.string().trim().toLowerCase().email('Email không hợp lệ').max(80, 'Email tối đa 80 ký tự');
 
 /** Quy tắc mật khẩu dùng chung: >= 8 ký tự, có chữ in hoa và ký tự đặc biệt. */
 export const passwordRule = z

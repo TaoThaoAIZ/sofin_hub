@@ -9,8 +9,6 @@ import { errText, toast, ToastHost } from './contentUi';
 import type { CommunityDetail } from '../../courses/types';
 import { useMembers } from '../queries';
 
-// Màu lấy đúng từ bảng pal[]/logoStyle trong file thiết kế gốc SofinHub Community.html.
-const AVATAR_PALETTE = ['#d6d3f5', '#cfe3f7', '#e5e7c9', '#cfe6d6', '#f3d4e6', '#dcd6cf', '#f5dcc8', '#d4dbe8'];
 const LOGO_PALETTE = ['#1e3a8a', '#65a30d', '#1d4ed8', '#7c3aed', '#0f766e'];
 
 function initials(name: string) {
@@ -44,7 +42,9 @@ export function CommunityRightSidebar({ course }: { course: CommunityDetail }) {
   };
   const suggested = useCommunities({ page: 1, limit: 4, sort: 'trending' });
   const shownMembers = members.data?.data.slice(0, 6) ?? [];
-  const remaining = Math.max(0, course.stats.members - shownMembers.length);
+  // Tổng thành viên lấy từ chính danh sách thật (cùng nguồn với dãy avatar) để số và avatar luôn khớp.
+  const totalMembers = members.data?.counts.all ?? course.stats.members;
+  const remaining = Math.max(0, totalMembers - shownMembers.length);
   const suggestedCourses = (suggested.data?.data ?? []).filter((c) => c.id !== course.id).slice(0, 3);
 
   return (
@@ -61,7 +61,7 @@ export function CommunityRightSidebar({ course }: { course: CommunityDetail }) {
           <div className="mt-1 truncate text-[12.5px] text-stone-500">{t('rightSidebar.by', { name: course.instructor.name })}</div>
           <div className="mt-2.5 grid grid-cols-3 border-t border-[rgba(120,60,20,.08)] pt-3 text-center">
             <div>
-              <div className="text-[15px] font-bold">{formatCompact(course.stats.members)}</div>
+              <div className="text-[15px] font-bold">{formatCompact(totalMembers)}</div>
               <div className="mt-0.5 text-[11px] text-stone-500">{t('info.members')}</div>
             </div>
             <div className="border-x border-[rgba(120,60,20,.08)]">
@@ -78,7 +78,7 @@ export function CommunityRightSidebar({ course }: { course: CommunityDetail }) {
             <div className="mt-3.5 flex items-center">
               {shownMembers.map((m, i) => (
                 <span key={m.id} className="flex-none rounded-full border-2 border-white" style={{ marginLeft: i ? -6 : 0 }}>
-                  <Avatar url={m.avatarUrl} name={m.name} size={22} text={initials(m.name)} className="text-stone-700" style={{ background: AVATAR_PALETTE[i % AVATAR_PALETTE.length], fontSize: 9.5 }} />
+                  <Avatar url={m.avatarUrl} name={m.name} size={22} text={initials(m.name)} style={{ fontSize: 9.5 }} />
                 </span>
               ))}
               {remaining > 0 && <span className="ml-2 text-[12.5px] text-stone-600">+{formatCompact(remaining)}</span>}

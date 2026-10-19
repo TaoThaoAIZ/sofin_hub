@@ -29,6 +29,7 @@
     },
     "moderation": "Moderation",
     "revenue": "Revenue & payouts",
+    "surveys": "Surveys",
     "settings": "Settings"
   },
   "rightSidebar": {
@@ -284,6 +285,11 @@
     "filterBtn": "Filter events",
     "icsToast": "Community calendar downloaded (.ics)",
     "icsTitle": "Download an .ics file with all community events to import into Google/Apple/Outlook Calendar",
+    "docxToast": "Community calendar downloaded (.docx)",
+    "docxTitle": "Download a Word (.docx) file listing all events, opens in Word/Google Docs",
+    "docxAll": "Download calendar as Word",
+    "docxEvent": "Download Word file (.docx)",
+    "docxEventToast": "Event downloaded (.docx)",
     "subscribeAll": "Download community calendar",
     "close": "Close",
     "create": "Create event",
@@ -619,6 +625,13 @@
     "fileNote": "Files will be inserted as links at the end of the post.",
     "removeTag": "Remove tag {{tag}}",
     "tagsFull": "Tag limit reached",
+    "mentionPrefix": "Tagged",
+    "mentionSearching": "Searching...",
+    "mentionAria": "Search members to tag",
+    "mentionsFull": "Maximum tagged members reached",
+    "mentionEmpty": "No matching members",
+    "maxMentions": "You can tag up to {{max}} members",
+    "removeMention": "Remove tag {{name}}",
     "tagPh": "Type a tag and press Enter",
     "tagAria": "Enter a tag",
     "suggest": "Suggestions:",
@@ -640,7 +653,7 @@
     "submit": "Post",
     "tooLong": "Content is too long",
     "video": "Video",
-    "videoHint": "Upload an mp4 video from your device (max 25 MB)"
+    "videoHint": "Upload an mp4 video from your device (max 2GB)"
   },
   "page": {
     "loading": "Loading community…"

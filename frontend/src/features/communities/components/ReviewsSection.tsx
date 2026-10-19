@@ -4,18 +4,12 @@ import { currentLocale } from '../../../i18n';
 import { Button } from '../../../components/ui/Button';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { SectionTitle } from '../../../components/ui/SectionTitle';
+import { Avatar } from '../../account/components/Avatar';
 import { useAuth } from '../../auth/AuthContext';
 import { useDeleteMyReview, useDeleteReview, useReviews, useSaveReview } from '../queries';
 import { isAtLeast, type Review, type ViewerRole } from '../types';
 import { errorText } from './Modal';
 import { usePopup } from '../../../components/ui/usePopup';
-
-const AVATAR_COLORS = ['#fdba74', '#93c5fd', '#86efac', '#c4b5fd', '#fde68a', '#fca5a5', '#a5f3fc'];
-const colorFor = (id: string) => {
-  let h = 0;
-  for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  return AVATAR_COLORS[h % AVATAR_COLORS.length]!;
-};
 
 function Stars({ value, size = 16 }: { value: number; size?: number }) {
   const { t } = useTranslation('communities');
@@ -116,7 +110,7 @@ export function ReviewsSection({
         {rows.map((r) => (
           <div key={r.id} className="rounded-[18px] border border-white/95 bg-white/75 p-[18px] shadow-[0_6px_18px_rgba(120,60,20,.06)]">
             <div className="flex items-center gap-2.5">
-              <span className="size-[38px] flex-none rounded-full" style={{ background: colorFor(r.userId) }} />
+              <Avatar url={r.avatarUrl} name={r.name} size={38} />
               <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
                 <b className="text-sm">{r.name}</b>
                 <Stars value={r.rating} size={15} />

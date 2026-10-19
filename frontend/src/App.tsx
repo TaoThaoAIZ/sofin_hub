@@ -45,6 +45,7 @@ import { LessonPage } from './pages/LessonPage';
 import { VerifyOtpPage } from './pages/VerifyOtpPage';
 import { OAuthCallbackPage } from './pages/OAuthCallbackPage';
 import { ModerationPage } from './features/community/components/ModerationPanel';
+import { SurveyDetailPage, SurveysPage } from './features/community/components/SurveyResultsPages';
 import { AboutTab } from './features/community/components/AboutTab';
 import { CalendarTab } from './features/community/components/CalendarTab';
 import { ClassroomTab } from './features/community/components/ClassroomTab';
@@ -82,6 +83,8 @@ export default function App() {
           <Route path="lop-hoc" element={<ClassroomTab />} />
           <Route path="lop-hoc/:lessonId" element={<LessonPage />} />
           <Route path="kiem-duyet" element={<ModerationPage />} />
+          <Route path="khao-sat" element={<SurveysPage />} />
+          <Route path="khao-sat/:lessonId" element={<SurveyDetailPage />} />
           <Route path="cai-dat" element={<CommunitySettingsPage />} />
           <Route path="lich" element={<CalendarTab />} />
           <Route path="thanh-vien" element={<MembersTab />} />

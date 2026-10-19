@@ -72,7 +72,7 @@ const schema = z.object({
   UPLOAD_SIGNING_SECRET: z.string().min(1).default('dev-upload-secret-change-me'),
   UPLOAD_TICKET_TTL_SEC: z.coerce.number().int().positive().default(600),
   UPLOAD_MAX_IMAGE_MB: z.coerce.number().positive().default(5),
-  UPLOAD_MAX_FILE_MB: z.coerce.number().positive().default(25),
+  UPLOAD_MAX_FILE_MB: z.coerce.number().positive().default(2048),
   UPLOAD_MAX_AVATAR_MB: z.coerce.number().positive().default(3),
   UPLOAD_MAX_COVER_MB: z.coerce.number().positive().default(8),
   /** Video bài học tải từ máy (stream thẳng xuống kho, không nạp vào RAM). Cần nginx `client_max_body_size` >= giá trị này. */

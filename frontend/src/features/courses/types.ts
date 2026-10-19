@@ -22,7 +22,7 @@ export interface Course {
   category: CategoryId;
   tag: CourseTag | null;
   thumbnail: string;
-  instructor: { name: string; role: string };
+  instructor: { name: string; role: string; avatarUrl?: string };
   lessons: number;
   durationMinutes: number;
   students: number;

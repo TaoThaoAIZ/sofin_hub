@@ -322,6 +322,66 @@ export interface QuizInput {
   questions: Array<{ text: string; options: string[]; correctIndex: number }>;
 }
 
+export type SurveyQuestionType = 'single' | 'multiple' | 'text';
+export interface SurveyQuestion {
+  id: string;
+  text: string;
+  type: SurveyQuestionType;
+  options: string[];
+  required: boolean;
+}
+export interface SurveyAnswer {
+  questionId: string;
+  choices: string[];
+  text?: string;
+}
+export interface SurveyView {
+  canEdit: boolean;
+  survey: null | { id: string; questions: SurveyQuestion[]; myAnswers: SurveyAnswer[] | null; answeredAt: string | null };
+}
+export interface SurveyInput {
+  questions: Array<{ id?: string; text: string; type: SurveyQuestionType; options: string[]; required: boolean }>;
+}
+export interface SurveyUser {
+  id: string;
+  name: string;
+  avatarUrl?: string;
+}
+export interface SurveyListItem {
+  lessonId: string;
+  lessonTitle: string;
+  moduleTitle: string;
+  questionCount: number;
+  responseCount: number;
+  lastAnsweredAt: string | null;
+}
+export interface SurveyList {
+  memberCount: number;
+  surveys: SurveyListItem[];
+}
+export interface SurveyOverview {
+  lessonId: string;
+  lessonTitle: string;
+  moduleTitle: string;
+  responseCount: number;
+  memberCount: number;
+  questions: Array<{ id: string; text: string; type: SurveyQuestionType; required: boolean; answered: number; options: Array<{ text: string; count: number }> }>;
+}
+export interface SurveyPageMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+export interface SurveyTexts {
+  data: Array<{ user: SurveyUser; text: string; answeredAt: string }>;
+  meta: SurveyPageMeta;
+}
+export interface SurveyResponses {
+  data: Array<{ user: SurveyUser; answeredAt: string; answers: SurveyAnswer[] }>;
+  meta: SurveyPageMeta;
+}
+
 export interface CourseProgress {
   percent: number;
   completedLessons: number;

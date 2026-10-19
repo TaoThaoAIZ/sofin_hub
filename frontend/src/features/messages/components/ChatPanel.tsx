@@ -29,6 +29,9 @@ function ChatAttachment({ a, mine }: { a: MessageView['attachments'][number]; mi
       <div className="mt-1.5 h-24 w-40 animate-pulse rounded-xl bg-stone-900/10" />
     );
   }
+  if (a.contentType.startsWith('video/') && href) {
+    return <video src={href} controls playsInline preload="metadata" aria-label={a.name} className="mt-1.5 max-h-64 max-w-full rounded-xl bg-black" />;
+  }
   return (
     <a
       href={href}

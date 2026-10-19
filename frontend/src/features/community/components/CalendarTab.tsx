@@ -5,7 +5,7 @@ import i18n, { currentLocale } from '../../../i18n';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { useClickOutside } from '../../../lib/useClickOutside';
 import { useCommunityDetail } from '../../courses/queries';
-import { useCancelRsvp, useCreateEvent, useDeleteEvent, useDownloadIcs, useEvents, useToggleRsvp, useUpdateEvent } from '../queries';
+import { useCancelRsvp, useCreateEvent, useDeleteEvent, useDownloadDocx, useDownloadIcs, useEvents, useToggleRsvp, useUpdateEvent } from '../queries';
 import type { CommunityEvent } from '../types';
 import { areaCls, ConfirmDialog, Dialog, errText, ErrorNote, ghostBtn, inputCls, isModPlus, primaryBtn, safeUrl, toast, ToastHost, toLocalInput } from './contentUi';
 import { InviteePicker } from './InviteePicker';
@@ -56,6 +56,7 @@ export function CalendarTab() {
   const cancelRsvp = useCancelRsvp(courseId);
   const createEvent = useCreateEvent(courseId);
   const downloadIcs = useDownloadIcs();
+  const downloadDocx = useDownloadDocx();
 
   const today = useMemo(() => new Date(), []);
   const minStart = toLocalInput(new Date().toISOString());
@@ -166,6 +167,17 @@ export function CalendarTab() {
           >
             <MaterialIcon name="event_repeat" size={19} />
             {t('calendar.subscribeAll')}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => downloadDocx.mutate({ courseId }, { onSuccess: () => toast(t('calendar.docxToast')), onError: (e) => toast(errText(e), 'error') })}
+            disabled={downloadDocx.isPending}
+            className={toolBtn}
+            title={t('calendar.docxTitle')}
+          >
+            <MaterialIcon name="description" size={19} />
+            {t('calendar.docxAll')}
           </button>
 
           {canManage && <button onClick={() => setShowForm((s) => !s)} className="flex h-11 items-center gap-2 rounded-xl bg-brand px-[18px] text-sm font-bold text-white max-md:order-first max-md:w-full max-md:justify-center">
@@ -314,6 +326,7 @@ function EventDialog({
   const update = useUpdateEvent(courseId);
   const remove = useDeleteEvent(courseId);
   const downloadIcs = useDownloadIcs();
+  const downloadDocx = useDownloadDocx();
   const [editing, setEditing] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false);
   const [title, setTitle] = useState(ev.title);
@@ -445,6 +458,16 @@ function EventDialog({
         >
           <MaterialIcon name="calendar_add_on" size={19} />
           {t('calendar.addToCal')}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => downloadDocx.mutate({ eventId: ev.id }, { onSuccess: () => toast(t('calendar.docxEventToast')), onError: (e) => toast(errText(e), 'error') })}
+          disabled={downloadDocx.isPending}
+          className={`${ghostBtn} mt-2 w-full`}
+        >
+          <MaterialIcon name="description" size={19} />
+          {t('calendar.docxEvent')}
         </button>
 
         {canManage && (

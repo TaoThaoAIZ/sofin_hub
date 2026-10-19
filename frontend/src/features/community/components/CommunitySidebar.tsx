@@ -82,6 +82,20 @@ export function CommunityNavList({ onNavigate }: { onNavigate?: () => void }) {
             {t('sidebar.moderation')}
           </NavLink>
         )}
+        {isModPlus(viewerCourse?.viewerRole) && (
+          <NavLink
+            onClick={onNavigate}
+            to="khao-sat"
+            className={({ isActive }) =>
+              `flex h-11 items-center gap-3.5 rounded-xl px-3.5 text-[14.5px] ${
+                isActive ? 'bg-brand-soft font-semibold text-brand dark:bg-white/10' : 'font-normal text-stone-900 hover:bg-stone-50'
+              }`
+            }
+          >
+            <MaterialIcon name="poll" size={21} color="currentColor" />
+            {t('sidebar.surveys')}
+          </NavLink>
+        )}
         {(viewerCourse?.viewerRole === 'owner' || viewerCourse?.viewerRole === 'platform_admin') && (
           <NavLink
             onClick={onNavigate}

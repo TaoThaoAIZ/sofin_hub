@@ -8,6 +8,7 @@ import { releaseLikeNotice } from './posts.like-notice.js';
 import { atLeast, canManageContent, getRole } from '../permissions/policy.js';
 import { pointsService } from '../points/points.service.js';
 import { userRepository } from '../auth/auth.repository.js';
+import { enrollmentService } from '../enrollments/enrollments.service.js';
 import { postsRepository, type CommentCursor, type PollTally, type PostCursor, type PostsRepository } from './posts.repository.js';
 import type { Comment, CommentView, PollDef, PollView, Post, PostAuthorView, PostCategory, PostView } from './posts.types.js';
 import type { CreatePollBody, ListCommentsQuery, ListPostsQuery, UpdatePostBody } from './posts.schema.js';
@@ -51,6 +52,33 @@ function decodeCommentCursor(raw: string): CommentCursor {
     throw HttpError.badRequest('Mốc phân trang không hợp lệ');
   }
   return { createdAt: v[0], id: v[1] };
+}
+
+/** Thành viên được gắn tên nằm ở dòng cuối nội dung: "Gắn thẻ: [[user:<id>|<tên>]] ..." (FE tách ra để hiển thị). */
+const MENTION_RE = /\[\[user:([A-Za-z0-9_-]{1,64})\|[^\]\n]{1,100}\]\]/g;
+const MAX_MENTIONS = 10;
+const mentionedIds = (content: string) => [...new Set([...content.matchAll(MENTION_RE)].map((m) => m[1]!))].slice(0, MAX_MENTIONS);
+
+/** Báo cho từng thành viên (còn trong cộng đồng, khác tác giả) được gắn tên trong bài. Lỗi từng người không làm hỏng việc đăng bài. */
+async function notifyMentions(post: Post, authorId: string, content: string): Promise<void> {
+  const ids = mentionedIds(content).filter((id) => id !== authorId);
+  if (!ids.length) return;
+  const who = await userBriefView(authorId);
+  for (const userId of ids) {
+    try {
+      await enrollmentService.requireMembership(userId, post.communityId);
+      notify({
+        userId,
+        type: 'system',
+        title: 'Bạn được gắn thẻ trong một bài viết',
+        body: `${who.name} đã gắn thẻ bạn trong một bài viết`,
+        link: postPath(post),
+        communityId: post.communityId,
+      });
+    } catch {
+      /* không phải thành viên / không tồn tại: bỏ qua */
+    }
+  }
 }
 
 const normTag = (t: string) => t.trim().replace(/^#/, '').toLowerCase();
@@ -159,6 +187,7 @@ export function createPostsService(repo: PostsRepository = postsRepository) {
       }
       const post = await repo.create(communityId, authorId, content, category, tags, imageUrl, poll);
       await pointsService.award(authorId, communityId, 'post', { type: 'post', id: post.id });
+      void notifyMentions(post, authorId, content).catch(() => undefined);
       return toView(post, authorId);
     },
 

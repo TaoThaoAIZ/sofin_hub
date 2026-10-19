@@ -143,7 +143,7 @@ export function LoginPage() {
           <FormField
             type="email"
             autoComplete="email"
-            maxLength={30}
+            maxLength={80}
             value={email}
             onChange={(v) => {
               setEmail(v);

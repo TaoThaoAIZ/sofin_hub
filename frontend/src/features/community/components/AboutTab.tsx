@@ -4,6 +4,7 @@ import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { formatCompact } from '../../../lib/format';
 import { MediaGallery } from '../../courses/components/MediaGallery';
 import { useCommunityDetail } from '../../courses/queries';
+import { Avatar } from '../../account/components/Avatar';
 import { CommunityInfoCard, initials } from './shared';
 
 import { formatCents } from '../../../lib/datetime';
@@ -23,7 +24,7 @@ export function AboutTab() {
     { icon: course.visibility === 'private' ? 'lock' : 'public', t: course.visibility === 'private' ? t('about.private') : t('about.public'), s: course.visibility === 'private' ? t('about.membersOnly') : t('about.openCommunity') },
     { icon: 'group', t: t('about.membersChip', { n: formatCompact(course.stats.members) }), s: t('about.active') },
     { icon: 'sell', t: course.priceUsd === 0 ? t('about.free') : t('about.perMonth', { price: formatCents(course.priceUsd) }), s: course.priceUsd === 0 ? t('about.joinNow') : t('about.membership') },
-    { face: initials(course.instructor.name), t: t('about.byInstructor', { name: course.instructor.name }), s: t('about.roleAdmin', { role: course.instructor.role }) },
+    { face: course.instructor.name, t: t('about.byInstructor', { name: course.instructor.name }), s: t('about.roleAdmin', { role: course.instructor.role }) },
   ];
   const lessons = Number(course.facts.find((f) => f.label === 'Bài học')?.value ?? 0);
   const free = [
@@ -40,7 +41,7 @@ export function AboutTab() {
           {chips.map((c) => (
             <div key={c.t} className="glass flex min-w-0 items-center gap-3 rounded-[18px] px-4 py-3.5">
               {c.icon && <MaterialIcon name={c.icon} size={28} color="#ff570a" />}
-              {c.face && <span className="grid size-[38px] flex-none place-items-center rounded-full bg-[#e7d3c6] text-xs font-bold text-[#7c2d12]">{c.face}</span>}
+              {c.face && <Avatar url={course.instructor.avatarUrl} name={c.face} size={38} text={initials(c.face)} />}
               <div className="min-w-0">
                 <div className="truncate text-[14.5px] font-semibold">{c.t}</div>
                 <div className="mt-0.5 text-[12.5px] text-stone-500">{c.s}</div>
@@ -116,7 +117,7 @@ export function AboutTab() {
           </div>
           <div className="mt-4 flex flex-wrap items-center gap-4">
             <div className="flex items-center gap-3">
-              <span className="grid size-10 place-items-center rounded-full bg-[#e7d3c6] text-xs font-bold text-[#7c2d12]">{initials(course.instructor.name)}</span>
+              <Avatar url={course.instructor.avatarUrl} name={course.instructor.name} size={40} text={initials(course.instructor.name)} />
               <span className="text-[15px]">{t('about.founder', { name: course.instructor.name })}</span>
             </div>
           </div>

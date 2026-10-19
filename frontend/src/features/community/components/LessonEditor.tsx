@@ -7,6 +7,7 @@ import type { ClassroomLesson, LessonAttachment } from '../types';
 import { absoluteUrl, errText, ErrorNote, FieldLabel, inputCls } from './contentUi';
 import { shellGhostBtn, shellPrimaryBtn, ShellBody, ShellFooter, Toggle } from './ModalShell';
 import { QuizEditor } from './QuizEditor';
+import { SurveyEditor } from './SurveyEditor';
 
 type LessonType = ClassroomLesson['type'];
 
@@ -276,7 +277,10 @@ export function LessonEditor({
           <Toggle on={isPreview} />
         </button>
         {lesson ? (
-          <QuizEditor communityId={communityId} lessonId={lesson.id} />
+          <>
+            <QuizEditor communityId={communityId} lessonId={lesson.id} />
+            <SurveyEditor communityId={communityId} lessonId={lesson.id} />
+          </>
         ) : (
           <p className="m-0 rounded-xl bg-[#faf7f4] px-3.5 py-2.5 text-[12.5px] text-stone-500">{t('editor.lesson.quizAfterSave')}</p>
         )}

@@ -467,6 +467,7 @@ model User {
   /// Cột GENERATED ALWAYS (họ tên đã gập dấu).
   searchVector               Unsupported("tsvector")?
   quizAttempts               QuizAttempt[]
+  surveyResponses            SurveyResponse[]
   communityOnboardings       CommunityOnboarding[]
   communityReferralsGiven    CommunityReferral[]         @relation("CommunityReferralReferrer")
   communityReferralsReceived CommunityReferral[]         @relation("CommunityReferralReferred")
@@ -1061,6 +1062,7 @@ model ClassroomLesson {
   community Community        @relation(fields: [communityId], references: [id], onDelete: Cascade)
   progress  LessonProgress[]
   quiz      LessonQuiz?
+  survey    LessonSurvey?
 
   @@index([moduleId, index])
   @@index([communityId])
@@ -2249,6 +2251,36 @@ model QuizAttempt {
   user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([quizId, userId, createdAt])
+  @@index([userId])
+}
+
+/// Khảo sát của MỘT bài học (không bắt buộc, không chặn hoàn thành bài). Chủ/mod đọc kết quả để biết mong muốn của học viên.
+/// `questions` = [{ id, text, type: 'single'|'multiple'|'text', options: string[] (rỗng nếu type = text), required }].
+model LessonSurvey {
+  id        String   @id @default(uuid())
+  lessonId  String   @unique
+  questions Json     @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lesson    ClassroomLesson  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  responses SurveyResponse[]
+}
+
+/// Câu trả lời khảo sát của một học viên (mỗi người một bản, nộp lại thì ghi đè).
+/// `answers` = [{ questionId, choices: string[] (lưu NỘI DUNG lựa chọn để sửa khảo sát không lệch), text? }].
+model SurveyResponse {
+  id        String   @id @default(uuid())
+  surveyId  String
+  userId    String
+  answers   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  survey LessonSurvey @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([surveyId, userId])
   @@index([userId])
 }
 

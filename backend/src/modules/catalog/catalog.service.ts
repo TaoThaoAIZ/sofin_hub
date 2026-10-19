@@ -1,4 +1,5 @@
 import { HttpError } from '../../utils/http-error.js';
+import { userRepository } from '../auth/auth.repository.js';
 import { cfg } from '../settings/settings.service.js';
 import { buildCommunityDetail, type CommunityDetail, type CourseReview } from './community-detail.js';
 import type { Community, CommunityPatch, NewCommunity } from './community.types.js';
@@ -34,7 +35,10 @@ export function createCatalogService(repo: CatalogRepository = catalogRepository
       const course = await this.getById(id);
       // Mọi số liệu lấy từ DB thật (Enrollment, ClassroomLesson, Global Settings); không sinh nội dung minh họa.
       const [{ online, admins }, lessons, courses] = await Promise.all([repo.memberStats(id), repo.lessonCount(id), repo.courseInfo(id)]);
-      return buildCommunityDetail(course, viewerEnrolled, realReviews, { online, admins, lessons, trialDays: course.memberTrialEnabled ? cfg().payments.trialDays : 0, ...courses });
+      const detail = buildCommunityDetail(course, viewerEnrolled, realReviews, { online, admins, lessons, trialDays: course.memberTrialEnabled ? cfg().payments.trialDays : 0, ...courses });
+      const owner = course.ownerId ? await userRepository.findById(course.ownerId) : undefined;
+      if (owner?.avatarUrl) detail.instructor = { ...detail.instructor, avatarUrl: owner.avatarUrl };
+      return detail;
     },
 
     create: (course: NewCommunity) => repo.create(course),

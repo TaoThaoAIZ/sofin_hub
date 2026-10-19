@@ -6,7 +6,7 @@ import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { useAuth } from '../../auth/AuthContext';
 import { useLeaderboard, useLevels } from '../queries';
 import type { LeaderboardWindow, LevelInfo } from '../types';
-import { AVATAR_PALETTE, initials } from './shared';
+import { initials } from './shared';
 
 const BOARDS: { window: LeaderboardWindow; icon: string; color: string; titleKey: string; prefix: string }[] = [
   { window: '7d', icon: 'local_fire_department', color: '#ef4444', titleKey: 'leaderboard.top7', prefix: '+' },
@@ -79,7 +79,7 @@ function Board({ cfg, courseId, meId }: { cfg: (typeof BOARDS)[number]; courseId
           ) : (
             <span className="w-[26px] flex-none text-center text-[13px] text-stone-600">{r.rank}</span>
           )}
-          <Avatar url={r.avatarUrl} name={r.name} size={34} text={initials(r.name)} className="text-stone-700" style={{ background: AVATAR_PALETTE[(i + BOARDS.indexOf(cfg) * 3) % AVATAR_PALETTE.length] }} />
+          <Avatar url={r.avatarUrl} name={r.name} size={34} text={initials(r.name)} />
           <span className="flex min-w-0 flex-1 items-center gap-1.5 truncate text-sm font-medium">
             <span className="truncate">{r.name}</span>
             {r.userId === meId && <span className="text-xs text-brand">{t('leaderboard.you')}</span>}

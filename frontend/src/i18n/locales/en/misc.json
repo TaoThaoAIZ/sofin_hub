@@ -21,7 +21,7 @@
     "unsupported": "Unsupported file type. Accepted: {{types}}",
     "labels": {
       "images": "JPG, PNG, WEBP, GIF images",
-      "files": "PDF, ZIP, DOCX, XLSX, PPTX, PPT, DOC, XLS, CSV, TXT, MP4",
+      "files": "PDF, ZIP, DOCX, XLSX, PPTX, PPT, DOC, XLS, CSV, TXT, images, MP4, WEBM, MOV",
       "message": "images, PDF, ZIP, DOCX, XLSX, PPTX, PPT, DOC, XLS, CSV, TXT",
       "media": "JPG, PNG, WEBP, GIF images or MP4 video",
       "video": "MP4, WEBM or MOV video",
