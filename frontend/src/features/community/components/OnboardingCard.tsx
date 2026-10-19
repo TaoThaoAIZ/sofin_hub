@@ -14,16 +14,17 @@ const APP_URL = (import.meta.env.VITE_APP_DOWNLOAD_URL as string | undefined) ||
 const STEP_LABEL: Record<OnboardingStepKey, string> = { video: 'video', comment: 'comment', app: 'app' };
 
 function Ring({ done, total }: { done: number; total: number }) {
-  const r = 46;
+  // Theo thiết kế: vòng ~92px, nét dày 12, tâm trắng, rãnh be nhạt, cung cam đầu tròn chạy từ 12 giờ theo chiều kim đồng hồ.
+  const r = 40;
   const c = 2 * Math.PI * r;
   const pct = total ? done / total : 0;
   return (
-    <div className="relative size-[116px] flex-none">
-      <svg viewBox="0 0 116 116" className="size-full -rotate-90" aria-hidden>
-        <circle cx="58" cy="58" r={r} strokeWidth="11" className="fill-white stroke-[rgba(120,60,20,.1)] dark:fill-transparent dark:stroke-white/20" />
-        <circle cx="58" cy="58" r={r} fill="none" stroke="#ff570a" strokeWidth="11" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - pct)} className="transition-[stroke-dashoffset]" />
+    <div className="relative size-[92px] flex-none">
+      <svg viewBox="0 0 92 92" className="size-full -rotate-90" aria-hidden>
+        <circle cx="46" cy="46" r={r} strokeWidth="12" className="fill-white stroke-[#f1e9e3] dark:fill-transparent dark:stroke-white/20" />
+        {pct > 0 && <circle cx="46" cy="46" r={r} fill="none" stroke="#ff570a" strokeWidth="12" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - pct)} className="transition-[stroke-dashoffset]" />}
       </svg>
-      <div className="absolute inset-0 grid place-items-center text-[28px] font-extrabold tracking-tight text-stone-900">
+      <div className="absolute inset-0 grid place-items-center text-[24px] font-extrabold tracking-tight text-stone-900">
         {done}/{total}
       </div>
     </div>
@@ -94,7 +95,7 @@ export function OnboardingCard({ communityId, data, onExplore }: { communityId: 
           </div>
           <ul className="m-0 flex min-w-[260px] max-w-[460px] flex-1 list-none flex-col gap-2.5 p-0 pr-[170px] max-[900px]:pr-0">
             {data.steps.map((s) => (
-              <li key={s.key} className="flex items-center gap-3 rounded-2xl bg-white/90 px-3.5 py-2.5 shadow-[0_6px_18px_rgba(120,60,20,.08)]">
+              <li key={s.key} className="flex items-center gap-3 rounded-2xl bg-white/90 px-3.5 py-2.5 shadow-[0_2px_8px_rgba(120,60,20,.06)]">
                 <span aria-hidden className={`grid size-6 flex-none place-items-center rounded-full ${s.done ? 'bg-brand' : 'border-[1.5px] border-stone-300 bg-white dark:border-white/40 dark:bg-transparent'}`}>
                   {s.done && <MaterialIcon name="check" size={16} color="#fff" weight={700} />}
                 </span>
@@ -103,7 +104,7 @@ export function OnboardingCard({ communityId, data, onExplore }: { communityId: 
                 <button
                   type="button"
                   onClick={() => act(s.key)}
-                  className={`h-9 flex-none rounded-xl px-4 text-[13.5px] font-bold ${s.done ? 'bg-stone-200 text-stone-700 hover:bg-stone-300' : 'border-[1.5px] border-brand bg-white text-brand hover:bg-brand-soft'}`}
+                  className={`h-9 flex-none rounded-xl px-4 text-[13.5px] font-bold ${s.done ? 'bg-[#e8e2dd] text-stone-700 hover:bg-[#ddd5ce]' : 'border-[1.5px] border-brand bg-white text-brand hover:bg-brand-soft'}`}
                 >
                   {t(`onboarding.steps.${STEP_LABEL[s.key]}.${s.done ? 'again' : 'cta'}`)}
                 </button>

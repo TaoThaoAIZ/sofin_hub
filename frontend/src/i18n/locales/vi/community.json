@@ -461,6 +461,7 @@
       "loadingLessons": "Đang tải bài học…",
       "noLessons": "Module chưa có bài học.",
       "lessonMinutes": "{{n}} phút",
+      "dragLesson": "Kéo để đổi vị trí bài học",
       "lessonUp": "Đưa bài học lên",
       "lessonDown": "Đưa bài học xuống",
       "editLesson": "Sửa bài học",

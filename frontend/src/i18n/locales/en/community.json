@@ -461,6 +461,7 @@
       "loadingLessons": "Loading lessons…",
       "noLessons": "This module has no lessons yet.",
       "lessonMinutes": "{{n}} min",
+      "dragLesson": "Drag to reorder lesson",
       "lessonUp": "Move lesson up",
       "lessonDown": "Move lesson down",
       "editLesson": "Edit lesson",

@@ -139,11 +139,11 @@ function CommunityProgram() {
             {!rateValid && <p role="alert" className="m-0 mt-2 text-[12.5px] text-red-600">{t('referral.rateErr', { max: fmtPct(p.maxRateBps) })}</p>}
             <ErrorNote message={save.isError ? errText(save.error) : null} />
             {p.owner && (
-              <div className="mt-4 grid grid-cols-3 gap-3 text-center max-sm:grid-cols-1">
-                <Kpi label={t('referral.ownerReferrers')} value={String(p.owner.referrers)} />
-                <Kpi label={t('referral.ownerReferred')} value={String(p.owner.referred)} />
-                <Kpi label={t('referral.ownerCommission')} value={formatCents(p.owner.commissionCents)} />
-              </div>
+              <p className="mt-4 mb-0 flex flex-wrap gap-x-5 gap-y-1 text-[13px] text-stone-600">
+                <span>{t('referral.ownerReferrers')}: <b className="text-stone-900">{p.owner.referrers}</b></span>
+                <span>{t('referral.ownerReferred')}: <b className="text-stone-900">{p.owner.referred}</b></span>
+                <span>{t('referral.ownerCommission')}: <b className="text-stone-900">{formatCents(p.owner.commissionCents)}</b></span>
+              </p>
             )}
           </div>
         )}
@@ -161,56 +161,24 @@ function CommunityProgram() {
               </button>
             </div>
             <p className="mt-2 mb-0 text-[12.5px] text-stone-500">{t('referral.howItWorks', { pct: fmtPct(p.rateBps) })}</p>
+            {p.stats && (
+              <p className="mt-3 mb-0 flex flex-wrap gap-x-5 gap-y-1 text-[13px] text-stone-600">
+                <span>{t('referral.kpiReferred')}: <b className="text-stone-900">{p.stats.referred}</b></span>
+                <span>{t('referral.kpiPaying')}: <b className="text-stone-900">{p.stats.paying}</b></span>
+                <span>{t('referral.kpiCommission')}: <b className="text-stone-900">{formatCents(p.stats.commissionCents)}</b></span>
+                <span>{t('referral.kpiPending')}: <b className="text-stone-900">{formatCents(p.stats.pendingCents)}</b> · {t('referral.payoutOn', { date: formatDate(p.stats.payoutOn) })}</span>
+              </p>
+            )}
           </div>
         )}
         {!p.enabled && !p.isOwner && <p className="mt-4 mb-0 text-sm text-stone-600">{t('referral.disabledMember')}</p>}
       </section>
 
-      {p.enabled && p.stats && (
-        <>
-          <div className="grid grid-cols-4 gap-3 max-[900px]:grid-cols-2">
-            <Kpi label={t('referral.kpiReferred')} value={String(p.stats.referred)} />
-            <Kpi label={t('referral.kpiPaying')} value={String(p.stats.paying)} />
-            <Kpi label={t('referral.kpiCommission')} value={formatCents(p.stats.commissionCents)} />
-            <Kpi label={t('referral.kpiPending')} value={formatCents(p.stats.pendingCents)} note={t('referral.payoutOn', { date: formatDate(p.stats.payoutOn) })} />
-          </div>
-
-          <section className="glass rounded-3xl p-6">
-            <h2 className="m-0 text-[17px] font-extrabold">{t('referral.listTitle')}</h2>
-            {p.referred.length === 0 ? (
-              <p className="mt-3 mb-0 text-sm text-stone-500">{t('referral.listEmpty')}</p>
-            ) : (
-              <ul className="mt-3 mb-0 flex list-none flex-col divide-y divide-[rgba(120,60,20,.08)] p-0">
-                {p.referred.map((r) => (
-                  <li key={r.userId} className="flex flex-wrap items-center gap-3 py-2.5 text-[14px]">
-                    <span className="min-w-0 flex-1 truncate font-semibold">{r.name}</span>
-                    <span className="text-[12.5px] text-stone-500">{formatDate(r.signedUpAt)}</span>
-                    <span className={`rounded-lg px-2.5 py-1 text-[12px] font-bold ${r.status === 'paid' ? 'bg-[#dcfce7] text-[#15803d]' : 'bg-stone-100 text-stone-600'}`}>
-                      {r.status === 'paid' ? t('referral.statusPaid') : t('referral.statusNone')}
-                    </span>
-                    <span className="w-[110px] text-right font-bold tabular-nums">{r.earnedCents > 0 ? formatCents(r.earnedCents) : '—'}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        </>
-      )}
     </div>
   );
 }
 
-function Kpi({ label, value, note }: { label: string; value: string; note?: string }) {
-  return (
-    <div className="glass rounded-2xl p-4">
-      <div className="text-[12.5px] text-stone-500">{label}</div>
-      <div className="mt-1 text-[22px] font-extrabold tabular-nums">{value}</div>
-      {note && <div className="mt-0.5 text-[11.5px] text-stone-400">{note}</div>}
-    </div>
-  );
-}
-
-/** Trang "Giới thiệu & hoa hồng" trong cộng đồng: chương trình giới thiệu của CỘNG ĐỒNG này + khối giới thiệu nền tảng (có rút tiền hoa hồng). */
+/** Trang "Giới thiệu & hoa hồng" trong cộng đồng: bố cục thiết kế (giới thiệu nền tảng + rút tiền) và một thẻ gọn cho chương trình của CỘNG ĐỒNG này. */
 export function CommunityReferralTab() {
   // Trang này không dùng ảnh nền đầu trang (xem body.no-page-bg ở index.css).
   useEffect(() => {
@@ -219,10 +187,11 @@ export function CommunityReferralTab() {
   }, []);
   return (
     <div className="flex flex-col gap-[18px]">
-      <CommunityProgram />
+      {/* Bố cục theo thiết kế: hero + link, 4 chỉ số, bảng người giới thiệu + rút tiền, quy trình rút tiền. */}
       <ToastProvider>
         <PlatformReferral kind="member" withdraw showPayoutLink={false} />
       </ToastProvider>
+      <CommunityProgram />
     </div>
   );
 }
