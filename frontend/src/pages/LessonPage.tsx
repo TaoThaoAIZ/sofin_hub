@@ -363,7 +363,7 @@ export function LessonPage() {
             {(l.quiz || l.hasSurvey) && (
               <section className="mt-5 flex flex-wrap items-center gap-3 rounded-2xl border border-[rgba(120,60,20,.12)] bg-[#fffaf5] p-4 dark:border-white/10 dark:bg-white/[.05]" aria-label={t('lesson.test.title')}>
                 <MaterialIcon name="quiz" size={26} filled color="#ff570a" />
-                <div className="min-w-0 flex-1">
+                <div className="min-w-[170px] flex-1">
                   <div className="text-[15px] font-extrabold">{t('lesson.test.title')}</div>
                   <div className="text-[12.5px] text-stone-500">
                     {l.quiz ? (l.quiz.passed ? t('lesson.test.quizPassed') : t('quiz.passRule', { n: l.quiz.questionCount, pct: l.quiz.passPercent })) : t('lesson.test.surveyOnly')}
@@ -371,11 +371,11 @@ export function LessonPage() {
                   </div>
                 </div>
                 {l.video?.required && !l.video.watched ? (
-                  <button type="button" disabled className={`${primaryBtn} disabled:cursor-not-allowed disabled:opacity-60`} title={t('lesson.videoMustWatch')}>
+                  <button type="button" disabled className={`${primaryBtn} max-sm:w-full max-sm:justify-center disabled:cursor-not-allowed disabled:opacity-60`} title={t('lesson.videoMustWatch')}>
                     <MaterialIcon name="lock" size={18} color="#fff" /> {t('lesson.test.locked')}
                   </button>
                 ) : (
-                  <Link to={lessonQuizPath(communityId, l.id)} className={primaryBtn}>
+                  <Link to={lessonQuizPath(communityId, l.id)} className={`${primaryBtn} max-sm:w-full max-sm:justify-center`}>
                     {l.quiz?.passed ? t('lesson.test.review') : t('lesson.test.start')} <MaterialIcon name="arrow_forward" size={18} color="#fff" />
                   </Link>
                 )}

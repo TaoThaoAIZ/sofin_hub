@@ -36,13 +36,14 @@ export const SurveyEditor = forwardRef<DraftEditorHandle, { communityId: string;
 
   const survey = surveyQ.data?.survey;
   useEffect(() => {
-    if (surveyQ.isSuccess && !loaded) {
+    // Chỉ nạp khi dữ liệu mới nhất đã về: mở lại hộp thoại sau khi lưu có thể còn bản cache cũ (đã đánh dấu cũ, đang tải lại).
+    if (surveyQ.isSuccess && !surveyQ.isFetching && !loaded) {
       /* eslint-disable react-hooks/set-state-in-effect */
       setQuestions((survey?.questions ?? []).map((q) => ({ id: q.id, text: q.text, type: q.type, options: [...q.options], required: q.required, allowText: !!q.allowText || q.type === 'text' })));
       setLoaded(true);
       /* eslint-enable react-hooks/set-state-in-effect */
     }
-  }, [surveyQ.isSuccess, survey, loaded]);
+  }, [surveyQ.isSuccess, surveyQ.isFetching, survey, loaded]);
 
   // KHÔNG tự lưu: thay đổi chỉ được lưu khi người dùng bấm "Lưu bài học" (LessonEditor gọi `save()` qua ref); bấm X là bỏ.
   const dirty = useRef(false);
@@ -84,7 +85,7 @@ export const SurveyEditor = forwardRef<DraftEditorHandle, { communityId: string;
     edit(i, { type, options: type === 'text' ? [] : q.options, allowText: type === 'text' ? true : q.allowText || q.options.length === 0 });
   };
 
-  if (surveyQ.isPending) return <p className="text-sm text-stone-400">{t('survey.loading')}</p>;
+  if (surveyQ.isPending || (!loaded && surveyQ.isFetching)) return <p className="text-sm text-stone-400">{t('survey.loading')}</p>;
   if (surveyQ.isError) return <p role="alert" className="text-sm text-red-600">{errText(surveyQ.error)}</p>;
 
   return (

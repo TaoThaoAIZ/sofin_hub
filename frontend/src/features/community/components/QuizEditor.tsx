@@ -35,7 +35,8 @@ export const QuizEditor = forwardRef<DraftEditorHandle, { communityId: string; l
 
   const quiz = quizQ.data?.quiz;
   useEffect(() => {
-    if (quizQ.isSuccess && !loaded) {
+    // Chỉ nạp khi dữ liệu mới nhất đã về: mở lại hộp thoại sau khi lưu có thể còn bản cache cũ (đã đánh dấu cũ, đang tải lại).
+    if (quizQ.isSuccess && !quizQ.isFetching && !loaded) {
       // Nạp một lần từ server (mod+ nhận kèm correctIndex).
       /* eslint-disable react-hooks/set-state-in-effect */
       setQuestions((quiz?.questions ?? []).map((q) => ({ text: q.text, options: [...q.options], correctIndex: q.correctIndex ?? 0 })));
@@ -43,7 +44,7 @@ export const QuizEditor = forwardRef<DraftEditorHandle, { communityId: string; l
       setLoaded(true);
       /* eslint-enable react-hooks/set-state-in-effect */
     }
-  }, [quizQ.isSuccess, quiz, loaded]);
+  }, [quizQ.isSuccess, quizQ.isFetching, quiz, loaded]);
 
   // KHÔNG tự lưu: thay đổi chỉ được lưu khi người dùng bấm "Lưu bài học" (LessonEditor gọi `save()` qua ref); bấm X là bỏ.
   const dirty = useRef(false);
@@ -77,7 +78,7 @@ export const QuizEditor = forwardRef<DraftEditorHandle, { communityId: string; l
     setQuestions((qs) => qs.map((q, j) => (j === i ? { ...q, ...patch } : q)));
   };
 
-  if (quizQ.isPending) return <p className="text-sm text-stone-400">{t('quiz.loading')}</p>;
+  if (quizQ.isPending || (!loaded && quizQ.isFetching)) return <p className="text-sm text-stone-400">{t('quiz.loading')}</p>;
   if (quizQ.isError) return <p role="alert" className="text-sm text-red-600">{errText(quizQ.error)}</p>;
 
   return (

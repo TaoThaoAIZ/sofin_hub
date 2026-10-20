@@ -124,11 +124,11 @@ export function CommunitiesTab() {
                 e.preventDefault();
                 onDrop(c);
               }}
-              className={`flex items-center gap-4 border-b border-[#f3eee9] py-[18px] ${dragId === c.id ? 'bg-[#fff8f3]' : ''}`}
+              className={`flex items-center gap-4 border-b border-[#f3eee9] py-[18px] max-md:flex-wrap max-md:gap-x-3 max-md:gap-y-3 ${dragId === c.id ? 'bg-[#fff8f3]' : ''}`}
             >
               <MaterialIcon name="drag_indicator" size={22} color="#c7bfb8" className="cursor-grab" />
               <CommunityLogo name={c.title} seed={c.id} size={60} src={c.logoUrl} />
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 max-md:min-w-[150px]">
                 <div className="flex flex-wrap items-center gap-2.5">
                   <span className="text-[16.5px] font-bold">{c.title}</span>
                   <span className={`rounded-lg px-2.5 py-1 text-[12.5px] font-bold whitespace-nowrap ${owner ? 'bg-[#1e293b] text-white' : 'bg-[#dcfce7] text-[#15803d]'}`}>{roleText(c)}</span>
@@ -136,7 +136,7 @@ export function CommunitiesTab() {
                 </div>
                 <div className="mt-1 text-sm leading-normal text-stone-500">{lineText(c)}</div>
               </div>
-              <div className="flex flex-none items-center gap-3">
+              <div className="flex flex-none items-center gap-3 max-md:w-full max-md:justify-end">
                 {owner ? (
                   <Link to={`/communities/${c.id}/community/cai-dat`} title={t('communitiesTab.communitySettings')} className={SIDE_BTN}>
                     <MaterialIcon name="settings" size={20} />

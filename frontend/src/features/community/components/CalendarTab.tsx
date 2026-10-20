@@ -30,7 +30,7 @@ const mondayOf = (d: Date) => {
 const timeOf = (iso: string) => new Date(iso).toLocaleTimeString(currentLocale(), { hour: '2-digit', minute: '2-digit' });
 
 const toolBtn =
-  'flex h-11 items-center gap-2 rounded-xl border border-[rgba(120,60,20,.12)] bg-white px-[18px] text-sm font-medium shadow-[0_1px_2px_rgba(120,60,20,.05)] hover:bg-[#fff7f0]';
+  'flex h-11 items-center gap-2 rounded-xl border border-[rgba(120,60,20,.12)] bg-white px-[18px] text-sm font-medium shadow-[0_1px_2px_rgba(120,60,20,.05)] hover:bg-[#fff7f0] max-md:h-10 max-md:px-3 max-md:text-[13px]';
 
 function buildDays(view: View, cur: Date): Date[] {
   if (view === 'day') return [cur];
@@ -100,7 +100,7 @@ export function CalendarTab() {
       <PageBanner image="cal-hero-bg.webp" icon="calendar_month" title={t('calendar.title')} subtitle={t('calendar.subtitle')} />
 
       <section className="glass rounded-3xl p-4">
-        <div className="mb-4 flex flex-wrap items-center gap-4">
+        <div className="mb-4 flex flex-wrap items-center gap-4 max-md:gap-2.5">
           <button onClick={() => setCur(today)} className={toolBtn}>
             {t('calendar.today')}
           </button>
@@ -140,7 +140,7 @@ export function CalendarTab() {
               {t('calendar.filterBtn')}
             </button>
             {filterOpen && (
-              <div className="absolute right-0 z-20 mt-2 w-52 rounded-xl border border-[rgba(120,60,20,.12)] bg-white p-1.5 shadow-lg">
+              <div className="absolute right-0 z-20 mt-2 w-52 rounded-xl max-md:right-auto max-md:left-0 border border-[rgba(120,60,20,.12)] bg-white p-1.5 shadow-lg">
                 {FILTERS.map((f) => (
                   <button
                     key={f}
