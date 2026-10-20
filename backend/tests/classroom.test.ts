@@ -75,7 +75,11 @@ describe('lớp học', () => {
     assert.equal((await c.call('GET', '/courses/fin/certificate', { token: member2!.token })).status, 403);
   });
 
-  const post = (path: string, token: string | undefined, body?: unknown) => c.call('POST', base + path, { token, body });
+  const post = async (path: string, token: string | undefined, body?: unknown) => {
+    // Hoàn thành bài đòi xem hết video (nếu có): các test không bàn về video thì báo "đã xem" trước.
+    if (/\/lessons\/[^/]+\/complete$/.test(path)) await c.call('POST', base + path.replace(/\/complete$/, '/watched'), { token });
+    return c.call('POST', base + path, { token, body });
+  };
 
   it('401 khi thiếu token, 403 khi member quản lý nội dung', async () => {
     assert.equal((await c.call('GET', `${base}/modules`)).status, 401);

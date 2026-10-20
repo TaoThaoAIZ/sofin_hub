@@ -433,7 +433,7 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
       const isLocked = (id: string | undefined) => !!id && states.some((x) => x.lockedLessons.has(id));
       // Tóm tắt trắc nghiệm đi kèm truy vấn findLesson (không thêm truy vấn khi bài không có trắc nghiệm).
       const q = lesson.quiz;
-      const quiz = q ? { questionCount: q.questionCount, passPercent: q.passPercent, passed: await quizStore.hasPassed(q.id, userId), required: !staff } : null;
+      const quiz = q ? { questionCount: q.questionCount, passPercent: q.passPercent, passed: await quizStore.hasPassed(q.id, userId), required: true } : null;
       return {
         ...lessonView(lesson, doneIds),
         learningCourseId: course.id,
@@ -446,8 +446,9 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
         prevLessonLocked: isLocked(flat[i - 1]),
         nextLessonLocked: isLocked(flat[i + 1]),
         quiz,
-        surveyBlocks: !staff && !doneIds.has(lessonId) && !!lesson.survey && (await surveyStore.unansweredRequired(lesson.survey.id, lesson.survey.requiredIds, userId)),
+        surveyBlocks: !doneIds.has(lessonId) && !!lesson.survey && (await surveyStore.unansweredRequired(lesson.survey.id, lesson.survey.requiredIds, userId)),
         hasSurvey: !!lesson.survey,
+        surveyRequired: !!lesson.survey && lesson.survey.requiredIds.length > 0,
         video: { required: !!lesson.videoUrl, watched: !lesson.videoUrl || (await lessonWatchStore.hasWatched(userId, lessonId)) },
       };
     },
@@ -470,8 +471,12 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
       const s = states.find((x) => x.module.id === lesson.moduleId);
       if (!s) throw HttpError.notFound('Không tìm thấy module');
       assertLessonOpen(s, lesson);
-      // Bài có trắc nghiệm: muốn ĐÁNH DẤU hoàn thành phải đã đạt điểm (bỏ đánh dấu thì không cần). Mod+ không bị bắt buộc.
-      if (!staff && !doneIds.has(lessonId)) {
+      // Muốn ĐÁNH DẤU hoàn thành phải học hết bài (bỏ đánh dấu thì không cần). Áp dụng cho MỌI người, kể cả mod/chủ cộng đồng:
+      // xem hết video (nếu có) -> đạt trắc nghiệm (nếu có) -> trả lời các câu khảo sát bắt buộc (nếu có).
+      if (!doneIds.has(lessonId)) {
+        if (lesson.videoUrl && !(await lessonWatchStore.hasWatched(userId, lessonId))) {
+          throw HttpError.coded(409, 'VIDEO_REQUIRED', 'Bạn cần xem hết video của bài học trước khi hoàn thành');
+        }
         const q = lesson.quiz;
         if (q && !(await quizStore.hasPassed(q.id, userId))) {
           throw HttpError.coded(409, 'QUIZ_REQUIRED', `Bạn cần đạt tối thiểu ${q.passPercent}% bài trắc nghiệm để hoàn thành bài học này`);

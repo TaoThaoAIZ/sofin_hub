@@ -246,7 +246,9 @@ export function LessonPage() {
   const docFiles = (l.attachments ?? []).filter((a) => a.kind !== 'slide');
   const pct = progress.data?.percent ?? 0;
   // Bài có trắc nghiệm bắt buộc: chưa đạt thì chưa được đánh dấu hoàn thành (bỏ đánh dấu thì vẫn được).
-  const quizBlocks = !!l.quiz?.required && !l.quiz.passed && !l.completed;
+  const quizBlocks = !!l.quiz && !l.quiz.passed && !l.completed;
+  // Xem hết video (nếu có): chưa xem hết thì chưa được hoàn thành bài.
+  const videoBlocks = !!l.video?.required && !l.video.watched && !l.completed;
   // Khảo sát có câu bắt buộc chưa trả lời: chưa được hoàn thành bài.
   const surveyBlocks = !!l.surveyBlocks && !l.completed;
 
@@ -256,6 +258,14 @@ export function LessonPage() {
   };
 
   watchedCb.current = onVideoEnded;
+
+  // Điều kiện để bấm "Hoàn thành": học hết bài theo thứ tự xem video -> đạt trắc nghiệm -> khảo sát bắt buộc.
+  const requirements = [
+    ...(l.video?.required ? [{ key: 'video', done: !!l.video.watched, label: t('lesson.req.video') }] : []),
+    ...(l.quiz ? [{ key: 'quiz', done: l.quiz.passed, label: t('lesson.req.quiz', { pct: l.quiz.passPercent }) }] : []),
+    ...(l.surveyRequired ? [{ key: 'survey', done: !l.surveyBlocks, label: t('lesson.req.survey') }] : []),
+  ];
+  const locked = videoBlocks || quizBlocks || surveyBlocks;
 
   const onToggle = () =>
     toggle.mutate(l.id, {
@@ -376,8 +386,8 @@ export function LessonPage() {
                 <button
                   type="button"
                   onClick={onToggle}
-                  disabled={toggle.isPending || quizBlocks || surveyBlocks}
-                  title={quizBlocks ? t('quiz.needPass', { pct: l.quiz?.passPercent }) : surveyBlocks ? t('survey.needRequired') : undefined}
+                  disabled={toggle.isPending || locked}
+                  title={locked ? t('lesson.reqTitle') : undefined}
                   className={`${l.completed ? ghostBtn : primaryBtn} disabled:cursor-not-allowed disabled:opacity-60`}
                 >
                   <MaterialIcon name={l.completed ? 'undo' : 'check_circle'} size={19} color={l.completed ? undefined : '#fff'} />
@@ -388,8 +398,19 @@ export function LessonPage() {
                   <MaterialIcon name="check_circle" size={17} filled color="#059669" /> {t('lesson.youCompleted')}
                 </p>
               )}
-              {quizBlocks && <p className="mt-2 mb-0 text-[12.5px] text-stone-500">{t('quiz.needPass', { pct: l.quiz?.passPercent })}</p>}
-              {surveyBlocks && <p className="mt-2 mb-0 text-[12.5px] text-stone-500">{t('survey.needRequired')}</p>}
+              {requirements.length > 0 && !l.completed && (
+                <div className="mt-1 w-full rounded-xl bg-[rgba(120,60,20,.05)] px-3.5 py-3 dark:bg-white/[.05]">
+                  <div className="mb-1.5 text-[12.5px] font-bold text-stone-600">{t('lesson.reqTitle')}</div>
+                  <ul className="m-0 flex list-none flex-col gap-1 p-0">
+                    {requirements.map((r) => (
+                      <li key={r.key} className={`flex items-center gap-2 text-[13px] ${r.done ? 'text-emerald-600' : 'text-stone-600'}`}>
+                        <MaterialIcon name={r.done ? 'check_circle' : 'radio_button_unchecked'} size={17} filled={r.done} color="currentColor" />
+                        {r.label}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
 
             <div className="mt-2">

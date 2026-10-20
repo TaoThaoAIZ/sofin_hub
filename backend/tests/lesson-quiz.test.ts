@@ -98,13 +98,15 @@ describe('lớp học: trắc nghiệm theo bài học', () => {
     assert.equal((await call('POST', `/lessons/${l}/quiz/attempt`, stranger.token, { answers: [0, 0] })).status, 403);
   });
 
-  it('mod+ thấy đáp án để sửa và không bị bắt buộc đạt điểm; sửa bộ câu hỏi xóa lượt làm cũ nhưng không hủy bài đã hoàn thành', async () => {
+  it('mod+ thấy đáp án để sửa và cũng phải đạt điểm mới hoàn thành; sửa bộ câu hỏi xóa lượt làm cũ nhưng không hủy bài đã hoàn thành', async () => {
     const l = await newLesson(await newModule());
     await put(l, { passPercent: 100, questions: [q('x', 1)] });
     const staffView = (await call('GET', `/lessons/${l}/quiz`, mod.token)).body.data;
     assert.equal(staffView.canEdit, true);
     assert.equal(staffView.quiz.questions[0].correctIndex, 1);
-    assert.equal((await call('GET', `/lessons/${l}`, mod.token)).body.data.quiz.required, false);
+    assert.equal((await call('GET', `/lessons/${l}`, mod.token)).body.data.quiz.required, true);
+    assert.equal((await call('POST', `/lessons/${l}/complete`, mod.token)).status, 409);
+    await call('POST', `/lessons/${l}/quiz/attempt`, mod.token, { answers: [1] });
     assert.equal((await call('POST', `/lessons/${l}/complete`, mod.token)).status, 200);
 
     await call('POST', `/lessons/${l}/quiz/attempt`, a.token, { answers: [1] });

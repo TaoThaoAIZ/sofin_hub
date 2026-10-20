@@ -280,6 +280,7 @@ export interface LessonDetail extends ClassroomLesson {
   quiz: { questionCount: number; passPercent: number; passed: boolean; required: boolean } | null;
   surveyBlocks?: boolean;
   hasSurvey?: boolean;
+  surveyRequired?: boolean;
   /** required = phải xem hết video mới làm được trắc nghiệm (mod+ không bị bắt buộc); watched = đã xem hết. */
   video?: { required: boolean; watched: boolean };
 }

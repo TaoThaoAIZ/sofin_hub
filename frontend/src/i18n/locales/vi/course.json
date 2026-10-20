@@ -124,6 +124,12 @@
     }
   },
   "lesson": {
+    "reqTitle": "Để hoàn thành bài học, bạn cần:",
+    "req": {
+      "video": "Xem hết video bài học",
+      "quiz": "Đạt bài trắc nghiệm (từ {{pct}}% trở lên)",
+      "survey": "Trả lời các câu khảo sát bắt buộc"
+    },
     "videoSkipped": "Bạn đã tua qua video nên chưa tính là xem hết. Hãy xem lại video liên tục từ đầu đến cuối.",
     "videoWatched": "Bạn đã xem hết video bài học.",
     "videoMustWatch": "Hãy xem hết video của bài học để mở bài trắc nghiệm.",

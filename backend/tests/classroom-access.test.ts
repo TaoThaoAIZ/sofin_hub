@@ -13,7 +13,11 @@ describe('lớp học: truy cập module', () => {
   let b: { token: string; id: string };
   let flush: () => Promise<void>;
 
-  const call = (method: string, path: string, token: string, body?: unknown) => c.call(method, base + path, { token, body });
+  const call = async (method: string, path: string, token: string, body?: unknown) => {
+    // Hoàn thành bài đòi xem hết video (nếu có): các test không bàn về video thì báo "đã xem" trước.
+    if (method === 'POST' && /\/lessons\/[^/]+\/complete$/.test(path)) await c.call('POST', base + path.replace(/\/complete$/, '/watched'), { token });
+    return c.call(method, base + path, { token, body });
+  };
   const newModule = async (body: Record<string, unknown>) => (await call('POST', '/modules', mod.token, { title: 'M', description: 'd', ...body })).body.data.id as string;
   const newLesson = async (moduleId: string, body: Record<string, unknown> = {}) =>
     (await call('POST', `/modules/${moduleId}/lessons`, mod.token, { title: 'L', type: 'text', durationMin: 1, body: 'noi dung', ...body })).body.data.id as string;

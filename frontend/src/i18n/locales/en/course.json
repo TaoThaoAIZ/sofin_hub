@@ -124,6 +124,12 @@
     }
   },
   "lesson": {
+    "reqTitle": "To complete this lesson you need to:",
+    "req": {
+      "video": "Watch the whole lesson video",
+      "quiz": "Pass the quiz ({{pct}}% or higher)",
+      "survey": "Answer the required survey questions"
+    },
     "videoSkipped": "You skipped through the video, so it does not count as watched. Please watch it from start to finish.",
     "videoWatched": "You have watched the whole lesson video.",
     "videoMustWatch": "Watch the whole lesson video to unlock the quiz.",

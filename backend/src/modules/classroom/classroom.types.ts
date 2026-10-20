@@ -110,6 +110,8 @@ export interface ClassroomLessonDetail extends ClassroomLessonView {
   surveyBlocks: boolean;
   /** Bài có khảo sát (dù bắt buộc hay không). */
   hasSurvey: boolean;
+  /** Khảo sát có câu BẮT BUỘC (dù người xem đã trả lời hay chưa). */
+  surveyRequired: boolean;
   /** Video bài học: `required` = bài có video, phải xem hết video mới làm được trắc nghiệm (áp dụng cho mọi người); `watched` = đã xem hết. */
   video: { required: boolean; watched: boolean };
 }
