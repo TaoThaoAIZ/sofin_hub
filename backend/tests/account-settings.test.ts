@@ -289,7 +289,9 @@ describe('cài đặt hồ sơ & bảo mật', () => {
 
     it('đăng nhập khi bật 2FA: trả vé (không phiên/cookie), bước 2 đúng mã mới cấp phiên; sai mã/vé giả/vé là access token: 401; mã đã dùng không dùng lại được', async () => {
       const { u, secret, totpAt } = await setup('tf2');
-      await call('POST', '/auth/2fa/enable', { token: u.token, body: { code: totpAt(secret) } });
+      // Giữ đúng mã đã dùng để bật 2FA: nếu giữa hai lệnh gọi rơi qua ranh giới 30 giây thì mã "của bước hiện tại" đã đổi và test sẽ chập chờn.
+      const enableCode = totpAt(secret);
+      await call('POST', '/auth/2fa/enable', { token: u.token, body: { code: enableCode } });
 
       const step1 = await call('POST', '/auth/login', { body: { email: u.email, password: u.password } });
       assert.equal(step1.status, 200);
@@ -306,7 +308,7 @@ describe('cài đặt hồ sơ & bảo mật', () => {
       assert.equal((await call('POST', '/auth/login/2fa', { body: { ticket } })).status, 400);
 
       // Mã của bước hiện tại đã dùng để bật 2FA => từ chối (chống replay); dùng mã bước kế tiếp.
-      assert.equal((await call('POST', '/auth/login/2fa', { body: { ticket, code: totpAt(secret) } })).status, 401);
+      assert.equal((await call('POST', '/auth/login/2fa', { body: { ticket, code: enableCode } })).status, 401);
       const next = totpAt(secret, Date.now() + 30_000);
       const ok = await call('POST', '/auth/login/2fa', { body: { ticket, code: next } });
       assert.equal(ok.status, 200, JSON.stringify(ok.body));
