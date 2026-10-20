@@ -27,6 +27,9 @@ export interface UploadRecord {
   status: 'pending' | 'uploaded';
   /** true khi Platform Admin đã gỡ file: không còn phục vụ công khai. */
   removed?: boolean;
+  /** Bản web của video bài học (MediaConvert); undefined = chưa chuyển mã. */
+  webStatus?: 'processing' | 'ready' | 'failed';
+  webJobId?: string;
   createdAt: string;
 }
 

@@ -1,3 +1,4 @@
+import { webKeyOf } from './video-optimize.js';
 import {
   AbortMultipartUploadCommand,
   CompleteMultipartUploadCommand,
@@ -73,7 +74,7 @@ export interface StorageProvider {
    * URL đọc trực tiếp từ kho (S3 presigned GET, hỗ trợ Range): trình duyệt tải thẳng, không đi qua backend. Dùng cho video lớn.
    * Không có (đĩa local) = phục vụ qua GET /files/:key.
    */
-  signedReadUrl?(key: string, opts: { ttlSec: number; contentType: string }): Promise<string>;
+  signedReadUrl?(key: string, opts: { ttlSec: number; contentType: string; /** Đọc bản web (web/<khóa>.mp4) thay vì file gốc. */ web?: boolean }): Promise<string>;
   /** Có = trình duyệt upload thẳng lên kho (không đi qua backend). Không có (đĩa local) = luồng vé HMAC qua backend. */
   direct?: DirectUpload;
   createUploadTarget(input: { key: string; contentType: string; maxSize: number; userId: string }): UploadTarget;
@@ -187,10 +188,10 @@ export class S3Storage implements StorageProvider {
     private readonly sign: (cmd: object, ttlSec: number) => Promise<string> = (cmd, ttlSec) => getSignedUrl(client as S3Client, cmd as never, { expiresIn: ttlSec }),
   ) {}
 
-  signedReadUrl = (key: string, opts: { ttlSec: number; contentType: string }): Promise<string> => {
+  signedReadUrl = (key: string, opts: { ttlSec: number; contentType: string; web?: boolean }): Promise<string> => {
     assertKey(key);
     return this.sign(
-      new GetObjectCommand({ Bucket: this.bucket, Key: key, ResponseContentType: opts.contentType, ResponseCacheControl: 'private, max-age=3600' }),
+      new GetObjectCommand({ Bucket: this.bucket, Key: opts.web ? webKeyOf(key) : key, ResponseContentType: opts.web ? 'video/mp4' : opts.contentType, ResponseCacheControl: 'private, max-age=3600' }),
       opts.ttlSec,
     );
   };

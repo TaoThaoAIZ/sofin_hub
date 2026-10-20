@@ -8,6 +8,7 @@ import { prismaUploadRepository, type UploadRepository } from './uploads.reposit
 import type { CompleteInput, PresignInput } from './uploads.schema.js';
 import { storage as defaultStorage, type ByteRange, type StorageProvider } from './uploads.storage.js';
 import { consumeTicket, isTicketUsed, verifyUploadTicket, type UploadTicket } from './uploads.ticket.js';
+import { jobState, optimizeEnabled, startOptimizeJob } from './video-optimize.js';
 import { isReferencedByLiveMessage } from './uploads.access.js';
 import { EXT_TO_TYPE, FILE_URL_PREFIX, GENERIC_EXT, GENERIC_TYPE, IMAGE_TYPES, KEY_PATTERN, isCommunityPurpose, isStreamedPurpose, purposeRule, type UploadRecord } from './uploads.types.js';
 
@@ -154,6 +155,8 @@ export function createUploadService(repo: UploadRepository = prismaUploadReposit
         throw e;
       }
       await repo.update(key, { status: 'uploaded', size: rec.size });
+      // Video bài học: chuyển mã ngay để lúc học viên xem đã có bản web nhẹ + faststart.
+      if (rec.purpose === 'lesson_video') void this.ensureWebRendition({ ...rec, status: 'uploaded' }).catch((e) => console.error('[video] không tạo được job chuyển mã', key, e instanceof Error ? e.message : e));
       return { key, fileUrl: storage.publicUrl(key), size: rec.size, contentType: rec.contentType };
     },
 
@@ -258,10 +261,36 @@ export function createUploadService(repo: UploadRepository = prismaUploadReposit
      * Video bài học trên S3: trả URL presigned GET để trình duyệt tải thẳng từ S3 (tua/đệm nhanh, không qua backend + không kiểm quyền DB
      * ở từng Range). Gọi SAU khi đã kiểm quyền. null = không áp dụng (đĩa local / loại file khác) -> dùng URL ký qua backend.
      */
-    async directReadUrl(rec: UploadRecord, ttlSec: number): Promise<{ url: string; expiresAt: string } | null> {
+    async directReadUrl(rec: UploadRecord, ttlSec: number): Promise<{ url: string; expiresAt: string; optimizing?: boolean } | null> {
       if (!storage.signedReadUrl || rec.purpose !== 'lesson_video') return null;
+      // Có bản web (nhẹ + faststart) thì phát bản web; đang chuyển mã / lỗi thì phát tạm bản gốc.
+      const state = await this.ensureWebRendition(rec);
+      if (state === 'ready') {
+        const url = await storage.signedReadUrl(rec.key, { ttlSec, contentType: rec.contentType, web: true });
+        return { url, expiresAt: new Date(Date.now() + ttlSec * 1000).toISOString() };
+      }
       const url = await storage.signedReadUrl(rec.key, { ttlSec, contentType: rec.contentType });
-      return { url, expiresAt: new Date(Date.now() + ttlSec * 1000).toISOString() };
+      // Đang tối ưu: URL gốc vẫn dùng được lâu, nhưng báo hết hạn sau 2 phút để FE xin lại và chuyển sang bản web khi đã xong.
+      const expiresAt = new Date(Date.now() + (state === 'processing' ? 120 : ttlSec) * 1000).toISOString();
+      return { url, expiresAt, ...(state === 'processing' ? { optimizing: true } : {}) };
+    },
+
+    /**
+     * Bảo đảm video có bản web: chưa chuyển mã thì tạo job (cũng là cách tự "bù" cho video đã upload từ trước), đang chạy thì kiểm tra job.
+     * Trả trạng thái hiện tại; null = tính năng tắt (dev/test) hoặc kho không phải S3.
+     */
+    async ensureWebRendition(rec: UploadRecord): Promise<'processing' | 'ready' | 'failed' | null> {
+      if (!optimizeEnabled() || !storage.signedReadUrl) return null;
+      if (rec.webStatus === 'ready' || rec.webStatus === 'failed') return rec.webStatus;
+      if (rec.webStatus === 'processing' && rec.webJobId) {
+        const s = await jobState(rec.webJobId);
+        if (s !== 'processing') await repo.update(rec.key, { webStatus: s });
+        return s;
+      }
+      if (rec.status !== 'uploaded') return null;
+      const webJobId = await startOptimizeJob(rec.key);
+      await repo.update(rec.key, { webStatus: 'processing', webJobId });
+      return 'processing';
     },
 
     /** Bản ghi của file đã upload xong và chưa bị gỡ; undefined nếu không phục vụ được. */

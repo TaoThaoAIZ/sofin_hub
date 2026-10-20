@@ -1596,6 +1596,9 @@ model Upload {
   modAt       DateTime?
   modById     String?
   createdAt   DateTime      @default(now())
+  /// Bản web của video bài học (MediaConvert): null = chưa chuyển mã; processing | ready | failed. Bản web nằm ở web/<khóa không đuôi>.mp4.
+  webStatus   String?
+  webJobId    String?
 
   owner     User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   community Community? @relation(fields: [communityId], references: [id], onDelete: SetNull)

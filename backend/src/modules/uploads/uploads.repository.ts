@@ -27,6 +27,8 @@ const toDomain = (u: Upload): UploadRecord => ({
   ...(u.communityId ? { communityId: u.communityId, courseId: u.communityId } : {}),
   status: u.status,
   ...(u.removedAt ? { removed: true } : {}),
+  ...(u.webStatus ? { webStatus: u.webStatus as 'processing' | 'ready' | 'failed' } : {}),
+  ...(u.webJobId ? { webJobId: u.webJobId } : {}),
   createdAt: u.createdAt.toISOString(),
 });
 
@@ -60,6 +62,8 @@ export const prismaUploadRepository: UploadRepository = {
         ...(patch.size !== undefined ? { size: patch.size } : {}),
         ...(patch.filename !== undefined ? { filename: patch.filename } : {}),
         ...(patch.contentType !== undefined ? { contentType: patch.contentType } : {}),
+        ...(patch.webStatus !== undefined ? { webStatus: patch.webStatus } : {}),
+        ...(patch.webJobId !== undefined ? { webJobId: patch.webJobId } : {}),
       },
     });
   },

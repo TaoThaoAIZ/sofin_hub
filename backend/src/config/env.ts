@@ -84,6 +84,8 @@ const schema = z.object({
   // Có S3_BUCKET = lưu file ở S3 (bucket private, backend vẫn là cổng kiểm quyền); bỏ trống = LocalDiskStorage (UPLOAD_DIR).
   // Credentials lấy theo chuỗi mặc định của AWS SDK (IAM role của EC2/ECS) — KHÔNG đặt access key tĩnh vào .env.
   S3_BUCKET: z.string().optional().transform((v) => v?.trim() || undefined),
+  /** Role cho AWS MediaConvert (đọc bucket gốc, ghi web/*). Có biến này = tự chuyển mã video bài học sang bản web nhẹ + faststart. */
+  MEDIACONVERT_ROLE_ARN: z.string().optional().transform((v) => v?.trim() || undefined),
   S3_REGION: z.string().optional().transform((v) => v?.trim() || undefined),
 
   // --- State chia sẻ giữa các instance (SSE fan-out, vé, rate limit...). Bỏ trống = in-memory (đúng cho 1 instance). ---
