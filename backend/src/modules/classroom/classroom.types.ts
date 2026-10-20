@@ -106,6 +106,12 @@ export interface ClassroomLessonDetail extends ClassroomLessonView {
   nextLessonLocked: boolean;
   /** Trắc nghiệm của bài (null = không có). `required` = người xem phải đạt điểm mới hoàn thành được bài (mod+ không bị bắt buộc). */
   quiz: { questionCount: number; passPercent: number; passed: boolean; required: boolean } | null;
+  /** true khi bài có khảo sát với câu BẮT BUỘC mà người xem (không phải mod+) chưa trả lời: chưa được hoàn thành bài. */
+  surveyBlocks: boolean;
+  /** Bài có khảo sát (dù bắt buộc hay không). */
+  hasSurvey: boolean;
+  /** Video bài học: `required` = bài có video, phải xem hết video mới làm được trắc nghiệm (áp dụng cho mọi người); `watched` = đã xem hết. */
+  video: { required: boolean; watched: boolean };
 }
 
 export interface ClassroomProgress {

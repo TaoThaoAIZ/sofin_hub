@@ -54,6 +54,7 @@ export const SurveyEditor = forwardRef<DraftEditorHandle, { communityId: string;
     for (const [i, q] of questions.entries()) {
       if (!q.text.trim()) return t('surveyEditor.errText', { n: i + 1 });
       if (q.type === 'text') continue;
+      if (q.options.length === 0 && !q.allowText) return t('surveyEditor.errNoOptions', { n: i + 1 });
       if (q.options.some((o) => !o.trim())) return t('surveyEditor.errOption', { n: i + 1 });
       if (new Set(q.options.map((o) => o.trim().toLowerCase())).size !== q.options.length) return t('surveyEditor.errDup', { n: i + 1 });
     }
@@ -64,7 +65,7 @@ export const SurveyEditor = forwardRef<DraftEditorHandle, { communityId: string;
     save: async () => {
       if (!dirty.current) return;
       const r = await put.mutateAsync({
-        questions: questions.map((q) => ({ ...(q.id ? { id: q.id } : {}), text: q.text.trim(), type: q.type, options: q.type === 'text' ? [] : q.options.map((o) => o.trim()), required: q.required, allowText: q.type === 'text' ? true : q.allowText })),
+        questions: questions.map((q) => ({ ...(q.id ? { id: q.id } : {}), text: q.text.trim(), type: q.type, options: q.type === 'text' ? [] : q.options.map((o) => o.trim()), required: q.required, allowText: q.type === 'text' || q.options.length === 0 ? true : q.allowText })),
       });
       dirty.current = false;
       setSaved(true);
@@ -80,7 +81,7 @@ export const SurveyEditor = forwardRef<DraftEditorHandle, { communityId: string;
   };
   const changeType = (i: number, type: SurveyQuestionType) => {
     const q = questions[i]!;
-    edit(i, { type, options: type === 'text' ? [] : q.options.length >= 2 ? q.options : ['', ''] });
+    edit(i, { type, options: type === 'text' ? [] : q.options, allowText: type === 'text' ? true : q.allowText || q.options.length === 0 });
   };
 
   if (surveyQ.isPending) return <p className="text-sm text-stone-400">{t('survey.loading')}</p>;
@@ -123,11 +124,18 @@ export const SurveyEditor = forwardRef<DraftEditorHandle, { communityId: string;
                   <div key={oi} className="flex items-center gap-2">
                     <span aria-hidden className={`size-4 flex-none border-[1.5px] border-stone-300 ${q.type === 'single' ? 'rounded-full' : 'rounded'}`} />
                     <input value={o} maxLength={200} onChange={(e) => edit(i, { options: q.options.map((x, k) => (k === oi ? e.target.value : x)) })} placeholder={t('surveyEditor.optionPh', { n: oi + 1 })} aria-label={t('surveyEditor.optionPh', { n: oi + 1 })} className={`${inputCls} h-9`} />
-                    {q.options.length > 2 && (
-                      <button type="button" aria-label={t('surveyEditor.removeOption', { n: oi + 1 })} onClick={() => edit(i, { options: q.options.filter((_, k) => k !== oi) })} className="text-stone-400 hover:text-red-600">
-                        <MaterialIcon name="close" size={16} />
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      aria-label={t('surveyEditor.removeOption', { n: oi + 1 })}
+                      // Xóa hết lựa chọn thì tự bật ô nhập ý kiến khác (học viên chỉ nhập chữ), không để câu hỏi trống.
+                      onClick={() => {
+                        const next = q.options.filter((_, k) => k !== oi);
+                        edit(i, { options: next, ...(next.length === 0 ? { allowText: true } : {}) });
+                      }}
+                      className="text-stone-400 hover:text-red-600"
+                    >
+                      <MaterialIcon name="close" size={16} />
+                    </button>
                   </div>
                 ))}
                 {q.options.length < MAX_OPT && (
@@ -139,9 +147,10 @@ export const SurveyEditor = forwardRef<DraftEditorHandle, { communityId: string;
             )}
             {q.type !== 'text' && (
               <label className="mt-2 flex items-center gap-1.5 text-[12.5px]">
-                <input type="checkbox" checked={q.allowText} onChange={(e) => edit(i, { allowText: e.target.checked })} className="size-4 accent-brand" /> {t('surveyEditor.allowText')}
+                <input type="checkbox" checked={q.allowText || q.options.length === 0} disabled={q.options.length === 0} onChange={(e) => edit(i, { allowText: e.target.checked })} className="size-4 accent-brand" /> {t('surveyEditor.allowText')}
               </label>
             )}
+            {q.type !== 'text' && q.options.length === 0 && <p className="m-0 mt-1 text-[11.5px] text-stone-400">{t('surveyEditor.noOptionsHint')}</p>}
             {q.type === 'text' && <p className="m-0 mt-2 text-[11.5px] text-stone-400">{t('surveyEditor.textHint')}</p>}
           </div>
         ))}

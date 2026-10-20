@@ -75,3 +75,18 @@ def load(add):
     A("Avatar theo dữ liệu user", "Dãy avatar thành viên, bảng xếp hạng, danh sách thành viên, đánh giá và chủ cộng đồng hiển thị đúng ảnh/chữ cái của user (không còn màu cứng)", "Giao diện", "Trung bình", BASE,
       ["Mở trang cộng đồng: thẻ bên phải có dãy avatar", "Mở tab Thành viên, Bảng xếp hạng, Giới thiệu và phần Đánh giá của cộng đồng", "So sánh với ảnh đại diện đã đặt trong hồ sơ từng user"], "user có ảnh / chưa có ảnh",
       "User có ảnh: hiện đúng ảnh ở mọi nơi (kể cả avatar người đánh giá và chủ cộng đồng ở tab Giới thiệu); chưa có ảnh: hiện chữ cái đầu trên nền thương hiệu, không còn bảng màu pastel theo thứ tự; số thành viên và số avatar khớp nhau.")
+    A("Khảo sát bài học", "Câu khảo sát 'Bắt buộc trả lời' chặn hoàn thành bài cho tới khi học viên trả lời", "Chức năng", "Cao", "Bài có khảo sát với ít nhất 1 câu bắt buộc; đăng nhập học viên (không phải mod).",
+      ["Mở bài học, kéo xuống cuối trang", "Quan sát nút Hoàn thành khi chưa trả lời", "Trả lời đủ câu bắt buộc, bấm Gửi khảo sát", "Gọi trực tiếp POST /lessons/:id/complete khi chưa trả lời (API)"], "-",
+      "Chưa trả lời: nút Hoàn thành bị khóa kèm dòng nhắc, API trả 409 SURVEY_REQUIRED; trả lời xong nút mở và hoàn thành được, bài sau (học tuần tự) được mở; mod/chủ không bị chặn.")
+    A("Khảo sát bài học", "Câu hỏi có thể xóa hết lựa chọn; khi đó bắt buộc bật ô nhập ý kiến khác", "Chức năng", "Trung bình", "Mod đang soạn khảo sát.",
+      ["Thêm câu hỏi, bấm X xóa lần lượt mọi lựa chọn", "Quan sát ô 'Cho phép học viên nhập thêm ý kiến khác'", "Lưu bài học, đăng nhập học viên mở bài"], "-",
+      "Ô nhập ý kiến khác tự tick và bị khóa khi không còn lựa chọn; lưu được; học viên chỉ thấy ô nhập chữ dưới câu hỏi; gọi API với 0 lựa chọn và allowText=false trả 400.")
+    A("Giao diện dark mode", "Thẻ 'Chào mừng bạn trở lại' ở bảng tin đọc được trong dark mode", "Giao diện", "Thấp", BASE,
+      ["Bật giao diện tối", "Mở tab Cộng đồng (bảng tin) của cộng đồng chưa hiện onboarding"], "-",
+      "Thẻ có nền tối mờ như thẻ onboarding, tiêu đề/mô tả chữ sáng, 3 nút hành động nền mờ chữ sáng, không còn chữ trắng trên nền kem.")
+    A("Trắc nghiệm sau khi xem video", "Bài có video: phải xem hết video mới mở được trắc nghiệm; trắc nghiệm nằm ở trang riêng", "Chức năng", "Cao", "Bài học có video (YouTube/Vimeo/tải lên) và trắc nghiệm; đăng nhập học viên (không phải mod).",
+      ["Mở bài học, chưa xem video: quan sát khung 'Bài trắc nghiệm & khảo sát'", "Xem video đến hết (không tua)", "Bấm 'Làm trắc nghiệm'", "Làm xong bấm 'Về bài học để hoàn thành'", "Gọi trực tiếp POST /lessons/:id/quiz/attempt khi chưa xem hết video (API)"], "-",
+      "Chưa xem hết: nút khóa kèm dòng nhắc, API trả 409 VIDEO_REQUIRED; video chạy hết thì hiện 'Bạn đã xem hết video' và nút mở sang trang /trac-nghiem (trắc nghiệm + khảo sát), không còn nằm dồn dưới bài học; trạng thái đã xem được nhớ khi quay lại; mod/chủ không bị chặn.")
+    A("Giao diện mobile", "Mobile không còn thanh menu dưới; màn con có nút quay lại ở thanh trên", "Giao diện", "Cao", "Trình duyệt ở chế độ mobile (< 768px), đã đăng nhập.",
+      ["Mở trang chủ: kiểm tra không có thanh tab dưới", "Vào một cộng đồng > Lớp học > một bài học", "Bấm nút mũi tên quay lại ở thanh trên, và mở menu (icon ghi chú) để vào Trang chủ/Chat/Cộng đồng của tôi/Cá nhân"], "-",
+      "Không còn thanh tab Trang chủ/Cộng đồng/Chat/Cá nhân; màn chính (trang chủ, cộng đồng của tôi, chat, cài đặt, bảng tin cộng đồng) không có nút quay lại; các màn khác có nút quay lại bên trái cạnh nút menu (quay về màn trước, mở link trực tiếp thì về trang chính); menu có đủ Chat (kèm số tin chưa đọc); mascot chat không bị lệch chỗ.")

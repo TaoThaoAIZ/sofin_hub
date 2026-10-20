@@ -485,6 +485,7 @@ export const useSubmitSurvey = (cid: string, lessonId: string) => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: surveyKey(cid, lessonId) });
       qc.invalidateQueries({ queryKey: staffSurveyKey(cid) });
+      qc.invalidateQueries({ queryKey: ['community', cid, 'lesson'] });
     },
   });
 };
@@ -543,6 +544,16 @@ export const useProgress = (cid: string, courseId: string | null) => {
     queryKey: ck.progress(cid, courseId ?? ''),
     queryFn: ({ signal }) => api.fetchProgress(cid, courseId!, accessToken!, signal),
     enabled: !!courseId && !!accessToken,
+  });
+};
+
+/** Video bài học đã chạy hết: báo server để mở khóa trắc nghiệm, rồi làm mới chi tiết bài. */
+export const useMarkVideoWatched = (cid: string, lessonId: string) => {
+  const token = useToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.markVideoWatched(cid, lessonId, token),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['community', cid, 'lesson'] }),
   });
 };
 

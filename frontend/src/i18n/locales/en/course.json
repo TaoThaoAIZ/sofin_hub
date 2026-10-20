@@ -124,6 +124,24 @@
     }
   },
   "lesson": {
+    "videoSkipped": "You skipped through the video, so it does not count as watched. Please watch it from start to finish.",
+    "videoWatched": "You have watched the whole lesson video.",
+    "videoMustWatch": "Watch the whole lesson video to unlock the quiz.",
+    "test": {
+      "title": "Quiz & survey",
+      "quizPassed": "You passed the quiz",
+      "surveyOnly": "Quick survey for this lesson",
+      "withSurvey": "with survey",
+      "start": "Take the quiz",
+      "review": "Review",
+      "locked": "Watch the video to unlock",
+      "pageTitle": "Quiz: {{title}}",
+      "backToLesson": "Back to lesson",
+      "backToComplete": "Back to the lesson to complete it",
+      "lockedTitle": "Not unlocked yet",
+      "watchVideo": "Back to the video",
+      "none": "This lesson has no quiz or survey."
+    },
     "loadingAttachment": "{{name}} (loading…)",
     "invalidLink": "{{name}} (invalid link)",
     "loading": "Loading lesson…",
@@ -184,6 +202,7 @@
     "filterChoicePh": "Pick the answer to filter"
   },
   "survey": {
+    "needRequired": "Answer the required (*) survey questions above to complete this lesson.",
     "loading": "Loading survey…",
     "title": "Quick survey",
     "intro": "Tell the community owner what you need. Optional and does not affect completing the lesson.",
@@ -199,6 +218,8 @@
     "fillRequired": "Please answer the required questions (*)"
   },
   "surveyEditor": {
+    "errNoOptions": "Question {{n}}: add at least one option or tick \"Let learners add their own comment\"",
+    "noOptionsHint": "No options: learners will only type their own comment under the question.",
     "saveWithLesson": "Changes are saved when you click \"Save lesson\"",
     "autoHint": "Changes are saved automatically",
     "autoIncomplete": "Complete every question and option to auto-save",

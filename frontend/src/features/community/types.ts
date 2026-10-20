@@ -278,6 +278,10 @@ export interface LessonDetail extends ClassroomLesson {
   nextLessonLocked: boolean;
   /** Trắc nghiệm của bài (null = không có). required = phải đạt điểm mới hoàn thành bài (mod+ không bị bắt buộc). */
   quiz: { questionCount: number; passPercent: number; passed: boolean; required: boolean } | null;
+  surveyBlocks?: boolean;
+  hasSurvey?: boolean;
+  /** required = phải xem hết video mới làm được trắc nghiệm (mod+ không bị bắt buộc); watched = đã xem hết. */
+  video?: { required: boolean; watched: boolean };
 }
 
 export type OnboardingStepKey = 'video' | 'comment' | 'app';

@@ -5,4 +5,5 @@ export const communityCheckout = (id: string) => `/communities/${id}/checkout`;
 export const communitySettings = (id: string) => communityHome(id, 'cai-dat');
 export const classroomPath = (id: string, courseId?: string | null) =>
   `${communityHome(id, 'lop-hoc')}${courseId ? `?khoa=${encodeURIComponent(courseId)}` : ''}`;
+export const lessonQuizPath = (id: string, lessonId: string) => communityHome(id, `lop-hoc/${lessonId}/trac-nghiem`);
 export const lessonPath = (id: string, lessonId: string) => communityHome(id, `lop-hoc/${lessonId}`);

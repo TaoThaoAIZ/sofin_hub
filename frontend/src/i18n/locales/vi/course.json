@@ -124,6 +124,24 @@
     }
   },
   "lesson": {
+    "videoSkipped": "Bạn đã tua qua video nên chưa tính là xem hết. Hãy xem lại video liên tục từ đầu đến cuối.",
+    "videoWatched": "Bạn đã xem hết video bài học.",
+    "videoMustWatch": "Hãy xem hết video của bài học để mở bài trắc nghiệm.",
+    "test": {
+      "title": "Bài trắc nghiệm & khảo sát",
+      "quizPassed": "Bạn đã đạt bài trắc nghiệm",
+      "surveyOnly": "Khảo sát nhanh của bài học",
+      "withSurvey": "kèm khảo sát",
+      "start": "Làm trắc nghiệm",
+      "review": "Xem lại",
+      "locked": "Xem hết video để mở khóa",
+      "pageTitle": "Trắc nghiệm: {{title}}",
+      "backToLesson": "Về bài học",
+      "backToComplete": "Về bài học để hoàn thành",
+      "lockedTitle": "Chưa mở khóa",
+      "watchVideo": "Quay lại xem video",
+      "none": "Bài học này không có trắc nghiệm hay khảo sát."
+    },
     "loadingAttachment": "{{name}} (đang tải…)",
     "invalidLink": "{{name}} (liên kết không hợp lệ)",
     "loading": "Đang tải bài học…",
@@ -184,6 +202,7 @@
     "filterChoicePh": "Chọn đáp án cần lọc"
   },
   "survey": {
+    "needRequired": "Hãy trả lời các câu bắt buộc (*) trong khảo sát ở trên để hoàn thành bài học.",
     "loading": "Đang tải khảo sát…",
     "title": "Khảo sát nhanh",
     "intro": "Chia sẻ mong muốn của bạn để chủ cộng đồng hiểu bạn cần gì. Không bắt buộc và không ảnh hưởng việc hoàn thành bài.",
@@ -199,6 +218,8 @@
     "fillRequired": "Hãy trả lời các câu bắt buộc (*)"
   },
   "surveyEditor": {
+    "errNoOptions": "Câu {{n}}: cần ít nhất 1 lựa chọn hoặc tick \"Cho phép học viên nhập thêm ý kiến khác\"",
+    "noOptionsHint": "Không có lựa chọn nào: học viên sẽ chỉ nhập ý kiến vào ô bên dưới câu hỏi.",
     "saveWithLesson": "Thay đổi sẽ được lưu khi bạn bấm \"Lưu bài học\"",
     "autoHint": "Tự động lưu khi bạn nhập hoặc xóa",
     "autoIncomplete": "Hoàn thiện nội dung câu hỏi và các lựa chọn để tự động lưu",

@@ -84,11 +84,11 @@ export function FeedTab() {
         )}
 
         {!showOnboarding && (
-        <div className="relative min-h-[210px] overflow-hidden rounded-[24px] border border-brand/15 bg-gradient-to-br from-[#fff6ef] to-[#ffe6d4] p-6">
+        <div className="relative min-h-[210px] overflow-hidden rounded-[24px] border border-brand/15 bg-gradient-to-br from-[#fff6ef] to-[#ffe6d4] p-6 dark:border-[rgba(255,220,197,.1)] dark:from-[rgba(63,63,63,.3)] dark:to-[rgba(74,29,0,.3)]">
           <img
             src="/images/community-welcome-art.webp"
             alt=""
-            className="pointer-events-none absolute inset-0 size-full object-cover"
+            className="pointer-events-none absolute inset-0 size-full object-cover dark:hidden"
           />
           <div className="relative z-10">
             <h2 className="m-0 text-[26px] font-extrabold tracking-tight">{t('feed.welcome', { name: user?.firstName ?? t('feed.welcomeFallbackName') })}</h2>
@@ -103,7 +103,7 @@ export function FeedTab() {
                   disabled={a.comingSoon}
                   title={a.comingSoon ? t('feed.comingSoon') : undefined}
                   onClick={a.key === 'popular' ? () => setSort('popular') : undefined}
-                  className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl bg-white/90 px-4 py-3.5 text-left shadow-[0_6px_18px_rgba(120,60,20,.08)] hover:bg-white disabled:cursor-not-allowed disabled:opacity-70"
+                  className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl bg-white/90 px-4 py-3.5 text-left shadow-[0_6px_18px_rgba(120,60,20,.08)] hover:bg-white dark:bg-white/[.07] dark:hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   <MaterialIcon name={a.icon} size={28} filled color="#ff570a" className="flex-none" />
                   <div className="min-w-0">

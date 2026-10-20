@@ -8,6 +8,8 @@ import { levelFor } from '../points/points.levels.js';
 import { pointsService } from '../points/points.service.js';
 import { postsService } from '../posts/posts.service.js';
 import { quizStore } from '../quiz/quiz.store.js';
+import { surveyStore } from '../survey/survey.store.js';
+import { lessonWatchStore } from './lesson-watch.store.js';
 import { toEmbedUrl, uploadedVideoPath } from './classroom.schema.js';
 import { classroomRepository, type ClassroomRepository, type LessonPatch, type ModulePatch } from './classroom.repository.js';
 import {
@@ -444,7 +446,21 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
         prevLessonLocked: isLocked(flat[i - 1]),
         nextLessonLocked: isLocked(flat[i + 1]),
         quiz,
+        surveyBlocks: !staff && !doneIds.has(lessonId) && (await surveyStore.hasUnansweredRequired(lessonId, userId)),
+        hasSurvey: await surveyStore.exists(lessonId),
+        video: { required: !!lesson.videoUrl, watched: !lesson.videoUrl || (await lessonWatchStore.hasWatched(userId, lessonId)) },
       };
+    },
+
+    /** FE báo video bài học đã chạy hết: ghi nhận để mở khóa trắc nghiệm của bài (bài không có video thì bỏ qua). */
+    async markVideoWatched(communityId: string, lessonId: string, userId: string) {
+      const { lesson, course, staff } = await lessonContext(communityId, lessonId, userId);
+      const { states } = await state(communityId, course, userId, staff);
+      const s = states.find((x) => x.module.id === lesson.moduleId);
+      if (!s) throw HttpError.notFound('Không tìm thấy module');
+      assertLessonOpen(s, lesson);
+      if (lesson.videoUrl) await lessonWatchStore.markWatched(userId, lessonId);
+      return { watched: true };
     },
 
     async toggleLessonComplete(communityId: string, lessonId: string, userId: string) {
@@ -459,6 +475,10 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
         const q = lesson.quiz;
         if (q && !(await quizStore.hasPassed(q.id, userId))) {
           throw HttpError.coded(409, 'QUIZ_REQUIRED', `Bạn cần đạt tối thiểu ${q.passPercent}% bài trắc nghiệm để hoàn thành bài học này`);
+        }
+        // Khảo sát có câu BẮT BUỘC: phải trả lời đủ mới hoàn thành bài (và mới sang được bài tiếp theo khi học tuần tự).
+        if (await surveyStore.hasUnansweredRequired(lessonId, userId)) {
+          throw HttpError.coded(409, 'SURVEY_REQUIRED', 'Bạn cần trả lời các câu hỏi bắt buộc trong khảo sát để hoàn thành bài học này');
         }
       }
       // firstTime chỉ true đúng một lần (dòng LessonProgress được tạo nguyên tử) => điểm không bị cộng đôi kể cả gọi song song.

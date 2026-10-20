@@ -1,4 +1,3 @@
-import { MobileTabBar } from './components/layout/MobileChrome';
 import { CommunityReferralTab } from './features/community/components/CommunityReferralTab';
 import { lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -42,6 +41,7 @@ import { TermsPage } from './pages/TermsPage';
 import { ToolsContent, ToolsPage } from './pages/ToolsPage';
 import { CertificateVerifyPage } from './pages/CertificateVerifyPage';
 import { LessonPage } from './pages/LessonPage';
+import { LessonQuizPage } from './pages/LessonQuizPage';
 import { VerifyOtpPage } from './pages/VerifyOtpPage';
 import { OAuthCallbackPage } from './pages/OAuthCallbackPage';
 import { ModerationPage } from './features/community/components/ModerationPanel';
@@ -64,7 +64,6 @@ export default function App() {
       <ScrollToTop />
       <ReferralCapture />
       <ChatWidget />
-      <MobileTabBar />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
@@ -82,6 +81,7 @@ export default function App() {
           <Route index element={<FeedTab />} />
           <Route path="lop-hoc" element={<ClassroomTab />} />
           <Route path="lop-hoc/:lessonId" element={<LessonPage />} />
+          <Route path="lop-hoc/:lessonId/trac-nghiem" element={<LessonQuizPage />} />
           <Route path="kiem-duyet" element={<ModerationPage />} />
           <Route path="khao-sat" element={<SurveysPage />} />
           <Route path="khao-sat/:lessonId" element={<SurveyDetailPage />} />

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../../db/prisma.js';
 import { HttpError } from '../../utils/http-error.js';
 import { classroomService } from '../classroom/classroom.service.js';
+import { lessonWatchStore } from '../classroom/lesson-watch.store.js';
 import { quizStore, type StoredQuestion } from './quiz.store.js';
 
 export const MAX_QUESTIONS = 50;
@@ -82,7 +83,11 @@ export const quizService = {
    * (để thử lại không thể đọc thẳng đáp án từ phản hồi).
    */
   async attempt(communityId: string, lessonId: string, userId: string, body: z.infer<typeof attemptBody>) {
-    await classroomService.assertLessonAccessible(communityId, lessonId, userId);
+    const { lesson } = await classroomService.assertLessonAccessible(communityId, lessonId, userId);
+    // Bài có video: ai cũng phải xem hết video trước khi làm trắc nghiệm.
+    if (lesson.videoUrl && !(await lessonWatchStore.hasWatched(userId, lessonId))) {
+      throw HttpError.coded(409, 'VIDEO_REQUIRED', 'Bạn cần xem hết video của bài học trước khi làm trắc nghiệm');
+    }
     const quiz = await quizStore.findByLesson(lessonId);
     if (!quiz || quiz.questions.length === 0) throw HttpError.notFound('Bài học này chưa có trắc nghiệm');
     if (body.answers.length !== quiz.questions.length) throw HttpError.badRequest('Số câu trả lời không khớp số câu hỏi');

@@ -16,7 +16,7 @@ import { MaterialIcon } from '../ui/MaterialIcon';
 
 /**
  * Khung giao diện MOBILE (< md, theo Figma "Sofin-HUB" khung 390px): thanh trên (nút menu, logo/tiêu đề trang, tìm kiếm, chuông)
- * + ngăn kéo menu + thanh tab dưới (Trang chủ · Cộng đồng · Chat · Cá nhân). Desktop không thay đổi.
+ * + ngăn kéo menu (đã gồm Trang chủ · Cộng đồng · Chat · Cá nhân). Không còn thanh tab dưới; màn con có nút quay lại ở thanh trên. Desktop không thay đổi.
  */
 
 /** Mục menu cộng đồng -> tiêu đề trên thanh trên (khóa i18n namespace `community`). */
@@ -45,12 +45,24 @@ function useCommunityTitleKey(): string | null {
   return COMMUNITY_TITLES[first] ?? null;
 }
 
+/** Màn chính (không hiện nút quay lại). Mọi màn khác có nút quay lại ở thanh trên. */
+const ROOT_PATHS = ['/', '/me/communities', '/messages', '/settings', '/explore', '/notifications'];
+const isRootScreen = (pathname: string) => ROOT_PATHS.includes(pathname) || !!matchPath({ path: '/communities/:id/community', end: true }, pathname);
+
 export function MobileTopBar() {
   const { t } = useTranslation('community');
   const { status } = useAuth();
   const { unreadCount } = useNotificationsContext();
   const titleKey = useCommunityTitleKey();
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const showBack = !isRootScreen(pathname);
+  // Quay lại màn trước; mở thẳng bằng link (không có lịch sử) thì về trang chính phù hợp.
+  const goBack = () => {
+    if ((window.history.state?.idx ?? 0) > 0) return navigate(-1);
+    const m = matchPath({ path: '/communities/:id/community/*', end: false }, pathname);
+    navigate(m ? `/communities/${m.params.id}/community` : '/');
+  };
   // Lưu trang lúc mở: đổi trang thì ngăn kéo tự đóng (không cần effect).
   const [openAt, setOpenAt] = useState<string | null>(null);
   const open = openAt === pathname;
@@ -58,9 +70,16 @@ export function MobileTopBar() {
   return (
     <>
       <div className="sticky top-0 z-30 flex h-[60px] items-center justify-between gap-2 px-4 md:hidden">
-        <button type="button" onClick={() => setOpenAt(pathname)} aria-label={t('mobile.menu')} aria-expanded={open} className={circleBtn}>
-          <MaterialIcon name="notes" size={20} color="currentColor" />
-        </button>
+        <div className="flex items-center gap-1.5">
+          {showBack && (
+            <button type="button" onClick={goBack} aria-label={t('mobile.back')} className={circleBtn}>
+              <MaterialIcon name="arrow_back" size={20} color="currentColor" />
+            </button>
+          )}
+          <button type="button" onClick={() => setOpenAt(pathname)} aria-label={t('mobile.menu')} aria-expanded={open} className={circleBtn}>
+            <MaterialIcon name="notes" size={20} color="currentColor" />
+          </button>
+        </div>
         {titleKey ? (
           <h1 className="m-0 min-w-0 flex-1 truncate text-center text-[18px] leading-[26px] font-bold text-[#201e1c] dark:text-white">{t(titleKey)}</h1>
         ) : (
@@ -100,6 +119,7 @@ function MobileDrawer({ onClose }: { onClose: () => void }) {
   const { t: tl } = useTranslation('layout');
   const { user, status, logout } = useAuth();
   const { isAdmin } = useIsPlatformAdmin();
+  const { unreadCount: chatUnread } = useMessagesContext();
   const { resolved, toggle: toggleTheme } = useTheme();
   const toggleLanguage = useToggleLanguage();
   const navigate = useNavigate();
@@ -172,6 +192,12 @@ function MobileDrawer({ onClose }: { onClose: () => void }) {
           <Link to="/me/communities" className={link}>
             <MaterialIcon name="groups" size={22} color="currentColor" /> {tc('nav.myCommunities')}
           </Link>
+          {status === 'authenticated' && (
+            <Link to="/messages" className={link}>
+              <MaterialIcon name="chat_bubble" size={22} color="currentColor" /> {t('mobile.tabs.chat')}
+              {chatUnread > 0 && <span className="ml-auto grid min-w-5 place-items-center rounded-full bg-brand px-1.5 text-[11px] leading-5 font-bold text-white">{chatUnread > 9 ? '9+' : chatUnread}</span>}
+            </Link>
+          )}
           <Link to="/communities/new" className={link}>
             <MaterialIcon name="add_circle" size={22} color="currentColor" /> {tc('header.createCommunity')}
           </Link>
@@ -210,86 +236,5 @@ function MobileDrawer({ onClose }: { onClose: () => void }) {
       </aside>
     </div>,
     document.body,
-  );
-}
-
-// ---------------------------------------------------------------- Thanh tab dưới
-
-/** Trang KHÔNG hiện thanh tab (đăng nhập/đăng ký, admin, trình tạo cộng đồng, thanh toán, khung chat đang mở...). */
-const HIDE_TABBAR = [
-  '/login',
-  '/register',
-  '/verify-otp',
-  '/oauth/*',
-  '/forgot-password',
-  '/reset-password',
-  '/verify-email',
-  '/admin/*',
-  '/communities/new',
-  '/communities/:id/checkout',
-  '/invite/:code',
-  '/messages/:id',
-  '/certificates/:code',
-];
-
-type TabKey = 'home' | 'community' | 'chat' | 'me';
-
-function activeTab(pathname: string): TabKey | null {
-  if (pathname === '/' || matchPath('/communities/:id', pathname) || matchPath('/courses/:id', pathname) || pathname === '/tools') return 'home';
-  if (pathname.startsWith('/me/communities') || matchPath({ path: '/communities/:id/community/*', end: false }, pathname)) return 'community';
-  if (pathname.startsWith('/messages')) return 'chat';
-  if (pathname.startsWith('/settings') || pathname.startsWith('/users/')) return 'me';
-  return null;
-}
-
-export function MobileTabBar() {
-  const { t } = useTranslation('community');
-  const { pathname } = useLocation();
-  const { status } = useAuth();
-  const { unreadCount } = useMessagesContext();
-  const hidden = HIDE_TABBAR.some((p) => matchPath({ path: p, end: true }, pathname));
-
-  // Chừa chỗ ở cuối trang để nội dung không bị thanh tab che (CSS ở index.css: body.has-tabbar).
-  useEffect(() => {
-    document.body.classList.toggle('has-tabbar', !hidden);
-    return () => document.body.classList.remove('has-tabbar');
-  }, [hidden]);
-
-  if (hidden) return null;
-  const active = activeTab(pathname);
-  const tabs: { key: TabKey; to: string; icon: string; label: string; badge?: number }[] = [
-    { key: 'home', to: '/', icon: 'home', label: t('mobile.tabs.home') },
-    { key: 'community', to: '/me/communities', icon: 'groups', label: t('mobile.tabs.community') },
-    { key: 'chat', to: '/messages', icon: 'chat_bubble', label: t('mobile.tabs.chat'), badge: status === 'authenticated' ? unreadCount : 0 },
-    { key: 'me', to: status === 'authenticated' ? '/settings' : '/login', icon: 'person', label: t('mobile.tabs.me') },
-  ];
-
-  return (
-    <nav aria-label={t('mobile.tabs.aria')} className="pointer-events-none fixed inset-x-0 bottom-0 z-40 bg-gradient-to-t from-black/25 to-transparent px-4 pt-6 pb-3 md:hidden">
-      <div className="pointer-events-auto relative flex h-[70px] items-center justify-around gap-1 overflow-hidden px-2 rounded-[20px] bg-[rgba(72,72,72,.62)] shadow-[inset_0_0_0_1px_rgba(255,255,255,.12)] backdrop-blur-[22px] backdrop-saturate-150">
-        {tabs.map((tab) => {
-          const on = tab.key === active;
-          return (
-            <Link
-              key={tab.key}
-              to={tab.to}
-              aria-current={on ? 'page' : undefined}
-              className={`relative flex h-[46px] min-w-[60px] flex-none flex-col whitespace-nowrap px-1 items-center justify-center gap-0.5 rounded-[50px] text-[12px] leading-[18px] no-underline ${on ? 'font-semibold text-white' : 'font-medium text-[#dedede]'}`}
-            >
-              {on && <span aria-hidden="true" className="absolute top-[-5px] left-0 h-[54px] w-full rounded-[41px] bg-[rgba(255,87,10,.8)] blur-[10px]" />}
-              <span className="relative">
-                <MaterialIcon name={tab.icon} size={24} filled color="currentColor" />
-                {tab.badge ? (
-                  <span className="absolute -top-1 -right-2 grid min-w-4 place-items-center rounded-full bg-brand px-1 text-[10px] leading-4 font-bold text-white">
-                    {tab.badge > 9 ? '9+' : tab.badge}
-                  </span>
-                ) : null}
-              </span>
-              <span className="relative">{tab.label}</span>
-            </Link>
-          );
-        })}
-      </div>
-    </nav>
   );
 }

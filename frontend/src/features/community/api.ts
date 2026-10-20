@@ -217,6 +217,8 @@ export const attemptQuiz = (cid: string, lessonId: string, answers: Array<number
   apiPost<{ data: QuizAttemptResult }>(`/communities/${cid}/lessons/${lessonId}/quiz/attempt`, { answers }, { token }).then(D);
 export const toggleLessonComplete = (cid: string, lessonId: string, token: string) =>
   apiPost<{ data: { completed: boolean } }>(`/communities/${cid}/lessons/${lessonId}/complete`, undefined, { token }).then(D);
+export const markVideoWatched = (cid: string, lessonId: string, token: string) =>
+  apiPost<{ data: { watched: boolean } }>(`/communities/${cid}/lessons/${lessonId}/watched`, undefined, { token }).then(D);
 export const updateLesson = (cid: string, lessonId: string, body: Partial<LessonInput>, token: string) =>
   apiPatch<{ data: ClassroomLesson }>(`/communities/${cid}/lessons/${lessonId}`, body, { token }).then(D);
 export const deleteLesson = (cid: string, lessonId: string, token: string) =>

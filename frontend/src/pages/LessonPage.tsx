@@ -1,17 +1,15 @@
 import { useTranslation } from 'react-i18next';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { MaterialIcon } from '../components/ui/MaterialIcon';
 import { ApiError } from '../lib/api';
-import { classroomPath, lessonPath } from '../lib/paths';
+import { classroomPath, lessonPath, lessonQuizPath } from '../lib/paths';
 import { fileKeyOf, refreshFileUrl, useFileUrl } from '../lib/files';
-import { QuizPanel } from '../features/community/components/QuizPanel';
-import { SurveyPanel } from '../features/community/components/SurveyPanel';
 import { ConfirmDialog, errText, ErrorNote, ghostBtn, isModPlus, primaryBtn, safeUrl, toast, ToastHost } from '../features/community/components/contentUi';
 import { LessonFormDialog } from '../features/community/components/ClassroomEditor';
 import { useCommunityDetail } from '../features/courses/queries';
 import type { ClassroomLesson } from '../features/community/types';
-import { useCourseList, useDeleteLesson, useLesson, useLessons, useProgress, useReorderLessons, useToggleLessonComplete } from '../features/community/queries';
+import { useCourseList, useDeleteLesson, useLesson, useLessons, useMarkVideoWatched, useProgress, useReorderLessons, useToggleLessonComplete } from '../features/community/queries';
 import { useDragReorder } from '../features/community/useDragReorder';
 
 // Chỉ nhúng iframe từ các host video đã biết (BE đã dựng lại embedUrl từ ID hợp lệ; FE kiểm tra thêm lần nữa).
@@ -20,8 +18,46 @@ const isSafeEmbed = (u?: string) => !!u && EMBED_PREFIXES.some((p) => u.startsWi
 
 const fmtSize = (n?: number) => (n === undefined ? '' : n > 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 
+/**
+ * Theo dõi mức xem THẬT của video: cộng dồn thời gian phát liên tục (bước nhảy do tua bị bỏ qua).
+ * Chỉ coi là "xem hết" khi video kết thúc VÀ đã phát liên tục tối thiểu 85% thời lượng; tua thẳng tới cuối thì không tính.
+ */
+const WATCH_MIN_RATIO = 0.85;
+function useWatchCoverage(onDone: () => void) {
+  const last = useRef<number | null>(null);
+  const played = useRef(0);
+  const duration = useRef(0);
+  const [skipped, setSkipped] = useState(false);
+  const doneRef = useRef(onDone);
+  doneRef.current = onDone;
+  return {
+    skipped,
+    tick: (t: number, d: number) => {
+      if (d > 0) duration.current = d;
+      if (last.current !== null) {
+        const delta = t - last.current;
+        if (delta > 0 && delta < 2.5) played.current += delta;
+      }
+      last.current = t;
+    },
+    ended: () => {
+      if (duration.current > 0 && played.current >= duration.current * WATCH_MIN_RATIO) {
+        setSkipped(false);
+        doneRef.current();
+      } else {
+        // Tua qua video: bắt xem lại từ đầu.
+        setSkipped(true);
+        played.current = 0;
+        last.current = null;
+      }
+    },
+  };
+}
+
 /** Video do chủ cộng đồng tải lên (mp4): file riêng tư theo khóa học nên phát bằng URL ký hạn ngắn. */
-function UploadedVideo({ url, title }: { url: string; title: string }) {
+type Watch = ReturnType<typeof useWatchCoverage>;
+
+function UploadedVideo({ url, title, watch }: { url: string; title: string; watch?: Watch }) {
   const { t } = useTranslation('course');
   const initial = useFileUrl(url);
   const [fresh, setFresh] = useState<{ for: string; src: string } | null>(null);
@@ -41,6 +77,8 @@ function UploadedVideo({ url, title }: { url: string; title: string }) {
         playsInline
         preload="metadata"
         className="size-full"
+        onTimeUpdate={(e) => watch?.tick(e.currentTarget.currentTime, e.currentTarget.duration)}
+        onEnded={() => watch?.ended()}
         onError={(e) => {
           // URL ký hết hạn (xem dở rồi để lâu): xin URL mới đúng 1 lần và phát lại từ vị trí cũ.
           if (retried.current) return;
@@ -55,6 +93,80 @@ function UploadedVideo({ url, title }: { url: string; title: string }) {
         }}
       />
     </div>
+  );
+}
+
+/**
+ * Video YouTube/Vimeo nhúng: nghe thông điệp của trình phát (postMessage, không cần tải script ngoài) để biết khi nào video chạy hết.
+ * YouTube: bật enablejsapi, gửi 'listening' rồi nhận onStateChange (info 0 = ended). Vimeo: addEventListener 'finish'.
+ */
+function EmbedPlayer({ src, title, watch }: { src: string; title: string; watch?: Watch }) {
+  const ref = useRef<HTMLIFrameElement>(null);
+  const watchRef = useRef(watch);
+  watchRef.current = watch;
+  const isYoutube = src.includes('youtube');
+  const url = (() => {
+    if (!isYoutube) return src;
+    const u = new URL(src);
+    u.searchParams.set('enablejsapi', '1');
+    u.searchParams.set('origin', window.location.origin);
+    return u.toString();
+  })();
+
+  useEffect(() => {
+    const onMsg = (e: MessageEvent) => {
+      if (e.source !== ref.current?.contentWindow) return;
+      let d: { event?: string; info?: unknown } | null = null;
+      try {
+        d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+      } catch {
+        return;
+      }
+      if (!d) return;
+      if (isYoutube) {
+        const info = d.info as { playerState?: number; currentTime?: number; duration?: number } | number | undefined;
+        if (typeof info === 'object' && info) {
+          if (typeof info.currentTime === 'number') watchRef.current?.tick(info.currentTime, info.duration ?? 0);
+          if (info.playerState === 0) watchRef.current?.ended();
+        } else if (d.event === 'onStateChange' && info === 0) watchRef.current?.ended();
+      } else if (d.event === 'playProgress') {
+        const v = (d as { data?: { seconds?: number; duration?: number } }).data;
+        if (v && typeof v.seconds === 'number') watchRef.current?.tick(v.seconds, v.duration ?? 0);
+      } else if (d.event === 'finish') watchRef.current?.ended();
+    };
+    window.addEventListener('message', onMsg);
+    return () => window.removeEventListener('message', onMsg);
+  }, [isYoutube]);
+
+  // Đăng ký nhận sự kiện sau khi trình phát tải xong (gửi lại sau 1,5s phòng trình phát khởi tạo chậm).
+  const subscribe = () => {
+    const w = ref.current?.contentWindow;
+    if (!w) return;
+    const send = () => {
+      if (isYoutube) {
+        w.postMessage(JSON.stringify({ event: 'listening', id: 1, channel: 'widget' }), '*');
+        w.postMessage(JSON.stringify({ event: 'command', func: 'addEventListener', args: ['onStateChange'], id: 1, channel: 'widget' }), '*');
+      } else {
+        w.postMessage(JSON.stringify({ method: 'addEventListener', value: 'finish' }), '*');
+        w.postMessage(JSON.stringify({ method: 'addEventListener', value: 'playProgress' }), '*');
+      }
+    };
+    send();
+    setTimeout(send, 1500);
+  };
+
+  return (
+    <iframe
+      ref={ref}
+      src={url}
+      title={title}
+      onLoad={subscribe}
+      className="size-full border-0"
+      sandbox="allow-scripts allow-same-origin allow-presentation allow-popups"
+      referrerPolicy="strict-origin-when-cross-origin"
+      allow="fullscreen; picture-in-picture; encrypted-media"
+      allowFullScreen
+    />
   );
 }
 
@@ -90,6 +202,9 @@ export function LessonPage() {
   const data = lesson.data;
   const siblings = useLessons(communityId, courseId, data?.moduleId ?? null);
   const toggle = useToggleLessonComplete(communityId);
+  const markWatched = useMarkVideoWatched(communityId, lessonId);
+  const watchedCb = useRef<() => void>(() => undefined);
+  const watch = useWatchCoverage(() => watchedCb.current());
   const back = classroomPath(communityId, courseId);
   const { t: tc } = useTranslation('community');
   const navigate = useNavigate();
@@ -132,6 +247,15 @@ export function LessonPage() {
   const pct = progress.data?.percent ?? 0;
   // Bài có trắc nghiệm bắt buộc: chưa đạt thì chưa được đánh dấu hoàn thành (bỏ đánh dấu thì vẫn được).
   const quizBlocks = !!l.quiz?.required && !l.quiz.passed && !l.completed;
+  // Khảo sát có câu bắt buộc chưa trả lời: chưa được hoàn thành bài.
+  const surveyBlocks = !!l.surveyBlocks && !l.completed;
+
+  // Video chạy hết => báo server (chỉ khi bài bắt buộc xem hết video và chưa ghi nhận).
+  const onVideoEnded = () => {
+    if (l.video?.required && !l.video.watched && !markWatched.isPending) markWatched.mutate();
+  };
+
+  watchedCb.current = onVideoEnded;
 
   const onToggle = () =>
     toggle.mutate(l.id, {
@@ -174,19 +298,10 @@ export function LessonPage() {
         <article className="glass overflow-hidden rounded-3xl">
           {l.type === 'video' && embed && (
             <div className="aspect-video w-full bg-black">
-              <iframe
-                src={embed}
-                title={l.title}
-                className="size-full border-0"
-                sandbox="allow-scripts allow-same-origin allow-presentation allow-popups"
-                referrerPolicy="strict-origin-when-cross-origin"
-                allow="fullscreen; picture-in-picture; encrypted-media"
-                allowFullScreen
-                loading="lazy"
-              />
+              <EmbedPlayer src={embed} title={l.title} watch={watch} />
             </div>
           )}
-          {l.type === 'video' && !embed && fileKeyOf(l.videoUrl) && <UploadedVideo url={l.videoUrl!} title={l.title} />}
+          {l.type === 'video' && !embed && fileKeyOf(l.videoUrl) && <UploadedVideo url={l.videoUrl!} title={l.title} watch={watch} />}
           {l.type === 'video' && !embed && !fileKeyOf(l.videoUrl) && (
             <div className="grid aspect-video w-full place-items-center bg-stone-100 text-sm text-stone-500">{t('lesson.noVideo')}</div>
           )}
@@ -228,15 +343,41 @@ export function LessonPage() {
             )}
             {l.body && <div className="mt-4 text-[14.5px] leading-[1.7] break-words whitespace-pre-wrap text-stone-800">{l.body}</div>}
 
-            {l.quiz && <QuizPanel communityId={communityId} lessonId={l.id} />}
-            <SurveyPanel communityId={communityId} lessonId={l.id} />
+            {l.video?.required && (
+              <p role="status" className={`mt-3 mb-0 flex items-center gap-1.5 rounded-xl px-3 py-2 text-[13px] font-semibold ${l.video.watched ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400' : 'bg-amber-50 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300'}`}>
+                <MaterialIcon name={l.video.watched ? 'check_circle' : 'play_circle'} size={18} filled color="currentColor" />
+                {l.video.watched ? t('lesson.videoWatched') : watch.skipped ? t('lesson.videoSkipped') : t('lesson.videoMustWatch')}
+              </p>
+            )}
+
+            {(l.quiz || l.hasSurvey) && (
+              <section className="mt-5 flex flex-wrap items-center gap-3 rounded-2xl border border-[rgba(120,60,20,.12)] bg-[#fffaf5] p-4 dark:border-white/10 dark:bg-white/[.05]" aria-label={t('lesson.test.title')}>
+                <MaterialIcon name="quiz" size={26} filled color="#ff570a" />
+                <div className="min-w-0 flex-1">
+                  <div className="text-[15px] font-extrabold">{t('lesson.test.title')}</div>
+                  <div className="text-[12.5px] text-stone-500">
+                    {l.quiz ? (l.quiz.passed ? t('lesson.test.quizPassed') : t('quiz.passRule', { n: l.quiz.questionCount, pct: l.quiz.passPercent })) : t('lesson.test.surveyOnly')}
+                    {l.hasSurvey && l.quiz ? ` · ${t('lesson.test.withSurvey')}` : ''}
+                  </div>
+                </div>
+                {l.video?.required && !l.video.watched ? (
+                  <button type="button" disabled className={`${primaryBtn} disabled:cursor-not-allowed disabled:opacity-60`} title={t('lesson.videoMustWatch')}>
+                    <MaterialIcon name="lock" size={18} color="#fff" /> {t('lesson.test.locked')}
+                  </button>
+                ) : (
+                  <Link to={lessonQuizPath(communityId, l.id)} className={primaryBtn}>
+                    {l.quiz?.passed ? t('lesson.test.review') : t('lesson.test.start')} <MaterialIcon name="arrow_forward" size={18} color="#fff" />
+                  </Link>
+                )}
+              </section>
+            )}
 
             <div className="mt-6 flex flex-col items-start gap-2 border-t border-[rgba(120,60,20,.1)] pt-4">
                 <button
                   type="button"
                   onClick={onToggle}
-                  disabled={toggle.isPending || quizBlocks}
-                  title={quizBlocks ? t('quiz.needPass', { pct: l.quiz?.passPercent }) : undefined}
+                  disabled={toggle.isPending || quizBlocks || surveyBlocks}
+                  title={quizBlocks ? t('quiz.needPass', { pct: l.quiz?.passPercent }) : surveyBlocks ? t('survey.needRequired') : undefined}
                   className={`${l.completed ? ghostBtn : primaryBtn} disabled:cursor-not-allowed disabled:opacity-60`}
                 >
                   <MaterialIcon name={l.completed ? 'undo' : 'check_circle'} size={19} color={l.completed ? undefined : '#fff'} />
@@ -248,6 +389,7 @@ export function LessonPage() {
                 </p>
               )}
               {quizBlocks && <p className="mt-2 mb-0 text-[12.5px] text-stone-500">{t('quiz.needPass', { pct: l.quiz?.passPercent })}</p>}
+              {surveyBlocks && <p className="mt-2 mb-0 text-[12.5px] text-stone-500">{t('survey.needRequired')}</p>}
             </div>
 
             <div className="mt-2">

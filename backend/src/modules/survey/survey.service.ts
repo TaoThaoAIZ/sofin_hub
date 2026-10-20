@@ -91,7 +91,8 @@ export const surveyService = {
     const seen = new Set<string>();
     const questions: StoredQuestion[] = body.questions.map((q, i) => {
       if (q.type !== 'text') {
-        if (q.options.length < 2) throw HttpError.badRequest(`Câu ${i + 1}: cần ít nhất 2 lựa chọn`);
+        // Có thể không có lựa chọn nào, khi đó bắt buộc bật ô nhập ý kiến khác (học viên chỉ nhập chữ).
+        if (q.options.length === 0 && !q.allowText) throw HttpError.badRequest(`Câu ${i + 1}: cần ít nhất 1 lựa chọn hoặc bật ô nhập ý kiến khác`);
         if (new Set(q.options.map((o) => o.toLowerCase())).size !== q.options.length) throw HttpError.badRequest(`Câu ${i + 1}: các lựa chọn không được trùng nhau`);
       }
       const id = q.id && knownIds.has(q.id) && !seen.has(q.id) ? q.id : randomUUID();

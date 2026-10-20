@@ -30,7 +30,7 @@ export function ChatLauncher({ onOpen, label, hint }: { onOpen: () => void; labe
   return (
     <>
       {showHint && (
-        <div className="mascot-hint pointer-events-none fixed right-4 bottom-[212px] z-[60] md:right-6 md:bottom-[136px]" role="status">
+        <div className="mascot-hint pointer-events-none fixed right-4 bottom-[116px] z-[60] md:right-6 md:bottom-[136px]" role="status">
           <div className="relative max-w-[220px] overflow-hidden rounded-[20px] rounded-br-[6px] border border-brand/40 bg-white/95 px-5 py-3.5 text-right shadow-[0_12px_40px_rgba(255,87,10,.25)] backdrop-blur dark:bg-[#161616]/95">
             <span className="mascot-hint-shimmer pointer-events-none absolute inset-0 bg-[linear-gradient(110deg,transparent_35%,rgba(255,87,10,.18)_50%,transparent_65%)]" />
             <p className="relative m-0 text-[15.5px] leading-snug font-semibold text-brand">
@@ -48,7 +48,7 @@ export function ChatLauncher({ onOpen, label, hint }: { onOpen: () => void; labe
         type="button"
         onClick={onOpen}
         aria-label={label}
-        className="fixed right-2 bottom-[96px] z-[60] size-[100px] cursor-pointer border-0 bg-transparent p-0 transition-transform active:scale-90 md:right-4 md:bottom-4"
+        className="fixed right-2 bottom-[16px] z-[60] size-[100px] cursor-pointer border-0 bg-transparent p-0 transition-transform active:scale-90 md:right-4 md:bottom-4"
       >
         <img src="/images/chatbot/mascot.png" alt="" width={100} height={100} className="mascot-float size-full object-contain" draggable={false} />
       </button>

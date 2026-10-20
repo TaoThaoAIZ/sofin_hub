@@ -883,6 +883,7 @@
     }
   },
   "mobile": {
+    "back": "Quay lại",
     "menu": "Mở menu",
     "close": "Đóng",
     "search": "Tìm kiếm",

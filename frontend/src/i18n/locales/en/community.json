@@ -883,6 +883,7 @@
     }
   },
   "mobile": {
+    "back": "Back",
     "menu": "Open menu",
     "close": "Close",
     "search": "Search",

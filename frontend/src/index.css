@@ -309,11 +309,8 @@
   background: none;
 }
 
-/* ===== Mobile (< md): thanh tab dưới cố định => chừa chỗ cuối trang; dải nền đầu trang co theo màn nhỏ ===== */
+/* ===== Mobile (< md): dải nền đầu trang co theo màn nhỏ ===== */
 @media (max-width: 767px) {
-  body.has-tabbar {
-    padding-bottom: 104px;
-  }
   body {
     background-size: 100% 420px;
   }
