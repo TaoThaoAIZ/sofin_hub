@@ -5,6 +5,20 @@ type A = { questionId: string; choices?: string[]; text?: string };
 
 /** Truy vấn Prisma thuần (dùng chung giữa classroom.service và survey.service, tránh vòng phụ thuộc). */
 export const surveyStore = {
+  /**
+   * Như hasUnansweredRequired nhưng đã biết sẵn khảo sát + các câu bắt buộc (lấy từ truy vấn mở bài): chỉ 1 truy vấn, và
+   * bài không có câu bắt buộc thì KHÔNG truy vấn nào.
+   */
+  async unansweredRequired(surveyId: string, requiredIds: string[], userId: string): Promise<boolean> {
+    if (requiredIds.length === 0) return false;
+    const mine = await prisma.surveyResponse.findUnique({ where: { surveyId_userId: { surveyId, userId } }, select: { answers: true } });
+    const answers = Array.isArray(mine?.answers) ? (mine.answers as A[]) : [];
+    return requiredIds.some((id) => {
+      const a = answers.find((x) => x.questionId === id);
+      return !a || !((a.choices?.length ?? 0) > 0 || a.text?.trim());
+    });
+  },
+
   /** Bài có khảo sát (có ít nhất 1 câu hỏi) không? */
   async exists(lessonId: string): Promise<boolean> {
     const s = await prisma.lessonSurvey.findUnique({ where: { lessonId }, select: { questions: true } });

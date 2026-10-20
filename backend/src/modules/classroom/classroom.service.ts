@@ -446,8 +446,8 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
         prevLessonLocked: isLocked(flat[i - 1]),
         nextLessonLocked: isLocked(flat[i + 1]),
         quiz,
-        surveyBlocks: !staff && !doneIds.has(lessonId) && (await surveyStore.hasUnansweredRequired(lessonId, userId)),
-        hasSurvey: await surveyStore.exists(lessonId),
+        surveyBlocks: !staff && !doneIds.has(lessonId) && !!lesson.survey && (await surveyStore.unansweredRequired(lesson.survey.id, lesson.survey.requiredIds, userId)),
+        hasSurvey: !!lesson.survey,
         video: { required: !!lesson.videoUrl, watched: !lesson.videoUrl || (await lessonWatchStore.hasWatched(userId, lessonId)) },
       };
     },

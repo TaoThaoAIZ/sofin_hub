@@ -1,4 +1,6 @@
-# Việc cần làm khi công ty cấp mail: chuyển gửi OTP sang mail công ty
+# Chuyển gửi OTP sang mail công ty
+
+**Trạng thái (2026-10-20):** ĐÃ chuyển server EC2 sang `hannah@sofingroup.com` (SMTP hoạt động, thư thử gửi OK). **CÒN LẠI: thêm SPF/DKIM/DMARC cho sofingroup.com ở Namecheap (hiện chưa có bản ghi nào), thu hồi mật khẩu ứng dụng cũ của tunsdev86@gmail.com, xóa file `/opt/app/.env.bak-smtp-*` trên server (chứa mật khẩu cũ).**
 
 Ghi ngày 2026-10-20. Hiện đang gửi OTP bằng mail cá nhân (tundev...). Chuyển sang mail công ty để thư không vào spam và không phụ thuộc tài khoản cá nhân.
 

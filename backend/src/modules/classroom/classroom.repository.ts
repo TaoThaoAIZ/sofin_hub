@@ -59,7 +59,7 @@ export interface ClassroomRepository {
   findModule(communityId: string, moduleId: string, includeUnpublished?: boolean): Promise<(ClassroomModule & { course: LearningCourseRecord }) | undefined>;
   getLessons(moduleId: string): Promise<ClassroomLesson[]>;
   /** 1 bài (hiển thị được: không ẩn/gỡ, module đã xuất bản) bằng 1 truy vấn; có `communityId` thì bài phải thuộc cộng đồng đó. Kèm khóa học chứa bài. */
-  findLesson(lessonId: string, communityId?: string, includeUnpublished?: boolean): Promise<(ClassroomLesson & { learningCourseId: string; course: LearningCourseRecord; quiz?: LessonQuizBrief }) | undefined>;
+  findLesson(lessonId: string, communityId?: string, includeUnpublished?: boolean): Promise<(ClassroomLesson & { learningCourseId: string; course: LearningCourseRecord; quiz?: LessonQuizBrief; survey?: LessonSurveyBrief }) | undefined>;
   /** Tên + module của 1 bài (không nạp thân bài) — dùng cho "bài kế tiếp" ở trang tiến độ. */
   findLessonBrief(lessonId: string): Promise<{ id: string; title: string; moduleId: string } | undefined>;
   /** Tiến độ nhiều cộng đồng cùng lúc cho 1 user: communityId → { tổng bài hiển thị, số bài đã hoàn thành } (1 truy vấn; cộng dồn các khóa đã xuất bản). */
@@ -161,11 +161,19 @@ export interface LessonQuizBrief {
   questionCount: number;
 }
 
+/** Tóm tắt khảo sát của bài (cùng truy vấn JOIN của findLesson — không thêm truy vấn). Chỉ có khi bài có >= 1 câu. */
+export interface LessonSurveyBrief {
+  id: string;
+  /** Id các câu BẮT BUỘC trả lời (rỗng = khảo sát không bắt buộc). */
+  requiredIds: string[];
+}
+
 /** Dòng JOIN của findLesson (cột khóa học có tiền tố c_). */
 interface RawLessonRow {
   id: string; moduleId: string; communityId: string; index: number; title: string; type: ClassroomLesson['type']; durationMin: number; body: string;
   videoUrl: string | null; embedUrl: string | null; attachments: unknown; isPreview: boolean; learningCourseId: string;
   quizId: string | null; quizPass: number | null; quizCount: number;
+  surveyId: string | null; surveyCount: number; surveyRequired: string[] | null;
   c_id: string; c_communityId: string; c_title: string; c_description: string; c_thumbnailUrl: string | null; c_position: number;
   c_publishStatus: LearningCourseRecord['publishStatus']; c_certificatesEnabled: boolean | null; c_removedAt: Date | null; c_createdAt: Date; c_updatedAt: Date;
 }
@@ -232,6 +240,8 @@ export const classroomRepository: ClassroomRepository = {
       SELECT l."id", l."moduleId", l."courseId" AS "communityId", l."index", l."title", l."type"::text AS "type", l."durationMin", l."body",
         l."videoUrl", l."embedUrl", l."attachments", l."isPreview", m."learningCourseId",
         q."id" AS "quizId", q."passPercent" AS "quizPass", COALESCE(jsonb_array_length(q."questions"), 0)::int AS "quizCount",
+        sv."id" AS "surveyId", COALESCE(jsonb_array_length(sv."questions"), 0)::int AS "surveyCount",
+        (SELECT jsonb_agg(e->>'id') FROM jsonb_array_elements(sv."questions") e WHERE e->>'required' = 'true') AS "surveyRequired",
         c."id" AS "c_id", c."communityId" AS "c_communityId", c."title" AS "c_title", c."description" AS "c_description", c."thumbnailUrl" AS "c_thumbnailUrl",
         c."position" AS "c_position", c."publishStatus"::text AS "c_publishStatus", c."certificatesEnabled" AS "c_certificatesEnabled",
         c."removedAt" AS "c_removedAt", c."createdAt" AS "c_createdAt", c."updatedAt" AS "c_updatedAt"
@@ -239,6 +249,7 @@ export const classroomRepository: ClassroomRepository = {
       JOIN "ClassroomModule" m ON m."id" = l."moduleId" AND m."removedAt" IS NULL ${includeUnpublished ? Prisma.empty : Prisma.sql`AND m."publishStatus" = 'published'`}
       JOIN "LearningCourse" c ON c."id" = m."learningCourseId"
       LEFT JOIN "LessonQuiz" q ON q."lessonId" = l."id"
+      LEFT JOIN "LessonSurvey" sv ON sv."lessonId" = l."id"
       WHERE l."id" = ${lessonId} AND NOT l."hidden" AND l."removedAt" IS NULL
         ${communityId ? Prisma.sql`AND l."courseId" = ${communityId}` : Prisma.empty}
       LIMIT 1`;
@@ -260,6 +271,7 @@ export const classroomRepository: ClassroomRepository = {
       isPreview: r.isPreview,
       learningCourseId: r.learningCourseId,
       ...(r.quizId && r.quizCount > 0 && r.quizPass !== null ? { quiz: { id: r.quizId, passPercent: r.quizPass, questionCount: r.quizCount } } : {}),
+      ...(r.surveyId && r.surveyCount > 0 ? { survey: { id: r.surveyId, requiredIds: r.surveyRequired ?? [] } } : {}),
       course: {
         id: r.c_id,
         communityId: r.c_communityId,
