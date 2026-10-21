@@ -307,7 +307,7 @@ export function ReferralTab({ kind: fixedKind, showPayoutLink = true, withdraw =
               const st = STATUS[r.status];
               const [bg, fg] = AVATARS[i % AVATARS.length]!;
               return (
-                <div key={r.userId} className={`grid ${COLS} items-center gap-3 border-b border-[#f3eee9] px-4 py-3.5 text-[15px]`}>
+                <div key={r.userId} className={`grid ${withdraw ? COLS_NARROW : COLS} items-center gap-3 border-b border-[#f3eee9] px-4 py-3.5 text-[15px]`}>
                   <span className="flex min-w-0 items-center gap-3.5">
                     {r.avatarUrl ? (
                       <img src={resolveApiPath(r.avatarUrl)} alt="" className="size-10 flex-none rounded-full object-cover" />
@@ -316,19 +316,21 @@ export function ReferralTab({ kind: fixedKind, showPayoutLink = true, withdraw =
                         {initials(r.name)}
                       </span>
                     )}
-                    <span className="truncate font-semibold">{r.name}</span>
+                    <span className="truncate font-semibold" title={r.name}>{r.name}</span>
                   </span>
                   <span className="truncate text-stone-700" title={r.communityName ?? undefined}>
                     {r.communityName ?? '—'}
                   </span>
-                  <span className="text-stone-700">{formatDate(r.signedUpAt)}</span>
-                  <span>
+                  <span className="truncate text-stone-700">{formatDate(r.signedUpAt)}</span>
+                  <span className="min-w-0">
                     <span style={{ background: st.bg, color: st.fg }} className="inline-flex h-[30px] items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold whitespace-nowrap">
                       <span style={{ background: st.fg }} className="size-[7px] rounded-full" />
                       {r.status === 'none' ? t(NONE_LABEL[kind]) : t(st.label)}
                     </span>
                   </span>
-                  <span className="text-stone-700">{r.earnedCents > 0 ? money(r.earnedCents, currency) : '—'}</span>
+                  <span className="truncate text-stone-700" title={r.earnedCents > 0 ? money(r.earnedCents, currency) : undefined}>
+                    {r.earnedCents > 0 ? money(r.earnedCents, currency) : '—'}
+                  </span>
                   <button type="button" aria-label={t('referral.rowOptions', { name: r.name })} onClick={(e) => rowMenu(e, r)} className="border-0 bg-transparent p-0 text-stone-800">
                     <MaterialIcon name="more_horiz" size={22} />
                   </button>
