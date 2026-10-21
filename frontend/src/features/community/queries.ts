@@ -453,6 +453,12 @@ export const useAttemptQuiz = (cid: string, lessonId: string) => {
   });
 };
 
+/** Chấm 1 câu ngay khi chọn (không ghi lượt làm, nên không làm mới cache). */
+export const useCheckQuizQuestion = (cid: string, lessonId: string) => {
+  const token = useToken();
+  return useMutation({ mutationFn: (input: { questionId: string; answer: number }) => api.checkQuizQuestion(cid, lessonId, input, token) });
+};
+
 export const usePutQuiz = (cid: string, lessonId: string) => {
   const token = useToken();
   const qc = useQueryClient();

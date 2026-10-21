@@ -19,6 +19,11 @@ export const surveyStore = {
     });
   },
 
+  /** Người dùng đã nộp khảo sát này chưa (để FE hiện "Đã khảo sát")? */
+  async answered(surveyId: string, userId: string): Promise<boolean> {
+    return (await prisma.surveyResponse.count({ where: { surveyId, userId } })) > 0;
+  },
+
   /** Bài có khảo sát (có ít nhất 1 câu hỏi) không? */
   async exists(lessonId: string): Promise<boolean> {
     const s = await prisma.lessonSurvey.findUnique({ where: { lessonId }, select: { questions: true } });

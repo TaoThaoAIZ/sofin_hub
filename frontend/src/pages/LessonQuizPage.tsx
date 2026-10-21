@@ -2,13 +2,12 @@ import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import { MaterialIcon } from '../components/ui/MaterialIcon';
 import { QuizPanel } from '../features/community/components/QuizPanel';
-import { SurveyPanel } from '../features/community/components/SurveyPanel';
 import { errText, ghostBtn, primaryBtn } from '../features/community/components/contentUi';
 import { useLesson } from '../features/community/queries';
 import { lessonPath } from '../lib/paths';
 
 /**
- * Trang riêng cho trắc nghiệm + khảo sát của một bài: học xong (xem hết video nếu có) mới bấm sang đây từ trang bài học,
+ * Trang riêng cho trắc nghiệm của một bài (khảo sát có trang riêng LessonSurveyPage): học xong (xem hết video nếu có) mới bấm sang đây từ trang bài học,
  * thay vì nằm dồn dưới nội dung bài. Làm xong quay về bài học để bấm "Hoàn thành".
  */
 export function LessonQuizPage() {
@@ -59,8 +58,7 @@ export function LessonQuizPage() {
         ) : (
           <>
             {l.quiz && <QuizPanel communityId={communityId} lessonId={l.id} />}
-            {l.hasSurvey && <SurveyPanel communityId={communityId} lessonId={l.id} />}
-            {!l.quiz && !l.hasSurvey && <p className="mt-4 mb-0 text-sm text-stone-500">{t('lesson.test.none')}</p>}
+            {!l.quiz && <p className="mt-4 mb-0 text-sm text-stone-500">{t('lesson.test.none')}</p>}
             <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-[rgba(120,60,20,.1)] pt-4">
               <Link to={backToLesson} className={l.quiz?.passed || !l.quiz ? primaryBtn : ghostBtn}>
                 <MaterialIcon name="arrow_back" size={18} color={l.quiz?.passed || !l.quiz ? '#fff' : undefined} /> {t('lesson.test.backToComplete')}

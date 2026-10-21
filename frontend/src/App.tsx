@@ -42,6 +42,7 @@ import { ToolsContent, ToolsPage } from './pages/ToolsPage';
 import { CertificateVerifyPage } from './pages/CertificateVerifyPage';
 import { LessonPage } from './pages/LessonPage';
 import { LessonQuizPage } from './pages/LessonQuizPage';
+import { LessonSurveyPage } from './pages/LessonSurveyPage';
 import { VerifyOtpPage } from './pages/VerifyOtpPage';
 import { OAuthCallbackPage } from './pages/OAuthCallbackPage';
 import { ModerationPage } from './features/community/components/ModerationPanel';
@@ -82,6 +83,7 @@ export default function App() {
           <Route path="lop-hoc" element={<ClassroomTab />} />
           <Route path="lop-hoc/:lessonId" element={<LessonPage />} />
           <Route path="lop-hoc/:lessonId/trac-nghiem" element={<LessonQuizPage />} />
+          <Route path="lop-hoc/:lessonId/khao-sat" element={<LessonSurveyPage />} />
           <Route path="kiem-duyet" element={<ModerationPage />} />
           <Route path="khao-sat" element={<SurveysPage />} />
           <Route path="khao-sat/:lessonId" element={<SurveyDetailPage />} />

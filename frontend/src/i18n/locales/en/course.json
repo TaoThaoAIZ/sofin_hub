@@ -134,6 +134,18 @@
     "videoWatched": "You have watched the whole lesson video.",
     "videoMustWatch": "Watch the whole lesson video to unlock the quiz.",
     "test": {
+      "quizTitle": "Quiz",
+      "quizDone": "Quiz completed",
+      "quizDoneSub": "You passed this quiz · tap to review",
+      "quizSub": "{{n}} questions · pass mark {{pct}}%",
+      "quizReview": "Completed · Review",
+      "surveyTitle": "Quick survey",
+      "surveySub": "Share what you need with the community owner",
+      "surveyDone": "Survey submitted",
+      "surveyDoneSub": "Thank you! Tap to review or take it again",
+      "surveyStart": "Take survey",
+      "surveyAgain": "Submitted · Take again",
+      "surveyPageTitle": "Survey: {{title}}",
       "title": "Quiz & survey",
       "quizPassed": "You passed the quiz",
       "surveyOnly": "Quick survey for this lesson",
@@ -176,7 +188,9 @@
     "next": "Next lesson",
     "toClassroom": "Back to classroom",
     "loadingShort": "Loading…",
-    "slides": "Lecture slides"
+    "slides": "Lecture slides",
+    "bodyMore": "Show more",
+    "bodyLess": "Show less"
   },
   "surveyResults": {
     "staffOnly": "Only the community owner and admins can view survey results",
@@ -260,6 +274,13 @@
     "truncated": "Showing the latest 500 responses only"
   },
   "quiz": {
+    "stepOf": "Question {{n}}/{{total}}",
+    "progress": "{{pct}}% complete",
+    "questionN": "Question {{n}}",
+    "rightNow": "Correct! 🎉",
+    "wrongNow": "Not quite, please choose again.",
+    "back": "Back",
+    "next": "Next",
     "loading": "Loading quiz…",
     "title": "Lesson quiz",
     "passRule": "{{n}} questions · pass mark {{pct}}%",

@@ -17,6 +17,7 @@ import type {
   Onboarding,
   PostQuery,
   QuizAttemptResult,
+  QuizCheckResult,
   QuizInput,
   QuizView,
   SurveyAnswer,
@@ -215,6 +216,8 @@ export const downloadSurveyCsv = (cid: string, lessonId: string, token: string) 
   apiDownload(`/communities/${cid}/lessons/${lessonId}/survey/export.csv`, `khao-sat-${lessonId}.csv`, { token });
 export const attemptQuiz = (cid: string, lessonId: string, answers: Array<number | null>, token: string) =>
   apiPost<{ data: QuizAttemptResult }>(`/communities/${cid}/lessons/${lessonId}/quiz/attempt`, { answers }, { token }).then(D);
+export const checkQuizQuestion = (cid: string, lessonId: string, body: { questionId: string; answer: number }, token: string) =>
+  apiPost<{ data: QuizCheckResult }>(`/communities/${cid}/lessons/${lessonId}/quiz/check`, body, { token }).then(D);
 export const toggleLessonComplete = (cid: string, lessonId: string, token: string) =>
   apiPost<{ data: { completed: boolean } }>(`/communities/${cid}/lessons/${lessonId}/complete`, undefined, { token }).then(D);
 export const markVideoWatched = (cid: string, lessonId: string, token: string) =>

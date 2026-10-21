@@ -3,7 +3,7 @@ import { requireAuth } from '../../middlewares/auth.js';
 import { catalogService } from '../catalog/catalog.service.js';
 import { enrollmentService } from '../enrollments/enrollments.service.js';
 import { requireRole } from '../permissions/policy.js';
-import { attemptBody, putQuizBody, quizService } from './quiz.service.js';
+import { attemptBody, checkBody, putQuizBody, quizService } from './quiz.service.js';
 
 /** Trắc nghiệm theo bài học. `/communities/:id/...` ≡ `/courses/:id/...` (communityAlias). */
 export const quizRouter = Router();
@@ -21,6 +21,12 @@ quizRouter.post('/courses/:id/lessons/:lessonId/quiz/attempt', requireAuth, asyn
   const communityId = communityOf(req);
   await enrollmentService.requireMembership(req.userId!, communityId);
   res.json({ data: await quizService.attempt(communityId, lessonOf(req), req.userId!, attemptBody.parse(req.body)) });
+});
+
+quizRouter.post('/courses/:id/lessons/:lessonId/quiz/check', requireAuth, async (req, res) => {
+  const communityId = communityOf(req);
+  await enrollmentService.requireMembership(req.userId!, communityId);
+  res.json({ data: await quizService.check(communityId, lessonOf(req), req.userId!, checkBody.parse(req.body)) });
 });
 
 quizRouter.put('/courses/:id/lessons/:lessonId/quiz', requireAuth, async (req, res) => {

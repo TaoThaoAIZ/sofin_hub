@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { MaterialIcon } from '../components/ui/MaterialIcon';
 import { ApiError } from '../lib/api';
-import { classroomPath, lessonPath, lessonQuizPath } from '../lib/paths';
+import { classroomPath, lessonPath, lessonQuizPath, lessonSurveyPath } from '../lib/paths';
 import { fileKeyOf, refreshFileUrl, useFileUrl } from '../lib/files';
 import { ConfirmDialog, errText, ErrorNote, ghostBtn, isModPlus, primaryBtn, safeUrl, toast, ToastHost } from '../features/community/components/contentUi';
 import { LessonFormDialog } from '../features/community/components/ClassroomEditor';
@@ -17,6 +17,67 @@ const EMBED_PREFIXES = ['https://www.youtube.com/embed/', 'https://www.youtube-n
 const isSafeEmbed = (u?: string) => !!u && EMBED_PREFIXES.some((p) => u.startsWith(p));
 
 const fmtSize = (n?: number) => (n === undefined ? '' : n > 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
+
+/** Thẻ "Làm trắc nghiệm" / "Làm khảo sát" của bài: xong rồi thì đổi thành nút "Đã ..." (vẫn bấm vào xem/làm lại được). */
+function TestCard({ icon, title, sub, done, to, startLabel, doneLabel, locked }: { icon: string; title: string; sub: string; done: boolean; to: string; startLabel: string; doneLabel: string; locked: boolean }) {
+  const { t } = useTranslation('course');
+  const full = 'max-sm:w-full max-sm:justify-center';
+  return (
+    <section className="flex flex-wrap items-center gap-3 rounded-2xl border border-[rgba(120,60,20,.12)] bg-[#fffaf5] p-4 dark:border-white/10 dark:bg-white/[.05]" aria-label={title}>
+      <MaterialIcon name={icon} size={26} filled color={done ? '#059669' : '#ff570a'} />
+      <div className="min-w-[170px] flex-1">
+        <div className="text-[15px] font-extrabold">{title}</div>
+        <div className="text-[12.5px] text-stone-500">{sub}</div>
+      </div>
+      {locked ? (
+        <button type="button" disabled className={`${primaryBtn} ${full} disabled:cursor-not-allowed disabled:opacity-60`} title={t('lesson.videoMustWatch')}>
+          <MaterialIcon name="lock" size={18} color="#fff" /> {t('lesson.test.locked')}
+        </button>
+      ) : done ? (
+        <Link to={to} className={`${full} inline-flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-[13.5px] font-bold text-emerald-700 no-underline hover:bg-emerald-100 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-400`}>
+          <MaterialIcon name="check_circle" size={18} filled color="currentColor" /> {doneLabel}
+        </Link>
+      ) : (
+        <Link to={to} className={`${primaryBtn} ${full}`}>
+          {startLabel} <MaterialIcon name="arrow_forward" size={18} color="#fff" />
+        </Link>
+      )}
+    </section>
+  );
+}
+
+/** Nội dung bài: mặc định gọn 1 dòng, bấm "Xem thêm" để đọc đủ (nút chỉ hiện khi nội dung dài hơn 1 dòng). */
+function LessonBody({ body }: { body: string }) {
+  const { t } = useTranslation('course');
+  const ref = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const [clamped, setClamped] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => {
+      if (!open) setClamped(el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [body, open]);
+
+  return (
+    <div className="mt-4">
+      <div ref={ref} className={`text-[14.5px] leading-[1.7] wrap-break-word whitespace-pre-wrap text-stone-800 ${open ? '' : 'line-clamp-1'}`}>
+        {body}
+      </div>
+      {(clamped || open) && (
+        <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="mt-1 cursor-pointer border-0 bg-transparent p-0 text-[13.5px] font-bold text-brand hover:underline">
+          {open ? t('lesson.bodyLess') : t('lesson.bodyMore')}
+        </button>
+      )}
+    </div>
+  );
+}
 
 /**
  * Theo dõi mức xem THẬT của video: cộng dồn thời gian phát liên tục (bước nhảy do tua bị bỏ qua).
@@ -351,7 +412,7 @@ export function LessonPage() {
                 </ul>
               </div>
             )}
-            {l.body && <div className="mt-4 text-[14.5px] leading-[1.7] break-words whitespace-pre-wrap text-stone-800">{l.body}</div>}
+            {l.body && <LessonBody key={l.id} body={l.body} />}
 
             {l.video?.required && (
               <p role="status" className={`mt-3 mb-0 flex items-center gap-1.5 rounded-xl px-3 py-2 text-[13px] font-semibold ${l.video.watched ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400' : 'bg-amber-50 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300'}`}>
@@ -361,25 +422,32 @@ export function LessonPage() {
             )}
 
             {(l.quiz || l.hasSurvey) && (
-              <section className="mt-5 flex flex-wrap items-center gap-3 rounded-2xl border border-[rgba(120,60,20,.12)] bg-[#fffaf5] p-4 dark:border-white/10 dark:bg-white/[.05]" aria-label={t('lesson.test.title')}>
-                <MaterialIcon name="quiz" size={26} filled color="#ff570a" />
-                <div className="min-w-[170px] flex-1">
-                  <div className="text-[15px] font-extrabold">{t('lesson.test.title')}</div>
-                  <div className="text-[12.5px] text-stone-500">
-                    {l.quiz ? (l.quiz.passed ? t('lesson.test.quizPassed') : t('quiz.passRule', { n: l.quiz.questionCount, pct: l.quiz.passPercent })) : t('lesson.test.surveyOnly')}
-                    {l.hasSurvey && l.quiz ? ` · ${t('lesson.test.withSurvey')}` : ''}
-                  </div>
-                </div>
-                {l.video?.required && !l.video.watched ? (
-                  <button type="button" disabled className={`${primaryBtn} max-sm:w-full max-sm:justify-center disabled:cursor-not-allowed disabled:opacity-60`} title={t('lesson.videoMustWatch')}>
-                    <MaterialIcon name="lock" size={18} color="#fff" /> {t('lesson.test.locked')}
-                  </button>
-                ) : (
-                  <Link to={lessonQuizPath(communityId, l.id)} className={`${primaryBtn} max-sm:w-full max-sm:justify-center`}>
-                    {l.quiz?.passed ? t('lesson.test.review') : t('lesson.test.start')} <MaterialIcon name="arrow_forward" size={18} color="#fff" />
-                  </Link>
+              <div className="mt-5 flex flex-col gap-3" aria-label={t('lesson.test.title')}>
+                {l.quiz && (
+                  <TestCard
+                    icon="quiz"
+                    title={t('lesson.test.quizTitle')}
+                    sub={l.quiz.passed ? t('lesson.test.quizDoneSub') : t('lesson.test.quizSub', { n: l.quiz.questionCount, pct: l.quiz.passPercent })}
+                    done={l.quiz.passed}
+                    to={lessonQuizPath(communityId, l.id)}
+                    startLabel={t('lesson.test.start')}
+                    doneLabel={t('lesson.test.quizReview')}
+                    locked={!!l.video?.required && !l.video.watched}
+                  />
                 )}
-              </section>
+                {l.hasSurvey && (
+                  <TestCard
+                    icon="poll"
+                    title={t('lesson.test.surveyTitle')}
+                    sub={l.surveyAnswered ? t('lesson.test.surveyDoneSub') : t('lesson.test.surveySub')}
+                    done={!!l.surveyAnswered}
+                    to={lessonSurveyPath(communityId, l.id)}
+                    startLabel={t('lesson.test.surveyStart')}
+                    doneLabel={t('lesson.test.surveyAgain')}
+                    locked={!!l.video?.required && !l.video.watched}
+                  />
+                )}
+              </div>
             )}
 
             <div className="mt-6 flex flex-col items-start gap-2 border-t border-[rgba(120,60,20,.1)] pt-4">

@@ -134,6 +134,18 @@
     "videoWatched": "Bạn đã xem hết video bài học.",
     "videoMustWatch": "Hãy xem hết video của bài học để mở bài trắc nghiệm.",
     "test": {
+      "quizTitle": "Bài trắc nghiệm",
+      "quizDone": "Đã hoàn thành trắc nghiệm",
+      "quizDoneSub": "Bạn đã đạt bài trắc nghiệm này · bấm để xem lại",
+      "quizSub": "{{n}} câu · cần đạt tối thiểu {{pct}}%",
+      "quizReview": "Đã hoàn thành · Xem lại",
+      "surveyTitle": "Khảo sát nhanh",
+      "surveySub": "Chia sẻ mong muốn của bạn với chủ cộng đồng",
+      "surveyDone": "Đã khảo sát",
+      "surveyDoneSub": "Cảm ơn bạn! Bấm để xem lại hoặc khảo sát lại",
+      "surveyStart": "Làm khảo sát",
+      "surveyAgain": "Đã khảo sát · Khảo sát lại",
+      "surveyPageTitle": "Khảo sát: {{title}}",
       "title": "Bài trắc nghiệm & khảo sát",
       "quizPassed": "Bạn đã đạt bài trắc nghiệm",
       "surveyOnly": "Khảo sát nhanh của bài học",
@@ -176,7 +188,9 @@
     "next": "Bài sau",
     "toClassroom": "Về lớp học",
     "loadingShort": "Đang tải…",
-    "slides": "Slide bài giảng"
+    "slides": "Slide bài giảng",
+    "bodyMore": "Xem thêm",
+    "bodyLess": "Thu gọn"
   },
   "surveyResults": {
     "staffOnly": "Chỉ chủ cộng đồng và quản trị viên xem được kết quả khảo sát",
@@ -260,6 +274,13 @@
     "truncated": "Chỉ hiển thị 500 câu trả lời mới nhất"
   },
   "quiz": {
+    "stepOf": "Câu {{n}}/{{total}}",
+    "progress": "{{pct}}% hoàn thành",
+    "questionN": "Câu {{n}}",
+    "rightNow": "Chính xác! 🎉",
+    "wrongNow": "Chưa đúng, hãy chọn lại nhé.",
+    "back": "Quay lại",
+    "next": "Tiếp theo",
     "loading": "Đang tải trắc nghiệm…",
     "title": "Bài trắc nghiệm",
     "passRule": "{{n}} câu · cần đạt tối thiểu {{pct}}%",
