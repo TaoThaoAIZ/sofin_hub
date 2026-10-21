@@ -75,7 +75,7 @@ export function SettingsLayout() {
   return (
     <RequireAuth>
       <ToastProvider>
-        <div className="flex min-h-screen flex-col bg-[#faf8f6]">
+        <div className="flex min-h-screen flex-col overflow-x-clip bg-[#faf8f6]">
           <Header active="" />
           <div
             className={`mx-auto grid w-[calc(100%-32px)] max-w-[1320px] flex-1 grid-cols-[minmax(0,1fr)] items-start gap-[18px] pt-5 pb-7 md:w-[calc(100%-80px)] min-[900px]:grid-cols-[250px_minmax(0,1fr)] min-[1240px]:grid-cols-[280px_minmax(0,1fr)] ${

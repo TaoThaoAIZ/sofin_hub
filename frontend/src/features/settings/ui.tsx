@@ -4,7 +4,7 @@ import { MaterialIcon } from '../../components/ui/MaterialIcon';
 /** Thẻ trắng bo 20px dùng cho mọi khối ở trang Cài đặt (đúng thiết kế "Cai dat ho so"). */
 export function SCard({ children, className = '', tone = 'white' }: { children: ReactNode; className?: string; tone?: 'white' | 'danger' }) {
   const toneCls = tone === 'danger' ? 'border-[#fecaca] bg-[#fff5f5]' : 'border-[rgba(120,60,20,.07)] bg-white';
-  return <section className={`min-w-0 rounded-[20px] border px-6 py-[22px] ${toneCls} ${className}`}>{children}</section>;
+  return <section className={`min-w-0 rounded-[20px] border px-6 py-[22px] max-md:px-4 max-md:py-4 ${toneCls} ${className}`}>{children}</section>;
 }
 
 /** Icon tròn cam nhạt + tiêu đề + mô tả ở đầu mỗi thẻ. `action` nằm bên phải. */
