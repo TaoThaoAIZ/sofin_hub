@@ -748,3 +748,42 @@ def load(add):
       ["Hoàn thành bài cuối ở màn hình 1440px, so với Figma node 153:3758", "Thu nhỏ còn 390px", "Bật dark mode"], "-",
       "Nền gradient cam nhạt, ảnh cúp 409x249, tiêu đề đậm 38px, nút 200x48 bo 15px (trắng viền #eee1d9 / cam #ff6717). Ở 390px: tiêu đề co lại, các nút xuống dòng, không tràn ngang. Dark mode: chữ vẫn đọc được.",
       pw="Không")
+
+    # =====================================================================================
+    # COURSE — Nhiều video / tài liệu / slide cho một bài học (thêm 2026-10-22)
+    # =====================================================================================
+    F = "Lớp học - Nhiều video, tài liệu, slide trong một bài"
+    MPRE = BASE + "Đăng nhập tài khoản mod/owner; mở popup Thêm/Sửa bài học (tab Lớp học). Có sẵn vài file mp4/webm, pdf, pptx nhỏ. "
+    C(CO, F, "Thêm nhiều video bổ sung bằng tệp tải lên (chọn nhiều tệp một lần)", "Chức năng", "Cao", MPRE,
+      ["Trong mục 'Video bổ sung' bấm 'Tải thêm video'", "Chọn cùng lúc 3 tệp mp4/webm", "Chờ tải xong, bấm 'Lưu bài học'", "Mở lại bài để sửa"], "3 tệp video",
+      "3 video lần lượt tải (có thanh tiến độ), hiện thành 3 dòng với tên tệp sửa được; lưu thành công; mở lại vẫn đủ 3 video bổ sung đúng thứ tự.")
+    C(CO, F, "Thêm video bổ sung bằng link YouTube/Vimeo; link lạ bị từ chối", "Chức năng", "Cao", MPRE,
+      ["Dán link YouTube hợp lệ vào ô link bổ sung, bấm 'Thêm link' (hoặc Enter)", "Dán link https://example.com/a.mp4, thêm rồi lưu"], "Link YouTube/Vimeo, link lạ",
+      "Link hợp lệ thêm thành dòng 'Video N' (đổi tên được). Link lạ: lưu bị từ chối 400 'Video bổ sung chỉ chấp nhận link YouTube/Vimeo hợp lệ hoặc video tải lên'.")
+    C(CO, F, "Giới hạn 10 video bổ sung và tổng 30 tệp", "Chức năng", "Trung bình", MPRE,
+      ["Thêm đủ 10 video bổ sung", "Thử thêm video thứ 11", "Gọi API với 11 video bổ sung"], "-",
+      "Nút tải/thêm link bị vô hiệu khi đủ 10; API trả 400 'Tối đa 10 video bổ sung'; tổng video+slide+tài liệu > 30 bị 400.")
+    C(CO, F, "Chọn nhiều tệp một lần cho tài liệu và slide", "Chức năng", "Trung bình", MPRE,
+      ["Mục tài liệu đính kèm: chọn 3 tệp cùng lúc", "Mục slide: chọn 2 tệp pdf/pptx cùng lúc", "Lưu bài"], "3 tài liệu, 2 slide",
+      "Tất cả được tải lần lượt và hiện đủ trong danh sách tương ứng; lưu xong học viên thấy đủ 5 tệp. Hủy giữa chừng: tệp đã tải xong vẫn giữ, các tệp sau dừng.")
+    C(CO, F, "Chưa có video chính: video bổ sung đầu tiên được nâng thành video chính", "Chức năng", "Trung bình", MPRE,
+      ["Để trống video chính, chỉ thêm 2 video bổ sung", "Lưu bài, mở trang bài học bằng học viên"], "2 video bổ sung",
+      "Bài lưu được, type = video; video đầu là video chính (phát đầu tiên, có theo dõi 'xem hết'), video còn lại là video bổ sung.")
+    C(CO, F, "Trang bài học: thanh chuyển video khi bài có từ 2 video", "Chức năng", "Cao", BASE + "Bài học có video chính + 2 video bổ sung (1 YouTube, 1 tải lên). Đăng nhập học viên.",
+      ["Mở trang bài học", "Bấm lần lượt các nút 'Video 1', tên video 2, tên video 3 dưới khung phát", "Đổi sang bài khác rồi quay lại"], "-",
+      "Có thanh chip dưới khung phát, chip đang chọn nổi màu cam; bấm chip thì khung phát đổi đúng video (YouTube nhúng iframe, tải lên dùng thẻ video); quay lại bài thì về Video 1. Bài chỉ có 1 video: không hiện thanh chip, giao diện như cũ.")
+    C(CO, F, "Phải xem hết TẤT CẢ video (chính + bổ sung) mới hoàn thành được bài", "Chức năng", "Cao", BASE + "Bài có 3 video (1 chính + 2 bổ sung), học viên chưa xem video nào.",
+      ["Xem hết Video 1 (không tua), bấm 'Hoàn thành'", "Chuyển sang video 2, xem hết, bấm 'Hoàn thành'", "Xem hết video 3, bấm 'Hoàn thành'", "Quan sát dòng thông báo và dấu tích trên các nút video"], "-",
+      "Sau video 1 và 2: nút Hoàn thành vẫn báo 409 VIDEO_REQUIRED 'xem hết tất cả video', thông báo 'Đã xem 1/3, 2/3 video', nút video đã xem hiện dấu tích. Chỉ sau khi xem hết cả 3 mới hoàn thành được; bài trắc nghiệm cũng chỉ mở khi xem đủ 3.")
+    C(CO, F, "Tua qua video bổ sung không tính là đã xem; API báo xem với khóa video lạ bị từ chối", "Chức năng", "Trung bình", BASE + "Bài có video bổ sung chưa xem.",
+      ["Chuyển sang video bổ sung, tua thẳng tới cuối", "Gọi POST /lessons/:id/watched với videoKey không thuộc bài"], "-",
+      "Tua qua: hiện 'Bạn đã tua qua video…', không ghi nhận. API khóa lạ: 400 'Video không thuộc bài học này'.")
+    C(CO, F, "Sửa bài đã có video/tài liệu/slide rồi bấm Lưu: không lỗi 400", "Chức năng", "Cao", MPRE + "Bài đã lưu có video bổ sung tải lên + link YouTube + slide + tài liệu.",
+      ["Bấm nút Sửa bài", "Không đổi gì (hoặc thêm 1 video/tài liệu/slide), bấm 'Lưu bài học'", "Mở lại bài để sửa"], "Bài có đủ 3 loại tệp",
+      "Lưu thành công (200), không còn 400; đủ video/tài liệu/slide cũ và mới; video tải lên vẫn phát được (BE lưu dạng /api/files/<key> và nhận lại đúng dạng này khi sửa).")
+    C(CO, F, "Danh sách tài liệu/slide nhiều tệp: 2 cột, thu gọn 4 tệp đầu + 'Xem thêm'", "Giao diện", "Trung bình", BASE + "Bài có 7 tài liệu và 6 slide.",
+      ["Mở trang bài học ở 1440px", "Bấm 'Xem thêm n tệp', rồi 'Thu gọn'", "Thu nhỏ còn 390px"], "-",
+      "Mỗi mục hiện số tệp trong ngoặc, 2 cột (mobile 1 cột), chỉ 4 tệp đầu; 'Xem thêm' mở hết, 'Thu gọn' đóng lại; tên dài bị cắt bằng '...'. Form soạn bài cũng chỉ hiện 4 dòng đầu cho mỗi danh sách video/tài liệu/slide kèm 'Xem thêm n tệp'.", pw="Không")
+    C(CO, F, "Bài khóa không lộ video bổ sung; học viên ngoài quyền không tải được", "Bảo mật", "Cao", BASE + "Module khóa với học viên chưa mở khóa.",
+      ["Học viên chưa mở khóa gọi GET /api/courses/photo/lessons/:id", "Thử mở URL video bổ sung trực tiếp"], "-",
+      "Phản hồi bài khóa có attachments = [] (không có link video bổ sung); URL /api/files/... cần quyền cộng đồng, người ngoài bị chặn.")

@@ -87,8 +87,8 @@ export const quizService = {
    */
   async check(communityId: string, lessonId: string, userId: string, body: z.infer<typeof checkBody>) {
     const { lesson } = await classroomService.assertLessonAccessible(communityId, lessonId, userId);
-    if (lesson.videoUrl && !(await lessonWatchStore.hasWatched(userId, lessonId))) {
-      throw HttpError.coded(409, 'VIDEO_REQUIRED', 'Bạn cần xem hết video của bài học trước khi làm trắc nghiệm');
+    if (!(await lessonWatchStore.hasWatchedAll(userId, lesson))) {
+      throw HttpError.coded(409, 'VIDEO_REQUIRED', 'Bạn cần xem hết tất cả video của bài học trước khi làm trắc nghiệm');
     }
     const quiz = await quizStore.findByLesson(lessonId);
     const q = quiz?.questions.find((x) => x.id === body.questionId);
@@ -103,8 +103,8 @@ export const quizService = {
   async attempt(communityId: string, lessonId: string, userId: string, body: z.infer<typeof attemptBody>) {
     const { lesson } = await classroomService.assertLessonAccessible(communityId, lessonId, userId);
     // Bài có video: ai cũng phải xem hết video trước khi làm trắc nghiệm.
-    if (lesson.videoUrl && !(await lessonWatchStore.hasWatched(userId, lessonId))) {
-      throw HttpError.coded(409, 'VIDEO_REQUIRED', 'Bạn cần xem hết video của bài học trước khi làm trắc nghiệm');
+    if (!(await lessonWatchStore.hasWatchedAll(userId, lesson))) {
+      throw HttpError.coded(409, 'VIDEO_REQUIRED', 'Bạn cần xem hết tất cả video của bài học trước khi làm trắc nghiệm');
     }
     const quiz = await quizStore.findByLesson(lessonId);
     if (!quiz || quiz.questions.length === 0) throw HttpError.notFound('Bài học này chưa có trắc nghiệm');

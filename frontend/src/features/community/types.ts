@@ -263,8 +263,10 @@ export interface LessonAttachment {
   name: string;
   url: string;
   size?: number;
-  /** 'slide' = slide bài giảng (hiện ở mục riêng); bỏ trống = tệp đính kèm thường. */
-  kind?: 'slide';
+  /** 'slide' = slide bài giảng; 'video' = video bổ sung (ngoài video chính); bỏ trống = tệp đính kèm thường. */
+  kind?: 'slide' | 'video';
+  /** Chỉ video bổ sung dạng link YouTube/Vimeo: URL nhúng do BE dựng. */
+  embedUrl?: string;
 }
 
 export interface LessonDetail extends ClassroomLesson {
@@ -283,7 +285,7 @@ export interface LessonDetail extends ClassroomLesson {
   surveyAnswered?: boolean;
   surveyRequired?: boolean;
   /** required = phải xem hết video mới làm được trắc nghiệm (mod+ không bị bắt buộc); watched = đã xem hết. */
-  video?: { required: boolean; watched: boolean };
+  video?: { required: boolean; watched: boolean; /** Từng video theo thứ tự hiển thị (video chính trước); `watched` ở trên = đã xem hết mọi video. */ items?: { key: string; watched: boolean }[] };
 }
 
 export type OnboardingStepKey = 'video' | 'comment' | 'app';

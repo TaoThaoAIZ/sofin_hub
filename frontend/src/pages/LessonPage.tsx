@@ -9,7 +9,7 @@ import { ConfirmDialog, errText, ErrorNote, ghostBtn, isModPlus, primaryBtn, saf
 import { LessonFormDialog } from '../features/community/components/ClassroomEditor';
 import { LessonCompleteCard } from '../features/community/components/LessonCompleteCard';
 import { useCommunityDetail } from '../features/courses/queries';
-import type { ClassroomLesson } from '../features/community/types';
+import type { ClassroomLesson, LessonAttachment } from '../features/community/types';
 import { useCourseList, useDeleteLesson, useLesson, useLessons, useMarkVideoWatched, useProgress, useReorderLessons, useToggleLessonComplete } from '../features/community/queries';
 import { useDragReorder } from '../features/community/useDragReorder';
 
@@ -94,6 +94,13 @@ function useWatchCoverage(onDone: () => void) {
   doneRef.current = onDone;
   return {
     skipped,
+    /** Đổi sang video khác: bắt đầu đo lại từ đầu. */
+    reset: () => {
+      last.current = null;
+      played.current = 0;
+      duration.current = 0;
+      setSkipped(false);
+    },
     tick: (t: number, d: number) => {
       if (d > 0) duration.current = d;
       if (last.current !== null) {
@@ -254,6 +261,34 @@ function LessonAttachmentLink({ a }: { a: { name: string; url: string; size?: nu
   );
 }
 
+/** Danh sách tệp/slide của bài: 2 cột trên màn rộng; nhiều hơn 4 tệp thì thu gọn, bấm "Xem thêm" để mở hết. */
+const FILES_COLLAPSED = 4;
+function LessonFileList({ icon, title, files }: { icon?: string; title: string; files: LessonAttachment[] }) {
+  const { t } = useTranslation('course');
+  const [open, setOpen] = useState(false);
+  const shown = open ? files : files.slice(0, FILES_COLLAPSED);
+  return (
+    <div className="mt-4">
+      <div className="mb-2 flex items-center gap-1.5 text-[13.5px] font-bold">
+        {icon && <MaterialIcon name={icon} size={18} color="#ff570a" />} {title}
+        <span className="font-medium text-stone-500">({files.length})</span>
+      </div>
+      <ul className="m-0 grid list-none grid-cols-2 gap-2 p-0 max-sm:grid-cols-1">
+        {shown.map((a) => (
+          <li key={a.url} className="min-w-0">
+            <LessonAttachmentLink a={a} />
+          </li>
+        ))}
+      </ul>
+      {files.length > FILES_COLLAPSED && (
+        <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="mt-2 cursor-pointer border-0 bg-transparent p-0 text-[13.5px] font-bold text-brand hover:underline">
+          {open ? t('lesson.bodyLess') : t('lesson.filesMore', { n: files.length - FILES_COLLAPSED })}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function LessonPage() {
   const { t } = useTranslation('course');
   const { id: communityId = '', lessonId = '' } = useParams();
@@ -279,7 +314,12 @@ export function LessonPage() {
   const [editing, setEditing] = useState<ClassroomLesson | 'new' | null>(null);
   const [deleting, setDeleting] = useState<ClassroomLesson | null>(null);
   const [celebrate, setCelebrate] = useState(false);
-  useEffect(() => setCelebrate(false), [lessonId]);
+  // Video đang xem trong danh sách (0 = video chính, các video sau là video bổ sung).
+  const [activeVideo, setActiveVideo] = useState(0);
+  useEffect(() => {
+    setCelebrate(false);
+    setActiveVideo(0);
+  }, [lessonId]);
 
   if (lesson.isPending) return <p className="py-10 text-center text-stone-400">{t('lesson.loading')}</p>;
 
@@ -307,7 +347,16 @@ export function LessonPage() {
   const l = lesson.data;
   const embed = isSafeEmbed(l.embedUrl) ? l.embedUrl! : null;
   const slideFiles = (l.attachments ?? []).filter((a) => a.kind === 'slide');
-  const docFiles = (l.attachments ?? []).filter((a) => a.kind !== 'slide');
+  const docFiles = (l.attachments ?? []).filter((a) => !a.kind);
+  // Danh sách video: video chính (theo dõi "xem hết" để hoàn thành bài) rồi tới các video bổ sung.
+  const videos: { key: string; label: string; url: string; embed: string | null }[] = [
+    ...(l.videoUrl ? [{ key: 'main', label: t('lesson.videoN', { n: 1 }), url: l.videoUrl, embed }] : []),
+    ...(l.attachments ?? [])
+      .filter((a) => a.kind === 'video')
+      .map((a, i) => ({ key: a.url, label: a.name || t('lesson.videoN', { n: i + 2 }), url: a.url, embed: isSafeEmbed(a.embedUrl) ? a.embedUrl! : null })),
+  ];
+  const current = videos[Math.min(activeVideo, videos.length - 1)];
+  const isMain = !!l.videoUrl && (current?.key === 'main');
   const pct = progress.data?.percent ?? 0;
   // Bài có trắc nghiệm bắt buộc: chưa đạt thì chưa được đánh dấu hoàn thành (bỏ đánh dấu thì vẫn được).
   const quizBlocks = !!l.quiz && !l.quiz.passed && !l.completed;
@@ -318,7 +367,8 @@ export function LessonPage() {
 
   // Video chạy hết => báo server (chỉ khi bài bắt buộc xem hết video và chưa ghi nhận).
   const onVideoEnded = () => {
-    if (l.video?.required && !l.video.watched && !markWatched.isPending) markWatched.mutate();
+    const item = l.video?.items?.[Math.min(activeVideo, videos.length - 1)];
+    if (item && !item.watched && !markWatched.isPending) markWatched.mutate(item.key);
   };
 
   watchedCb.current = onVideoEnded;
@@ -383,14 +433,38 @@ export function LessonPage() {
         ) : (
         <>
         <article className="glass overflow-hidden rounded-3xl">
-          {l.type === 'video' && embed && (
+          {current?.embed && (
             <div className="aspect-video w-full bg-black">
-              <EmbedPlayer src={embed} title={l.title} watch={watch} />
+              <EmbedPlayer key={current.key} src={current.embed} title={current.label} {...(isMain ? { watch } : {})} />
             </div>
           )}
-          {l.type === 'video' && !embed && fileKeyOf(l.videoUrl) && <UploadedVideo url={l.videoUrl!} title={l.title} watch={watch} />}
-          {l.type === 'video' && !embed && !fileKeyOf(l.videoUrl) && (
+          {current && !current.embed && fileKeyOf(current.url) && <UploadedVideo key={current.key} url={current.url} title={current.label} {...(isMain ? { watch } : {})} />}
+          {(!current || (!current.embed && !fileKeyOf(current.url))) && l.type === 'video' && (
             <div className="grid aspect-video w-full place-items-center bg-stone-100 text-sm text-stone-500">{t('lesson.noVideo')}</div>
+          )}
+          {videos.length > 1 && (
+            <div role="tablist" aria-label={t('lesson.videoList')} className="flex gap-2 overflow-x-auto border-b border-[rgba(120,60,20,.1)] px-5 py-3">
+              {videos.map((v, i) => {
+                const on = v.key === current?.key;
+                return (
+                  <button
+                    key={v.key}
+                    type="button"
+                    role="tab"
+                    aria-selected={on}
+                    onClick={() => {
+                      watch.reset();
+                      setActiveVideo(i);
+                    }}
+                    title={v.label}
+                    className={`inline-flex max-w-[220px] flex-none cursor-pointer items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13px] font-semibold ${on ? 'border-brand bg-brand text-white' : 'border-[rgba(120,60,20,.15)] bg-white text-stone-700 hover:border-brand dark:bg-white/5 dark:text-stone-200'}`}
+                  >
+                    <MaterialIcon name={l.video?.items?.[i]?.watched ? 'check_circle' : on ? 'play_circle' : 'play_arrow'} size={16} filled={on || !!l.video?.items?.[i]?.watched} color="currentColor" />
+                    <span className="truncate">{v.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           )}
           <div className="p-5">
             <div className="flex flex-wrap items-start gap-3">
@@ -401,39 +475,20 @@ export function LessonPage() {
                 </div>
               </div>
             </div>
-            {slideFiles.length > 0 && (
-              <div className="mt-4">
-                <div className="mb-2 flex items-center gap-1.5 text-[13.5px] font-bold">
-                  <MaterialIcon name="slideshow" size={18} color="#ff570a" /> {t('lesson.slides')}
-                </div>
-                <ul className="m-0 flex list-none flex-col gap-2 p-0">
-                  {slideFiles.map((a) => (
-                    <li key={a.url}>
-                      <LessonAttachmentLink a={a} />
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {docFiles.length > 0 && (
-              <div className="mt-4">
-                <div className="mb-2 text-[13.5px] font-bold">{t('lesson.attachments')}</div>
-                <ul className="m-0 flex list-none flex-col gap-2 p-0">
-                  {docFiles.map((a) => (
-                    <li key={a.url}>
-                      <LessonAttachmentLink a={a} />
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            {slideFiles.length > 0 && <LessonFileList icon="slideshow" title={t('lesson.slides')} files={slideFiles} />}
+            {docFiles.length > 0 && <LessonFileList title={t('lesson.attachments')} files={docFiles} />}
             {l.body && <LessonBody key={l.id} body={l.body} />}
 
             {l.video?.required && (
               <p role="status" className={`mt-3 mb-0 flex items-center gap-1.5 rounded-xl px-3 py-2 text-[13px] font-semibold ${l.video.watched ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400' : 'bg-amber-50 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300'}`}>
                 <MaterialIcon name={l.video.watched ? 'check_circle' : 'play_circle'} size={18} filled color="currentColor" />
-                {l.video.watched ? t('lesson.videoWatched') : watch.skipped ? t('lesson.videoSkipped') : t('lesson.videoMustWatch')}
+                {l.video.watched
+                  ? t('lesson.videoWatched')
+                  : watch.skipped
+                    ? t('lesson.videoSkipped')
+                    : videos.length > 1
+                      ? t('lesson.videosProgress', { done: l.video.items?.filter((x) => x.watched).length ?? 0, total: videos.length })
+                      : t('lesson.videoMustWatch')}
               </p>
             )}
 

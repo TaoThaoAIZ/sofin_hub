@@ -4,8 +4,10 @@ export interface LessonAttachment {
   name: string;
   url: string;
   size?: number;
-  /** 'slide' = slide bài giảng; bỏ trống = tệp đính kèm thường. */
-  kind?: 'slide';
+  /** 'slide' = slide bài giảng; 'video' = video bổ sung (ngoài video chính `videoUrl`); bỏ trống = tệp đính kèm thường. */
+  kind?: 'slide' | 'video';
+  /** Chỉ kind = 'video' dùng link YouTube/Vimeo: URL nhúng do BE dựng; video tải lên không có. */
+  embedUrl?: string;
 }
 
 export interface ClassroomLesson {
@@ -115,7 +117,8 @@ export interface ClassroomLessonDetail extends ClassroomLessonView {
   /** Khảo sát có câu BẮT BUỘC (dù người xem đã trả lời hay chưa). */
   surveyRequired: boolean;
   /** Video bài học: `required` = bài có video, phải xem hết video mới làm được trắc nghiệm (áp dụng cho mọi người); `watched` = đã xem hết. */
-  video: { required: boolean; watched: boolean };
+  /** `items` = từng video theo thứ tự hiển thị (video chính trước); `watched` = đã xem hết MỌI video. */
+  video: { required: boolean; watched: boolean; items: { key: string; watched: boolean }[] };
 }
 
 export interface ClassroomProgress {

@@ -131,8 +131,9 @@
       "survey": "Trả lời các câu khảo sát bắt buộc"
     },
     "videoSkipped": "Bạn đã tua qua video nên chưa tính là xem hết. Hãy xem lại video liên tục từ đầu đến cuối.",
-    "videoWatched": "Bạn đã xem hết video bài học.",
-    "videoMustWatch": "Hãy xem hết video của bài học để mở bài trắc nghiệm.",
+    "videoWatched": "Bạn đã xem hết tất cả video của bài học.",
+    "videosProgress": "Hãy xem hết tất cả video của bài học để hoàn thành bài và mở bài trắc nghiệm. Đã xem {{done}}/{{total}} video.",
+    "videoMustWatch": "Hãy xem hết tất cả video của bài học để hoàn thành bài và mở bài trắc nghiệm.",
     "test": {
       "quizTitle": "Bài trắc nghiệm",
       "quizDone": "Đã hoàn thành trắc nghiệm",
@@ -194,6 +195,9 @@
       "continue": "Tiếp tục học bài {{n}}"
     },
     "loadingShort": "Đang tải…",
+    "videoN": "Video {{n}}",
+    "videoList": "Danh sách video của bài",
+    "filesMore": "Xem thêm {{n}} tệp",
     "slides": "Slide bài giảng",
     "bodyMore": "Xem thêm",
     "bodyLess": "Thu gọn"

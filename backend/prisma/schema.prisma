@@ -1103,12 +1103,14 @@ model LessonProgress {
 model LessonVideoWatch {
   userId    String
   lessonId  String
+  /// 'main' = video chính (videoUrl); video bổ sung = mã băm URL (lessonVideoKeys).
+  videoKey  String   @default("main")
   createdAt DateTime @default(now())
 
   user   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   lesson ClassroomLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
-  @@id([userId, lessonId])
+  @@id([userId, lessonId, videoKey])
   @@index([lessonId])
 }
 

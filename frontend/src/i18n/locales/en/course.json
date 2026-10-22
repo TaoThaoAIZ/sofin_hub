@@ -131,8 +131,9 @@
       "survey": "Answer the required survey questions"
     },
     "videoSkipped": "You skipped through the video, so it does not count as watched. Please watch it from start to finish.",
-    "videoWatched": "You have watched the whole lesson video.",
-    "videoMustWatch": "Watch the whole lesson video to unlock the quiz.",
+    "videoWatched": "You have watched every video in this lesson.",
+    "videosProgress": "Watch every video in this lesson to complete it and unlock the quiz. Watched {{done}}/{{total}} videos.",
+    "videoMustWatch": "Watch every video in this lesson to complete it and unlock the quiz.",
     "test": {
       "quizTitle": "Quiz",
       "quizDone": "Quiz completed",
@@ -194,6 +195,9 @@
       "continue": "Continue to module {{n}}"
     },
     "loadingShort": "Loading…",
+    "videoN": "Video {{n}}",
+    "videoList": "Lesson videos",
+    "filesMore": "Show {{n}} more files",
     "slides": "Lecture slides",
     "bodyMore": "Show more",
     "bodyLess": "Show less"

@@ -558,7 +558,7 @@ export const useMarkVideoWatched = (cid: string, lessonId: string) => {
   const token = useToken();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => api.markVideoWatched(cid, lessonId, token),
+    mutationFn: (videoKey?: string) => api.markVideoWatched(cid, lessonId, token, videoKey),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['community', cid, 'lesson'] }),
   });
 };
