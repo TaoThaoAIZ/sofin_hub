@@ -712,3 +712,39 @@ def load(add):
       ["Owner mở quản lý chứng nhận (dự kiến)", "Thu hồi chứng nhận FIN-DEMO-CERT-001", "Xác minh công khai lại"],
       "FIN-DEMO-CERT-001",
       "Dự kiến: trang xác minh báo chứng nhận đã bị thu hồi (ví dụ valid:false + lý do) thay vì 'hợp lệ'; cần chốt chính sách thu hồi khi mod thêm bài mới.", pw="Không", st=PLAN)
+
+    # =====================================================================================
+    # COURSE — Màn chúc mừng khi hoàn thành TOÀN BỘ bài của một module (Figma node 153:3758, thêm 2026-10-22)
+    # =====================================================================================
+    F = "Lớp học - Màn chúc mừng hoàn thành module"
+    CPRE = BASE + "Đăng nhập member có quyền học; chọn module có nhiều bài (vd 6 bài), đã hoàn thành n-1 bài, còn đúng 1 bài chưa xong và không bị chặn điều kiện (video/trắc nghiệm/khảo sát). "
+    C(CO, F, "Hoàn thành bài cuối còn thiếu của module hiện màn chúc mừng", "Chức năng", "Cao", CPRE,
+      ["Mở bài cuối còn thiếu của module (/communities/:id/lessons/:lessonId)", "Bấm nút 'Hoàn thành'"],
+      "Module n bài, n-1 bài đã xong",
+      "Toggle thành công, toast 'đã hoàn thành'; khu vực nội dung đổi sang màn chúc mừng: ảnh cúp, tiêu đề 'Chúc mừng bạn đã hoàn thành bài N!' (N = số '#N' của module ở breadcrumb), mô tả, 2 nút 'Xem lại bài học' và 'Tiếp tục học bài N+1'. Thanh tiến độ cập nhật (vd 9/15 bài).")
+    C(CO, F, "Hoàn thành bài khi module còn bài chưa xong: KHÔNG hiện chúc mừng", "Chức năng", "Cao", BASE + "Module có từ 2 bài chưa hoàn thành.",
+      ["Mở một bài chưa xong của module (còn >= 1 bài khác chưa xong)", "Bấm 'Hoàn thành'"], "Module còn bài dở",
+      "Chỉ hiện toast 'đã hoàn thành', vẫn ở lại nội dung bài (nút đổi 'Bỏ hoàn thành'); không có màn chúc mừng.")
+    C(CO, F, "Hoàn thành không theo thứ tự: bài cuối còn thiếu là bài giữa vẫn hiện chúc mừng", "Chức năng", "Trung bình", BASE + "Module 6 bài, đã xong bài 1,2,4,5,6; còn bài 3.",
+      ["Mở bài 3", "Bấm 'Hoàn thành'"], "Bài còn thiếu không phải bài cuối danh sách",
+      "Hiện màn chúc mừng (điều kiện là cả module đã xong, không phụ thuộc vị trí bài).")
+    C(CO, F, "Nút 'Tiếp tục học bài N+1' chuyển sang bài đầu của module kế", "Chức năng", "Cao", CPRE + "Có module kế tiếp, không bị khóa.",
+      ["Hoàn thành bài cuối còn thiếu", "Bấm 'Tiếp tục học bài N+1'"], "Module có nextLessonId",
+      "Chuyển tới URL của bài kế tiếp (bài đầu module sau); màn chúc mừng biến mất, hiện nội dung bài mới.")
+    C(CO, F, "Module cuối khóa hoặc module kế bị khóa: nút chính đổi thành 'Về lớp học'", "Chức năng", "Trung bình", CPRE + "Chọn module cuối của khóa hoặc module sau đang bị khóa.",
+      ["Hoàn thành bài cuối còn thiếu", "Quan sát nút chính", "Bấm nút đó"], "Không có bài kế mở được",
+      "Nút chính hiện 'Về lớp học' (không còn 'Tiếp tục học bài N+1'); bấm vào chuyển về trang Lớp học của khóa.")
+    C(CO, F, "Nút 'Xem lại bài học' quay lại nội dung bài", "Chức năng", "Trung bình", CPRE,
+      ["Hoàn thành bài cuối để hiện màn chúc mừng", "Bấm 'Xem lại bài học'"], "-",
+      "Màn chúc mừng đóng, hiện lại nội dung bài, nút hiển thị 'Bỏ hoàn thành' và dòng 'Bạn đã hoàn thành bài này'; không gọi API thêm.")
+    C(CO, F, "Bỏ hoàn thành / tải lại trang / đổi bài không hiện lại màn chúc mừng", "Chức năng", "Trung bình", BASE + "Module đã hoàn thành đủ.",
+      ["Mở bài đã xong, bấm 'Bỏ hoàn thành'", "Hoàn thành lại để hiện chúc mừng rồi bấm F5", "Hiện chúc mừng rồi chuyển sang bài khác trong sidebar"], "-",
+      "Bỏ hoàn thành chỉ hiện toast, không có màn chúc mừng; F5 và đổi bài đều không hiện màn chúc mừng (chỉ hiện ngay sau khi bấm Hoàn thành bài cuối).")
+    C(CO, F, "Bài còn điều kiện bắt buộc: không hoàn thành được nên không hiện chúc mừng", "Chức năng", "Trung bình",
+      BASE + "Bài cuối còn thiếu có video bắt buộc xem hết / trắc nghiệm / khảo sát chưa đạt.",
+      ["Mở bài bị chặn điều kiện", "Quan sát nút 'Hoàn thành'"], "Bài có requirements chưa đạt",
+      "Nút 'Hoàn thành' bị vô hiệu kèm danh sách điều kiện; không có màn chúc mừng cho tới khi đạt đủ và hoàn thành thành công.")
+    C(CO, F, "Giao diện màn chúc mừng khớp Figma, responsive và dark mode", "Giao diện", "Thấp", CPRE,
+      ["Hoàn thành bài cuối ở màn hình 1440px, so với Figma node 153:3758", "Thu nhỏ còn 390px", "Bật dark mode"], "-",
+      "Nền gradient cam nhạt, ảnh cúp 409x249, tiêu đề đậm 38px, nút 200x48 bo 15px (trắng viền #eee1d9 / cam #ff6717). Ở 390px: tiêu đề co lại, các nút xuống dòng, không tràn ngang. Dark mode: chữ vẫn đọc được.",
+      pw="Không")

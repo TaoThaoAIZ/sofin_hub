@@ -187,6 +187,12 @@
     "prev": "Bài trước",
     "next": "Bài sau",
     "toClassroom": "Về lớp học",
+    "celebrate": {
+      "title": "Chúc mừng bạn đã hoàn thành bài {{n}}!",
+      "desc": "Bạn đã hoàn thành toàn bộ bài học của phần này trong hành trình của mình. Thật tuyệt vời! Hãy tiếp tục phát huy nhé!",
+      "review": "Xem lại bài học",
+      "continue": "Tiếp tục học bài {{n}}"
+    },
     "loadingShort": "Đang tải…",
     "slides": "Slide bài giảng",
     "bodyMore": "Xem thêm",

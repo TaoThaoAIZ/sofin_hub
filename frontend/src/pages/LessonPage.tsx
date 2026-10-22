@@ -7,6 +7,7 @@ import { classroomPath, lessonPath, lessonQuizPath, lessonSurveyPath } from '../
 import { fileKeyOf, refreshFileUrl, useFileUrl } from '../lib/files';
 import { ConfirmDialog, errText, ErrorNote, ghostBtn, isModPlus, primaryBtn, safeUrl, toast, ToastHost } from '../features/community/components/contentUi';
 import { LessonFormDialog } from '../features/community/components/ClassroomEditor';
+import { LessonCompleteCard } from '../features/community/components/LessonCompleteCard';
 import { useCommunityDetail } from '../features/courses/queries';
 import type { ClassroomLesson } from '../features/community/types';
 import { useCourseList, useDeleteLesson, useLesson, useLessons, useMarkVideoWatched, useProgress, useReorderLessons, useToggleLessonComplete } from '../features/community/queries';
@@ -277,6 +278,8 @@ export function LessonPage() {
   });
   const [editing, setEditing] = useState<ClassroomLesson | 'new' | null>(null);
   const [deleting, setDeleting] = useState<ClassroomLesson | null>(null);
+  const [celebrate, setCelebrate] = useState(false);
+  useEffect(() => setCelebrate(false), [lessonId]);
 
   if (lesson.isPending) return <p className="py-10 text-center text-stone-400">{t('lesson.loading')}</p>;
 
@@ -330,7 +333,11 @@ export function LessonPage() {
 
   const onToggle = () =>
     toggle.mutate(l.id, {
-      onSuccess: ({ completed }) => toast(completed ? t('lesson.completedToast') : t('lesson.uncompletedToast')),
+      onSuccess: ({ completed }) => {
+        toast(completed ? t('lesson.completedToast') : t('lesson.uncompletedToast'));
+        // Chỉ chúc mừng khi bài vừa xong là bài cuối còn thiếu của module (cả module đã hoàn thành).
+        setCelebrate(completed && !!siblings.data?.length && siblings.data.every((s) => s.id === l.id || s.completed));
+      },
       onError: (e) => toast(errText(e), 'error'),
     });
 
@@ -366,6 +373,15 @@ export function LessonPage() {
           </div>
         </div>
 
+        {celebrate ? (
+          <LessonCompleteCard
+            number={Math.max(1, l.moduleIndex - 1)}
+            nextTo={l.nextLessonId && !l.nextLessonLocked ? lessonPath(communityId, l.nextLessonId) : null}
+            classroomTo={back}
+            onReview={() => setCelebrate(false)}
+          />
+        ) : (
+        <>
         <article className="glass overflow-hidden rounded-3xl">
           {l.type === 'video' && embed && (
             <div className="aspect-video w-full bg-black">
@@ -505,6 +521,8 @@ export function LessonPage() {
             </Link>
           )}
         </div>
+        </>
+        )}
       </main>
 
       <aside className="glass sticky top-[76px] rounded-2xl p-3 max-[1100px]:static">

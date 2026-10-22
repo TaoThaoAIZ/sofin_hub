@@ -187,6 +187,12 @@
     "prev": "Previous lesson",
     "next": "Next lesson",
     "toClassroom": "Back to classroom",
+    "celebrate": {
+      "title": "Congratulations on completing module {{n}}!",
+      "desc": "You have completed every lesson in this module on your learning journey. Great job! Keep up the momentum!",
+      "review": "Review lessons",
+      "continue": "Continue to module {{n}}"
+    },
     "loadingShort": "Loading…",
     "slides": "Lecture slides",
     "bodyMore": "Show more",
