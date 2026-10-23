@@ -23,6 +23,10 @@
     "holder": "Chủ tài khoản",
     "sent": "Đã gửi yêu cầu rút tiền, chờ quản trị viên nền tảng duyệt.",
     "sending": "Đang gửi…",
+    "heldNotice": "Hiện chưa có số dư để rút: {{held}} doanh thu đang trong thời gian giữ {{days}} ngày (hoàn tiền + tranh chấp). Khoản đầu tiên rút được từ {{date}}.",
+    "noBalanceNotice": "Hiện chưa có số dư để rút. Doanh thu mới chỉ rút được sau {{days}} ngày.",
+    "reserveNotice": "Hệ thống luôn giữ lại {{pct}}% làm dự phòng.",
+    "minNotice": "Số tiền rút tối thiểu mỗi lần: {{amount}}.",
     "submit": "Gửi yêu cầu rút tiền"
   },
   "title": "Doanh thu & rút tiền",

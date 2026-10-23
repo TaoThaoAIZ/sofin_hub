@@ -1429,6 +1429,9 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
         reserveCents: bal.reserve, // rolling reserve
         debtCents: bal.debt, // nợ do hoàn tiền/chargeback sau khi đã rút
         payoutPolicy: {
+          // Ngày số tiền đang giữ đầu tiên được phép rút (giao dịch sớm nhất còn trong holding period + holdDays); null = không có tiền đang giữ.
+          nextEligibleAt: await repo.earliestHeldAt(communityId, bal.policy.eligibleBefore).then((d) => (d ? new Date(d.getTime() + bal.policy.holdDays * DAY_MS).toISOString() : null)),
+          minPayoutCents: toCents(cfg().payments.payoutMinUsd),
           holdDays: bal.policy.holdDays,
           refundWindowDays: bal.policy.refundWindowDays,
           disputeWindowDays: bal.policy.disputeWindowDays,

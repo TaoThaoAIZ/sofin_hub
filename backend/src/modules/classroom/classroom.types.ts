@@ -98,6 +98,8 @@ export interface ClassroomLessonView extends Omit<ClassroomLesson, 'moduleId' | 
 }
 
 export interface ClassroomLessonDetail extends ClassroomLessonView {
+  /** Module chứa bài còn khóa với người xem (bài đang mở được là bài học thử miễn phí): FE báo "mua module để học tiếp". */
+  moduleLocked: boolean;
   learningCourseId: string;
   communityId: string;
   moduleId: string;

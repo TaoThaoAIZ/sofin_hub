@@ -372,7 +372,6 @@ export function ModuleWizard({ communityId, courseId, module: initial, onClose }
             courseId={courseId}
             moduleId={moduleId}
             {...(editing && editing !== 'new' ? { lesson: editing } : {})}
-            defaultPreview={lessons.length === 0}
             onSaved={() => {
               toast(editing && editing !== 'new' ? t('editor.lesson.toastUpdated') : t('editor.lesson.toastCreated'));
               setEditing(null);

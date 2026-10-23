@@ -126,12 +126,12 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
     const grantable = staff ? [] : modules.filter((m) => m.accessMode === 'paid' || m.accessMode === 'selected').map((m) => m.id);
     const granted = await repo.accessModuleIds(userId, grantable);
 
-    let prevFullyDone = true;
+    let prevFullyDone: boolean = true;
     const states: ModuleState[] = [];
     for (const m of modules) {
       const completedCount = m.lessonIds.filter((id) => doneIds.has(id)).length;
       const pct = m.lessonIds.length ? Math.round((completedCount / m.lessonIds.length) * 100) : 0;
-      const orderLocked = !staff && !prevFullyDone;
+      const orderLocked: boolean = !staff && !prevFullyDone;
       const accessReason: 'level' | 'paid' | 'selected' | null =
         staff || orderLocked
           ? null
@@ -140,7 +140,7 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
             : (m.accessMode === 'paid' || m.accessMode === 'selected') && !granted.has(m.id)
               ? m.accessMode
               : null;
-      const locked = orderLocked || accessReason !== null;
+      const locked: boolean = orderLocked || accessReason !== null;
       const lockedLessons = new Set<string>();
       if (orderLocked) m.lessonIds.forEach((id) => lockedLessons.add(id));
       else if (accessReason) m.lessonIds.filter((id) => !m.previewIds.includes(id)).forEach((id) => lockedLessons.add(id));
@@ -178,7 +178,9 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
         lockedLessons,
         orderLocked,
       });
-      prevFullyDone = completedCount === m.lessonIds.length;
+      // Module còn khóa (chưa mua / chưa đủ cấp độ / chưa được chọn / còn khóa thứ tự) chưa được coi là đã xong, dù mọi bài trong đó là bài học thử đã hoàn thành:
+      // nếu không, học thử xong bài miễn phí của module trả phí sẽ mở luôn module kế tiếp mà chưa thanh toán.
+      prevFullyDone = completedCount === m.lessonIds.length && !locked;
     }
     return { modules, states, doneIds, doneAt, staff };
   }
@@ -455,6 +457,7 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
         learningCourseId: course.id,
         communityId,
         moduleId: s.module.id,
+        moduleLocked: s.view.locked,
         moduleTitle: s.module.title,
         moduleIndex: s.module.index,
         prevLessonId: flat[i - 1] ?? null,

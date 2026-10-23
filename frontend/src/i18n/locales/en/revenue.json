@@ -23,6 +23,10 @@
     "holder": "Account holder",
     "sent": "Payout request sent, awaiting approval from the platform admins.",
     "sending": "Sending…",
+    "heldNotice": "Nothing is withdrawable yet: {{held}} of your revenue is still in the {{days}}-day holding period (refunds + disputes). The first amount can be withdrawn from {{date}}.",
+    "noBalanceNotice": "Nothing is withdrawable yet. New revenue can be withdrawn after {{days}} days.",
+    "reserveNotice": "{{pct}}% is always kept as a reserve.",
+    "minNotice": "Minimum withdrawal per request: {{amount}}.",
     "submit": "Submit payout request"
   },
   "title": "Revenue & payouts",

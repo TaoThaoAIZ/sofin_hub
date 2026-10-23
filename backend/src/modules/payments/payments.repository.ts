@@ -284,6 +284,8 @@ export interface PaymentsOps {
    * (qua `policy.eligibleBefore`, cộng mọi khoản net âm). Không truyền policy ⇒ eligible = net (hành vi cũ).
    */
   balance(communityId: string, rates: RevenueRates, policy?: BalancePolicy): Promise<BalanceFigures>;
+  /** Giao dịch thu tiền (chưa tính hoàn) sớm nhất còn trong holding period (sau `eligibleBefore`) — để báo ngày số dư đầu tiên được rút. null = không có. */
+  earliestHeldAt(communityId: string, eligibleBefore: Date): Promise<Date | null>;
   addLedgerEntry(entry: LedgerEntryInput): Promise<void>;
   /** Tổng nợ đã ghi sổ (giá trị dương) của cộng đồng — để hiển thị/đối soát. */
   ledgerDebtCents(communityId: string): Promise<number>;
@@ -887,6 +889,13 @@ function makeOps(db: Db): PaymentsOps {
       const fee = num(r?.fee);
       const referral = num(rc?.total);
       return { grossCents: gross, refundsCents: refunds, platformCommissionCents: commission, gatewayFeeCents: fee, referralCommissionCents: referral, netCents: gross - refunds - commission - fee - referral };
+    },
+    async earliestHeldAt(communityId, eligibleBefore) {
+      const [r] = await db.$queryRaw<{ at: Date | null }[]>`
+        SELECT MIN(COALESCE("confirmedAt", "createdAt")) AS "at" FROM "Payment"
+        WHERE "courseId" = ${communityId} AND "kind" <> 'hosting' AND "status" IN ('succeeded', 'refunded')
+          AND "amountCents" - "refundedCents" > 0 AND COALESCE("confirmedAt", "createdAt") > ${ts(eligibleBefore)}`;
+      return r?.at ?? null;
     },
     async balance(communityId, rates, policy) {
       // `n` = net của từng giao dịch (đã trừ hoàn tiền, hoa hồng trên phần giữ lại, phí cổng). Giao dịch đủ điều kiện rút khi đã qua

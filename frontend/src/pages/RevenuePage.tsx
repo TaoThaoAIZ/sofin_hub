@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 import i18n from '../i18n';
+import { MaterialIcon } from '../components/ui/MaterialIcon';
 import { Pager } from '../components/ui/Pager';
 import { ApiError } from '../lib/api';
 import { formatCents, formatDate, formatDateTime } from '../lib/datetime';
@@ -34,7 +35,7 @@ function Stat({ label, value, hint, accent }: { label: string; value: string; hi
   );
 }
 
-function PayoutForm({ courseId, available, blocked }: { courseId: string; available: number; blocked: boolean }) {
+function PayoutForm({ courseId, available, blocked, held = 0, holdDays, reservePct, nextEligibleAt, minPayout }: { courseId: string; available: number; blocked: boolean; held?: number; holdDays?: number; reservePct?: number; nextEligibleAt?: string | null; minPayout?: number }) {
   const { t } = useTranslation('revenue');
   const request = useRequestPayout(courseId);
   const [amount, setAmount] = useState('');
@@ -87,6 +88,19 @@ function PayoutForm({ courseId, available, blocked }: { courseId: string; availa
         {t('form.holder')}
         <input value={accountHolder} onChange={(e) => setAccountHolder(e.target.value)} maxLength={100} className={`${input} mt-1`} required />
       </label>
+      {/* Hết số dư rút được thì nút Gửi bị vô hiệu: nói rõ vì sao (tiền mới còn trong thời gian giữ hoàn tiền/tranh chấp) và khi nào rút được. */}
+      {!blocked && available <= 0 && (
+        <div role="status" className="flex items-start gap-2.5 rounded-xl bg-amber-50 px-4 py-3 text-[13px] leading-relaxed text-amber-900 sm:col-span-2 dark:bg-amber-500/15 dark:text-amber-200">
+          <MaterialIcon name="schedule" size={18} filled color="currentColor" />
+          <span>
+            {held > 0 && holdDays !== undefined
+              ? t('form.heldNotice', { held: formatCents(held), days: holdDays, date: nextEligibleAt ? formatDate(nextEligibleAt) : '—' })
+              : t('form.noBalanceNotice', { days: holdDays ?? 0 })}
+            {reservePct ? ` ${t('form.reserveNotice', { pct: reservePct })}` : ''}
+            {minPayout ? ` ${t('form.minNotice', { amount: formatCents(minPayout) })}` : ''}
+          </span>
+        </div>
+      )}
       {error && <div role="alert" className="rounded-xl bg-red-50 px-4 py-2 text-sm font-medium text-red-600 sm:col-span-2">{error}</div>}
       {ok && <div className="rounded-xl bg-green-50 px-4 py-2 text-sm font-medium text-green-700 sm:col-span-2">{t('form.sent')}</div>}
       <div className="sm:col-span-2">
@@ -203,7 +217,7 @@ function RevenueInner() {
             </div>
 
             <div className="mt-8">
-              <PayoutForm courseId={id} available={d.availableBalanceCents} blocked={debt > 0} />
+              <PayoutForm courseId={id} available={d.availableBalanceCents} blocked={debt > 0} held={d.heldCents ?? 0} {...(pol ? { holdDays: pol.holdDays, reservePct: pol.reservePct, nextEligibleAt: pol.nextEligibleAt ?? null, ...(pol.minPayoutCents ? { minPayout: pol.minPayoutCents } : {}) } : {})} />
             </div>
 
             <h2 className="mt-8 mb-3 text-lg font-extrabold">{t('payouts.title')}</h2>

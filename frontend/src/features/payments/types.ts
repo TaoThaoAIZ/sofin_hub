@@ -140,7 +140,7 @@ export interface RevenueSummary {
   heldCents?: number;
   reserveCents?: number;
   debtCents?: number;
-  payoutPolicy?: { holdDays: number; refundWindowDays: number; disputeWindowDays: number; reservePct: number; note?: string };
+  payoutPolicy?: { nextEligibleAt?: string | null; minPayoutCents?: number; holdDays: number; refundWindowDays: number; disputeWindowDays: number; reservePct: number; note?: string };
   payoutRequestedCents: number;
   activePaidMembers: number;
   trialingMembers: number;

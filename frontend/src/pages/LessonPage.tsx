@@ -423,6 +423,13 @@ export function LessonPage() {
           </div>
         </div>
 
+        {l.isPreview && l.moduleLocked && (
+          <div role="status" className="flex flex-wrap items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13.5px] text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-200">
+            <MaterialIcon name="lock_open" size={20} filled color="currentColor" />
+            <span className="min-w-0 flex-1">{t('lesson.previewBanner')}</span>
+            <Link to={back} className="font-bold text-brand underline">{t('lesson.previewBannerCta')}</Link>
+          </div>
+        )}
         {celebrate ? (
           <LessonCompleteCard
             number={Math.max(1, l.moduleIndex - 1)}

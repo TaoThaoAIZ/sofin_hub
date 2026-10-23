@@ -206,4 +206,24 @@ describe('doanh thu & payout cho Owner', () => {
     assert.equal(await bal(), before - ok * amount);
     assert.ok((await bal()) >= 0);
   });
+
+  it('doanh thu mới còn trong holding period: không rút được, revenue báo số tiền đang giữ + ngày đầu tiên rút được + mức rút tối thiểu; yêu cầu rút quá số dư bị từ chối', async () => {
+    const before = (await c.call('GET', `/courses/${COURSE}/revenue`, { token: owner.token })).body.data;
+    const fresh = await c.registerUser('held-new');
+    await pay(fresh); // thanh toán MỚI, không lùi ngày
+    const d = (await c.call('GET', `/courses/${COURSE}/revenue`, { token: owner.token })).body.data;
+    assert.equal(d.availableBalanceCents, before.availableBalanceCents); // khoản mới chưa rút được
+    assert.ok(d.heldCents > before.heldCents);
+    const pol = d.payoutPolicy;
+    assert.equal(typeof pol.minPayoutCents, 'number');
+    assert.ok(pol.minPayoutCents > 0);
+    // Ngày rút được đầu tiên = giao dịch sớm nhất còn đang giữ + holdDays (nằm trong tương lai, không quá holdDays kể từ bây giờ).
+    const at = new Date(pol.nextEligibleAt).getTime();
+    assert.ok(at > Date.now());
+    assert.ok(at <= Date.now() + pol.holdDays * 86_400_000 + 60_000);
+    // Rút vượt số dư khả dụng: bị từ chối kèm lý do (giữ 14 ngày + dự phòng).
+    const tooMuch = await c.call('POST', `/courses/${COURSE}/payouts`, { token: owner.token, body: { amountCents: d.availableBalanceCents + 1_000_000, method: BANK } });
+    assert.equal(tooMuch.status, 400);
+    assert.equal(tooMuch.body.error?.code ?? tooMuch.body.code, 'PAYOUT_EXCEEDS_AVAILABLE');
+  });
 });

@@ -232,4 +232,37 @@ describe('lớp học: truy cập module', () => {
     assert.equal((await call('GET', `/lessons/${l2}`, a.token)).status, 200);
     assert.equal((await call('GET', `/lessons/${l1}`, a.token)).body.data.nextLessonLocked, false);
   });
+  it('module trả phí chưa mua mà chỉ có bài học thử: học xong bài thử KHÔNG mở module sau (phải trả phí rồi mới tới); bài thử báo module còn khóa', async () => {
+    for (const m of (await call('GET', '/modules', mod.token)).body.data) await call('DELETE', `/modules/${m.id}`, mod.token);
+    const free1 = await newModule({});
+    const paid = await newModule({ accessMode: 'paid', priceCents: 99_000 });
+    const free2 = await newModule({});
+    const a1 = await newLesson(free1);
+    const b1 = await newLesson(paid, { isPreview: true });
+    const c1 = await newLesson(free2);
+
+    assert.equal((await call('POST', `/lessons/${a1}/complete`, a.token)).status, 200);
+    // Bài học thử của module trả phí mở được (đúng thiết kế) và báo module còn khóa để FE nhắc mua.
+    const d = await call('GET', `/lessons/${b1}`, a.token);
+    assert.equal(d.status, 200);
+    assert.equal(d.body.data.moduleLocked, true);
+    assert.equal(d.body.data.isPreview, true);
+    assert.equal((await call('POST', `/lessons/${b1}/complete`, a.token)).status, 200);
+
+    // Xong bài thử nhưng CHƯA mua: module kế tiếp vẫn khóa theo thứ tự, không học được bài sau.
+    const after = await view(a.token, free2);
+    assert.equal(after.locked, true);
+    assert.equal(after.lockReason, 'previous_module');
+    assert.ok([403, 402, 423].includes((await call('GET', `/lessons/${c1}`, a.token)).status));
+    assert.equal((await call('GET', `/lessons/${b1}`, a.token)).body.data.nextLessonLocked, true);
+
+    // Mua module (cấp quyền) → module trả phí mở và tính là đã xong → module kế tiếp mở.
+    const { prisma } = await import('../src/db/prisma.js');
+    await prisma.moduleAccess.create({ data: { moduleId: paid, userId: a.id, source: 'purchase' } });
+    assert.equal((await view(a.token, free2)).locked, false);
+    assert.equal((await call('GET', `/lessons/${c1}`, a.token)).status, 200);
+    assert.equal((await call('GET', `/lessons/${b1}`, a.token)).body.data.moduleLocked, false);
+    // mod+ không bị ảnh hưởng.
+    assert.equal((await view(mod.token, free2)).locked, false);
+  });
 });

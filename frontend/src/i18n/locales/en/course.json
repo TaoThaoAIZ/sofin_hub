@@ -200,6 +200,8 @@
     "videoN": "Video {{n}}",
     "videoList": "Lesson videos",
     "filesMore": "Show {{n}} more files",
+    "previewBanner": "This is a free preview lesson of a module you have not unlocked. Unlock the module to continue with the next lessons.",
+    "previewBannerCta": "View classroom",
     "slides": "Lecture slides",
     "bodyMore": "Show more",
     "bodyLess": "Show less"

@@ -200,6 +200,8 @@
     "videoN": "Video {{n}}",
     "videoList": "Danh sách video của bài",
     "filesMore": "Xem thêm {{n}} tệp",
+    "previewBanner": "Đây là bài học thử miễn phí của module chưa mở khóa. Hãy mở khóa module để học các bài tiếp theo.",
+    "previewBannerCta": "Xem lớp học",
     "slides": "Slide bài giảng",
     "bodyMore": "Xem thêm",
     "bodyLess": "Thu gọn"

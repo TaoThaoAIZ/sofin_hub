@@ -272,6 +272,8 @@ export interface LessonAttachment {
 }
 
 export interface LessonDetail extends ClassroomLesson {
+  /** Module chứa bài còn khóa với người xem: bài đang mở được là bài học thử miễn phí. */
+  moduleLocked?: boolean;
   moduleId: string;
   moduleTitle: string;
   moduleIndex: number;
