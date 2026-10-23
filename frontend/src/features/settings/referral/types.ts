@@ -7,6 +7,8 @@ export interface ReferralOverview {
   link: string;
   /** USD (cent) cho member; VND (đồng) cho creator. */
   currency: string;
+  /** Chỉ có khi hỏi theo một cộng đồng: chủ cộng đồng đã bật hoa hồng giới thiệu (> 0%) chưa. */
+  programEnabled?: boolean;
   rates: { creatorRateBps: number; memberRateBps: number; rateBps: number; attributionDays: number; payoutDay: number };
   kpis: {
     registered: { value: number; delta: number | null };

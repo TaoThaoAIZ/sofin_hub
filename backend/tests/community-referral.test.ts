@@ -228,4 +228,33 @@ describe('giới thiệu theo cộng đồng: % do chủ đặt, hoa hồng tr�
     // Người lạ không xem được chi tiết của người không do mình mời.
     assert.equal((await c.call('GET', `/me/referral/users/${guest.id}/commissions?kind=member&communityId=${id}`, { token: owner.token })).status, 404);
   });
+
+  it('tổng quan theo cộng đồng: chưa đặt % thì programEnabled=false và rateBps=0 (không phải % nền tảng); bật % thì số liệu đếm người tham gia qua link + hoa hồng của CỘNG ĐỒNG đó', async () => {
+    const { id, owner } = await community();
+    const referrer = await member(id, 'ovr');
+    const code = referrer.code;
+    const overview = async (token: string, communityId = id) => (await c.call('GET', `/me/referral?kind=member&communityId=${communityId}`, { token })).body.data;
+
+    // Chủ cộng đồng chưa đặt %: không có chương trình; tỉ lệ hiển thị là của cộng đồng (0), KHÔNG phải 10% nền tảng.
+    const off = await overview(referrer.token);
+    assert.equal(off.programEnabled, false);
+    assert.equal(off.rates.rateBps, 0);
+    assert.equal((await c.call('GET', '/me/referral?kind=member', { token: referrer.token })).body.data.rates.rateBps, 1000); // không kèm communityId: vẫn là % nền tảng
+    assert.equal(off.kpis.registered.value, 0);
+
+    assert.equal((await setRate(id, owner.token, 1500)).status, 200);
+    const guest = await signup('ovg');
+    await checkoutAndPay(guest, id, code); // vào bằng link + trả phí
+    const on = await overview(referrer.token);
+    assert.equal(on.programEnabled, true);
+    assert.equal(on.rates.rateBps, 1500);
+    assert.equal(on.kpis.registered.value, 1);
+    assert.equal(on.kpis.paying.value, 1);
+    assert.equal(on.kpis.commissionThisMonth.cents, Math.round((PRICE * 1500) / 10_000));
+    assert.equal(on.kpis.pendingPayout.cents, on.kpis.commissionThisMonth.cents);
+    // Cộng đồng khác không lẫn số liệu.
+    const other = await overview(referrer.token, 'khong-co-cong-dong-nay');
+    assert.equal(other.kpis.registered.value, 0);
+    assert.equal(other.kpis.commissionThisMonth.cents, 0);
+  });
 });

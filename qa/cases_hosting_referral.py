@@ -127,3 +127,15 @@ def load(add):
     A("Trạng thái người được giới thiệu", "B vào cộng đồng từ trang khác (không qua link) vẫn đổi trạng thái; yêu cầu tham gia chờ duyệt hiện 'Chờ duyệt'", "Chức năng", "Cao", RPRE + "B đăng ký bằng link của A lúc trước; có 1 cộng đồng miễn phí công khai và 1 cộng đồng riêng tư cần duyệt.",
       ["B vào cộng đồng miễn phí từ trang Khám phá (không dùng link) và bấm Tham gia", "A tải lại bảng", "B gửi yêu cầu tham gia cộng đồng riêng tư", "A tải lại bảng", "Chủ cộng đồng riêng tư duyệt yêu cầu, A tải lại"], "-",
       "Sau bước 1: 'Đã tham gia' (cộng đồng miễn phí). Sau bước 3 khi chưa có cộng đồng nào khác: 'Chờ duyệt' (vàng) kèm tên cộng đồng riêng tư; sau khi duyệt: 'Đã tham gia'. Nhãn 'Chưa tham gia' chỉ còn khi B chưa vào/xin vào cộng đồng nào.")
+    A("Trang Giới thiệu & hoa hồng của cộng đồng", "Khung đặt % hoa hồng nằm TRÊN CÙNG trang (chủ cộng đồng)", "Giao diện", "Cao", RPRE + "Đăng nhập chủ cộng đồng X.",
+      ["Vào /communities/<X>/chuong-trinh-gioi-thieu", "Quan sát thứ tự các khối từ trên xuống"], "-",
+      "Thứ tự: (1) khung 'Hoa hồng giới thiệu (dành cho chủ cộng đồng)' có ô % + Lưu (+ Tắt khi đang bật), (2) hero + link, (3) 4 chỉ số, (4) bảng 'Người bạn đã giới thiệu' + Rút tiền, (5) Quy trình rút tiền. Không còn khung % ở cuối trang. Thành viên thường không thấy khung %.", pw="Không")
+    A("Trang Giới thiệu & hoa hồng của cộng đồng", "Chủ cộng đồng chưa đặt % (0): KHÔNG hiện link và KHÔNG hiện '10%' của nền tảng", "Chức năng", "Cao", RPRE + "Cộng đồng X có hoa hồng cộng đồng = 0% (mặc định).",
+      ["Chủ cộng đồng mở trang Giới thiệu & hoa hồng", "Một thành viên thường của X mở cùng trang"], "% = 0",
+      "Hero hiện 'Chương trình giới thiệu chưa được bật' kèm hướng dẫn (chủ: 'Hãy đặt % ở khung phía trên'; thành viên: 'Chủ cộng đồng chưa bật hoa hồng giới thiệu'); KHÔNG có ô link, nút Sao chép/chia sẻ và KHÔNG có chữ 'Nhận 10%'. Các chỉ số hiện 0.")
+    A("Trang Giới thiệu & hoa hồng của cộng đồng", "Chủ đặt % thì hero và link hiện ngay với đúng % của cộng đồng", "Chức năng", "Cao", RPRE + "Cộng đồng X đang 0%.",
+      ["Chủ cộng đồng nhập 15 vào ô % và bấm Lưu", "Quan sát hero/link không cần tải lại trang", "Thành viên thường tải lại trang"], "15%",
+      "Hero đổi thành 'Nhận 15% ...' và hiện ô link + nút chia sẻ ngay (không cần F5); thành viên thường thấy cùng nội dung. Bấm 'Tắt' thì quay về trạng thái chưa bật.")
+    A("Trang Giới thiệu & hoa hồng của cộng đồng", "Số liệu 4 ô tính theo CỘNG ĐỒNG và khớp bảng người giới thiệu", "Chức năng", "Cao", RPRE + "X đã bật 15%. B (tài khoản cũ) tham gia X qua link của A và trả phí 250.000đ; C đăng ký tài khoản mới qua link của A nhưng chưa vào X.",
+      ["A mở trang Giới thiệu & hoa hồng của X", "So 4 ô chỉ số với bảng 'Người bạn đã giới thiệu'"], "B trả phí, C chưa tham gia",
+      "'Người đã đăng ký' = 2 (B, C; bằng tổng số dòng bảng); 'Đang trả phí' = 1 (B); 'Hoa hồng tháng này' = 37.500đ (15% x 250.000đ); 'Chờ chi trả' = 37.500đ kèm ngày chi trả. Hoa hồng phát sinh ở cộng đồng KHÁC không lẫn vào. Dòng B: 'Đang trả phí' + cột Hoa hồng 37.500đ; dòng C: 'Chưa tham gia'; cột Cộng đồng/trạng thái tính theo X.")

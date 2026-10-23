@@ -75,9 +75,9 @@ export const referralsRepository = {
   /** Chỉ hủy hoa hồng còn `pending` (đã chi trả thì không thu hồi được ở đây). */
   voidPendingBySource: (sourceRef: string) => prisma.referralCommission.updateMany({ where: { sourceRef, status: 'pending' }, data: { status: 'void' } }),
 
-  sumCommissions: async (referrerId: string, kind: ReferralKind, where: { status?: CommissionStatus | { not: CommissionStatus }; from?: Date; to?: Date }) => {
+  sumCommissions: async (referrerId: string, kind: ReferralKind, where: { status?: CommissionStatus | { not: CommissionStatus }; from?: Date; to?: Date; communityId?: string }) => {
     const r = await prisma.referralCommission.aggregate({
-      where: { referrerId, kind, ...(where.status ? { status: where.status } : {}), ...(where.from || where.to ? { createdAt: { ...(where.from ? { gte: where.from } : {}), ...(where.to ? { lt: where.to } : {}) } } : {}) },
+      where: { referrerId, kind, ...(where.communityId ? { communityId: where.communityId } : {}), ...(where.status ? { status: where.status } : {}), ...(where.from || where.to ? { createdAt: { ...(where.from ? { gte: where.from } : {}), ...(where.to ? { lt: where.to } : {}) } } : {}) },
       _sum: { amountCents: true },
     });
     return r._sum.amountCents ?? 0;
@@ -90,6 +90,7 @@ export const referralsRepository = {
     });
     return new Map(rows.map((r) => [r.referredUserId, r._sum.amountCents ?? 0]));
   },
+  findCommunityRate: (communityId: string) => prisma.community.findFirst({ where: { id: communityId, deletedAt: null }, select: { referralRateBps: true } }),
   findCommunityReferral: (referrerId: string, communityId: string, referredUserId: string) => prisma.communityReferral.findFirst({ where: { referrerId, communityId, referredUserId } }),
   listCommissions: (referrerId: string, referredUserId: string, kind: ReferralKind, take: number, communityId?: string) =>
     prisma.referralCommission.findMany({ where: { referrerId, referredUserId, ...(communityId ? { OR: [{ kind }, { kind: 'community' as ReferralKind, communityId }] } : { kind }) }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take }),

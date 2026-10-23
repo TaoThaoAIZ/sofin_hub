@@ -109,14 +109,14 @@ function CommissionModal({ row, kind, currency, communityId, onClose }: { row: R
 
 /** `withdraw`: hiện thẻ "Rút tiền hoa hồng" cạnh bảng người được giới thiệu + "Quy trình rút tiền" (số dư là chung cho mọi loại hoa hồng nên chỉ bật ở MỘT khối trên trang). */
 /** `kind` cố định: ẩn thanh chọn loại (dùng khi gộp nhiều chương trình trên một trang); `showPayoutLink` bật link "Cài đặt nhận tiền" ở chế độ đó. */
-export function ReferralTab({ kind: fixedKind, showPayoutLink = true, withdraw = false, communityId }: { kind?: ReferralKind; showPayoutLink?: boolean; withdraw?: boolean; communityId?: string } = {}) {
+export function ReferralTab({ kind: fixedKind, showPayoutLink = true, withdraw = false, communityId, communityOwner = false }: { kind?: ReferralKind; showPayoutLink?: boolean; withdraw?: boolean; communityId?: string; communityOwner?: boolean } = {}) {
   const { t } = useTranslation('settings');
   const toast = useToast();
   const [pickedKind, setKind] = useState<ReferralKind>('creator');
   const kind = fixedKind ?? pickedKind;
   const [all, setAll] = useState(false);
   const [detail, setDetail] = useState<ReferralRow | null>(null);
-  const overview = useReferral(kind);
+  const overview = useReferral(kind, communityId);
   const users = useReferralUsers(kind, all, communityId);
   const remind = useRemind();
   const { openMenu, menuEl } = useMenu();
@@ -135,6 +135,8 @@ export function ReferralTab({ kind: fixedKind, showPayoutLink = true, withdraw =
   const total = users.data?.meta.total ?? 0;
   // % hoa hồng do admin cấu hình (Cấu hình hệ thống) — chưa tải xong thì hiện '…', không dùng số cứng.
   const rate = o ? pct(o.rates.rateBps) : '…';
+  // Trang trong một cộng đồng mà chủ cộng đồng chưa đặt % hoa hồng: chưa có chương trình nên không hiện % hay link giới thiệu.
+  const programOff = !!communityId && kind === 'member' && o?.programEnabled === false;
   // Link dựng từ origin của trang đang mở: mở được ở mọi môi trường, không phụ thuộc biến FRONTEND_URL trên server.
   // Trang trong một cộng đồng: link kèm `?c=<id>` để người nhận được đưa vào đúng cộng đồng đó (không phải trang chủ).
   const link = o?.code ? `${window.location.origin}/gioi-thieu/${o.code}${communityId ? `?c=${encodeURIComponent(communityId)}` : ''}` : '';
@@ -222,17 +224,27 @@ export function ReferralTab({ kind: fixedKind, showPayoutLink = true, withdraw =
       <section className="relative flex flex-wrap items-end gap-6 overflow-hidden rounded-[20px] border border-[#fde3cf] bg-[linear-gradient(110deg,#fff6ef_0%,#ffe3cd_100%)] px-[30px] py-7 dark:border-[rgba(255,220,197,.1)] dark:bg-[linear-gradient(110deg,rgba(63,63,63,.3)_0%,rgba(74,29,0,.3)_100%)]">
         <div className="flex min-w-0 flex-[1_1_420px] items-center gap-5">
         <div className="min-w-0 flex-1">
-          <h1 className="m-0 text-[clamp(26px,2.6vw,34px)] leading-[1.2] font-extrabold tracking-[-.02em]">
-            {t('referral.heroGet')} <span className="text-brand">{rate}</span> {kind === 'creator' ? t('referral.heroCreator') : t('referral.heroMember')}
-          </h1>
-          <div className="mt-3 text-base text-stone-600">
-            {kind === 'creator' ? t('referral.heroSubCreator') : t('referral.heroSubMember')}
-          </div>
+          {programOff ? (
+            <>
+              <h1 className="m-0 text-[clamp(24px,2.4vw,30px)] leading-[1.2] font-extrabold tracking-[-.02em]">{t('referral.heroOffTitle')}</h1>
+              <div className="mt-3 text-base text-stone-600">{communityOwner ? t('referral.heroOffOwner') : t('referral.heroOffMember')}</div>
+            </>
+          ) : (
+            <>
+              <h1 className="m-0 text-[clamp(26px,2.6vw,34px)] leading-[1.2] font-extrabold tracking-[-.02em]">
+                {t('referral.heroGet')} <span className="text-brand">{rate}</span> {kind === 'creator' ? t('referral.heroCreator') : t('referral.heroMember')}
+              </h1>
+              <div className="mt-3 text-base text-stone-600">
+                {kind === 'creator' ? t('referral.heroSubCreator') : t('referral.heroSubMember')}
+              </div>
+            </>
+          )}
         </div>
         <span aria-hidden className="hidden flex-none opacity-90 min-[1280px]:block">
           <MaterialIcon name="redeem" size={84} filled color="#ff570a" />
         </span>
         </div>
+        {!programOff && (
         <div className="relative min-w-[280px] flex-[0_1_460px] rounded-2xl bg-white/85 p-4 dark:bg-black/25">
           <div className="mb-2 text-sm font-semibold text-stone-800">{t('referral.yourLink')}</div>
           <div className="flex gap-3">
@@ -253,6 +265,7 @@ export function ReferralTab({ kind: fixedKind, showPayoutLink = true, withdraw =
           </div>
           {link && <ShareButtons link={link} onCopy={copy} />}
         </div>
+        )}
       </section>
 
       <div className="grid gap-3.5" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))' }}>

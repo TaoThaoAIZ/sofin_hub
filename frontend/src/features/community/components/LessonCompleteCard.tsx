@@ -33,7 +33,7 @@ export function LessonCompleteCard({ number, nextTo, classroomTo, onReview }: Pr
       <h2 className="m-0 text-[clamp(24px,4vw,38px)] leading-[1.42] font-bold text-black">{t('lesson.celebrate.title', { n: number })}</h2>
       <p className="m-0 max-w-[520px] text-[18px] leading-[26px] text-[#626262]">{t('lesson.celebrate.desc')}</p>
       <div className="flex flex-wrap items-center justify-center gap-[13px] pt-1.5">
-        <button type="button" onClick={onReview} className={`${btn} cursor-pointer border-[#eee1d9] bg-white text-[#1e1c1a]`}>
+        <button type="button" onClick={onReview} className={`${btn} cursor-pointer border-[#eee1d9] bg-white text-[#1e1c1a] dark:bg-white dark:text-[#1e1c1a]`}>
           <MaterialIcon name="play_arrow" size={20} />
           {t('lesson.celebrate.review')}
         </button>

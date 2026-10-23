@@ -4,14 +4,14 @@ import * as api from './api';
 import type { ReferralKind } from './types';
 
 export const referralKeys = {
-  overview: (kind: ReferralKind) => ['referral', 'overview', kind] as const,
+  overview: (kind: ReferralKind, communityId?: string) => ['referral', 'overview', kind, communityId ?? null] as const,
   users: (kind: ReferralKind, all: boolean, communityId?: string) => ['referral', 'users', kind, all, communityId ?? null] as const,
   commissions: (userId: string, kind: ReferralKind, communityId?: string) => ['referral', 'commissions', userId, kind, communityId ?? null] as const,
 };
 
-export const useReferral = (kind: ReferralKind) => {
+export const useReferral = (kind: ReferralKind, communityId?: string) => {
   const { status } = useAuth();
-  return useQuery({ queryKey: referralKeys.overview(kind), queryFn: ({ signal }) => api.fetchReferral(kind, signal), enabled: status === 'authenticated', placeholderData: keepPreviousData });
+  return useQuery({ queryKey: referralKeys.overview(kind, communityId), queryFn: ({ signal }) => api.fetchReferral(kind, communityId, signal), enabled: status === 'authenticated', placeholderData: keepPreviousData });
 };
 
 export const useReferralUsers = (kind: ReferralKind, all: boolean, communityId?: string) => {

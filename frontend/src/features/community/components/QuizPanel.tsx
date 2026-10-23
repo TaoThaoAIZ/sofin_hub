@@ -21,6 +21,8 @@ export function QuizPanel({ communityId, lessonId }: { communityId: string; less
   /** Kết quả chấm ngay của đáp án ĐANG chọn cho từng câu (qid -> đúng/sai). */
   const [graded, setGraded] = useState<Record<string, boolean>>({});
   const [result, setResult] = useState<QuizAttemptResult | null>(null);
+  /** Tâm trạng linh vật đang hiển thị (đổi theo đáp án/câu, xem `settledMood` bên dưới). */
+  const [mood, setMood] = useState('intro');
 
   const quiz = quizQ.data?.quiz;
   if (quizQ.isPending) return <p className="mt-6 text-sm text-stone-400">{t('quiz.loading')}</p>;
@@ -34,8 +36,10 @@ export function QuizPanel({ communityId, lessonId }: { communityId: string; less
   const canNext = picked !== undefined && !check.isPending && (!needAllRight || ok === true);
   const isLast = step === total - 1;
   const pct = Math.round(((step + 1) / total) * 100);
-  // Tâm trạng linh vật: đúng/sai theo đáp án đang chọn, còn lại là lời chào (câu đầu) hoặc lời cổ vũ (các câu sau).
-  const mood = ok === true ? 'right' : ok === false ? 'wrong' : step === 0 ? 'intro' : 'next';
+  // Tâm trạng linh vật: đúng/sai theo đáp án đang chọn, chưa chọn gì thì là lời chào (câu đầu) hoặc lời cổ vũ (các câu sau).
+  // Đã chọn nhưng server chưa chấm xong (`picked` có, `ok` chưa có) thì GIỮ nguyên lời thoại hiện tại, không nháy sang lời chào/cổ vũ rồi mới ra đúng/sai.
+  const settledMood = ok === true ? 'right' : ok === false ? 'wrong' : picked !== undefined ? null : step === 0 ? 'intro' : 'next';
+  if (settledMood && settledMood !== mood) setMood(settledMood);
 
   const choose = (oi: number) => {
     if (ok === true || check.isPending) return; // câu đã đúng thì khóa; đang chấm thì chờ

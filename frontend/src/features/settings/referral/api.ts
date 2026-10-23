@@ -1,7 +1,8 @@
 import { apiGet, apiPost, apiPut } from '../../../lib/api';
 import type { Bank, CommissionDetail, PayoutAccount, ReferralKind, ReferralOverview, ReferralUsers, WithdrawOverview, Withdrawal } from './types';
 
-export const fetchReferral = (kind: ReferralKind, signal?: AbortSignal) => apiGet<{ data: ReferralOverview }>('/me/referral', { kind }, signal).then((r) => r.data);
+export const fetchReferral = (kind: ReferralKind, communityId?: string, signal?: AbortSignal) =>
+  apiGet<{ data: ReferralOverview }>('/me/referral', { kind, ...(communityId ? { communityId } : {}) }, signal).then((r) => r.data);
 export const fetchReferralUsers = (kind: ReferralKind, all: boolean, communityId?: string, signal?: AbortSignal) =>
   apiGet<ReferralUsers>('/me/referral/users', { kind, all, ...(communityId ? { communityId } : {}) }, signal);
 export const fetchCommissions = (userId: string, kind: ReferralKind, communityId?: string, signal?: AbortSignal) =>

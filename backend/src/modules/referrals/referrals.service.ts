@@ -73,7 +73,8 @@ export function createReferralsService() {
       .slice(0, limit);
     if (refs.length === 0) return [];
     const ids = refs.map((r) => r.referredUserId);
-    const earned = await repo.earnedByUser(referrerId, kind as ReferralKind, ids);
+    // Trang trong một cộng đồng: chỉ tính hoa hồng phát sinh ở CỘNG ĐỒNG đó.
+    const earned = await repo.earnedByUser(referrerId, kind as ReferralKind, ids, kind === 'member' ? communityId : undefined);
     // Hoa hồng của chương trình giới thiệu theo cộng đồng (kind = 'community') cộng vào cùng cột "Hoa hồng đã nhận" của người đó.
     if (kind === 'member' && communityId) {
       for (const [uid, cents] of await repo.earnedByUser(referrerId, 'community' as ReferralKind, ids, communityId)) earned.set(uid, (earned.get(uid) ?? 0) + cents);
@@ -87,7 +88,12 @@ export function createReferralsService() {
     };
 
     if (kind === 'member') {
-      const [subs, memberships, pendingRequests] = await Promise.all([repo.listSubscriptions(ids), repo.listMemberships(ids), repo.listPendingJoinRequests(ids)]);
+      // Trang trong một cộng đồng: trạng thái + cột "Cộng đồng" tính theo CỘNG ĐỒNG đó (không lẫn cộng đồng khác).
+      const inScope = <T extends { communityId: string }>(list: T[]) => (communityId ? list.filter((x) => x.communityId === communityId) : list);
+      const [allSubs, allMemberships, allPending] = await Promise.all([repo.listSubscriptions(ids), repo.listMemberships(ids), repo.listPendingJoinRequests(ids)]);
+      const subs = inScope(allSubs);
+      const memberships = inScope(allMemberships);
+      const pendingRequests = inScope(allPending);
       const memberOf = new Set(memberships.map((m) => `${m.userId}:${m.communityId}`));
       // Mỗi người có thể có nhiều gói: ưu tiên gói đang trả phí > dùng thử > đang là thành viên > đã hủy.
       for (const s of subs) {
@@ -125,11 +131,39 @@ export function createReferralsService() {
   return {
     ensureCode,
 
-    async overview(userId: string, kind: ReferralKindName, now = new Date()): Promise<ReferralOverview> {
+    async overview(userId: string, kind: ReferralKindName, now = new Date(), communityId?: string): Promise<ReferralOverview> {
       const code = await ensureCode(userId);
       const k = kind as ReferralKind;
       const thisMonth = monthStart(now);
       const lastMonth = monthStart(now, -1);
+      const r = cfg().referral;
+      // Trang trong một cộng đồng (tab member): số liệu theo CỘNG ĐỒNG đó và % là % chủ cộng đồng đặt (0 = chưa bật), không phải % nền tảng.
+      if (kind === 'member' && communityId) {
+        const [community, rows] = await Promise.all([repo.findCommunityRate(communityId), loadRows(userId, kind, MAX_ROWS, communityId)]);
+        const rateBps = community?.referralRateBps ?? 0;
+        const sum = async (where: { status?: 'pending' | { not: 'void' }; from?: Date; to?: Date }) =>
+          (await repo.sumCommissions(userId, k, { ...where, communityId })) + (await repo.sumCommissions(userId, 'community' as ReferralKind, { ...where, communityId }));
+        const [cur, prev, pending] = await Promise.all([
+          sum({ status: { not: 'void' }, from: thisMonth }),
+          sum({ status: { not: 'void' }, from: lastMonth, to: thisMonth }),
+          sum({ status: 'pending' }),
+        ]);
+        const newThisMonth = rows.filter((x) => new Date(x.signedUpAt).getTime() >= thisMonth.getTime()).length;
+        return {
+          kind,
+          code,
+          link: linkOf(code),
+          currency: currencyOf(kind),
+          programEnabled: rateBps > 0,
+          rates: { creatorRateBps: r.creatorRateBps, memberRateBps: r.memberRateBps, rateBps, attributionDays: r.attributionDays, payoutDay: r.payoutDay },
+          kpis: {
+            registered: { value: rows.length, delta: newThisMonth > 0 ? newThisMonth : null },
+            paying: { value: rows.filter((x) => x.status === 'paid').length },
+            commissionThisMonth: { cents: cur, deltaPct: prev > 0 ? Math.round(((cur - prev) / prev) * 100) : null },
+            pendingPayout: { cents: pending, payoutOn: nextPayoutDate(now).toISOString() },
+          },
+        };
+      }
       const [registered, newThisMonth, rows, cur, prev, pending] = await Promise.all([
         repo.countReferrals(userId),
         repo.countReferrals(userId, thisMonth),
@@ -138,7 +172,6 @@ export function createReferralsService() {
         repo.sumCommissions(userId, k, { status: { not: 'void' }, from: lastMonth, to: thisMonth }),
         repo.sumCommissions(userId, k, { status: 'pending' }),
       ]);
-      const r = cfg().referral;
       return {
         kind,
         code,

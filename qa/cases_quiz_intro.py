@@ -33,8 +33,11 @@ def load(add):
       ["Sau video, quan sát phần đầu bài trắc nghiệm trong 2-3 giây đầu"], "Bài có trắc nghiệm",
       "Ảnh linh vật (quiz-mascot.png) trượt vào từ trái, nảy nhẹ rồi bồng bềnh liên tục; bong bóng thoại bật ra bên phải linh vật và câu 'Sẵn sàng chưa? Cùng làm bài trắc nghiệm nào!' chạy từng ký tự kèm con trỏ nhấp nháy; chiều cao bong bóng không nhảy khi chữ chạy.")
     C("Linh vật đổi lời thoại theo đáp án và theo câu", "Chức năng", "Trung bình", PRE + "Bài trắc nghiệm có >= 2 câu.",
-      ["Ở câu 1 chọn đáp án SAI", "Chọn lại đáp án ĐÚNG", "Bấm sang câu 2"], "-",
-      "Chọn sai: linh vật nhảy một nhịp, bong bóng chạy 'Chưa đúng rồi, thử chọn lại nhé!'; chọn đúng: 'Chính xác! Bạn giỏi quá!'; sang câu 2: 'Câu tiếp theo nè, cố lên nhé!' (chạy lại từ đầu).")
+      ["Ở câu 1 chọn đáp án SAI", "Chọn tiếp một đáp án SAI khác (lần 2)", "Chọn lại đáp án ĐÚNG", "Bấm sang câu 2"], "-",
+      "Chọn sai: linh vật nhảy một nhịp, bong bóng chạy 'Chưa đúng rồi, thử chọn lại nhé!'; chọn đúng: 'Chính xác! Bạn giỏi quá!'; sang câu 2: 'Câu tiếp theo nè, cố lên nhé!' (chạy lại từ đầu). Trong lúc chờ server chấm (chọn lại đáp án), bong bóng GIỮ nguyên lời thoại cũ, KHÔNG nháy sang 'Sẵn sàng chưa?'/'Câu tiếp theo nè' rồi mới ra 'Chưa đúng rồi'.")
     C("Linh vật tôn trọng 'giảm chuyển động' và màn hình đọc được lời thoại", "Giao diện", "Thấp", PRE,
       ["Bật 'Reduce motion' của hệ điều hành rồi vào trắc nghiệm", "Dùng trình đọc màn hình"], "-",
       "Reduce motion: linh vật đứng yên, bong bóng hiện đủ chữ ngay (không chạy); trình đọc màn hình đọc đủ câu thoại một lần (không đọc từng ký tự).", pw="Không")
+    C("Dark mode: bong bóng thoại của linh vật đọc rõ, đuôi bong bóng khớp màu", "Giao diện", "Trung bình", PRE,
+      ["Bật dark mode, vào bài trắc nghiệm", "Quan sát bong bóng ở lời chào, khi chọn sai, khi chọn đúng"], "-",
+      "Bong bóng nền xám đậm (#2b2f33) viền xám, chữ TRẮNG rõ nét (không bị mờ/xám chìm); đuôi bong bóng cùng màu và viền với thân bong bóng, không lệch tông.", pw="Không")

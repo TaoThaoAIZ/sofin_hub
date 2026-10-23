@@ -25,6 +25,8 @@ export interface ReferralOverview {
   link: string;
   /** Tiền của `kind` này: member = VND (đồng), creator = tiền gói hosting (VND, không có phần thập phân). */
   currency: string;
+  /** Chỉ có khi hỏi theo một cộng đồng: chủ cộng đồng đã bật hoa hồng giới thiệu (% > 0) chưa. `rates.rateBps` lúc đó là % của cộng đồng. */
+  programEnabled?: boolean;
   rates: { creatorRateBps: number; memberRateBps: number; rateBps: number; attributionDays: number; payoutDay: number };
   kpis: {
     registered: { value: number; delta: number | null };
