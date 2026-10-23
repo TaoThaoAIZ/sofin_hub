@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import { MaterialIcon } from '../components/ui/MaterialIcon';
+import { QuizLoadingScreen } from '../features/community/components/QuizLoadingScreen';
 import { QuizPanel } from '../features/community/components/QuizPanel';
 import { errText, ghostBtn, primaryBtn } from '../features/community/components/contentUi';
 import { useLesson } from '../features/community/queries';
@@ -15,7 +17,14 @@ export function LessonQuizPage() {
   const { id: communityId = '', lessonId = '' } = useParams();
   const lesson = useLesson(communityId, lessonId);
   const backToLesson = lessonPath(communityId, lessonId);
-
+  // Video linh vật chạy hết mới vào làm trắc nghiệm (kể cả khi dữ liệu bài đã có sẵn trong cache).
+  const [introDone, setIntroDone] = useState(false);
+  // Chỉ chào bằng video khi thật sự sắp làm trắc nghiệm (bài có trắc nghiệm và đã mở khóa); lỗi/khóa/không có trắc nghiệm thì báo ngay.
+  // Một chỗ render duy nhất cho cả lúc đang tải lẫn lúc đã có dữ liệu để video không bị dựng lại và phát lại từ đầu.
+  const d = lesson.data;
+  const intro = !introDone && (lesson.isPending || (!!d && !!d.quiz && !(d.video?.required && !d.video.watched)));
+  if (intro) return <QuizLoadingScreen onEnded={() => setIntroDone(true)} />;
+  // Video đã chạy hết mà dữ liệu bài vẫn chưa về (mạng chậm).
   if (lesson.isPending) return <p className="py-10 text-center text-stone-400">{t('lesson.loading')}</p>;
   if (lesson.isError) {
     return (

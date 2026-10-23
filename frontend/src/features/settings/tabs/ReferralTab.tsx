@@ -31,6 +31,8 @@ const STATUS: Record<ReferralRowStatus, { label: string; bg: string; fg: string 
   paid: { label: 'referral.statusPaid', bg: '#dcfce7', fg: '#15803d' },
   trial: { label: 'referral.statusTrial', bg: '#fef3c7', fg: '#b45309' },
   cancel: { label: 'referral.statusCancel', bg: '#f1efed', fg: '#57534e' },
+  joined: { label: 'referral.statusJoined', bg: '#e0f2fe', fg: '#0369a1' },
+  pending: { label: 'referral.statusPending', bg: '#fef3c7', fg: '#b45309' },
   none: { label: '', bg: '#f1efed', fg: '#78716c' },
 };
 const NONE_LABEL: Record<ReferralKind, string> = { creator: 'referral.noneCreator', member: 'referral.noneMember' };
@@ -77,9 +79,9 @@ async function copyText(text: string): Promise<boolean> {
   }
 }
 
-function CommissionModal({ row, kind, currency, onClose }: { row: ReferralRow; kind: ReferralKind; currency: string; onClose: () => void }) {
+function CommissionModal({ row, kind, currency, communityId, onClose }: { row: ReferralRow; kind: ReferralKind; currency: string; communityId?: string; onClose: () => void }) {
   const { t } = useTranslation('settings');
-  const q = useCommissions(row.userId, kind);
+  const q = useCommissions(row.userId, kind, communityId);
   return (
     <SettingsModal title={t('referral.commissionTitle')} body={t('referral.commissionBody', { name: row.name, amount: money(row.earnedCents, currency) })} onClose={onClose}>
       {q.isPending && <p className="py-3 text-center text-stone-400">{t('referral.loading')}</p>}
@@ -107,7 +109,7 @@ function CommissionModal({ row, kind, currency, onClose }: { row: ReferralRow; k
 
 /** `withdraw`: hiện thẻ "Rút tiền hoa hồng" cạnh bảng người được giới thiệu + "Quy trình rút tiền" (số dư là chung cho mọi loại hoa hồng nên chỉ bật ở MỘT khối trên trang). */
 /** `kind` cố định: ẩn thanh chọn loại (dùng khi gộp nhiều chương trình trên một trang); `showPayoutLink` bật link "Cài đặt nhận tiền" ở chế độ đó. */
-export function ReferralTab({ kind: fixedKind, showPayoutLink = true, withdraw = false }: { kind?: ReferralKind; showPayoutLink?: boolean; withdraw?: boolean } = {}) {
+export function ReferralTab({ kind: fixedKind, showPayoutLink = true, withdraw = false, communityId }: { kind?: ReferralKind; showPayoutLink?: boolean; withdraw?: boolean; communityId?: string } = {}) {
   const { t } = useTranslation('settings');
   const toast = useToast();
   const [pickedKind, setKind] = useState<ReferralKind>('creator');
@@ -115,7 +117,7 @@ export function ReferralTab({ kind: fixedKind, showPayoutLink = true, withdraw =
   const [all, setAll] = useState(false);
   const [detail, setDetail] = useState<ReferralRow | null>(null);
   const overview = useReferral(kind);
-  const users = useReferralUsers(kind, all);
+  const users = useReferralUsers(kind, all, communityId);
   const remind = useRemind();
   const { openMenu, menuEl } = useMenu();
   const dm = useStartConversation();
@@ -134,7 +136,8 @@ export function ReferralTab({ kind: fixedKind, showPayoutLink = true, withdraw =
   // % hoa hồng do admin cấu hình (Cấu hình hệ thống) — chưa tải xong thì hiện '…', không dùng số cứng.
   const rate = o ? pct(o.rates.rateBps) : '…';
   // Link dựng từ origin của trang đang mở: mở được ở mọi môi trường, không phụ thuộc biến FRONTEND_URL trên server.
-  const link = o?.code ? `${window.location.origin}/gioi-thieu/${o.code}` : '';
+  // Trang trong một cộng đồng: link kèm `?c=<id>` để người nhận được đưa vào đúng cộng đồng đó (không phải trang chủ).
+  const link = o?.code ? `${window.location.origin}/gioi-thieu/${o.code}${communityId ? `?c=${encodeURIComponent(communityId)}` : ''}` : '';
 
   const copy = async () => {
     if (!link) return;
@@ -353,7 +356,7 @@ export function ReferralTab({ kind: fixedKind, showPayoutLink = true, withdraw =
       {withdraw && <WithdrawProcess />}
 
       {menuEl}
-      {detail && <CommissionModal row={detail} kind={kind} currency={currency} onClose={() => setDetail(null)} />}
+      {detail && <CommissionModal row={detail} kind={kind} currency={currency} {...(communityId ? { communityId } : {})} onClose={() => setDetail(null)} />}
     </main>
   );
 }

@@ -5,6 +5,7 @@ import { playCorrect, playPassed, playWrong } from '../../../lib/sfx';
 import { useAttemptQuiz, useCheckQuizQuestion, useQuiz } from '../queries';
 import type { QuizAttemptResult } from '../types';
 import { errText, ErrorNote, ghostBtn, primaryBtn } from './contentUi';
+import { QuizMascot } from './QuizMascot';
 
 /**
  * Trắc nghiệm của bài (học viên), làm từng câu một: chọn đáp án là được chấm ngay (kèm âm báo đúng/sai) và chọn lại được ngay.
@@ -33,6 +34,8 @@ export function QuizPanel({ communityId, lessonId }: { communityId: string; less
   const canNext = picked !== undefined && !check.isPending && (!needAllRight || ok === true);
   const isLast = step === total - 1;
   const pct = Math.round(((step + 1) / total) * 100);
+  // Tâm trạng linh vật: đúng/sai theo đáp án đang chọn, còn lại là lời chào (câu đầu) hoặc lời cổ vũ (các câu sau).
+  const mood = ok === true ? 'right' : ok === false ? 'wrong' : step === 0 ? 'intro' : 'next';
 
   const choose = (oi: number) => {
     if (ok === true || check.isPending) return; // câu đã đúng thì khóa; đang chấm thì chờ
@@ -90,7 +93,8 @@ export function QuizPanel({ communityId, lessonId }: { communityId: string; less
 
   return (
     <section className="mt-5" aria-label={t('quiz.title')}>
-      <div className="flex items-center gap-3 text-[12.5px] text-stone-500">
+      <QuizMascot mood={mood} message={t(`quiz.mascot.${mood}`)} />
+      <div className="mt-3 flex items-center gap-3 text-[12.5px] text-stone-500">
         <span className="font-semibold whitespace-nowrap">{t('quiz.stepOf', { n: step + 1, total })}</span>
         <div className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-[#f6e3d8] dark:bg-white/10" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
           <div className="h-full rounded-full bg-brand transition-[width] duration-300" style={{ width: `${pct}%` }} />

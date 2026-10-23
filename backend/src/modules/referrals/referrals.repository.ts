@@ -22,12 +22,34 @@ export const referralsRepository = {
     }),
   countReferrals: (referrerId: string, since?: Date) => prisma.referral.count({ where: { referrerId, ...(since ? { createdAt: { gte: since } } : {}) } }),
 
+  /** Người được mời VÀO MỘT cộng đồng qua link của `referrerId` (chương trình giới thiệu theo cộng đồng). */
+  listCommunityReferrals: (referrerId: string, communityId: string, take: number) =>
+    prisma.communityReferral.findMany({
+      where: { referrerId, communityId },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take,
+      include: { referredUser: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } } },
+    }),
   /** Gói mới nhất của từng người (mọi cộng đồng), kèm tên cộng đồng. */
   listSubscriptions: (userIds: string[]) =>
     prisma.subscription.findMany({
       where: { userId: { in: userIds } },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       select: { userId: true, communityId: true, status: true, cancelAtPeriodEnd: true, createdAt: true, community: { select: { title: true } } },
+    }),
+  /** Cộng đồng (chưa xóa) mà từng người đang là thành viên (không tính cộng đồng tự làm chủ), mới tham gia trước. */
+  listMemberships: (userIds: string[]) =>
+    prisma.enrollment.findMany({
+      where: { userId: { in: userIds }, role: { not: 'owner' }, community: { deletedAt: null } },
+      orderBy: [{ enrolledAt: 'desc' }, { communityId: 'asc' }],
+      select: { userId: true, communityId: true, community: { select: { title: true } } },
+    }),
+  /** Yêu cầu tham gia cộng đồng đang chờ duyệt của từng người. */
+  listPendingJoinRequests: (userIds: string[]) =>
+    prisma.joinRequest.findMany({
+      where: { userId: { in: userIds }, status: 'pending', community: { deletedAt: null } },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      select: { userId: true, communityId: true, community: { select: { title: true } } },
     }),
   /** Cộng đồng (đã publish, chưa xóa) mà từng người làm chủ + gói hosting. */
   listOwnedCommunities: (userIds: string[]) =>
@@ -60,16 +82,17 @@ export const referralsRepository = {
     });
     return r._sum.amountCents ?? 0;
   },
-  earnedByUser: async (referrerId: string, kind: ReferralKind, userIds: string[]) => {
+  earnedByUser: async (referrerId: string, kind: ReferralKind, userIds: string[], communityId?: string) => {
     const rows = await prisma.referralCommission.groupBy({
       by: ['referredUserId'],
-      where: { referrerId, kind, referredUserId: { in: userIds }, status: { not: 'void' } },
+      where: { referrerId, kind, referredUserId: { in: userIds }, status: { not: 'void' }, ...(communityId ? { communityId } : {}) },
       _sum: { amountCents: true },
     });
     return new Map(rows.map((r) => [r.referredUserId, r._sum.amountCents ?? 0]));
   },
-  listCommissions: (referrerId: string, referredUserId: string, kind: ReferralKind, take: number) =>
-    prisma.referralCommission.findMany({ where: { referrerId, referredUserId, kind }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take }),
+  findCommunityReferral: (referrerId: string, communityId: string, referredUserId: string) => prisma.communityReferral.findFirst({ where: { referrerId, communityId, referredUserId } }),
+  listCommissions: (referrerId: string, referredUserId: string, kind: ReferralKind, take: number, communityId?: string) =>
+    prisma.referralCommission.findMany({ where: { referrerId, referredUserId, ...(communityId ? { OR: [{ kind }, { kind: 'community' as ReferralKind, communityId }] } : { kind }) }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take }),
 
   /** Thành viên đã thanh toán thành công nhưng chưa có hoa hồng (đối soát khi hook sau commit bị mất). */
   listUncommissionedPayments: (since: Date, limit: number) =>

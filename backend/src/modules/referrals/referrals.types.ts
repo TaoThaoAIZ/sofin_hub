@@ -1,7 +1,11 @@
 import type { ReferralKindName } from './referrals.schema.js';
 
-/** Trạng thái hiển thị của 1 người được giới thiệu. `none` = chưa phát sinh (chưa tham gia / chưa mở cộng đồng trả phí). */
-export type ReferralRowStatus = 'paid' | 'trial' | 'cancel' | 'none';
+/**
+ * Trạng thái hiển thị của 1 người được giới thiệu. `none` = chưa phát sinh (chưa tham gia / chưa mở cộng đồng trả phí).
+ * `joined` (chỉ tab member) = đang là thành viên một cộng đồng nhưng không có gói trả phí / dùng thử còn hiệu lực (miễn phí, hoặc gói cũ đã hủy/hết hạn mà vẫn còn trong cộng đồng).
+ * `pending` (chỉ tab member) = đã gửi yêu cầu tham gia một cộng đồng riêng tư và đang chờ duyệt.
+ */
+export type ReferralRowStatus = 'paid' | 'trial' | 'cancel' | 'joined' | 'pending' | 'none';
 
 export interface ReferralRow {
   userId: string;

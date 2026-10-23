@@ -193,4 +193,39 @@ describe('giới thiệu theo cộng đồng: % do chủ đặt, hoa hồng tr�
     assert.equal((await c.call('POST', `/communities/${id}/enroll`, { token: g2.token, body: { referralCode: 'khongco' } })).status, 200);
     assert.equal((await program(id, referrer.token)).stats.referred, 1);
   });
+
+  it('bảng "Người bạn đã giới thiệu" của trang trong cộng đồng gộp cả người tham gia cộng đồng qua link (đã có tài khoản, không đăng ký mới)', async () => {
+    const owner = await signup('lown');
+    const cr = await c.call('POST', '/communities', { token: owner.token, body: { title: `List ${Date.now().toString(36)}${n++}`, description: 'd', category: 'tech', priceUsd: 0, visibility: 'public' } });
+    assert.equal(cr.status, 201, JSON.stringify(cr.body));
+    const id = cr.body.data.id as string;
+    assert.equal((await setRate(id, owner.token, 1000)).status, 200);
+    const referrer = await signup('lrf');
+    assert.equal((await c.call('POST', `/communities/${id}/enroll`, { token: referrer.token, body: {} })).status, 200);
+    const code = (await program(id, referrer.token)).code as string;
+
+    // Người có tài khoản từ trước (KHÔNG đăng ký qua link) vào cộng đồng bằng link của người mời.
+    const guest = await signup('lgu');
+    assert.equal((await c.call('POST', `/communities/${id}/enroll`, { token: guest.token, body: { referralCode: code } })).status, 200);
+
+    const list = (query: string) => c.call('GET', `/me/referral/users?kind=member${query}`, { token: referrer.token });
+    // Trang ngoài cộng đồng (Cài đặt) chỉ thấy người đăng ký tài khoản qua link → chưa có ai.
+    assert.equal((await list('')).body.meta.total, 0);
+    // Trang trong cộng đồng: thấy người vừa tham gia, trạng thái "joined" kèm đúng cộng đồng.
+    const inCommunity = (await list(`&communityId=${id}`)).body;
+    assert.equal(inCommunity.meta.total, 1);
+    assert.equal(inCommunity.data[0].userId, guest.id);
+    assert.equal(inCommunity.data[0].status, 'joined');
+    assert.equal(inCommunity.data[0].communityId, id);
+    // Cộng đồng khác không lẫn vào.
+    assert.equal((await list('&communityId=khong-co-cong-dong-nay')).body.meta.total, 0);
+
+    // Chi tiết hoa hồng của người này: có communityId thì mở được (rỗng vì chưa có thanh toán); thiếu thì 404 như cũ.
+    const withCommunity = await c.call('GET', `/me/referral/users/${guest.id}/commissions?kind=member&communityId=${id}`, { token: referrer.token });
+    assert.equal(withCommunity.status, 200, JSON.stringify(withCommunity.body));
+    assert.equal(withCommunity.body.data.data.length, 0);
+    assert.equal((await c.call('GET', `/me/referral/users/${guest.id}/commissions?kind=member`, { token: referrer.token })).status, 404);
+    // Người lạ không xem được chi tiết của người không do mình mời.
+    assert.equal((await c.call('GET', `/me/referral/users/${guest.id}/commissions?kind=member&communityId=${id}`, { token: owner.token })).status, 404);
+  });
 });

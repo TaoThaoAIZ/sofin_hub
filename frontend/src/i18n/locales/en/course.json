@@ -155,6 +155,8 @@
       "review": "Review",
       "locked": "Watch the video to unlock",
       "pageTitle": "Quiz: {{title}}",
+      "loadingTitle": "Loading your quiz...",
+      "loadingSub": "Hang on, we are getting everything ready for you.",
       "backToLesson": "Back to lesson",
       "backToComplete": "Back to the lesson to complete it",
       "lockedTitle": "Not unlocked yet",
@@ -284,6 +286,12 @@
     "truncated": "Showing the latest 500 responses only"
   },
   "quiz": {
+    "mascot": {
+      "intro": "Ready? Let's take the quiz!",
+      "next": "Here's the next one, you've got this!",
+      "right": "Correct! Great job!",
+      "wrong": "Not quite, try again!"
+    },
     "stepOf": "Question {{n}}/{{total}}",
     "progress": "{{pct}}% complete",
     "questionN": "Question {{n}}",

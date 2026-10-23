@@ -4,7 +4,7 @@ import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-do
 import { Button } from '../components/ui/Button';
 import { ApiError } from '../lib/api';
 import { useAuth } from '../features/auth/AuthContext';
-import { clearReferralCode, readReferralCode } from '../features/referral/storage';
+import { clearReferralCode, readReferralCode, readReferralDestination } from '../features/referral/storage';
 import { AuthShell } from '../features/account/components/AuthShell';
 import { Alert } from '../features/account/components/Field';
 
@@ -59,13 +59,14 @@ export function VerifyOtpPage() {
     setInfo(null);
     try {
       await verifyRegistration(email, code, readReferralCode());
+      const referralDest = readReferralDestination(); // lấy trước khi xóa: người đăng ký từ link giới thiệu vào đúng cộng đồng
       clearReferralCode();
       try {
         sessionStorage.removeItem(DRAFT_KEY);
       } catch {
         /* bỏ qua */
       }
-      navigate(state.from ?? '/', { replace: true });
+      navigate(state.from ?? referralDest ?? '/', { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('otp.fail'));
       setDigits(Array(LENGTH).fill(''));

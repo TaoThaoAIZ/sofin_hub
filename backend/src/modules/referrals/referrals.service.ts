@@ -63,12 +63,23 @@ export function createReferralsService() {
   const linkOf = (code: string) => `${env.FRONTEND_URL.replace(/\/$/, '')}/gioi-thieu/${code}`;
 
   /** Trạng thái + cộng đồng tiêu biểu của từng người được giới thiệu theo loại. */
-  async function loadRows(referrerId: string, kind: ReferralKindName, limit = MAX_ROWS): Promise<ReferralRow[]> {
-    const refs = await repo.listReferrals(referrerId, limit);
+  async function loadRows(referrerId: string, kind: ReferralKindName, limit = MAX_ROWS, communityId?: string): Promise<ReferralRow[]> {
+    const platform = await repo.listReferrals(referrerId, limit);
+    // Trang trong một cộng đồng (tab member): thêm người được mời vào cộng đồng này qua link dù họ KHÔNG đăng ký mới (đã có tài khoản). Người đã đăng ký qua link thì giữ một dòng.
+    const inCommunity = kind === 'member' && communityId ? await repo.listCommunityReferrals(referrerId, communityId, limit) : [];
+    const seen = new Set(platform.map((r) => r.referredUserId));
+    const refs = [...platform, ...inCommunity.filter((r) => !seen.has(r.referredUserId))]
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime() || b.id.localeCompare(a.id))
+      .slice(0, limit);
     if (refs.length === 0) return [];
     const ids = refs.map((r) => r.referredUserId);
     const earned = await repo.earnedByUser(referrerId, kind as ReferralKind, ids);
-    const rank: Record<ReferralRowStatus, number> = { paid: 4, trial: 3, cancel: 2, none: 1 };
+    // Hoa hồng của chương trình giới thiệu theo cộng đồng (kind = 'community') cộng vào cùng cột "Hoa hồng đã nhận" của người đó.
+    if (kind === 'member' && communityId) {
+      for (const [uid, cents] of await repo.earnedByUser(referrerId, 'community' as ReferralKind, ids, communityId)) earned.set(uid, (earned.get(uid) ?? 0) + cents);
+    }
+    // "Đã tham gia" (đang là thành viên) cao hơn "Đã hủy" (gói cũ đã hủy): người đã hủy gói ở cộng đồng này nhưng đang ở cộng đồng khác vẫn là đã tham gia.
+    const rank: Record<ReferralRowStatus, number> = { paid: 6, trial: 5, joined: 4, pending: 3, cancel: 2, none: 1 };
     const pick = new Map<string, { communityId: string; communityName: string; status: ReferralRowStatus }>();
     const offer = (userId: string, communityId: string, communityName: string, status: ReferralRowStatus) => {
       const cur = pick.get(userId);
@@ -76,10 +87,18 @@ export function createReferralsService() {
     };
 
     if (kind === 'member') {
-      // Mỗi người có thể có nhiều gói: ưu tiên gói đang trả phí > dùng thử > đã hủy.
-      for (const s of await repo.listSubscriptions(ids)) {
-        offer(s.userId, s.communityId, s.community.title, s.status === 'trialing' ? 'trial' : s.status === 'active' ? 'paid' : 'cancel');
+      const [subs, memberships, pendingRequests] = await Promise.all([repo.listSubscriptions(ids), repo.listMemberships(ids), repo.listPendingJoinRequests(ids)]);
+      const memberOf = new Set(memberships.map((m) => `${m.userId}:${m.communityId}`));
+      // Mỗi người có thể có nhiều gói: ưu tiên gói đang trả phí > dùng thử > đang là thành viên > đã hủy.
+      for (const s of subs) {
+        // Gói đã hủy/hết hạn nhưng người này VẪN là thành viên cộng đồng đó thì là "Đã tham gia", không phải "Đã hủy".
+        const status: ReferralRowStatus = s.status === 'trialing' ? 'trial' : s.status === 'active' ? 'paid' : memberOf.has(`${s.userId}:${s.communityId}`) ? 'joined' : 'cancel';
+        offer(s.userId, s.communityId, s.community.title, status);
       }
+      // Đã vào cộng đồng nhưng chưa có gói (miễn phí / chưa thanh toán): hiện "Đã tham gia" thay vì "Chưa tham gia" mãi mãi.
+      for (const m of memberships) offer(m.userId, m.communityId, m.community.title, 'joined');
+      // Đã gửi yêu cầu tham gia, đang chờ chủ cộng đồng duyệt.
+      for (const j of pendingRequests) offer(j.userId, j.communityId, j.community.title, 'pending');
     } else {
       for (const c of await repo.listOwnedCommunities(ids)) {
         if (!c.ownerId) continue;
@@ -137,17 +156,20 @@ export function createReferralsService() {
       };
     },
 
-    async users(userId: string, kind: ReferralKindName, all: boolean) {
+    async users(userId: string, kind: ReferralKindName, all: boolean, communityId?: string) {
       await ensureCode(userId);
-      const rows = await loadRows(userId, kind);
+      const rows = await loadRows(userId, kind, MAX_ROWS, communityId);
       const data = all ? rows : rows.slice(0, COLLAPSED_ROWS);
       return { data, meta: { total: rows.length, shown: data.length, currency: currencyOf(kind) } };
     },
 
     /** Chi tiết hoa hồng của 1 người được giới thiệu (modal "Chi tiết hoa hồng"). */
-    async commissionsOf(userId: string, referredUserId: string, kind: ReferralKindName) {
-      if (!(await repo.findReferral(userId, referredUserId))) throw HttpError.notFound('Không tìm thấy người được giới thiệu');
-      const list = await repo.listCommissions(userId, referredUserId, kind as ReferralKind, 100);
+    async commissionsOf(userId: string, referredUserId: string, kind: ReferralKindName, communityId?: string) {
+      // Người được mời vào cộng đồng qua link (không đăng ký mới) chỉ có dòng ở chương trình giới thiệu của cộng đồng đó.
+      const inCommunity = kind === 'member' && !!communityId;
+      const known = (await repo.findReferral(userId, referredUserId)) ?? (inCommunity ? await repo.findCommunityReferral(userId, communityId, referredUserId) : null);
+      if (!known) throw HttpError.notFound('Không tìm thấy người được giới thiệu');
+      const list = await repo.listCommissions(userId, referredUserId, kind as ReferralKind, 100, inCommunity ? communityId : undefined);
       return {
         currency: currencyOf(kind),
         totalCents: list.filter((c) => c.status !== 'void').reduce((s, c) => s + c.amountCents, 0),

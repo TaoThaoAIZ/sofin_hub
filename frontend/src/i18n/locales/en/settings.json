@@ -412,6 +412,8 @@
     "kindMember": "Refer members",
     "statusPaid": "Paying",
     "statusTrial": "On trial",
+    "statusJoined": "Joined",
+    "statusPending": "Pending approval",
     "statusCancel": "Canceled",
     "noneCreator": "Not paying yet",
     "noneMember": "Not joined yet",

@@ -412,6 +412,8 @@
     "kindMember": "Giới thiệu thành viên",
     "statusPaid": "Đang trả phí",
     "statusTrial": "Đang dùng thử",
+    "statusJoined": "Đã tham gia",
+    "statusPending": "Chờ duyệt",
     "statusCancel": "Đã hủy",
     "noneCreator": "Chưa trả phí",
     "noneMember": "Chưa tham gia",

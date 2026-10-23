@@ -86,3 +86,44 @@ def load(add):
     A("Tiền vào ngân hàng", "Ô tìm kiếm theo mã giao dịch / số tài khoản / mã tham chiếu / nội dung (không phân biệt hoa thường)", "Chức năng", "Cao",
       "Đã có nhiều giao dịch tiền vào.", ["Gõ một phần mã giao dịch (chữ thường)", "Gõ mã SFH... của một phiên", "Gõ cụm từ không tồn tại", "Xóa ô tìm kiếm"], "TX1001, SFH...",
       "Danh sách lọc sau ~0,3 giây ở trang 1; tìm mã không tồn tại hiện 'Chưa có giao dịch…'; kết hợp được với tab 'Chưa ghi có' / 'Đã ghi có'; xóa ô trả về đầy đủ.")
+
+    # ---------------------------------------------------------------- Link giới thiệu & trạng thái người được giới thiệu (fix 2026-10-23)
+    RPRE = "Môi trường: backend + frontend chạy. A = người giới thiệu (Cài đặt > Giới thiệu & hoa hồng, copy link dạng /gioi-thieu/<mã>); B = người nhận link. "
+    A("Link giới thiệu", "Link copy trong trang Giới thiệu & hoa hồng của cộng đồng có kèm id cộng đồng", "Chức năng", "Cao", RPRE + "A là thành viên cộng đồng X.",
+      ["A vào /communities/<X>/chuong-trinh-gioi-thieu", "Bấm sao chép link (hoặc xem ô link, nút Facebook/Telegram/X)"], "-",
+      "Link có dạng <origin>/gioi-thieu/<mã>?c=<id cộng đồng X> (cả ô hiển thị lẫn nội dung được copy/chia sẻ). Link cũ không có ?c vẫn mở được nhưng không biết cộng đồng nào (người đã đăng nhập về trang chủ).")
+    A("Link giới thiệu", "Mở link khi ĐÃ đăng nhập: vào đúng cộng đồng của người giới thiệu, không sang đăng ký", "Chức năng", "Cao", RPRE + "B đã đăng nhập sẵn trên trình duyệt; link của A lấy từ trang Giới thiệu & hoa hồng của cộng đồng X.",
+      ["Dán link /gioi-thieu/<mã>?c=<X> vào tab mới của trình duyệt đang đăng nhập B", "Quan sát trang đích và thanh địa chỉ"], "Link của A có ?c",
+      "Thoáng hiện 'Đang chuyển hướng' rồi vào TRANG CỘNG ĐỒNG X (/communities/<X>?cref=<mã>), vẫn đăng nhập; KHÔNG vào /register và KHÔNG về trang chủ. B bấm Tham gia/thanh toán thì chương trình giới thiệu của cộng đồng ghi nhận A (nếu cộng đồng bật hoa hồng và A còn là thành viên).")
+    A("Link giới thiệu", "Link có id cộng đồng sai định dạng/không tồn tại: không điều hướng bậy", "Chức năng", "Trung bình", RPRE + "B đã đăng nhập.",
+      ["Mở /gioi-thieu/<mã>?c=../admin", "Mở /gioi-thieu/<mã>?c=khong-ton-tai"], "?c lạ",
+      "?c chứa ký tự lạ ('/', '.'...) bị bỏ qua, về trang chủ; ?c hợp lệ nhưng cộng đồng không tồn tại: vào /communities/<id> và hiện trang 'không tìm thấy' như bình thường (không treo).")
+    A("Link giới thiệu", "Mở link khi CHƯA đăng nhập: lưu mã rồi sang đăng ký; đăng ký xong được ghi nhận", "Chức năng", "Cao", RPRE + "Cửa sổ ẩn danh, chưa đăng nhập.",
+      ["Mở link của A", "Đăng ký tài khoản mới + xác thực OTP", "A mở Giới thiệu & hoa hồng, xem bảng 'Người bạn đã giới thiệu'"], "Link của A",
+      "Tự chuyển sang /register; xác thực OTP xong B được đưa thẳng vào CỘNG ĐỒNG trên link (nếu link có ?c) thay vì trang chủ; bảng của A có thêm dòng của B với trạng thái 'Chưa tham gia', hoa hồng '—'; KPI 'Người đã đăng ký' tăng 1. Đăng ký bằng Google/Facebook cũng vào đúng cộng đồng.")
+    A("Link giới thiệu", "Mở link khi đang chờ xác định phiên đăng nhập (F5 trên link)", "Chức năng", "Trung bình", RPRE + "B đã đăng nhập.",
+      ["Mở link rồi bấm F5 ngay trên trang chuyển hướng"], "Link của A",
+      "Không nháy sang /register: trang đợi biết phiên đăng nhập xong mới chuyển (đã đăng nhập -> vào cộng đồng của link, không có ?c thì trang chủ).", pw="Không")
+    A("Trạng thái người được giới thiệu", "B (đăng ký bằng link của A) tham gia cộng đồng miễn phí: trạng thái đổi thành 'Đã tham gia'", "Chức năng", "Cao", RPRE + "B đã đăng ký bằng link của A; có một cộng đồng miễn phí công khai.",
+      ["Đăng nhập lại B, vào cộng đồng miễn phí và bấm Tham gia", "A tải lại Cài đặt > Giới thiệu & hoa hồng"], "Cộng đồng miễn phí",
+      "Dòng của B đổi từ 'Chưa tham gia' sang nhãn xanh dương 'Đã tham gia' và cột Cộng đồng hiện tên cộng đồng vừa vào. Hoa hồng vẫn '—' vì chưa có giao dịch; KPI 'Đang trả phí' không tăng.")
+    A("Trạng thái người được giới thiệu", "B thanh toán gói cộng đồng trả phí: trạng thái lên 'Đang trả phí' và A được cộng hoa hồng", "Chức năng", "Cao", RPRE + "B đã đăng ký bằng link của A; có cộng đồng trả phí 250.000đ; hoa hồng thành viên mặc định 10%.",
+      ["Đăng nhập B, thanh toán gói cộng đồng trả phí (chuyển khoản, ghi có)", "A tải lại Giới thiệu & hoa hồng", "Bấm '...' ở dòng B > Chi tiết hoa hồng"], "Gói 250.000đ",
+      "Dòng B: 'Đang trả phí', cộng đồng đúng, hoa hồng 25.000đ (pending); KPI 'Đang trả phí' +1, 'Hoa hồng tháng này' 25.000đ. Gói trả phí được ưu tiên hơn 'Đã tham gia' khi B ở cả cộng đồng miễn phí lẫn trả phí.")
+    A("Trạng thái người được giới thiệu", "Cộng đồng do chính B tạo không làm trạng thái 'member' thành 'Đã tham gia'", "Chức năng", "Trung bình", RPRE + "B đã đăng ký bằng link của A, chưa vào cộng đồng nào.",
+      ["B tạo cộng đồng riêng của mình", "A xem tab 'Hoa hồng thành viên' và tab 'Hoa hồng người tạo'"], "-",
+      "Tab thành viên: dòng B vẫn 'Chưa tham gia' (chủ cộng đồng không tính là đã tham gia); tab người tạo hiện cộng đồng của B với trạng thái gói hosting.")
+    A("Trạng thái người được giới thiệu", "Người ĐÃ có tài khoản tham gia cộng đồng qua link: hiện trong bảng 'Người bạn đã giới thiệu' của trang trong cộng đồng", "Chức năng", "Cao",
+      RPRE + "Chủ cộng đồng X đã BẬT % hoa hồng ở thẻ 'Chương trình giới thiệu của cộng đồng này' (mặc định 0% = tắt); A là thành viên X; B có tài khoản từ trước, chưa là thành viên X.",
+      ["A copy link ở /communities/<X>/chuong-trinh-gioi-thieu và gửi B", "B (đã đăng nhập) mở link, bấm Tham gia (hoặc Gửi yêu cầu tham gia nếu cộng đồng riêng tư)", "A tải lại trang Giới thiệu & hoa hồng"], "Link có ?c",
+      "Bảng của A có dòng B (tên, ngày) với cột Cộng đồng = X; sau khi B vào X trạng thái là 'Đã tham gia'; nếu B trả phí thì 'Đang trả phí' và cột Hoa hồng cộng cả hoa hồng chương trình cộng đồng. Mở '...' > Chi tiết hoa hồng không báo lỗi 'không tìm thấy'. Trang Cài đặt chung (ngoài cộng đồng) vẫn chỉ liệt kê người đăng ký tài khoản qua link.")
+    A("Trạng thái người được giới thiệu", "Chủ cộng đồng để hoa hồng cộng đồng = 0% (tắt): tham gia qua link KHÔNG được ghi nhận người mời", "Chức năng", "Trung bình",
+      RPRE + "Cộng đồng X có hoa hồng cộng đồng = 0% (mặc định).",
+      ["B có tài khoản từ trước mở link của A rồi tham gia X", "A xem bảng 'Người bạn đã giới thiệu'"], "% = 0",
+      "Chương trình tắt nên không ghi nhận người mời (hành vi hiện tại): dòng của B KHÔNG xuất hiện ở bảng của A; bật % rồi người KHÁC tham gia thì mới được ghi nhận.")
+    A("Trạng thái người được giới thiệu", "Gói cũ đã hủy nhưng người đó vẫn là thành viên: hiện 'Đã tham gia', không phải 'Đã hủy'", "Chức năng", "Cao", RPRE + "B đăng ký bằng link của A; B từng có gói trả phí ở cộng đồng X (đã hủy/hết hạn) nhưng hiện vẫn là thành viên X.",
+      ["A mở Giới thiệu & hoa hồng, xem dòng của B", "Cho B rời cộng đồng X rồi A tải lại"], "Gói canceled + enrollment còn",
+      "Khi B còn là thành viên: nhãn 'Đã tham gia' (xanh dương) kèm tên cộng đồng X. Sau khi B rời X (không còn thành viên): nhãn 'Đã hủy' (xám). Người có gói đang trả phí/dùng thử luôn ưu tiên hơn.")
+    A("Trạng thái người được giới thiệu", "B vào cộng đồng từ trang khác (không qua link) vẫn đổi trạng thái; yêu cầu tham gia chờ duyệt hiện 'Chờ duyệt'", "Chức năng", "Cao", RPRE + "B đăng ký bằng link của A lúc trước; có 1 cộng đồng miễn phí công khai và 1 cộng đồng riêng tư cần duyệt.",
+      ["B vào cộng đồng miễn phí từ trang Khám phá (không dùng link) và bấm Tham gia", "A tải lại bảng", "B gửi yêu cầu tham gia cộng đồng riêng tư", "A tải lại bảng", "Chủ cộng đồng riêng tư duyệt yêu cầu, A tải lại"], "-",
+      "Sau bước 1: 'Đã tham gia' (cộng đồng miễn phí). Sau bước 3 khi chưa có cộng đồng nào khác: 'Chờ duyệt' (vàng) kèm tên cộng đồng riêng tư; sau khi duyệt: 'Đã tham gia'. Nhãn 'Chưa tham gia' chỉ còn khi B chưa vào/xin vào cộng đồng nào.")

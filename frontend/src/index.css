@@ -387,6 +387,21 @@ body.no-page-bg,
 .mascot-hint { animation: mascot-hint-in 0.4s ease-out both, mascot-hint-bob 3s ease-in-out 0.4s infinite; }
 .mascot-hint-word { display: inline-block; margin-right: 3px; animation: mascot-word-in 0.35s ease-out both, mascot-word-hop 1.6s ease-in-out infinite; }
 .mascot-hint-shimmer { animation: mascot-shimmer 2.2s ease-in-out 1s infinite; }
+/* Linh vật + bong bóng thoại ở bài trắc nghiệm (kiểu Duolingo): nhún nhảy vào, bong bóng bật ra, chữ chạy có con trỏ nhấp nháy. */
+@keyframes quiz-mascot-in {
+  0% { opacity: 0; transform: translateX(-36px) scale(0.7) rotate(-10deg); }
+  60% { opacity: 1; transform: translateX(6px) scale(1.08) rotate(4deg); }
+  100% { opacity: 1; transform: translateX(0) scale(1) rotate(0); }
+}
+@keyframes quiz-mascot-bob { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-6px) rotate(-3deg); } }
+@keyframes quiz-mascot-hop { 0% { transform: translateY(0) scale(1); } 35% { transform: translateY(-14px) scale(1.06); } 70% { transform: translateY(0) scale(0.96); } 100% { transform: translateY(0) scale(1); } }
+@keyframes quiz-bubble-pop { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: scale(1); } }
+@keyframes quiz-caret { 50% { opacity: 0; } }
+.quiz-mascot-in { animation: quiz-mascot-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.quiz-mascot-bob { animation: quiz-mascot-hop 0.55s ease-out, quiz-mascot-bob 2.6s ease-in-out 0.55s infinite; }
+.quiz-bubble-pop { transform-origin: left bottom; animation: quiz-bubble-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) 0.35s both; }
+.quiz-caret { display: inline-block; width: 2px; height: 1em; margin-left: 2px; vertical-align: -0.12em; background: currentColor; animation: quiz-caret 0.8s steps(1) infinite; }
 @media (prefers-reduced-motion: reduce) {
-  .mascot-float, .mascot-hint, .mascot-hint-word, .mascot-hint-shimmer { animation: none; }
+  .mascot-float, .mascot-hint, .mascot-hint-word, .mascot-hint-shimmer,
+  .quiz-mascot-in, .quiz-mascot-bob, .quiz-bubble-pop, .quiz-caret { animation: none; }
 }

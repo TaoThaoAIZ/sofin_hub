@@ -155,6 +155,8 @@
       "review": "Xem lại",
       "locked": "Xem hết video để mở khóa",
       "pageTitle": "Trắc nghiệm: {{title}}",
+      "loadingTitle": "Đang tải bài trắc nghiệm...",
+      "loadingSub": "Đợi chút nhé, chúng tôi đang chuẩn bị nội dung cho bạn.",
       "backToLesson": "Về bài học",
       "backToComplete": "Về bài học để hoàn thành",
       "lockedTitle": "Chưa mở khóa",
@@ -284,6 +286,12 @@
     "truncated": "Chỉ hiển thị 500 câu trả lời mới nhất"
   },
   "quiz": {
+    "mascot": {
+      "intro": "Sẵn sàng chưa? Cùng làm bài trắc nghiệm nào!",
+      "next": "Câu tiếp theo nè, cố lên nhé!",
+      "right": "Chính xác! Bạn giỏi quá!",
+      "wrong": "Chưa đúng rồi, thử chọn lại nhé!"
+    },
     "stepOf": "Câu {{n}}/{{total}}",
     "progress": "{{pct}}% hoàn thành",
     "questionN": "Câu {{n}}",

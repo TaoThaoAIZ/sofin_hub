@@ -180,6 +180,7 @@ function CommunityProgram() {
 
 /** Trang "Giới thiệu & hoa hồng" trong cộng đồng: bố cục thiết kế (giới thiệu nền tảng + rút tiền) và một thẻ gọn cho chương trình của CỘNG ĐỒNG này. */
 export function CommunityReferralTab() {
+  const { id: communityId = '' } = useParams();
   // Trang này không dùng ảnh nền đầu trang (xem body.no-page-bg ở index.css).
   useEffect(() => {
     document.body.classList.add('no-page-bg');
@@ -189,7 +190,7 @@ export function CommunityReferralTab() {
     <div className="flex flex-col gap-[18px]">
       {/* Bố cục theo thiết kế: hero + link, 4 chỉ số, bảng người giới thiệu + rút tiền, quy trình rút tiền. */}
       <ToastProvider>
-        <PlatformReferral kind="member" withdraw showPayoutLink={false} />
+        <PlatformReferral kind="member" withdraw showPayoutLink={false} communityId={communityId} />
       </ToastProvider>
       <CommunityProgram />
     </div>

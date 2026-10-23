@@ -1288,7 +1288,7 @@ STILL_PLAN_OLD_COUNT = sum(1 for _r in rows if _r[6] == PLAN)
 # Nạp testcase mới từ qa/cases_*.py (mỗi file có hàm load(add)).
 CASE_MODULES = ["cases_auth", "cases_community", "cases_content", "cases_classroom",
                 "cases_payments", "cases_comms", "cases_platform", "cases_admin", "cases_admin2", "cases_admin3",
-                "cases_audit_secx", "cases_audit_money", "cases_audit_game", "cases_audit_infra", "cases_audit_perf", "cases_audit_split", "cases_wizard", "cases_settings", "cases_bank_transfer", "cases_tools", "cases_chatbot", "cases_community_bot", "cases_community_greetings", "cases_hosting_referral", "cases_community_extras", "cases_ui_oct16", "cases_ui_oct19"]
+                "cases_audit_secx", "cases_audit_money", "cases_audit_game", "cases_audit_infra", "cases_audit_perf", "cases_audit_split", "cases_wizard", "cases_settings", "cases_bank_transfer", "cases_tools", "cases_chatbot", "cases_community_bot", "cases_community_greetings", "cases_hosting_referral", "cases_community_extras", "cases_ui_oct16", "cases_ui_oct19", "cases_quiz_intro"]
 for _m in CASE_MODULES:
     try:
         _mod = importlib.import_module(_m)

@@ -1,5 +1,5 @@
 export type ReferralKind = 'creator' | 'member';
-export type ReferralRowStatus = 'paid' | 'trial' | 'cancel' | 'none';
+export type ReferralRowStatus = 'paid' | 'trial' | 'cancel' | 'joined' | 'pending' | 'none';
 
 export interface ReferralOverview {
   kind: ReferralKind;

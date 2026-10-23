@@ -5,7 +5,7 @@ import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
 import { ApiError } from '../lib/api';
 import { useAuth } from '../features/auth/AuthContext';
-import { clearReferralCode } from '../features/referral/storage';
+import { clearReferralCode, readReferralDestination } from '../features/referral/storage';
 import { AuthShell } from '../features/account/components/AuthShell';
 import { Alert } from '../features/account/components/Field';
 
@@ -43,8 +43,9 @@ export function OAuthCallbackPage() {
     } else {
       completeSocialLogin()
         .then(() => {
+          const referralDest = readReferralDestination(); // lấy trước khi xóa: người đăng ký từ link giới thiệu vào đúng cộng đồng
           clearReferralCode();
-          navigate('/', { replace: true });
+          navigate(referralDest ?? '/', { replace: true });
         })
         .catch(() => setState({ kind: 'error', message: t('login.socialFail') }));
     }
@@ -61,8 +62,9 @@ export function OAuthCallbackPage() {
     setCodeError(null);
     try {
       await completeTwoFactor(state.ticket, code);
+      const referralDest = readReferralDestination();
       clearReferralCode();
-      navigate('/', { replace: true });
+      navigate(referralDest ?? '/', { replace: true });
     } catch (err) {
       setCodeError(err instanceof ApiError ? err.message : t('login.verifyFail'));
       if (err instanceof ApiError && err.status === 401 && /hết hạn, vui lòng đăng nhập lại/.test(err.message)) {
