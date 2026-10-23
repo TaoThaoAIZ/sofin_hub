@@ -106,13 +106,17 @@ export function CommunityReferralTab() {
     queryFn: ({ signal }) => apiGet<{ data: Program }>(`/communities/${communityId}/referral-program`, undefined, signal, { token: accessToken! }).then((r) => r.data),
     enabled: !!accessToken && !!communityId,
   });
+  // Chưa biết người xem có phải CHỦ cộng đồng không thì chưa dựng gì: nếu dựng sớm, chủ sẽ thấy thoáng giao diện của học viên (bảng "Người bạn đã giới thiệu", Rút tiền).
+  if (q.isPending) return <p className="py-10 text-center text-stone-400">{t('referral.loading')}</p>;
+  if (q.isError || !q.data) {
+    return <p role="alert" className="py-10 text-center text-red-600">{q.error instanceof ApiError ? q.error.message : errText(q.error)}</p>;
+  }
   const program = q.data;
-  const owner = !!program?.isOwner;
+  const owner = program.isOwner;
   return (
     <div className="flex flex-col gap-[18px]">
-      {q.isError && <p role="alert" className="m-0 text-center text-red-600">{q.error instanceof ApiError ? q.error.message : errText(q.error)}</p>}
       {owner && <h1 className="m-0 text-[22px] font-extrabold tracking-tight">{t('referral.pageTitle')}</h1>}
-      {owner && program && <RateBox communityId={communityId} program={program} />}
+      {owner && <RateBox communityId={communityId} program={program} />}
       {/* Bố cục theo thiết kế. Chủ cộng đồng: khung % → hero + link → chi trả cho cộng tác viên. Thành viên: hero + link, 4 chỉ số, người đã giới thiệu + rút tiền. */}
       <ToastProvider>
         <PlatformReferral kind="member" withdraw={!owner} heroOnly={owner} showPayoutLink={false} communityId={communityId} communityOwner={owner} />

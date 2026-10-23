@@ -68,7 +68,7 @@ function CopyRow({ label, value, display, strong }: { label: string; value: stri
     <div className="flex items-center justify-between gap-3 border-b border-[#f3eee9] py-2.5 last:border-b-0">
       <div className="min-w-0">
         <div className="text-xs text-stone-500">{label}</div>
-        <div className={`break-all select-all ${strong ? 'text-base font-extrabold text-brand' : 'text-[14.5px] font-semibold text-stone-900'}`}>{display ?? value}</div>
+        <div className={`[overflow-wrap:anywhere] select-all ${strong ? 'text-base font-extrabold text-brand' : 'text-[14.5px] font-semibold text-stone-900'}`}>{display ?? value}</div>
       </div>
       <button
         type="button"
@@ -173,11 +173,12 @@ export function BankTransferPanel({
       </div>
       <p className="mt-1 mb-0 text-[13px] text-stone-600">{t('bank.intro')}</p>
 
-      <div className="mt-3 flex flex-col items-center gap-3 sm:flex-row sm:items-start">
+      {/* Hộp thoại chỉ rộng 460–560px: xếp dọc (QR trên, thông tin dưới) để số tài khoản/tên chủ tài khoản không bị bóp thành từng chữ. */}
+      <div className="mt-3 flex flex-col items-center gap-3">
         <div className="flex-none rounded-2xl border border-[#ece5df] bg-white p-2">
           <QrImage url={transfer.qrUrl} alt={t('bank.qrAlt')} dim={timeUp} retryLabel={t('bank.qrRetry')} failLabel={t('bank.qrFail')} />
         </div>
-        <div className="w-full min-w-0 flex-1 rounded-2xl border border-[#f0ebe6] px-3.5">
+        <div className="w-full min-w-0 rounded-2xl border border-[#f0ebe6] px-3.5">
           <CopyRow label={t('bank.bank')} value={transfer.bankName} />
           <CopyRow label={t('bank.account')} value={transfer.bankAccount} />
           <CopyRow label={t('bank.accountName')} value={transfer.accountName} />

@@ -210,6 +210,18 @@ describe('lớp học: truy cập module', () => {
     const d2 = await call('GET', `/lessons/${l2}`, a.token);
     assert.ok(d2.status === 403 || d2.status === 402 || d2.status === 423, `status ${d2.status}`);
     assert.notEqual((await call('POST', `/lessons/${l2}/complete`, a.token)).status, 200);
+    // Khóa vì chưa xong module trước nhưng module còn bán riêng: lý do khóa vẫn là previous_module và kèm giá + cờ needsPurchase để FE hiện cả hai.
+    const free2 = await newModule({});
+    const paid2 = await newModule({ accessMode: 'paid', priceCents: 99_000 });
+    await newLesson(free2);
+    await newLesson(paid2);
+    const mods = (await call('GET', '/modules', a.token)).body.data as any[];
+    const m2 = mods.find((m) => m.id === paid2);
+    assert.equal(m2.lockReason, 'previous_module');
+    assert.equal(m2.needsPurchase, true);
+    assert.equal(m2.priceCents, 99_000);
+    assert.equal(mods.find((m) => m.id === free2).needsPurchase, undefined);
+    assert.equal(((await call('GET', '/modules', mod.token)).body.data as any[]).find((m) => m.id === paid2).needsPurchase, undefined); // mod+ không cần mua
     const list = (await call('GET', `/modules/${paid}/lessons`, a.token)).body.data;
     assert.equal(list[0].locked, true);
     assert.equal(list[0].body, '');

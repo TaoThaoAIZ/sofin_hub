@@ -173,6 +173,7 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
           publishStatus: m.publishStatus,
           hasPreview: m.previewIds.length > 0,
           lockReason: orderLocked ? 'previous_module' : accessReason,
+          ...(!staff && m.accessMode === 'paid' && !granted.has(m.id) ? { needsPurchase: true } : {}),
         },
         lockedLessons,
         orderLocked,

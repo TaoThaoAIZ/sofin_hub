@@ -87,6 +87,8 @@ export interface ClassroomModuleView {
   publishStatus: CoursePublishStatus;
   hasPreview: boolean;
   lockReason: LockReason;
+  /** Module bán riêng mà người xem CHƯA mua (kể cả khi đang bị khóa vì chưa xong module trước, lúc đó lockReason = previous_module): FE hiện phí song song với lý do khóa. */
+  needsPurchase?: boolean;
 }
 
 export interface ClassroomLessonView extends Omit<ClassroomLesson, 'moduleId' | 'courseId' | 'communityId'> {

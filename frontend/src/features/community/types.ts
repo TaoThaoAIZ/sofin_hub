@@ -67,6 +67,8 @@ export interface ClassroomModule {
   thumbnail?: string;
   requiredLevel?: number;
   lockReason?: 'previous_module' | 'level' | 'paid' | 'selected' | null;
+  /** Module bán riêng mà người xem chưa mua (kể cả khi đang khóa vì chưa xong module trước). */
+  needsPurchase?: boolean;
   learningCourseId?: string;
   accessMode?: ModuleAccessMode;
   /** Chỉ có khi accessMode = 'paid'. */

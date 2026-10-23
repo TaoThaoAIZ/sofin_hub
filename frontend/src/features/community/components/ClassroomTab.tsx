@@ -102,12 +102,15 @@ export function LessonList({ communityId, courseId, moduleId, unlock, canManage 
   );
 }
 
+/** "Mua riêng 299.000 ₫" — dùng cho lớp phủ giá của module bán riêng. */
+const paidText = (m: ClassroomModule) => i18n.t('modWizard.lock.paid', { ns: 'community', price: formatCents(m.priceCents ?? 0) });
+
 export function lockText(m: ClassroomModule) {
   if (m.lockReason === 'level')
     return m.requiredLevel
       ? i18n.t('classroom.lock.levelReq', { ns: 'community', level: m.requiredLevel })
       : i18n.t('classroom.lock.levelHigher', { ns: 'community' });
-  if (m.lockReason === 'paid') return i18n.t('modWizard.lock.paid', { ns: 'community', price: formatCents(m.priceCents ?? 0) });
+  if (m.lockReason === 'paid') return paidText(m);
   if (m.lockReason === 'selected') return i18n.t('modWizard.lock.selected', { ns: 'community' });
   return i18n.t('classroom.lock.prevModule', { ns: 'community' });
 }
@@ -353,12 +356,13 @@ export function ClassroomTab() {
                 {m.publishStatus === 'draft' && (
                   <span className="absolute top-3 left-3 z-[3] rounded-lg bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800">{t('modWizard.lock.draft')}</span>
                 )}
-                {m.locked && m.lockReason === 'paid' && (
+                {/* Module bán riêng chưa mua: lớp phủ giữa thẻ có khóa + giá (cả khi đang khóa vì chưa xong module trước — lúc đó chưa có nút Mua, lý do khóa hiện ở nhãn dưới). */}
+                {m.locked && (m.lockReason === 'paid' || (m.needsPurchase && !!m.priceCents)) && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[rgba(12,8,6,.62)] px-5 text-center text-sm font-bold text-white backdrop-blur-[2px]">
                     <span className="grid size-11 place-items-center rounded-full border border-white/25 bg-white/15">
                       <MaterialIcon name="lock" size={24} filled color="#fff" />
                     </span>
-                    {lockText(m)}
+                    {m.lockReason === 'paid' ? lockText(m) : paidText(m)}
                     {unlockOf(m) && (
                       <UnlockControl unlock={unlockOf(m)!} className="mt-1 rounded-xl bg-brand px-4 py-1.5 text-[13px] font-bold text-white hover:opacity-90">
                         {t('classroom.unlockBuy')}
@@ -384,7 +388,7 @@ export function ClassroomTab() {
                     </UnlockControl>
                   ) : (
                   m.locked ? (
-                    <span title={lockText(m)} className="grid size-[42px] flex-none cursor-not-allowed place-items-center rounded-[14px] bg-brand/10 opacity-50">
+                    <span title={m.needsPurchase && m.priceCents ? `${lockText(m)} · ${paidText(m)}` : lockText(m)} className="grid size-[42px] flex-none cursor-not-allowed place-items-center rounded-[14px] bg-brand/10 opacity-50">
                       <MaterialIcon name="arrow_forward" size={22} color="#ff570a" />
                     </span>
                   ) : (
