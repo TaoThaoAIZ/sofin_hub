@@ -472,6 +472,8 @@ model User {
   communityOnboardings       CommunityOnboarding[]
   communityReferralsGiven    CommunityReferral[]         @relation("CommunityReferralReferrer")
   communityReferralsReceived CommunityReferral[]         @relation("CommunityReferralReferred")
+  commissionPayoutsReceived  CommunityCommissionPayout[] @relation("CommissionPayoutReferrer")
+  commissionPayoutsMade      CommunityCommissionPayout[] @relation("CommissionPayoutPaidBy")
 
   @@index([isDemo])
   @@index([status])
@@ -664,6 +666,7 @@ model Community {
   /// Cột GENERATED ALWAYS (title A + description B, đã gập dấu).
   searchVector       Unsupported("tsvector")?
   communityReferrals CommunityReferral[]
+  commissionPayouts  CommunityCommissionPayout[]
   onboardings        CommunityOnboarding[]
 
   @@index([category])
@@ -1959,13 +1962,17 @@ model ReferralCommission {
   amountCents    Int
   status         CommissionStatus @default(pending)
   payoutOn       DateTime?
+  /// Hoa hồng cộng đồng do CHỦ CỘNG ĐỒNG tự chuyển khoản rồi đánh dấu đã chi: trỏ tới đợt chi trả. Có giá trị = không còn nằm trong số dư rút của người nhận và không còn trừ vào doanh thu creator.
+  payoutId       String?
   createdAt      DateTime         @default(now())
 
+  payout       CommunityCommissionPayout? @relation(fields: [payoutId], references: [id], onDelete: SetNull)
   referrer     User @relation("CommissionReferrer", fields: [referrerId], references: [id], onDelete: Cascade)
   referredUser User @relation("CommissionReferred", fields: [referredUserId], references: [id], onDelete: Cascade)
 
   @@index([referrerId, createdAt])
   @@index([referredUserId])
+  @@index([payoutId])
 }
 
 enum ReferralWithdrawalStatus {
@@ -2375,4 +2382,25 @@ model CommunityAnnouncementSeen {
 
   @@id([announcementId, userId])
   @@index([userId])
+}
+
+/// Một lần CHỦ CỘNG ĐỒNG chi trả hoa hồng giới thiệu cho một cộng tác viên (chuyển khoản ngoài hệ thống rồi bấm "Chi trả" để ghi nhận).
+model CommunityCommissionPayout {
+  id              String   @id @default(uuid())
+  communityId     String   @map("courseId")
+  referrerId      String
+  paidById        String
+  amountCents     Int
+  commissionCount Int
+  note            String?
+  createdAt       DateTime @default(now())
+
+  community   Community            @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  referrer    User                 @relation("CommissionPayoutReferrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  paidBy      User                 @relation("CommissionPayoutPaidBy", fields: [paidById], references: [id], onDelete: Cascade)
+  commissions ReferralCommission[]
+
+  @@index([communityId, createdAt])
+  @@index([referrerId])
+  @@index([paidById])
 }

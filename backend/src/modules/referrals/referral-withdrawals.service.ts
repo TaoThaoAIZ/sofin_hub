@@ -33,7 +33,8 @@ type Db = Prisma.TransactionClient | typeof prisma;
 async function balanceOf(db: Db, userId: string) {
   const kinds = cfg().owner.currency === 'VND' ? (['creator', 'member', 'community'] as const) : (['member', 'community'] as const);
   const [earned, active] = await Promise.all([
-    db.referralCommission.aggregate({ where: { referrerId: userId, status: { not: 'void' }, kind: { in: [...kinds] } }, _sum: { amountCents: true } }),
+    // Hoa hồng cộng đồng đã được CHỦ CỘNG ĐỒNG tự chuyển khoản (payoutId có giá trị) thì người nhận không rút lại qua nền tảng nữa.
+    db.referralCommission.aggregate({ where: { referrerId: userId, status: { not: 'void' }, kind: { in: [...kinds] }, payoutId: null }, _sum: { amountCents: true } }),
     db.referralWithdrawal.groupBy({ by: ['status'], where: { userId, status: { in: ['requested', 'paid'] } }, _sum: { amountCents: true } }),
   ]);
   const sum = (s: string) => active.find((x) => x.status === s)?._sum.amountCents ?? 0;
@@ -84,6 +85,8 @@ export type SettleOutcome = 'paid' | 'already' | 'unmatched' | 'underpaid' | 'du
 export const referralWithdrawalsService = {
   MIN_WITHDRAW_CENTS,
   balanceOf: (userId: string) => balanceOf(prisma, userId),
+  /** Như balanceOf nhưng đọc trong một transaction đang mở (đã giữ khóa rút tiền của user). */
+  balanceInTx: (tx: Prisma.TransactionClient, userId: string) => balanceOf(tx, userId),
 
   /** Màn "Rút tiền hoa hồng": số dư + tài khoản nhận + lịch sử gần đây. */
   async overview(userId: string) {

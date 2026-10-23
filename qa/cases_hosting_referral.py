@@ -129,7 +129,7 @@ def load(add):
       "Sau bước 1: 'Đã tham gia' (cộng đồng miễn phí). Sau bước 3 khi chưa có cộng đồng nào khác: 'Chờ duyệt' (vàng) kèm tên cộng đồng riêng tư; sau khi duyệt: 'Đã tham gia'. Nhãn 'Chưa tham gia' chỉ còn khi B chưa vào/xin vào cộng đồng nào.")
     A("Trang Giới thiệu & hoa hồng của cộng đồng", "Khung đặt % hoa hồng nằm TRÊN CÙNG trang (chủ cộng đồng)", "Giao diện", "Cao", RPRE + "Đăng nhập chủ cộng đồng X.",
       ["Vào /communities/<X>/chuong-trinh-gioi-thieu", "Quan sát thứ tự các khối từ trên xuống"], "-",
-      "Thứ tự: (1) khung 'Hoa hồng giới thiệu (dành cho chủ cộng đồng)' có ô % + Lưu (+ Tắt khi đang bật), (2) hero + link, (3) 4 chỉ số, (4) bảng 'Người bạn đã giới thiệu' + Rút tiền, (5) Quy trình rút tiền. Không còn khung % ở cuối trang. Thành viên thường không thấy khung %.", pw="Không")
+      "Chủ cộng đồng: (1) khung 'Hoa hồng giới thiệu (dành cho chủ cộng đồng)' có ô % + Lưu (+ Tắt chương trình khi đang bật), (2) hero + link, (3) khối 'Chi trả hoa hồng cho cộng tác viên'. Thành viên thường: không có khung %; thứ tự hero + link, 4 chỉ số, bảng 'Người bạn đã giới thiệu' + Rút tiền, Quy trình rút tiền.", pw="Không")
     A("Trang Giới thiệu & hoa hồng của cộng đồng", "Chủ cộng đồng chưa đặt % (0): KHÔNG hiện link và KHÔNG hiện '10%' của nền tảng", "Chức năng", "Cao", RPRE + "Cộng đồng X có hoa hồng cộng đồng = 0% (mặc định).",
       ["Chủ cộng đồng mở trang Giới thiệu & hoa hồng", "Một thành viên thường của X mở cùng trang"], "% = 0",
       "Hero hiện 'Chương trình giới thiệu chưa được bật' kèm hướng dẫn (chủ: 'Hãy đặt % ở khung phía trên'; thành viên: 'Chủ cộng đồng chưa bật hoa hồng giới thiệu'); KHÔNG có ô link, nút Sao chép/chia sẻ và KHÔNG có chữ 'Nhận 10%'. Các chỉ số hiện 0.")
@@ -139,10 +139,34 @@ def load(add):
     A("Trang Giới thiệu & hoa hồng của cộng đồng", "Số liệu 4 ô tính theo CỘNG ĐỒNG và khớp bảng người giới thiệu", "Chức năng", "Cao", RPRE + "X đã bật 15%. B (tài khoản cũ) tham gia X qua link của A và trả phí 250.000đ; C đăng ký tài khoản mới qua link của A nhưng chưa vào X.",
       ["A mở trang Giới thiệu & hoa hồng của X", "So 4 ô chỉ số với bảng 'Người bạn đã giới thiệu'"], "B trả phí, C chưa tham gia",
       "'Người đã đăng ký' = 2 (B, C; bằng tổng số dòng bảng); 'Đang trả phí' = 1 (B); 'Hoa hồng tháng này' = 37.500đ (15% x 250.000đ); 'Chờ chi trả' = 37.500đ kèm ngày chi trả. Hoa hồng phát sinh ở cộng đồng KHÁC không lẫn vào. Dòng B: 'Đang trả phí' + cột Hoa hồng 37.500đ; dòng C: 'Chưa tham gia'; cột Cộng đồng/trạng thái tính theo X.")
-    A("Trang Giới thiệu & hoa hồng của cộng đồng", "Chủ cộng đồng xem được TẤT CẢ người giới thiệu kèm người họ mời và hoa hồng", "Chức năng", "Cao",
-      RPRE + "X đã bật 15%. A và A2 là thành viên X; A mời B (đã trả phí 250.000đ) và C (chưa trả); A2 mời D (đã trả phí). Đăng nhập CHỦ cộng đồng X.",
-      ["Mở /communities/<X>/chuong-trinh-gioi-thieu", "Xem khối 'Người giới thiệu trong cộng đồng' (ngay dưới khung đặt %)", "Bấm vào dòng của A để mở rộng"], "A mời B,C; A2 mời D",
-      "Hàng tổng: Người giới thiệu 2, Người được mời 3, Đang trả phí 2, Hoa hồng phải trả 75.000đ. Bảng 2 dòng (A, A2) gồm cột Đã mời, Trả phí, Hoa hồng, Chờ chi trả, xếp theo hoa hồng giảm dần. Mở A: B (Đang trả phí, 37.500đ) và C (Đã tham gia/Chưa tham gia, —) kèm ngày. Quá 5 người giới thiệu thì có 'Xem thêm'.")
-    A("Trang Giới thiệu & hoa hồng của cộng đồng", "Chỉ chủ cộng đồng thấy danh sách tất cả người giới thiệu; thành viên thường không", "Bảo mật", "Cao", RPRE + "A là thành viên thường của X.",
-      ["A mở trang Giới thiệu & hoa hồng của X", "A gọi GET /api/communities/<X>/referral-program/referrers"], "-",
-      "Trang của A không có khối 'Người giới thiệu trong cộng đồng' và không có khung đặt %; API trả 403. A chỉ thấy bảng 'Người bạn đã giới thiệu' của riêng mình.")
+    PRE_OWN = RPRE + "X đã bật 20%. A và A2 là thành viên X; A mời B và C (đã trả phí 250.000đ mỗi người), A2 mời D (đã trả phí). Đăng nhập CHỦ cộng đồng X. "
+    A("Chi trả hoa hồng cho cộng tác viên", "Trang của chủ cộng đồng đúng thiết kế: tiêu đề, khung %, hero + link, rồi khối chi trả", "Giao diện", "Cao", PRE_OWN,
+      ["Mở /communities/<X>/chuong-trinh-gioi-thieu", "Quan sát thứ tự các khối từ trên xuống"], "-",
+      "Thứ tự: tiêu đề 'Giới thiệu & Hoa hồng' > khung 'Hoa hồng giới thiệu (dành cho chủ cộng đồng)' (ô % có hậu tố %, nút Lưu có icon, nút 'Tắt chương trình') > hero 'Nhận 20% ...' + link + Sao chép + chia sẻ > khối 'Chi trả hoa hồng cho cộng tác viên' (chọn khoảng ngày, 4 thẻ số liệu màu xanh dương/xanh lá/cam/tím, bảng + cột phải 'Thanh toán hoa hồng' và 'Lịch sử chi trả gần đây'). Chủ không còn thấy bảng 'Người bạn đã giới thiệu'/Rút tiền cá nhân ở trang này.", pw="Không")
+    A("Chi trả hoa hồng cho cộng tác viên", "4 thẻ số liệu và bảng cộng tác viên đúng dữ liệu theo khoảng ngày", "Chức năng", "Cao", PRE_OWN,
+      ["Chọn khoảng ngày chứa các giao dịch", "Đọc 4 thẻ số liệu", "Đọc dòng của A và A2 trong bảng", "Đổi sang khoảng ngày không có giao dịch"], "Khoảng ngày 01/10-31/12",
+      "Cộng tác viên 2, Người được giới thiệu 3, Hoa hồng cần chi trả 150.000đ, Đã chi trả 0đ. Dòng A: Người được giới thiệu 2, Tỷ lệ 20%, Tổng hoa hồng 100.000đ, Cần chi trả 100.000đ, trạng thái 'Chờ chi trả'. Khoảng ngày không có giao dịch: Cần chi trả 0đ, trạng thái 'Chưa phát sinh'. Ngày bắt đầu sau ngày kết thúc: báo lỗi, không gọi API.")
+    A("Chi trả hoa hồng cho cộng tác viên", "Tìm kiếm, lọc trạng thái và phân trang bảng (6 dòng/trang)", "Chức năng", "Trung bình", PRE_OWN + "Có > 6 cộng tác viên.",
+      ["Gõ một phần tên/email của A vào ô tìm kiếm", "Chọn lọc 'Đã chi trả' rồi 'Chờ chi trả'", "Bấm sang trang 2, trang cuối, trang trước"], "-",
+      "Tìm theo tên/email (không phân biệt hoa thường) lọc đúng; lọc trạng thái đúng; dòng 'Hiển thị 7-12 trong tổng N cộng tác viên' đúng; đổi trang/bộ lọc thì bỏ các ô đã chọn.")
+    A("Chi trả hoa hồng cho cộng tác viên", "Chi trả một cộng tác viên: xác nhận rồi đánh dấu đã chi + ghi lịch sử", "Chức năng", "Cao", PRE_OWN,
+      ["Chuyển khoản thật (ngoài hệ thống) cho A", "Ở dòng A bấm 'Chi trả'", "Bấm 'Đã chuyển, xác nhận'"], "A cần chi 100.000đ",
+      "Hiện hộp 'Xác nhận đã chuyển khoản' nêu đúng số tiền và tên A. Sau xác nhận: toast 'Đã ghi nhận chi trả 100.000đ cho 1 cộng tác viên'; dòng A thành 'Đã chi trả', Cần chi trả '—'; thẻ 'Đã chi trả' tăng 100.000đ, 'Cần chi trả' giảm; Lịch sử chi trả gần đây có dòng A (100.000đ, 'Đã chuyển'); A nhận thông báo 'Chủ cộng đồng đã chi trả hoa hồng giới thiệu'. Bấm lại thì nút 'Chi trả' bị vô hiệu.")
+    A("Chi trả hoa hồng cho cộng tác viên", "Chi trả hàng loạt các cộng tác viên đã chọn", "Chức năng", "Cao", PRE_OWN,
+      ["Tick ô chọn của A và A2 (hoặc ô chọn tất cả ở tiêu đề bảng)", "Quan sát nút 'Chi trả hàng loạt (2)'", "Bấm và xác nhận"], "A, A2",
+      "Nút hiện số người đã chọn; hộp xác nhận nêu tổng tiền và số người; sau xác nhận cả hai thành 'Đã chi trả', lịch sử có 2 dòng. Chỉ chọn được người còn khoản cần chi (ô chọn mờ với người đã chi).")
+    A("Chi trả hoa hồng cho cộng tác viên", "Sau khi chủ chi trả: doanh thu của chủ không còn bị trừ và cộng tác viên không rút lại khoản đó", "Chức năng", "Cao", PRE_OWN,
+      ["Ghi lại doanh thu thực nhận của chủ ở Doanh thu & rút tiền", "Chi trả cho A (100.000đ)", "Xem lại doanh thu của chủ", "Đăng nhập A, xem số dư 'Rút tiền hoa hồng'"], "-",
+      "Doanh thu thực nhận của chủ tăng đúng 100.000đ (khoản hoa hồng đó không còn bị trừ); số dư rút được của A không còn khoản 100.000đ đó (không thể rút trùng).")
+    A("Chi trả hoa hồng cho cộng tác viên", "Cộng tác viên đã rút một phần qua nền tảng: chỉ ghi nhận phần còn lại, không chi hai lần", "Chức năng", "Cao", PRE_OWN + "A đã thêm tài khoản nhận tiền và đã bấm Rút tiền 50.000đ trước đó (nền tảng đang xử lý).",
+      ["Chủ bấm Chi trả cho A (A còn 100.000đ cần chi, đã rút 50.000đ)"], "A có yêu cầu rút 50.000đ",
+      "Chỉ ghi nhận chi trả 50.000đ (phần A còn rút được), phần còn lại giữ 'Chờ chi trả' và có toast 'đã rút một phần hoa hồng qua nền tảng nên chỉ ghi nhận phần còn lại'. Số dư rút được của A không âm.")
+    A("Chi trả hoa hồng cho cộng tác viên", "Xuất danh sách thanh toán (CSV)", "Chức năng", "Trung bình", PRE_OWN,
+      ["Bấm 'Xuất danh sách thanh toán' khi chưa chọn ai", "Tick A rồi bấm lại", "Mở file bằng Excel"], "-",
+      "Tải file thanh-toan-hoa-hong-<từ>_<đến>.csv đọc đúng tiếng Việt: chưa chọn = mọi người còn khoản cần chi; đã chọn = chỉ người đã chọn. Cột: tên, email, số người giới thiệu, tỷ lệ, số khoản, cần chi trả, ngân hàng, chủ tài khoản, 4 số cuối tài khoản (số tài khoản đầy đủ không lộ cho chủ).")
+    A("Chi trả hoa hồng cho cộng tác viên", "Menu '⋮': xem người được mời của từng cộng tác viên", "Chức năng", "Trung bình", PRE_OWN,
+      ["Bấm '⋮' ở dòng A > 'Xem người được mời'"], "A mời B, C",
+      "Hiện hộp 'Người được A mời' liệt kê B, C với ngày tham gia, trạng thái (Đang trả phí/Đã tham gia/Chưa tham gia) và hoa hồng của từng người.")
+    A("Chi trả hoa hồng cho cộng tác viên", "Chỉ chủ cộng đồng chi trả/xem/xuất; thành viên thường bị chặn", "Bảo mật", "Cao", RPRE + "A là thành viên thường của X.",
+      ["A mở trang Giới thiệu & hoa hồng của X", "A gọi GET/POST /api/communities/<X>/referral-program/payouts và GET .../payouts/export.csv"], "-",
+      "Trang của A không có khung % và không có khối chi trả; mọi API trên trả 403. Gửi referrerIds rỗng hoặc id không phải cộng tác viên: 400 / bị bỏ qua, không đổi dữ liệu.")

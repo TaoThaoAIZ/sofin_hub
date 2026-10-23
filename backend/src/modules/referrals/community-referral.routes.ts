@@ -3,6 +3,7 @@ import { requireAuth } from '../../middlewares/auth.js';
 import { catalogService } from '../catalog/catalog.service.js';
 import { enrollmentService } from '../enrollments/enrollments.service.js';
 import { requireRole } from '../permissions/policy.js';
+import { communityReferralPayoutsService, exportQuery, payBody, payoutsQuery } from './community-referral-payouts.service.js';
 import { communityReferralService, setRateBody } from './community-referral.service.js';
 
 /** Chương trình giới thiệu theo cộng đồng. `/communities/:id/...` ≡ `/courses/:id/...` (communityAlias). */
@@ -21,6 +22,29 @@ communityReferralRouter.get('/courses/:id/referral-program/referrers', requireAu
   const communityId = id(req.params.id);
   await requireRole(req.userId!, communityId, 'owner');
   res.json({ data: await communityReferralService.referrers(communityId) });
+});
+
+// Chủ cộng đồng chi trả hoa hồng cho cộng tác viên (tự chuyển khoản rồi ghi nhận): tổng quan + bảng, chi trả, xuất danh sách.
+communityReferralRouter.get('/courses/:id/referral-program/payouts', requireAuth, async (req, res) => {
+  const communityId = id(req.params.id);
+  await requireRole(req.userId!, communityId, 'owner');
+  res.json({ data: await communityReferralPayoutsService.overview(communityId, payoutsQuery.parse(req.query)) });
+});
+
+communityReferralRouter.post('/courses/:id/referral-program/payouts', requireAuth, async (req, res) => {
+  const communityId = id(req.params.id);
+  await catalogService.requireLockState(communityId);
+  await requireRole(req.userId!, communityId, 'owner');
+  res.json({ data: await communityReferralPayoutsService.pay(communityId, req.userId!, payBody.parse(req.body)) });
+});
+
+communityReferralRouter.get('/courses/:id/referral-program/payouts/export.csv', requireAuth, async (req, res) => {
+  const communityId = id(req.params.id);
+  await requireRole(req.userId!, communityId, 'owner');
+  const csv = await communityReferralPayoutsService.exportCsv(communityId, exportQuery.parse(req.query));
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="thanh-toan-hoa-hong-${communityId}.csv"`);
+  res.send(csv);
 });
 
 // Chủ cộng đồng đặt % hoa hồng (0 = tắt).

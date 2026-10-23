@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Avatar } from '../../account/components/Avatar';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
@@ -250,6 +250,41 @@ const MENTION_LINE_RE = /^(?:Gắn thẻ|Tagged): (.+)$/;
 const MENTION_RE = /\[\[user:([A-Za-z0-9_-]+)\|([^\]]+)\]\]/g;
 const isVideoName = (n: string, url: string) => /\.mp4$/i.test(n) || /\.mp4(?:[?#]|$)/i.test(url);
 
+/** Link trong nội dung bài: URL đầy đủ hoặc đường dẫn nội bộ dạng /communities/... (bài thông báo cũ chỉ lưu đường dẫn). */
+const LINK_RE = /(https?:\/\/[^\s<]+|\/communities\/[^\s<]+)/g;
+const TRAILING_PUNCT = /[.,;:!?)\]}'"»]+$/;
+
+/** Hiển thị văn bản và biến link thành bấm được: link cùng trang web mở bằng router (không tải lại), link ngoài mở tab mới (chỉ http/https). */
+function LinkifiedText({ text }: { text: string }) {
+  const nodes: ReactNode[] = [];
+  let last = 0;
+  for (const m of text.matchAll(LINK_RE)) {
+    const raw = m[0].replace(TRAILING_PUNCT, '');
+    const start = m.index!;
+    if (start > last) nodes.push(text.slice(last, start));
+    last = start + raw.length;
+    let internal: string | null = raw.startsWith('/') ? raw : null;
+    if (!internal) {
+      try {
+        const u = new URL(raw);
+        if (u.origin === window.location.origin) internal = `${u.pathname}${u.search}${u.hash}`;
+      } catch {
+        /* URL hỏng: coi như chữ thường bên dưới */
+      }
+    }
+    const cls = 'text-brand underline decoration-brand/40 underline-offset-2 hover:decoration-brand break-all';
+    if (internal) {
+      nodes.push(<Link key={start} to={internal} className={cls}>{raw}</Link>);
+    } else if (safeUrl(raw)) {
+      nodes.push(<a key={start} href={safeUrl(raw)!} target="_blank" rel="noopener noreferrer" className={cls}>{raw}</a>);
+    } else {
+      nodes.push(raw);
+    }
+  }
+  if (last < text.length) nodes.push(text.slice(last));
+  return <>{nodes}</>;
+}
+
 function splitContent(content: string) {
   const text: string[] = [];
   const files: { name: string; url: string }[] = [];
@@ -454,7 +489,7 @@ export function PostCard({
             </div>
           ) : (
             <>
-              {parts.text && <p className="mt-2 text-[14.5px] leading-[1.6] break-words whitespace-pre-wrap text-stone-800">{parts.text}</p>}
+              {parts.text && <p className="mt-2 text-[14.5px] leading-[1.6] break-words whitespace-pre-wrap text-stone-800"><LinkifiedText text={parts.text} /></p>}
               {parts.mentions.length > 0 && (
                 <p className="mt-2 flex flex-wrap items-center gap-1.5 text-[13px] text-stone-500">
                   <MaterialIcon name="sell" size={15} color="currentColor" />

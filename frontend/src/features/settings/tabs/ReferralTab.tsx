@@ -109,7 +109,7 @@ function CommissionModal({ row, kind, currency, communityId, onClose }: { row: R
 
 /** `withdraw`: hiện thẻ "Rút tiền hoa hồng" cạnh bảng người được giới thiệu + "Quy trình rút tiền" (số dư là chung cho mọi loại hoa hồng nên chỉ bật ở MỘT khối trên trang). */
 /** `kind` cố định: ẩn thanh chọn loại (dùng khi gộp nhiều chương trình trên một trang); `showPayoutLink` bật link "Cài đặt nhận tiền" ở chế độ đó. */
-export function ReferralTab({ kind: fixedKind, showPayoutLink = true, withdraw = false, communityId, communityOwner = false }: { kind?: ReferralKind; showPayoutLink?: boolean; withdraw?: boolean; communityId?: string; communityOwner?: boolean } = {}) {
+export function ReferralTab({ kind: fixedKind, showPayoutLink = true, withdraw = false, communityId, communityOwner = false, heroOnly = false }: { kind?: ReferralKind; showPayoutLink?: boolean; withdraw?: boolean; communityId?: string; communityOwner?: boolean; heroOnly?: boolean } = {}) {
   const { t } = useTranslation('settings');
   const toast = useToast();
   const [pickedKind, setKind] = useState<ReferralKind>('creator');
@@ -268,6 +268,8 @@ export function ReferralTab({ kind: fixedKind, showPayoutLink = true, withdraw =
         )}
       </section>
 
+      {!heroOnly && (
+      <>
       <div className="grid gap-3.5" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))' }}>
         {kpis.map((k) => (
           <div key={k.label} className="flex min-w-0 gap-3.5 rounded-[20px] border border-[rgba(120,60,20,.07)] bg-white px-5 py-[18px]">
@@ -367,6 +369,8 @@ export function ReferralTab({ kind: fixedKind, showPayoutLink = true, withdraw =
         {withdraw && <WithdrawCard />}
       </div>
       {withdraw && <WithdrawProcess />}
+      </>
+      )}
 
       {menuEl}
       {detail && <CommissionModal row={detail} kind={kind} currency={currency} {...(communityId ? { communityId } : {})} onClose={() => setDetail(null)} />}

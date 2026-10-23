@@ -880,7 +880,7 @@ function makeOps(db: Db): PaymentsOps {
       const cTo = range.to ? Prisma.sql`AND "createdAt" <= ${ts(range.to)}` : Prisma.empty;
       const [rc] = await db.$queryRaw<{ total: bigint }[]>`
         SELECT COALESCE(SUM("amountCents"), 0)::bigint AS total FROM "ReferralCommission"
-        WHERE "communityId" = ${communityId} AND "kind" = 'community' AND "status" <> 'void' ${cFrom} ${cTo}`;
+        WHERE "communityId" = ${communityId} AND "kind" = 'community' AND "status" <> 'void' AND "payoutId" IS NULL ${cFrom} ${cTo}`;
       const gross = num(r?.gross);
       const refunds = num(r?.refunds);
       const commission = num(r?.commission);
@@ -906,7 +906,7 @@ function makeOps(db: Db): PaymentsOps {
       // Hoa hồng giới thiệu của cộng đồng là khoản phải trả cho người mời, lấy từ phần creator nhận: trừ ngay (không chờ holding period).
       const [rc] = await db.$queryRaw<{ total: bigint }[]>`
         SELECT COALESCE(SUM("amountCents"), 0)::bigint AS total FROM "ReferralCommission"
-        WHERE "communityId" = ${communityId} AND "kind" = 'community' AND "status" <> 'void'`;
+        WHERE "communityId" = ${communityId} AND "kind" = 'community' AND "status" <> 'void' AND "payoutId" IS NULL`;
       const referral = num(rc?.total);
       const net = num(r?.net) - referral;
       return { net, requested: num(r?.requested), eligible: policy ? num(r?.eligible) - referral : net };

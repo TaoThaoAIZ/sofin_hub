@@ -186,6 +186,11 @@ describe('lớp học: truy cập module', () => {
     const mine = (await list(a.token)).body.data as any[];
     assert.ok(mine.some((n) => n.body?.includes('Module thông báo') && n.link === '/communities/photo/community/lop-hoc'));
     assert.ok(!((await list(mod.token)).body.data as any[]).some((n) => n.body?.includes('Module thông báo')));
+    // Bài thông báo trên bảng tin có link ĐẦY ĐỦ (origin + đường dẫn) tới khóa học chứa module, không chỉ là đường dẫn trần.
+    const feed = (await c.call('GET', '/courses/photo/posts', { token: a.token })).body;
+    const announcement = ((feed.data ?? feed) as any[]).find((p) => String(p.content ?? '').includes('Module mới: Module thông báo'));
+    assert.ok(announcement, 'không thấy bài thông báo module mới');
+    assert.match(announcement.content, /Xem tại Lớp học: https?:\/\/[^\s]+\/communities\/photo\/community\/lop-hoc\?khoa=/);
     // đã published rồi: PATCH lại không gửi nữa
     const before = ((await list(b.token)).body.data as any[]).length;
     await call('PATCH', `/modules/${id}`, mod.token, { title: 'Đổi tên', notifyMembers: true });

@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto';
+import { env } from '../../config/env.js';
 import { HttpError } from '../../utils/http-error.js';
 import { userBriefView } from '../auth/user-view.js';
 import { catalogService } from '../catalog/catalog.service.js';
@@ -320,7 +321,12 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
     if (flags.announce) {
       try {
         const desc = mod.description ? `\n${mod.description}` : '';
-        await postsService.create(communityId, actorId, `Module mới: ${mod.title}${desc}\nXem tại Lớp học: ${link}`.slice(0, 4000), 'Thông báo', []);
+        // Bài đăng cần link ĐẦY ĐỦ (có origin) để bấm được; mở thẳng khóa học chứa module (?khoa=) thay vì trang Lớp học chung.
+        const url = `${env.FRONTEND_URL.replace(/\/$/, '')}${link}${mod.learningCourseId ? `?khoa=${encodeURIComponent(mod.learningCourseId)}` : ''}`;
+        // Cắt phần MÔ TẢ (không phải dòng link) nếu quá dài: link ở cuối bài luôn còn nguyên để bấm được.
+        const tail = `\nXem tại Lớp học: ${url}`;
+        const head = `Module mới: ${mod.title}${desc}`.slice(0, Math.max(0, 4000 - tail.length));
+        await postsService.create(communityId, actorId, `${head}${tail}`, 'Thông báo', []);
       } catch (e) {
         console.error('[classroom] đăng bài thông báo module mới lỗi', e instanceof Error ? e.message : e);
       }

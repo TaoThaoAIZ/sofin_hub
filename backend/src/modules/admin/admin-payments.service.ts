@@ -591,7 +591,7 @@ export const adminPaymentsService = {
       prisma.$queryRaw<{ id: string; net: bigint }[]>(Prisma.sql`
         SELECT c."ownerId" AS id, COALESCE(SUM(p."amountCents" - p."refundedCents" - (${comm}) - (${gate})), 0)::bigint
                - COALESCE((SELECT SUM(rc."amountCents") FROM "ReferralCommission" rc JOIN "Course" c2 ON c2."id" = rc."communityId"
-                           WHERE c2."ownerId" = c."ownerId" AND rc."kind" = 'community' AND rc."status" <> 'void'), 0)::bigint AS net
+                           WHERE c2."ownerId" = c."ownerId" AND rc."kind" = 'community' AND rc."status" <> 'void' AND rc."payoutId" IS NULL), 0)::bigint AS net
         FROM "Payment" p JOIN "Course" c ON c."id" = p."courseId"
         WHERE c."ownerId" IS NOT NULL AND p."kind" <> 'hosting' AND p."status" IN ('succeeded', 'refunded') GROUP BY c."ownerId"`),
       prisma.$queryRaw<{ id: string; gross: bigint; refunds: bigint; platform: bigint; gateway: bigint }[]>(Prisma.sql`
@@ -614,7 +614,7 @@ export const adminPaymentsService = {
              COALESCE((SELECT SUM(po."amountCents") FROM "Payout" po WHERE po."courseId" = c."id" AND po."status" <> 'rejected'), 0)::bigint AS requested
       FROM "Course" c
       CROSS JOIN LATERAL (SELECT COALESCE(SUM(rc."amountCents"), 0)::bigint AS "total" FROM "ReferralCommission" rc
-                          WHERE rc."communityId" = c."id" AND rc."kind" = 'community' AND rc."status" <> 'void') ref
+                          WHERE rc."communityId" = c."id" AND rc."kind" = 'community' AND rc."status" <> 'void' AND rc."payoutId" IS NULL) ref
       JOIN LATERAL (
         SELECT COALESCE(p."confirmedAt", p."createdAt") AS "at",
                (p."amountCents" - p."refundedCents" - (${comm}) - (${gate}))::bigint AS "n"

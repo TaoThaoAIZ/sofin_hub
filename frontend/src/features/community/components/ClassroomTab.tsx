@@ -114,7 +114,7 @@ export function lockText(m: ClassroomModule) {
 
 // Ảnh bìa module lấy từ file thiết kế gốc (slot module-img-0..8), ảnh đã có sẵn tiêu đề trong hình.
 const MODULE_IMAGE_COUNT = 9;
-const PAGE_SIZE = 9; // 3 hàng × 3 cột
+const PAGE_SIZE = 12; // 4 hàng × 3 cột
 export function ClassroomTab() {
   const { t } = useTranslation('community');
   const { id: communityId = '' } = useParams();
