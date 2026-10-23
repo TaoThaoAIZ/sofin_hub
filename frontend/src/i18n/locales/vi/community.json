@@ -845,6 +845,28 @@
     "turnOff": "Tắt chương trình",
     "saved": "Đã lưu",
     "rateErr": "Nhập phần trăm từ 0 đến {{max}}",
+    "ol": {
+      "title": "Người giới thiệu trong cộng đồng",
+      "sub": "Bạn là người trả hoa hồng nên xem được tất cả người giới thiệu, những người họ đã mời và số tiền hoa hồng tương ứng. Bấm vào một dòng để xem chi tiết.",
+      "totReferrers": "Người giới thiệu",
+      "totReferred": "Người được mời",
+      "totPaying": "Đang trả phí",
+      "totCommission": "Hoa hồng phải trả",
+      "totPending": "Chờ chi trả",
+      "colReferrer": "Người giới thiệu",
+      "colReferred": "Đã mời",
+      "colPaying": "Trả phí",
+      "colCommission": "Hoa hồng",
+      "colPending": "Chờ chi trả",
+      "empty": "Chưa có ai giới thiệu thành viên mới. Khi có người tham gia qua link giới thiệu, họ sẽ hiện ở đây.",
+      "more": "Xem thêm {{n}} người",
+      "less": "Thu gọn",
+      "status": {
+        "paid": "Đang trả phí",
+        "joined": "Đã tham gia",
+        "none": "Chưa tham gia"
+      }
+    },
     "ownerReferrers": "Người đang giới thiệu",
     "ownerReferred": "Người được mời",
     "ownerCommission": "Hoa hồng đã phát sinh",

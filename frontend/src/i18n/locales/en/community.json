@@ -845,6 +845,28 @@
     "turnOff": "Turn off",
     "saved": "Saved",
     "rateErr": "Enter a percentage from 0 to {{max}}",
+    "ol": {
+      "title": "Referrers in this community",
+      "sub": "You pay the commission, so you can see every referrer, the people they invited and the commission amounts. Click a row for details.",
+      "totReferrers": "Referrers",
+      "totReferred": "People invited",
+      "totPaying": "Paying",
+      "totCommission": "Commission owed",
+      "totPending": "Pending payout",
+      "colReferrer": "Referrer",
+      "colReferred": "Invited",
+      "colPaying": "Paying",
+      "colCommission": "Commission",
+      "colPending": "Pending",
+      "empty": "Nobody has referred new members yet. People who join through a referral link will show up here.",
+      "more": "Show {{n}} more",
+      "less": "Show less",
+      "status": {
+        "paid": "Paying",
+        "joined": "Joined",
+        "none": "Not joined"
+      }
+    },
     "ownerReferrers": "Active referrers",
     "ownerReferred": "People invited",
     "ownerCommission": "Commission generated",

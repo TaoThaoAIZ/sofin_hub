@@ -16,6 +16,13 @@ communityReferralRouter.get('/courses/:id/referral-program', requireAuth, async 
   res.json({ data: await communityReferralService.program(communityId, req.userId!) });
 });
 
+// Chủ cộng đồng xem TẤT CẢ người giới thiệu của cộng đồng (chủ là người trả % hoa hồng): từng người + người họ đã mời + hoa hồng.
+communityReferralRouter.get('/courses/:id/referral-program/referrers', requireAuth, async (req, res) => {
+  const communityId = id(req.params.id);
+  await requireRole(req.userId!, communityId, 'owner');
+  res.json({ data: await communityReferralService.referrers(communityId) });
+});
+
 // Chủ cộng đồng đặt % hoa hồng (0 = tắt).
 communityReferralRouter.put('/courses/:id/referral-program', requireAuth, async (req, res) => {
   const communityId = id(req.params.id);

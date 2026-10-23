@@ -9,6 +9,8 @@ import { referralsRepository as repo } from './referrals.repository.js';
 /** Trần hoa hồng chủ cộng đồng được đặt: 50% giá thanh toán (phần còn lại vẫn đủ trả phí nền tảng + phí cổng). */
 export const MAX_COMMUNITY_RATE_BPS = 5000;
 const MAX_ROWS = 100;
+/** Số lượt giới thiệu tối đa trả về cho chủ cộng đồng (mới nhất trước). */
+const MAX_OWNER_ROWS = 2000;
 const DAY_MS = 86_400_000;
 
 export const setRateBody = z.strictObject({
@@ -92,6 +94,71 @@ export const communityReferralService = {
       stats: { referred: refs.length, paying: referred.filter((r) => r.status === 'paid').length, commissionCents, pendingCents, payoutOn: nextPayoutDate(new Date()).toISOString() },
       referred,
       owner,
+    };
+  },
+
+  /**
+   * CHỦ CỘNG ĐỒNG xem TẤT CẢ người giới thiệu của cộng đồng (chủ là người trả % hoa hồng cho họ): mỗi người giới thiệu kèm số người đã mời,
+   * số người đang trả phí, hoa hồng phải trả / đang chờ chi trả và danh sách từng người được mời. Chỉ tính hoa hồng của chương trình cộng đồng (kind = community).
+   */
+  async referrers(communityId: string) {
+    const refs = await prisma.communityReferral.findMany({
+      where: { communityId },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: MAX_OWNER_ROWS,
+      include: {
+        referrer: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
+        referredUser: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
+      },
+    });
+    if (refs.length === 0) return { referrers: [], totals: { referrers: 0, referred: 0, paying: 0, commissionCents: 0, pendingCents: 0 } };
+    const referredIds = refs.map((r) => r.referredUserId);
+    const [commissions, members] = await Promise.all([
+      prisma.referralCommission.groupBy({
+        by: ['referrerId', 'referredUserId', 'status'],
+        where: { kind: 'community', communityId, status: { not: 'void' } },
+        _sum: { amountCents: true },
+      }),
+      prisma.enrollment.findMany({ where: { communityId, userId: { in: referredIds } }, select: { userId: true } }),
+    ]);
+    const memberSet = new Set(members.map((m) => m.userId));
+    const earned = new Map<string, { total: number; pending: number }>(); // khóa: referrerId:referredUserId
+    for (const c of commissions) {
+      const k = `${c.referrerId}:${c.referredUserId}`;
+      const cur = earned.get(k) ?? { total: 0, pending: 0 };
+      const v = c._sum.amountCents ?? 0;
+      cur.total += v;
+      if (c.status === 'pending') cur.pending += v;
+      earned.set(k, cur);
+    }
+    const byReferrer = new Map<string, { userId: string; name: string; avatarUrl: string | null; referred: { userId: string; name: string; avatarUrl: string | null; joinedAt: string; status: 'paid' | 'joined' | 'none'; earnedCents: number }[]; commissionCents: number; pendingCents: number }>();
+    for (const r of refs) {
+      const e = earned.get(`${r.referrerId}:${r.referredUserId}`) ?? { total: 0, pending: 0 };
+      const row = byReferrer.get(r.referrerId) ?? { userId: r.referrerId, name: nameOf(r.referrer), avatarUrl: r.referrer.avatarUrl, referred: [], commissionCents: 0, pendingCents: 0 };
+      row.referred.push({
+        userId: r.referredUserId,
+        name: nameOf(r.referredUser),
+        avatarUrl: r.referredUser.avatarUrl,
+        joinedAt: r.createdAt.toISOString(),
+        status: e.total > 0 ? 'paid' : memberSet.has(r.referredUserId) ? 'joined' : 'none',
+        earnedCents: e.total,
+      });
+      row.commissionCents += e.total;
+      row.pendingCents += e.pending;
+      byReferrer.set(r.referrerId, row);
+    }
+    const referrers = [...byReferrer.values()]
+      .map((r) => ({ ...r, referredCount: r.referred.length, payingCount: r.referred.filter((x) => x.status === 'paid').length }))
+      .sort((a, b) => b.commissionCents - a.commissionCents || b.referredCount - a.referredCount || a.name.localeCompare(b.name));
+    return {
+      referrers,
+      totals: {
+        referrers: referrers.length,
+        referred: refs.length,
+        paying: referrers.reduce((s, r) => s + r.payingCount, 0),
+        commissionCents: referrers.reduce((s, r) => s + r.commissionCents, 0),
+        pendingCents: referrers.reduce((s, r) => s + r.pendingCents, 0),
+      },
     };
   },
 

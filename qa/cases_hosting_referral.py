@@ -139,3 +139,10 @@ def load(add):
     A("Trang Giới thiệu & hoa hồng của cộng đồng", "Số liệu 4 ô tính theo CỘNG ĐỒNG và khớp bảng người giới thiệu", "Chức năng", "Cao", RPRE + "X đã bật 15%. B (tài khoản cũ) tham gia X qua link của A và trả phí 250.000đ; C đăng ký tài khoản mới qua link của A nhưng chưa vào X.",
       ["A mở trang Giới thiệu & hoa hồng của X", "So 4 ô chỉ số với bảng 'Người bạn đã giới thiệu'"], "B trả phí, C chưa tham gia",
       "'Người đã đăng ký' = 2 (B, C; bằng tổng số dòng bảng); 'Đang trả phí' = 1 (B); 'Hoa hồng tháng này' = 37.500đ (15% x 250.000đ); 'Chờ chi trả' = 37.500đ kèm ngày chi trả. Hoa hồng phát sinh ở cộng đồng KHÁC không lẫn vào. Dòng B: 'Đang trả phí' + cột Hoa hồng 37.500đ; dòng C: 'Chưa tham gia'; cột Cộng đồng/trạng thái tính theo X.")
+    A("Trang Giới thiệu & hoa hồng của cộng đồng", "Chủ cộng đồng xem được TẤT CẢ người giới thiệu kèm người họ mời và hoa hồng", "Chức năng", "Cao",
+      RPRE + "X đã bật 15%. A và A2 là thành viên X; A mời B (đã trả phí 250.000đ) và C (chưa trả); A2 mời D (đã trả phí). Đăng nhập CHỦ cộng đồng X.",
+      ["Mở /communities/<X>/chuong-trinh-gioi-thieu", "Xem khối 'Người giới thiệu trong cộng đồng' (ngay dưới khung đặt %)", "Bấm vào dòng của A để mở rộng"], "A mời B,C; A2 mời D",
+      "Hàng tổng: Người giới thiệu 2, Người được mời 3, Đang trả phí 2, Hoa hồng phải trả 75.000đ. Bảng 2 dòng (A, A2) gồm cột Đã mời, Trả phí, Hoa hồng, Chờ chi trả, xếp theo hoa hồng giảm dần. Mở A: B (Đang trả phí, 37.500đ) và C (Đã tham gia/Chưa tham gia, —) kèm ngày. Quá 5 người giới thiệu thì có 'Xem thêm'.")
+    A("Trang Giới thiệu & hoa hồng của cộng đồng", "Chỉ chủ cộng đồng thấy danh sách tất cả người giới thiệu; thành viên thường không", "Bảo mật", "Cao", RPRE + "A là thành viên thường của X.",
+      ["A mở trang Giới thiệu & hoa hồng của X", "A gọi GET /api/communities/<X>/referral-program/referrers"], "-",
+      "Trang của A không có khối 'Người giới thiệu trong cộng đồng' và không có khung đặt %; API trả 403. A chỉ thấy bảng 'Người bạn đã giới thiệu' của riêng mình.")

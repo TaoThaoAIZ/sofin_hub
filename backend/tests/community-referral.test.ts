@@ -257,4 +257,45 @@ describe('giới thiệu theo cộng đồng: % do chủ đặt, hoa hồng tr�
     assert.equal(other.kpis.registered.value, 0);
     assert.equal(other.kpis.commissionThisMonth.cents, 0);
   });
+
+  it('chủ cộng đồng xem TẤT CẢ người giới thiệu: từng người + người họ mời + hoa hồng; thành viên thường bị chặn; cộng đồng khác không lẫn', async () => {
+    const { id, owner } = await community();
+    assert.equal((await setRate(id, owner.token, 1000)).status, 200);
+    const a = await member(id, 'lsa');
+    const a2 = await member(id, 'lsb');
+    const b = await signup('lsb1');
+    const c1 = await signup('lsc1');
+    await checkoutAndPay(b, id, a.code); // A mời B, B trả phí
+    assert.equal((await c.call('POST', `/communities/${id}/checkout`, { token: c1.token, body: { method: 'stripe', referralCode: a.code } })).status, 201); // A mời C, C chưa thanh toán xong
+    const d = await signup('lsd1');
+    await checkoutAndPay(d, id, a2.code); // A2 mời D, D trả phí
+
+    const list = await c.call('GET', `/communities/${id}/referral-program/referrers`, { token: owner.token });
+    assert.equal(list.status, 200, JSON.stringify(list.body));
+    const { referrers, totals } = list.body.data as {
+      referrers: { userId: string; referredCount: number; payingCount: number; commissionCents: number; referred: { userId: string; status: string; earnedCents: number }[] }[];
+      totals: { referrers: number; referred: number; paying: number; commissionCents: number };
+    };
+    const each = Math.round((PRICE * 1000) / 10_000);
+    assert.equal(totals.referrers, 2);
+    assert.equal(totals.referred, 2 + 1); // A: B, C — A2: D (C đã được ghi nhận lúc checkout)
+    assert.equal(totals.paying, 2);
+    assert.equal(totals.commissionCents, each * 2);
+    const ra = referrers.find((r) => r.userId === a.id)!;
+    assert.equal(ra.referredCount, 2);
+    assert.equal(ra.payingCount, 1);
+    assert.equal(ra.commissionCents, each);
+    assert.equal(ra.referred.find((x) => x.userId === b.id)!.status, 'paid');
+    assert.equal(ra.referred.find((x) => x.userId === b.id)!.earnedCents, each);
+    assert.notEqual(ra.referred.find((x) => x.userId === c1.id)!.status, 'paid');
+    assert.equal(referrers.find((r) => r.userId === a2.id)!.referred[0]!.userId, d.id);
+
+    // Thành viên thường (kể cả người giới thiệu) KHÔNG xem được danh sách của cả cộng đồng.
+    assert.equal((await c.call('GET', `/communities/${id}/referral-program/referrers`, { token: a.token })).status, 403);
+    // Cộng đồng khác của chính người này không lẫn dữ liệu.
+    const other = await community();
+    const empty = await c.call('GET', `/communities/${other.id}/referral-program/referrers`, { token: other.owner.token });
+    assert.equal(empty.status, 200);
+    assert.equal(empty.body.data.referrers.length, 0);
+  });
 });
