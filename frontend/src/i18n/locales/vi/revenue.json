@@ -19,6 +19,7 @@
     "title": "Yêu cầu rút tiền",
     "amount": "Số tiền (VND) — có thể rút {{amount}}",
     "bank": "Ngân hàng",
+    "bankPlaceholder": "Chọn ngân hàng",
     "account": "Số tài khoản",
     "holder": "Chủ tài khoản",
     "sent": "Đã gửi yêu cầu rút tiền, chờ quản trị viên nền tảng duyệt.",

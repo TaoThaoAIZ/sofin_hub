@@ -19,6 +19,7 @@
     "title": "Request a payout",
     "amount": "Amount (VND) — you can withdraw {{amount}}",
     "bank": "Bank",
+    "bankPlaceholder": "Select a bank",
     "account": "Account number",
     "holder": "Account holder",
     "sent": "Payout request sent, awaiting approval from the platform admins.",

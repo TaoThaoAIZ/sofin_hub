@@ -35,6 +35,8 @@ function Stat({ label, value, hint, accent }: { label: string; value: string; hi
   );
 }
 
+const BANKS = ['Vietcombank', 'VietinBank', 'BIDV', 'Agribank', 'Techcombank', 'MB Bank', 'ACB', 'VPBank', 'TPBank', 'Sacombank', 'HDBank', 'VIB', 'SHB', 'MSB', 'OCB', 'SeABank', 'Eximbank', 'LPBank', 'SCB', 'Nam A Bank', 'Bac A Bank', 'ABBANK', 'VietBank', 'PVcomBank', 'NCB', 'BaoViet Bank', 'Kienlongbank', 'Cake', 'Timo'];
+
 function PayoutForm({ courseId, available, blocked, held = 0, holdDays, reservePct, nextEligibleAt, minPayout }: { courseId: string; available: number; blocked: boolean; held?: number; holdDays?: number; reservePct?: number; nextEligibleAt?: string | null; minPayout?: number }) {
   const { t } = useTranslation('revenue');
   const request = useRequestPayout(courseId);
@@ -56,7 +58,7 @@ function PayoutForm({ courseId, available, blocked, held = 0, holdDays, reserveP
     if (cents > available) return setError(t('err.overBalance', { amount: formatCents(available) }));
     if (!/^\d{6,20}$/.test(accountNumber.trim())) return setError(t('err.invalidAccount'));
     request.mutate(
-      { amountCents: cents, method: { type: 'bank', bankName: bankName.trim(), accountNumber: accountNumber.trim(), accountHolder: accountHolder.trim() } },
+      { amountCents: cents, method: { type: 'bank', bankName: bankName.trim(), accountNumber: accountNumber.trim(), accountHolder: accountHolder.trim().toUpperCase() } },
       {
         onSuccess: () => {
           setOk(true);
@@ -74,11 +76,14 @@ function PayoutForm({ courseId, available, blocked, held = 0, holdDays, reserveP
       <h2 className="text-lg font-extrabold sm:col-span-2">{t('form.title')}</h2>
       <label className="text-[12.5px] font-semibold sm:col-span-2">
         {t('form.amount', { amount: formatCents(available) })}
-        <input type="number" min="0" step="1" max={available} disabled={blocked} value={amount} onChange={(e) => setAmount(e.target.value)} className={`${input} mt-1`} required />
+        <input type="text" inputMode="numeric" autoComplete="off" disabled={blocked} value={amount} onChange={(e) => setAmount(e.target.value.replace(/\D/g, ''))} className={`${input} mt-1`} required />
       </label>
       <label className="text-[12.5px] font-semibold">
         {t('form.bank')}
-        <input value={bankName} onChange={(e) => setBankName(e.target.value)} maxLength={100} className={`${input} mt-1`} required />
+        <select value={bankName} onChange={(e) => setBankName(e.target.value)} className={`${input} mt-1`} required>
+          <option value="" disabled>{t('form.bankPlaceholder')}</option>
+          {BANKS.map((b) => <option key={b} value={b}>{b}</option>)}
+        </select>
       </label>
       <label className="text-[12.5px] font-semibold">
         {t('form.account')}
@@ -86,7 +91,7 @@ function PayoutForm({ courseId, available, blocked, held = 0, holdDays, reserveP
       </label>
       <label className="text-[12.5px] font-semibold sm:col-span-2">
         {t('form.holder')}
-        <input value={accountHolder} onChange={(e) => setAccountHolder(e.target.value)} maxLength={100} className={`${input} mt-1`} required />
+        <input value={accountHolder} onChange={(e) => setAccountHolder(e.target.value.toUpperCase())} maxLength={100} autoComplete="off" className={`${input} mt-1 uppercase`} required />
       </label>
       {/* Hết số dư rút được thì nút Gửi bị vô hiệu: nói rõ vì sao (tiền mới còn trong thời gian giữ hoàn tiền/tranh chấp) và khi nào rút được. */}
       {!blocked && available <= 0 && (
