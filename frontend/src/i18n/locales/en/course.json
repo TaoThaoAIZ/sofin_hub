@@ -221,7 +221,11 @@
     "summary": "{{n}} of {{total}} members answered",
     "csv": "Download CSV",
     "csvDone": "Survey results downloaded (.csv)",
-    "tabs": { "overview": "Overview", "texts": "Free-text answers", "people": "By learner" },
+    "tabs": {
+      "overview": "Overview",
+      "texts": "Free-text answers",
+      "people": "By learner"
+    },
     "sortByVotes": "Sort by most chosen option",
     "textQuestionHint": "Free-text question: read the answers in the \"Free-text answers\" tab.",
     "otherHint": "Learners can add their own comment: read it in the \"Free-text answers\" tab.",
@@ -262,7 +266,11 @@
     "rule": "Learners pick any answers or type their own; the survey never blocks lesson completion. Saving keeps collected answers.",
     "question": "Question {{n}}",
     "typeLabel": "Question type",
-    "types": { "single": "Pick one", "multiple": "Pick several", "text": "Free text" },
+    "types": {
+      "single": "Pick one",
+      "multiple": "Pick several",
+      "text": "Free text"
+    },
     "required": "Required",
     "optionPh": "Option {{n}}",
     "addOption": "Add option",
@@ -341,5 +349,43 @@
     "errText": "Question {{n}}: enter the question text",
     "errOption": "Question {{n}}: options cannot be empty",
     "errDup": "Question {{n}}: options must be different"
+  },
+  "game": {
+    "title": "Memory card game",
+    "hint": "Match each term with its definition. The fewer flips, the more stars; each star is worth {{n}} points (awarded once per lesson).",
+    "loading": "Loading the game…",
+    "none": "This lesson has no game yet.",
+    "moves": "{{n}} flips",
+    "cardBack": "Face-down card, tap to flip",
+    "skip": "Skip the game",
+    "continue": "Continue",
+    "replay": "Play again",
+    "playNow": "Play the memory game",
+    "playAgain": "Play the memory game again",
+    "starsAria": "{{n}} out of 3 stars",
+    "rating": {
+      "1": "Completed!",
+      "2": "Well done!",
+      "3": "Excellent!"
+    },
+    "stats": "{{moves}} flips · {{time}}",
+    "pointsEarned": "+{{n}} points",
+    "pointsNeedComplete": "Mark the lesson as complete to earn the bonus points.",
+    "pointsOnce": "Bonus points are awarded only once per lesson."
+  },
+  "gameEditor": {
+    "title": "End-of-lesson card game",
+    "optional": "(optional)",
+    "rule": "Enter {{min}}–{{max}} term ↔ definition pairs. After completing the lesson, students match them to earn bonus points. Leave empty = no game.",
+    "term": "Term of pair {{n}}",
+    "def": "Definition of pair {{n}}",
+    "termPh": "Term",
+    "defPh": "Definition / meaning",
+    "remove": "Remove pair {{n}}",
+    "add": "Add a card pair ({{n}}/{{max}})",
+    "errBlank": "Card game: every pair needs both a term and a definition.",
+    "errMin": "Card game: at least {{min}} pairs are needed (or clear them all to turn the game off).",
+    "errDupTerm": "Card game: terms must be different.",
+    "errDupDef": "Card game: definitions must be different."
   }
 }

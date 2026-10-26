@@ -20,6 +20,9 @@ import type {
   QuizCheckResult,
   QuizInput,
   QuizView,
+  GameInput,
+  GameResult,
+  GameView,
   SurveyAnswer,
   SurveyInput,
   SurveyList,
@@ -202,6 +205,12 @@ export const fetchSurvey = (cid: string, lessonId: string, token: string, signal
   apiGet<{ data: SurveyView }>(`/communities/${cid}/lessons/${lessonId}/survey`, undefined, signal, { token }).then(D);
 export const putSurvey = (cid: string, lessonId: string, body: SurveyInput, token: string) =>
   apiPut<{ data: { survey: null | { id: string; questionCount: number; questionIds: string[] } } }>(`/communities/${cid}/lessons/${lessonId}/survey`, body, { token }).then(D);
+export const fetchGame = (cid: string, lessonId: string, token: string, signal?: AbortSignal) =>
+  apiGet<{ data: GameView }>(`/communities/${cid}/lessons/${lessonId}/game`, undefined, signal, { token }).then(D);
+export const putGame = (cid: string, lessonId: string, body: GameInput, token: string) =>
+  apiPut<{ data: { game: null | { id: string; pairCount: number } } }>(`/communities/${cid}/lessons/${lessonId}/game`, body, { token }).then(D);
+export const submitGameResult = (cid: string, lessonId: string, body: { moves: number; seconds: number }, token: string) =>
+  apiPost<{ data: GameResult }>(`/communities/${cid}/lessons/${lessonId}/game/result`, body, { token }).then(D);
 export const submitSurvey = (cid: string, lessonId: string, answers: SurveyAnswer[], token: string) =>
   apiPost<{ data: { saved: boolean } }>(`/communities/${cid}/lessons/${lessonId}/survey/response`, { answers }, { token }).then(D);
 export const fetchSurveyList = (cid: string, token: string, signal?: AbortSignal) =>

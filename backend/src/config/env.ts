@@ -63,6 +63,12 @@ const schema = z.object({
   FACEBOOK_APP_ID: z.string().optional().transform((v) => v?.trim() || undefined),
   FACEBOOK_APP_SECRET: z.string().optional().transform((v) => v?.trim() || undefined),
 
+  // --- App mobile: cổng phiên bản (GET /meta/app-version). Trống = không ép cập nhật. Dạng "1.2.3". ---
+  MOBILE_MIN_VERSION: z.string().optional().transform((v) => v?.trim() || undefined),
+  MOBILE_LATEST_VERSION: z.string().optional().transform((v) => v?.trim() || undefined),
+  MOBILE_IOS_STORE_URL: z.string().optional().transform((v) => v?.trim() || undefined),
+  MOBILE_ANDROID_STORE_URL: z.string().optional().transform((v) => v?.trim() || undefined),
+
   // Khóa mã hóa số tài khoản nhận hoa hồng (AES-256-GCM). Trống = dẫn xuất từ UPLOAD_SIGNING_SECRET. KHÔNG đổi sau khi đã có dữ liệu.
   PAYOUT_ENC_KEY: z.string().optional().transform((v) => v?.trim() || undefined),
 

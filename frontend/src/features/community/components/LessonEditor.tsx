@@ -6,6 +6,7 @@ import { useCreateLesson, useUpdateLesson } from '../queries';
 import type { ClassroomLesson, LessonAttachment } from '../types';
 import { absoluteUrl, errText, ErrorNote, FieldLabel, inputCls } from './contentUi';
 import { shellGhostBtn, shellPrimaryBtn, ShellBody, ShellFooter, Toggle } from './ModalShell';
+import { GameEditor } from './GameEditor';
 import { QuizEditor, type DraftEditorHandle } from './QuizEditor';
 import { SurveyEditor } from './SurveyEditor';
 
@@ -68,6 +69,7 @@ export function LessonEditor({
   // Trắc nghiệm/khảo sát chỉ được lưu khi bấm "Lưu bài học" (không tự lưu; bấm X là bỏ thay đổi).
   const quizRef = useRef<DraftEditorHandle>(null);
   const surveyRef = useRef<DraftEditorHandle>(null);
+  const gameRef = useRef<DraftEditorHandle>(null);
   const [title, setTitle] = useState(lesson?.title ?? '');
   const [duration, setDuration] = useState(String(lesson?.durationMin ?? 10));
   const [body, setBody] = useState(lesson?.body ?? '');
@@ -139,7 +141,7 @@ export function LessonEditor({
       return;
     }
     setBodyErr(null);
-    const draftErr = quizRef.current?.validate() ?? surveyRef.current?.validate() ?? null;
+    const draftErr = quizRef.current?.validate() ?? surveyRef.current?.validate() ?? gameRef.current?.validate() ?? null;
     if (draftErr) return setLocalErr(draftErr);
     // Chưa có video chính mà đã thêm video bổ sung: video đầu tiên được nâng lên làm video chính.
     let url = videoUrl.trim();
@@ -152,7 +154,7 @@ export function LessonEditor({
     const done = {
       onSuccess: () => {
         // Bài đã lưu xong mới lưu trắc nghiệm + khảo sát; một trong hai lỗi thì giữ hộp thoại mở để người dùng thấy lỗi.
-        void Promise.all([quizRef.current?.save(), surveyRef.current?.save()]).then(onSaved, (e) => setLocalErr(errText(e)));
+        void Promise.all([quizRef.current?.save(), surveyRef.current?.save(), gameRef.current?.save()]).then(onSaved, (e) => setLocalErr(errText(e)));
       },
     };
     const all: LessonAttachment[] = [
@@ -404,6 +406,7 @@ export function LessonEditor({
           <>
             <QuizEditor ref={quizRef} communityId={communityId} lessonId={lesson.id} />
             <SurveyEditor ref={surveyRef} communityId={communityId} lessonId={lesson.id} />
+            <GameEditor ref={gameRef} communityId={communityId} lessonId={lesson.id} />
           </>
         ) : (
           <p className="m-0 rounded-xl bg-[#faf7f4] px-3.5 py-2.5 text-[12.5px] text-stone-500">{t('editor.lesson.quizAfterSave')}</p>

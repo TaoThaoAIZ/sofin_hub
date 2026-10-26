@@ -787,3 +787,39 @@ def load(add):
     C(CO, F, "Bài khóa không lộ video bổ sung; học viên ngoài quyền không tải được", "Bảo mật", "Cao", BASE + "Module khóa với học viên chưa mở khóa.",
       ["Học viên chưa mở khóa gọi GET /api/courses/photo/lessons/:id", "Thử mở URL video bổ sung trực tiếp"], "-",
       "Phản hồi bài khóa có attachments = [] (không có link video bổ sung); URL /api/files/... cần quyền cộng đồng, người ngoài bị chặn.")
+
+    # =====================================================================================
+    # COURSE — Trò chơi lật thẻ ghi nhớ cuối bài học (thêm 2026-10-22)
+    # =====================================================================================
+    F = "Lớp học - Trò chơi lật thẻ cuối bài"
+    GPRE = BASE + "Đăng nhập mod/owner để soạn; học viên (member1) để chơi. Mở popup Sửa bài học của một bài đã lưu. "
+    C(CO, F, "Chủ cộng đồng nhập các cặp thẻ (thuật ngữ ↔ định nghĩa) và lưu", "Chức năng", "Cao", GPRE,
+      ["Cuộn xuống mục 'Trò chơi lật thẻ cuối bài'", "Bấm 'Thêm cặp thẻ' 3 lần, nhập đủ thuật ngữ + định nghĩa", "Bấm 'Lưu bài học'", "Mở lại popup Sửa bài"], "3 cặp thẻ",
+      "Lưu thành công, mở lại thấy đủ 3 cặp; chỉ lưu khi bấm 'Lưu bài học' (bấm X thì bỏ thay đổi). Dòng trống hoàn toàn bị bỏ qua khi lưu. Tối đa 8 cặp (nút Thêm bị vô hiệu ở 8/8).")
+    C(CO, F, "Validate cặp thẻ: <2 cặp, thiếu chữ, trùng thuật ngữ/định nghĩa", "Chức năng", "Cao", GPRE,
+      ["Nhập đúng 1 cặp rồi lưu", "Nhập cặp thiếu định nghĩa rồi lưu", "Nhập 2 cặp trùng thuật ngữ (khác hoa/thường) rồi lưu", "Gọi API PUT /lessons/:id/game với 9 cặp"], "-",
+      "FE chặn kèm thông báo rõ từng lỗi (cần ít nhất 2 cặp / thiếu thuật ngữ hoặc định nghĩa / trùng); API trả 400 cho <2, >8 cặp, trùng, rỗng chữ. Xóa hết các cặp rồi lưu = tắt trò chơi của bài.")
+    C(CO, F, "Chỉ mod+ sửa được trò chơi; học viên/người ngoài bị chặn", "Bảo mật", "Cao", BASE + "Có tài khoản member, người ngoài cộng đồng.",
+      ["Học viên gọi PUT /lessons/:id/game", "Người ngoài cộng đồng gọi GET và POST /game/result"], "-",
+      "Học viên PUT: 403; người ngoài: bị từ chối (4xx) cho GET/POST; học viên GET xem được các cặp thẻ của bài.")
+    C(CO, F, "Bấm Hoàn thành bài có trò chơi: hiện màn chơi lật thẻ trước", "Chức năng", "Cao", BASE + "Bài có trò chơi (3 cặp), học viên chưa hoàn thành bài.",
+      ["Mở bài, bấm 'Hoàn thành'"], "Bài có hasGame",
+      "Toast 'đã hoàn thành' rồi hiện màn 'Trò chơi lật thẻ ghi nhớ' (nền gradient, đồng hồ, số lượt, tiến độ n/N cặp) thay cho nội dung bài. Bài không có trò chơi: giữ hành vi cũ.")
+    C(CO, F, "Chơi: lật 2 thẻ, ghép đúng thì giữ lại, sai thì úp lại", "Chức năng", "Cao", BASE + "Đang ở màn chơi.",
+      ["Lật 1 thuật ngữ + định nghĩa đúng của nó", "Lật 2 thẻ không khớp", "Bấm nhanh thẻ thứ 3 trong lúc 2 thẻ sai còn đang ngửa"], "-",
+      "Cặp đúng: 2 thẻ sáng xanh và khóa; cặp sai: úp lại sau khoảng 1 giây; trong lúc chờ không lật thêm được thẻ khác. Số lượt tăng 1 mỗi lần lật xong 2 thẻ; đồng hồ chạy từ lần lật đầu. Thẻ thuật ngữ và định nghĩa khác màu viền để phân biệt.")
+    C(CO, F, "Kết quả: số sao theo số lượt lật, điểm thưởng đúng một lần", "Chức năng", "Cao", BASE + "Bài 4 cặp, học viên đã hoàn thành bài, chưa chơi lần nào. Điểm khởi đầu ghi lại.",
+      ["Ghép hết 4 cặp với 4 lượt (hoàn hảo)", "Bấm 'Chơi lại', lần này chơi chậm hơn (>= 7 lượt)", "Xem tổng điểm ở hồ sơ / bảng xếp hạng"], "Bài 4 cặp",
+      "Lần 1: 3 sao, '+6 điểm' (mỗi sao 2 điểm); bảng điểm tăng đúng 6 (chưa tính 3 điểm hoàn thành bài). Lần 2: sao thấp hơn nhưng không cộng thêm điểm, kết quả tốt nhất giữ 3 sao. Ngưỡng sao: dư <= n/2 lượt = 3 sao; dư <= 2n lượt = 2 sao; còn lại 1 sao.")
+    C(CO, F, "Chơi game nhưng chưa hoàn thành bài: có sao, chưa có điểm", "Chức năng", "Trung bình", BASE + "Bài có trò chơi, học viên CHƯA hoàn thành bài.",
+      ["Mở bài đã có trò chơi, gọi POST /game/result hợp lệ (qua API) hoặc chơi qua nút nếu có", "Xem điểm"], "-",
+      "API trả stars và points = 0, điểm tổng không đổi; sau khi hoàn thành bài và chơi lại thì mới được cộng (một lần).")
+    C(CO, F, "Bỏ qua trò chơi và nút 'Tiếp tục' dẫn tới màn chúc mừng module (nếu đủ module)", "Chức năng", "Trung bình", BASE + "Bài cuối còn thiếu của module, có trò chơi.",
+      ["Bấm Hoàn thành bài cuối", "Bấm 'Bỏ qua trò chơi'", "Làm lại: chơi hết rồi bấm 'Tiếp tục'"], "-",
+      "Cả bỏ qua và Tiếp tục đều dẫn tới màn 'Chúc mừng bạn đã hoàn thành bài N!' khi đã xong cả module; nếu module chưa xong thì quay về nội dung bài.")
+    C(CO, F, "Chơi lại trò chơi từ bài đã hoàn thành", "Chức năng", "Trung bình", BASE + "Bài đã hoàn thành có trò chơi.",
+      ["Mở bài đã xong, tìm nút 'Chơi trò chơi ghi nhớ'", "Chơi xong, bấm 'Tiếp tục'", "Mở lại bài, nút đổi thành 'Chơi lại trò chơi ghi nhớ'"], "-",
+      "Nút hiện dưới dòng 'Bạn đã hoàn thành bài này' chỉ khi bài có trò chơi; 'Chơi lại' xáo thẻ mới; 'Tiếp tục' về nội dung bài (không hiện màn chúc mừng module).")
+    C(CO, F, "Giao diện trò chơi khớp phong cách, responsive, dark mode", "Giao diện", "Thấp", GPRE,
+      ["Mở trò chơi ở 1440px", "Thu nhỏ còn 390px", "Bật dark mode", "Dùng bàn phím Tab + Enter lật thẻ"], "-",
+      "Thẻ úp màu cam có dấu '?', lật 3D mượt; lưới 4 cột (<=6 thẻ: 3 cột; mobile 2 cột), chữ dài bị cắt 4 dòng; dark mode vẫn đọc được; thẻ là button có aria-label.", pw="Không")

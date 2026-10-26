@@ -8,6 +8,7 @@ import { fileKeyOf, refreshFileUrl, useFileUrl } from '../lib/files';
 import { ConfirmDialog, errText, ErrorNote, ghostBtn, isModPlus, primaryBtn, safeUrl, toast, ToastHost } from '../features/community/components/contentUi';
 import { LessonFormDialog } from '../features/community/components/ClassroomEditor';
 import { LessonCompleteCard } from '../features/community/components/LessonCompleteCard';
+import { MemoryGame } from '../features/community/components/MemoryGame';
 import { useCommunityDetail } from '../features/courses/queries';
 import type { ClassroomLesson, LessonAttachment } from '../features/community/types';
 import { useCourseList, useDeleteLesson, useLesson, useLessons, useMarkVideoWatched, useProgress, useReorderLessons, useToggleLessonComplete } from '../features/community/queries';
@@ -316,8 +317,12 @@ export function LessonPage() {
   const [celebrate, setCelebrate] = useState(false);
   // Video đang xem trong danh sách (0 = video chính, các video sau là video bổ sung).
   const [activeVideo, setActiveVideo] = useState(0);
+  // Trò chơi lật thẻ cuối bài; `celebrateAfterGame` = chơi xong (hoặc bỏ qua) thì tiếp tục sang màn chúc mừng hoàn thành module.
+  const [gameOpen, setGameOpen] = useState(false);
+  const [celebrateAfterGame, setCelebrateAfterGame] = useState(false);
   useEffect(() => {
     setCelebrate(false);
+    setGameOpen(false);
     setActiveVideo(0);
   }, [lessonId]);
 
@@ -386,7 +391,14 @@ export function LessonPage() {
       onSuccess: ({ completed }) => {
         toast(completed ? t('lesson.completedToast') : t('lesson.uncompletedToast'));
         // Chỉ chúc mừng khi bài vừa xong là bài cuối còn thiếu của module (cả module đã hoàn thành).
-        setCelebrate(completed && !!siblings.data?.length && siblings.data.every((s) => s.id === l.id || s.completed));
+        const moduleDone = completed && !!siblings.data?.length && siblings.data.every((s) => s.id === l.id || s.completed);
+        // Bài có trò chơi: chơi trước, xong mới tới màn chúc mừng (nếu có).
+        if (completed && l.hasGame) {
+          setCelebrateAfterGame(moduleDone);
+          setGameOpen(true);
+        } else {
+          setCelebrate(moduleDone);
+        }
       },
       onError: (e) => toast(errText(e), 'error'),
     });
@@ -430,7 +442,16 @@ export function LessonPage() {
             <Link to={back} className="font-bold text-brand underline">{t('lesson.previewBannerCta')}</Link>
           </div>
         )}
-        {celebrate ? (
+        {gameOpen ? (
+          <MemoryGame
+            communityId={communityId}
+            lessonId={l.id}
+            onContinue={() => {
+              setGameOpen(false);
+              setCelebrate(celebrateAfterGame);
+            }}
+          />
+        ) : celebrate ? (
           <LessonCompleteCard
             number={Math.max(1, l.moduleIndex - 1)}
             nextTo={l.nextLessonId && !l.nextLessonLocked ? lessonPath(communityId, l.nextLessonId) : null}
@@ -543,6 +564,18 @@ export function LessonPage() {
                 <p className="mt-2 mb-0 flex items-center gap-1.5 text-[13px] font-semibold text-emerald-600">
                   <MaterialIcon name="check_circle" size={17} filled color="#059669" /> {t('lesson.youCompleted')}
                 </p>
+              )}
+              {l.completed && l.hasGame && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCelebrateAfterGame(false);
+                    setGameOpen(true);
+                  }}
+                  className="mt-1 inline-flex cursor-pointer items-center gap-2 rounded-xl border border-[#fdba74] bg-[#fff9f4] px-4 py-2.5 text-[13.5px] font-bold text-[#e8590c] hover:bg-[#fff1e6] dark:border-white/15 dark:bg-white/5"
+                >
+                  <MaterialIcon name="style" size={19} filled color="#e8590c" /> {l.gamePlayed ? t('game.playAgain') : t('game.playNow')}
+                </button>
               )}
               {requirements.length > 0 && !l.completed && (
                 <div className="mt-1 w-full rounded-xl bg-[rgba(120,60,20,.05)] px-3.5 py-3 dark:bg-white/[.05]">

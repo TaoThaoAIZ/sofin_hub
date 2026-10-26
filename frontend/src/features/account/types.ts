@@ -46,7 +46,7 @@ export interface MyEnrollment {
   progressPct: number;
 }
 
-export type PointReason = 'post' | 'like_received' | 'lesson_complete' | 'event_rsvp';
+export type PointReason = 'post' | 'like_received' | 'lesson_complete' | 'event_rsvp' | 'game_play';
 
 export interface PointEvent {
   id: string;

@@ -97,6 +97,8 @@ enum PointReason {
   like_received
   lesson_complete
   event_rsvp
+  /// Chơi xong trò chơi lật thẻ cuối bài học (cộng một lần cho mỗi bài).
+  game_play
   /// Điểm âm bù khi xóa bài/sự kiện đã sinh điểm (cùng transaction với việc xóa).
   revoked
 }
@@ -469,6 +471,7 @@ model User {
   quizAttempts               QuizAttempt[]
   surveyResponses            SurveyResponse[]
   lessonVideoWatches         LessonVideoWatch[]
+  lessonGamePlays            LessonGamePlay[]
   communityOnboardings       CommunityOnboarding[]
   communityReferralsGiven    CommunityReferral[]         @relation("CommunityReferralReferrer")
   communityReferralsReceived CommunityReferral[]         @relation("CommunityReferralReferred")
@@ -1068,6 +1071,8 @@ model ClassroomLesson {
   quiz      LessonQuiz?
   survey    LessonSurvey?
   videoWatches LessonVideoWatch[]
+  game      LessonGame?
+  gamePlays LessonGamePlay[]
 
   @@index([moduleId, index])
   @@index([communityId])
@@ -2403,4 +2408,33 @@ model CommunityCommissionPayout {
   @@index([communityId, createdAt])
   @@index([referrerId])
   @@index([paidById])
+}
+
+/// Trò chơi lật thẻ ghi nhớ cuối bài học (chủ cộng đồng nhập). `pairs` = [{ id, term, definition }] (2..8 cặp).
+model LessonGame {
+  id        String   @id @default(uuid())
+  lessonId  String   @unique
+  pairs     Json     @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lesson ClassroomLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+}
+
+/// Kết quả tốt nhất của một học viên ở trò chơi của bài (điểm thưởng chỉ cộng ở lần chơi đầu tiên).
+model LessonGamePlay {
+  userId    String
+  lessonId  String
+  stars     Int
+  moves     Int
+  seconds   Int
+  plays     Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson ClassroomLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@id([userId, lessonId])
+  @@index([lessonId])
 }

@@ -122,6 +122,9 @@ export interface ClassroomLessonDetail extends ClassroomLessonView {
   surveyRequired: boolean;
   /** Video bài học: `required` = bài có video, phải xem hết video mới làm được trắc nghiệm (áp dụng cho mọi người); `watched` = đã xem hết. */
   /** `items` = từng video theo thứ tự hiển thị (video chính trước); `watched` = đã xem hết MỌI video. */
+  /** Bài có trò chơi lật thẻ cuối bài; `gamePlayed` = người xem đã chơi ít nhất một ván. */
+  hasGame: boolean;
+  gamePlayed: boolean;
   video: { required: boolean; watched: boolean; items: { key: string; watched: boolean }[] };
 }
 

@@ -61,9 +61,18 @@ function setRefreshCookie(res: import('express').Response, token: string) {
   });
 }
 
-function sendSession(res: import('express').Response, session: AuthSession) {
+/** App mobile (header X-Client: mobile) không có cookie jar đáng tin cậy: nhận refresh token qua body và lưu SecureStore. Web giữ nguyên cookie. */
+const isMobileClient = (req: Request) => req.get('x-client') === 'mobile';
+
+function sendSession(req: Request, res: import('express').Response, session: AuthSession) {
   setRefreshCookie(res, session.refreshToken);
-  res.json({ data: { user: session.user, accessToken: session.accessToken } });
+  res.json({
+    data: {
+      user: session.user,
+      accessToken: session.accessToken,
+      ...(isMobileClient(req) ? { refreshToken: session.refreshToken } : {}),
+    },
+  });
 }
 
 // Chống dò email / spam hộp thư theo IP. Test chạy hàng loạt từ 1 IP nên nới rất lớn.
@@ -101,7 +110,7 @@ authRouter.post('/register', registerLimiter, async (req, res) => {
 
 authRouter.post('/register/verify', otpVerifyLimiter, async (req, res) => {
   const body = verifyRegistrationBody.parse(req.body);
-  sendSession(res, await authService.verifyRegistration(body, metaOf(req)));
+  sendSession(req, res, await authService.verifyRegistration(body, metaOf(req)));
 });
 
 authRouter.post('/register/resend', otpResendLimiter, async (req, res) => {
@@ -157,18 +166,20 @@ authRouter.post('/login', loginLimiter, async (req, res) => {
     res.json({ data: result });
     return;
   }
-  sendSession(res, result);
+  sendSession(req, res, result);
 });
 
 authRouter.post('/login/2fa', async (req, res) => {
   const { ticket, code } = loginTwoFactorBody.parse(req.body);
-  sendSession(res, await authService.loginTwoFactor(ticket, code, metaOf(req)));
+  sendSession(req, res, await authService.loginTwoFactor(ticket, code, metaOf(req)));
 });
 
 authRouter.post('/refresh', async (req, res) => {
-  const token = req.cookies?.[REFRESH_COOKIE_NAME];
+  // Web: cookie httpOnly. Mobile: refresh token trong body (chỉ khi có header X-Client: mobile).
+  const bodyToken = isMobileClient(req) && typeof req.body?.refreshToken === 'string' ? req.body.refreshToken : undefined;
+  const token = req.cookies?.[REFRESH_COOKIE_NAME] ?? bodyToken;
   if (!token) throw HttpError.unauthorized('Chưa đăng nhập');
-  sendSession(res, await authService.refresh(token, metaOf(req)));
+  sendSession(req, res, await authService.refresh(token, metaOf(req)));
 });
 
 authRouter.post('/logout', requireAuth, async (req, res) => {

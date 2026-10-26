@@ -221,7 +221,11 @@
     "summary": "{{n}} / {{total}} thành viên đã trả lời",
     "csv": "Tải CSV",
     "csvDone": "Đã tải kết quả khảo sát (.csv)",
-    "tabs": { "overview": "Tổng quan", "texts": "Câu trả lời tự nhập", "people": "Từng học viên" },
+    "tabs": {
+      "overview": "Tổng quan",
+      "texts": "Câu trả lời tự nhập",
+      "people": "Từng học viên"
+    },
     "sortByVotes": "Sắp theo lựa chọn nhiều người chọn nhất",
     "textQuestionHint": "Câu hỏi tự nhập: xem nội dung ở tab \"Câu trả lời tự nhập\".",
     "otherHint": "Học viên có thể nhập thêm ý kiến khác: xem ở tab \"Câu trả lời tự nhập\".",
@@ -262,7 +266,11 @@
     "rule": "Học viên chọn bất kỳ đáp án nào hoặc tự nhập; khảo sát không chặn hoàn thành bài. Lưu lại không xóa câu trả lời đã có.",
     "question": "Câu hỏi {{n}}",
     "typeLabel": "Kiểu câu hỏi",
-    "types": { "single": "Chọn một đáp án", "multiple": "Chọn nhiều đáp án", "text": "Học viên tự nhập" },
+    "types": {
+      "single": "Chọn một đáp án",
+      "multiple": "Chọn nhiều đáp án",
+      "text": "Học viên tự nhập"
+    },
     "required": "Bắt buộc trả lời",
     "optionPh": "Lựa chọn {{n}}",
     "addOption": "Thêm lựa chọn",
@@ -341,5 +349,43 @@
     "errText": "Câu {{n}}: nhập nội dung câu hỏi",
     "errOption": "Câu {{n}}: các lựa chọn không được để trống",
     "errDup": "Câu {{n}}: các lựa chọn không được trùng nhau"
+  },
+  "game": {
+    "title": "Trò chơi lật thẻ ghi nhớ",
+    "hint": "Ghép thuật ngữ với định nghĩa đúng. Hoàn thành càng ít lượt lật càng nhiều sao, mỗi sao được {{n}} điểm (thưởng một lần cho mỗi bài).",
+    "loading": "Đang tải trò chơi…",
+    "none": "Bài học này chưa có trò chơi.",
+    "moves": "{{n}} lượt",
+    "cardBack": "Thẻ úp, bấm để lật",
+    "skip": "Bỏ qua trò chơi",
+    "continue": "Tiếp tục",
+    "replay": "Chơi lại",
+    "playNow": "Chơi trò chơi ghi nhớ",
+    "playAgain": "Chơi lại trò chơi ghi nhớ",
+    "starsAria": "{{n}} trên 3 sao",
+    "rating": {
+      "1": "Hoàn thành!",
+      "2": "Làm tốt lắm!",
+      "3": "Xuất sắc!"
+    },
+    "stats": "{{moves}} lượt lật · {{time}}",
+    "pointsEarned": "+{{n}} điểm",
+    "pointsNeedComplete": "Hãy bấm Hoàn thành bài học để nhận điểm thưởng.",
+    "pointsOnce": "Điểm thưởng chỉ được cộng một lần cho mỗi bài."
+  },
+  "gameEditor": {
+    "title": "Trò chơi lật thẻ cuối bài",
+    "optional": "(không bắt buộc)",
+    "rule": "Nhập {{min}}–{{max}} cặp thuật ngữ ↔ định nghĩa. Sau khi hoàn thành bài, học viên ghép các cặp này để nhận điểm thưởng. Để trống = bài không có trò chơi.",
+    "term": "Thuật ngữ của cặp {{n}}",
+    "def": "Định nghĩa của cặp {{n}}",
+    "termPh": "Thuật ngữ",
+    "defPh": "Định nghĩa / ý nghĩa",
+    "remove": "Xóa cặp {{n}}",
+    "add": "Thêm cặp thẻ ({{n}}/{{max}})",
+    "errBlank": "Trò chơi lật thẻ: mỗi cặp cần nhập đủ thuật ngữ và định nghĩa.",
+    "errMin": "Trò chơi lật thẻ: cần ít nhất {{min}} cặp (hoặc xóa hết để tắt trò chơi).",
+    "errDupTerm": "Trò chơi lật thẻ: các thuật ngữ không được trùng nhau.",
+    "errDupDef": "Trò chơi lật thẻ: các định nghĩa không được trùng nhau."
   }
 }

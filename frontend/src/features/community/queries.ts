@@ -11,6 +11,7 @@ import type {
   Post,
   PostQuery,
   QuizInput,
+  GameInput,
   SurveyAnswer,
   SurveyInput,
   ReportAction,
@@ -480,6 +481,44 @@ export const useSurvey = (cid: string, lessonId: string) => {
     queryFn: ({ signal }) => api.fetchSurvey(cid, lessonId, accessToken!, signal),
     enabled: !!accessToken && !!lessonId,
     retry: false,
+  });
+};
+
+const gameKey = (cid: string, lessonId: string) => ['community', cid, 'lesson', lessonId, 'game'] as const;
+
+export const useGame = (cid: string, lessonId: string, enabled = true) => {
+  const { accessToken } = useAuth();
+  return useQuery({
+    queryKey: gameKey(cid, lessonId),
+    queryFn: ({ signal }) => api.fetchGame(cid, lessonId, accessToken!, signal),
+    enabled: enabled && !!accessToken && !!lessonId,
+    retry: false,
+  });
+};
+
+export const usePutGame = (cid: string, lessonId: string) => {
+  const token = useToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: GameInput) => api.putGame(cid, lessonId, body, token),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: gameKey(cid, lessonId) });
+      void qc.invalidateQueries({ queryKey: ['community', cid, 'lesson'] });
+    },
+  });
+};
+
+export const useSubmitGameResult = (cid: string, lessonId: string) => {
+  const token = useToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { moves: number; seconds: number }) => api.submitGameResult(cid, lessonId, body, token),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: gameKey(cid, lessonId) });
+      void qc.invalidateQueries({ queryKey: ['community', cid, 'lesson'] });
+      // Điểm mới: làm mới bảng xếp hạng đang hiển thị.
+      void qc.invalidateQueries({ queryKey: ['community', cid, 'leaderboard'] });
+    },
   });
 };
 

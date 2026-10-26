@@ -288,8 +288,37 @@ export interface LessonDetail extends ClassroomLesson {
   hasSurvey?: boolean;
   surveyAnswered?: boolean;
   surveyRequired?: boolean;
+  /** Bài có trò chơi lật thẻ cuối bài; gamePlayed = người xem đã chơi ít nhất một ván. */
+  hasGame?: boolean;
+  gamePlayed?: boolean;
   /** required = phải xem hết video mới làm được trắc nghiệm (mod+ không bị bắt buộc); watched = đã xem hết. */
   video?: { required: boolean; watched: boolean; /** Từng video theo thứ tự hiển thị (video chính trước); `watched` ở trên = đã xem hết mọi video. */ items?: { key: string; watched: boolean }[] };
+}
+
+/** Trò chơi lật thẻ ghi nhớ cuối bài. */
+export interface GamePair {
+  id: string;
+  term: string;
+  definition: string;
+}
+export interface GameBest {
+  stars: number;
+  moves: number;
+  seconds: number;
+  plays: number;
+}
+export interface GameView {
+  canEdit: boolean;
+  game: { id: string; pairs: GamePair[]; pointsPerStar: number; best: GameBest | null } | null;
+}
+export interface GameInput {
+  pairs: { id?: string; term: string; definition: string }[];
+}
+export interface GameResult {
+  stars: number;
+  points: number;
+  best: GameBest;
+  firstPlay: boolean;
 }
 
 export type OnboardingStepKey = 'video' | 'comment' | 'app';

@@ -4,8 +4,8 @@ import { POINT_VALUES, type LeaderboardRow, type LeaderboardWindow, type PointRe
 export function createPointsService(repo: PointsRepository = pointsRepository) {
   return {
     /** Cộng điểm (idempotent theo `source` — xem PointSource). Trả `undefined` nếu khóa nghiệp vụ này đã được cộng. */
-    award(userId: string, communityId: string, reason: PointReason, source?: PointSource) {
-      return repo.award(userId, communityId, reason, POINT_VALUES[reason], source);
+    award(userId: string, communityId: string, reason: PointReason, source?: PointSource, points: number = POINT_VALUES[reason]) {
+      return repo.award(userId, communityId, reason, points, source);
     },
 
     /** Bảng xếp hạng (tổng hợp trong DB); `limit` cắt top N. */
