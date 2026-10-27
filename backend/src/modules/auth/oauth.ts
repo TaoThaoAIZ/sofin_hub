@@ -42,17 +42,19 @@ interface StatePayload {
   n: string;
   /** Mã giới thiệu (tùy chọn) mang qua vòng chuyển hướng. */
   ref?: string;
+  /** App mobile: challenge PKCE (base64url sha256(verifier)); có thì callback chuyển về deep link thay vì web (xem oauth-mobile.ts). */
+  m?: string;
 }
 
 /** Tạo `state` + nonce (nonce phải đặt vào cookie của trình duyệt). */
-export function createOAuthState(provider: SocialProvider, referralCode?: string): { state: string; nonce: string } {
+export function createOAuthState(provider: SocialProvider, referralCode?: string, mobileChallenge?: string): { state: string; nonce: string } {
   const nonce = randomBytes(16).toString('base64url');
-  const payload: StatePayload = { p: provider, n: nonce, ...(referralCode ? { ref: referralCode } : {}) };
+  const payload: StatePayload = { p: provider, n: nonce, ...(referralCode ? { ref: referralCode } : {}), ...(mobileChallenge ? { m: mobileChallenge } : {}) };
   return { nonce, state: jwt.sign(payload, env.JWT_ACCESS_SECRET, { expiresIn: STATE_TTL_SEC, audience: STATE_AUDIENCE }) };
 }
 
-/** Kiểm `state` đúng nhà cung cấp, còn hạn và nonce khớp cookie. Trả mã giới thiệu đi kèm (nếu có) hoặc null nếu không hợp lệ. */
-export function verifyOAuthState(state: unknown, nonceCookie: unknown, provider: SocialProvider): { referralCode?: string } | null {
+/** Kiểm `state` đúng nhà cung cấp, còn hạn và nonce khớp cookie. Trả mã giới thiệu và challenge mobile đi kèm (nếu có) hoặc null nếu không hợp lệ. */
+export function verifyOAuthState(state: unknown, nonceCookie: unknown, provider: SocialProvider): { referralCode?: string; mobileChallenge?: string } | null {
   if (typeof state !== 'string' || typeof nonceCookie !== 'string' || !nonceCookie) return null;
   try {
     const p = jwt.verify(state, env.JWT_ACCESS_SECRET, { audience: STATE_AUDIENCE }) as Partial<StatePayload>;
