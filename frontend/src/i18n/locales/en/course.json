@@ -221,7 +221,11 @@
     "summary": "{{n}} of {{total}} members answered",
     "csv": "Download CSV",
     "csvDone": "Survey results downloaded (.csv)",
-    "tabs": { "overview": "Overview", "texts": "Free-text answers", "people": "By learner" },
+    "tabs": {
+      "overview": "Overview",
+      "texts": "Free-text answers",
+      "people": "By learner"
+    },
     "sortByVotes": "Sort by most chosen option",
     "textQuestionHint": "Free-text question: read the answers in the \"Free-text answers\" tab.",
     "otherHint": "Learners can add their own comment: read it in the \"Free-text answers\" tab.",
@@ -233,7 +237,29 @@
     "filterQuestion": "Filter by question",
     "filterNone": "No answer filter",
     "filterChoice": "Pick an answer",
-    "filterChoicePh": "Pick the answer to filter"
+    "filterChoicePh": "Pick the answer to filter",
+    "stats": {
+      "total": "Total surveys",
+      "responses": "Total responses",
+      "avgRate": "Avg. completion rate",
+      "active": "Active surveys"
+    },
+    "cols": {
+      "survey": "Survey",
+      "lesson": "Module",
+      "questions": "Questions",
+      "responses": "Responses",
+      "rate": "Completion rate",
+      "status": "Status",
+      "updated": "Last updated"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Hidden"
+    },
+    "questionsShort": "{{count}} questions",
+    "viewResults": "Results",
+    "noAnswerShort": "—"
   },
   "survey": {
     "needRequired": "Answer the required (*) survey questions above to complete this lesson.",
@@ -262,7 +288,11 @@
     "rule": "Learners pick any answers or type their own; the survey never blocks lesson completion. Saving keeps collected answers.",
     "question": "Question {{n}}",
     "typeLabel": "Question type",
-    "types": { "single": "Pick one", "multiple": "Pick several", "text": "Free text" },
+    "types": {
+      "single": "Pick one",
+      "multiple": "Pick several",
+      "text": "Free text"
+    },
     "required": "Required",
     "optionPh": "Option {{n}}",
     "addOption": "Add option",
@@ -341,5 +371,107 @@
     "errText": "Question {{n}}: enter the question text",
     "errOption": "Question {{n}}: options cannot be empty",
     "errDup": "Question {{n}}: options must be different"
+  },
+  "game": {
+    "title": "End-of-lesson games",
+    "loading": "Loading the game…",
+    "none": "This lesson has no game yet.",
+    "moves": "{{n}} moves",
+    "cardBack": "Face-down card, tap to flip",
+    "skip": "Skip the game",
+    "back": "Pick another game",
+    "another": "Another game",
+    "continue": "Continue",
+    "replay": "Play again",
+    "playNow": "Play the games",
+    "playAgain": "Play the games again",
+    "pickTitle": "Pick a game",
+    "pickHint": "The fewer moves in a game, the more stars; each star is worth {{n}} points (awarded once per game).",
+    "pairCount": "{{n}} pairs",
+    "notPlayed": "Not played",
+    "starsAria": "{{n}} out of 3 stars",
+    "rating": {
+      "1": "Completed!",
+      "2": "Well done!",
+      "3": "Excellent!"
+    },
+    "stats": "{{moves}} moves · {{time}}",
+    "pointsEarned": "+{{n}} points",
+    "pointsNeedComplete": "Mark the lesson as complete to earn the bonus points.",
+    "pointsOnce": "Bonus points are awarded only once per game.",
+    "match": {
+      "terms": "Terms",
+      "defs": "Definitions"
+    },
+    "swipe": {
+      "term": "Term",
+      "def": "Definition",
+      "true": "True",
+      "false": "False",
+      "right": "Correct!",
+      "wasTrue": "Not quite — this definition does match the term.",
+      "wasFalse": "Not quite — the correct definition is: {{answer}}",
+      "keys": "Use ← (False) and → (True), or swipe the card."
+    },
+    "scramble": {
+      "hintLabel": "Hint",
+      "answer": "Your answer",
+      "pool": "Pieces to arrange",
+      "clear": "Clear and start over"
+    },
+    "kinds": {
+      "memory": {
+        "name": "Memory cards",
+        "title": "Memory card game",
+        "hint": "Flip two cards at a time to match each term with its definition. The fewer flips, the more stars; each star is worth {{n}} points.",
+        "editorHint": "Students flip cards to match terms with definitions. Definitions must be different.",
+        "termPh": "Term",
+        "defPh": "Definition / meaning"
+      },
+      "match": {
+        "name": "Matching",
+        "title": "Matching",
+        "hint": "Pick a term, then pick its definition. The fewer wrong matches, the more stars; each star is worth {{n}} points.",
+        "editorHint": "Students connect terms in the left column with definitions in the right column. Definitions must be different.",
+        "termPh": "Term",
+        "defPh": "Definition / meaning"
+      },
+      "swipe": {
+        "name": "True / False",
+        "title": "True or False?",
+        "hint": "Does the definition below match the term? The fewer mistakes, the more stars; each star is worth {{n}} points.",
+        "editorHint": "Each pair is shown sometimes correctly and sometimes mixed up with another definition; students answer True/False. Use at least 3 pairs for more variety.",
+        "termPh": "Concept",
+        "defPh": "Correct definition"
+      },
+      "scramble": {
+        "name": "Word scramble",
+        "title": "Word scramble",
+        "hint": "Read the hint and arrange the pieces into the right term. The fewer wrong tries, the more stars; each star is worth {{n}} points.",
+        "editorHint": "Students read the hint and unscramble the term (one word: arrange letters; several words: arrange words).",
+        "termPh": "Word to unscramble (e.g. Marketing)",
+        "defPh": "Hint (describe the word)"
+      }
+    },
+    "finished": "Done! Tallying your score…"
+  },
+  "gameEditor": {
+    "title": "End-of-lesson games",
+    "optional": "(optional)",
+    "rule": "Up to {{maxGames}} games per lesson, {{min}}–{{max}} pairs each. After completing the lesson, students play them to earn bonus points. Leave empty = no game.",
+    "gameN": "Game {{n}}",
+    "kindLabel": "Type of game {{n}}",
+    "removeGame": "Remove game {{n}}",
+    "addGame": "Add a game ({{n}}/{{max}}):",
+    "term": "Left column of pair {{n}}",
+    "def": "Right column of pair {{n}}",
+    "remove": "Remove pair {{n}}",
+    "add": "Add a pair ({{n}}/{{max}})",
+    "errGame": "Game {{n}} ({{kind}}): {{msg}}",
+    "errBlank": "every pair needs both fields.",
+    "errMin": "at least {{min}} pairs are needed (or remove this game).",
+    "errDupTerm": "terms must be different.",
+    "errDupDef": "definitions must be different.",
+    "errScramble": "the word to unscramble needs at least 2 different letters (or 2 different words)."
   }
 }

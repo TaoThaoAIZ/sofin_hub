@@ -42,7 +42,7 @@ export const surveyResults = {
     const [surveys, members] = await Promise.all([
       prisma.lessonSurvey.findMany({
         where: { lesson: { communityId } },
-        include: { lesson: { select: { id: true, title: true, index: true, module: { select: { title: true, index: true } } } }, _count: { select: { responses: true } } },
+        include: { lesson: { select: { id: true, title: true, index: true, hidden: true, removedAt: true, module: { select: { title: true, index: true, publishStatus: true, removedAt: true } } } }, _count: { select: { responses: true } } },
       }),
       prisma.enrollment.count({ where: { communityId } }),
     ]);
@@ -58,6 +58,8 @@ export const surveyResults = {
           questionCount: asQuestions(s.questions).length,
           responseCount: s._count.responses,
           lastAnsweredAt: lastBy.get(s.id)?.toISOString() ?? null,
+          /** Đang hoạt động = học viên đang thấy được khảo sát (bài không ẩn/gỡ, module đã xuất bản và chưa gỡ). */
+          active: !s.lesson.hidden && !s.lesson.removedAt && s.lesson.module.publishStatus === 'published' && !s.lesson.module.removedAt,
           order: s.lesson.module.index * 10_000 + s.lesson.index,
         }))
         .filter((s) => s.questionCount > 0)

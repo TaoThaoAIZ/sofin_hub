@@ -1,5 +1,5 @@
 /** `revoked` = điểm âm bù khi xóa bài/sự kiện đã sinh điểm (không bao giờ được `award` trực tiếp). */
-export const POINT_REASONS = ['post', 'like_received', 'lesson_complete', 'event_rsvp', 'revoked'] as const;
+export const POINT_REASONS = ['post', 'like_received', 'lesson_complete', 'event_rsvp', 'game_play', 'revoked'] as const;
 export type PointReason = (typeof POINT_REASONS)[number];
 
 /** Số điểm cho mỗi loại hoạt động (xem BRD mục 5 — hệ thống điểm). Giá trị tạm, có thể chỉnh sau. */
@@ -8,6 +8,8 @@ export const POINT_VALUES: Record<PointReason, number> = {
   like_received: 2,
   lesson_complete: 3,
   event_rsvp: 1,
+  /** Giá trị thật = số sao x điểm mỗi sao (game.service); 0 ở đây chỉ là mặc định. */
+  game_play: 0,
   revoked: 0,
 };
 
@@ -17,7 +19,7 @@ export const POINT_VALUES: Record<PointReason, number> = {
  * lesson_complete → ('lesson', lessonId) · event_rsvp → ('event', eventId).
  */
 export interface PointSource {
-  type: 'post' | 'post_like' | 'lesson' | 'event';
+  type: 'post' | 'post_like' | 'lesson' | 'lesson_game' | 'event';
   id: string;
 }
 

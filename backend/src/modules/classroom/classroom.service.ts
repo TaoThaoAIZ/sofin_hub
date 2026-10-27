@@ -10,6 +10,7 @@ import { pointsService } from '../points/points.service.js';
 import { postsService } from '../posts/posts.service.js';
 import { quizStore } from '../quiz/quiz.store.js';
 import { surveyStore } from '../survey/survey.store.js';
+import { hasPlayedGame } from '../game/game.service.js';
 import { lessonVideoKeys, lessonWatchStore } from './lesson-watch.store.js';
 import { toEmbedUrl, uploadedVideoPath } from './classroom.schema.js';
 import { classroomRepository, type ClassroomRepository, type LessonPatch, type ModulePatch } from './classroom.repository.js';
@@ -469,6 +470,8 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
         hasSurvey: !!lesson.survey,
         surveyAnswered: !!lesson.survey && (await surveyStore.answered(lesson.survey.id, userId)),
         surveyRequired: !!lesson.survey && lesson.survey.requiredIds.length > 0,
+        hasGame: !!lesson.hasGame,
+        gamePlayed: !!lesson.hasGame && (await hasPlayedGame(lessonId, userId)),
         video: await (async () => {
           const keys = lessonVideoKeys(lesson);
           const seen = keys.length > 0 ? await lessonWatchStore.watchedKeys(userId, lessonId) : new Set<string>();

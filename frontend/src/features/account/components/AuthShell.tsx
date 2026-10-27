@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
 /** Khung trang đơn giản (nền gradient + thẻ kính) cho quên mật khẩu / đặt lại / xác thực email. */
-export function AuthShell({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
+export function AuthShell({ title, subtitle, children }: { title: string; subtitle?: ReactNode; children: ReactNode }) {
   return (
     <div
       className="page-warm-bg grid min-h-screen place-items-center px-4 py-10"

@@ -59,7 +59,7 @@ export interface ClassroomRepository {
   findModule(communityId: string, moduleId: string, includeUnpublished?: boolean): Promise<(ClassroomModule & { course: LearningCourseRecord }) | undefined>;
   getLessons(moduleId: string): Promise<ClassroomLesson[]>;
   /** 1 bài (hiển thị được: không ẩn/gỡ, module đã xuất bản) bằng 1 truy vấn; có `communityId` thì bài phải thuộc cộng đồng đó. Kèm khóa học chứa bài. */
-  findLesson(lessonId: string, communityId?: string, includeUnpublished?: boolean): Promise<(ClassroomLesson & { learningCourseId: string; course: LearningCourseRecord; quiz?: LessonQuizBrief; survey?: LessonSurveyBrief }) | undefined>;
+  findLesson(lessonId: string, communityId?: string, includeUnpublished?: boolean): Promise<(ClassroomLesson & { learningCourseId: string; course: LearningCourseRecord; quiz?: LessonQuizBrief; survey?: LessonSurveyBrief; hasGame?: true }) | undefined>;
   /** Tên + module của 1 bài (không nạp thân bài) — dùng cho "bài kế tiếp" ở trang tiến độ. */
   findLessonBrief(lessonId: string): Promise<{ id: string; title: string; moduleId: string } | undefined>;
   /** Tiến độ nhiều cộng đồng cùng lúc cho 1 user: communityId → { tổng bài hiển thị, số bài đã hoàn thành } (1 truy vấn; cộng dồn các khóa đã xuất bản). */
@@ -174,6 +174,7 @@ interface RawLessonRow {
   videoUrl: string | null; embedUrl: string | null; attachments: unknown; isPreview: boolean; learningCourseId: string;
   quizId: string | null; quizPass: number | null; quizCount: number;
   surveyId: string | null; surveyCount: number; surveyRequired: string[] | null;
+  gameCount: number;
   c_id: string; c_communityId: string; c_title: string; c_description: string; c_thumbnailUrl: string | null; c_position: number;
   c_publishStatus: LearningCourseRecord['publishStatus']; c_certificatesEnabled: boolean | null; c_removedAt: Date | null; c_createdAt: Date; c_updatedAt: Date;
 }
@@ -242,6 +243,7 @@ export const classroomRepository: ClassroomRepository = {
         q."id" AS "quizId", q."passPercent" AS "quizPass", COALESCE(jsonb_array_length(q."questions"), 0)::int AS "quizCount",
         sv."id" AS "surveyId", COALESCE(jsonb_array_length(sv."questions"), 0)::int AS "surveyCount",
         (SELECT jsonb_agg(e->>'id') FROM jsonb_array_elements(sv."questions") e WHERE e->>'required' = 'true') AS "surveyRequired",
+        (SELECT count(*) FROM "LessonGame" gm WHERE gm."lessonId" = l."id" AND jsonb_array_length(gm."pairs") >= 2)::int AS "gameCount",
         c."id" AS "c_id", c."communityId" AS "c_communityId", c."title" AS "c_title", c."description" AS "c_description", c."thumbnailUrl" AS "c_thumbnailUrl",
         c."position" AS "c_position", c."publishStatus"::text AS "c_publishStatus", c."certificatesEnabled" AS "c_certificatesEnabled",
         c."removedAt" AS "c_removedAt", c."createdAt" AS "c_createdAt", c."updatedAt" AS "c_updatedAt"
@@ -271,6 +273,8 @@ export const classroomRepository: ClassroomRepository = {
       isPreview: r.isPreview,
       learningCourseId: r.learningCourseId,
       ...(r.quizId && r.quizCount > 0 && r.quizPass !== null ? { quiz: { id: r.quizId, passPercent: r.quizPass, questionCount: r.quizCount } } : {}),
+      // Trò chơi cuối bài: có ít nhất một trò chơi đủ >= 2 cặp (khớp MIN_GAME_PAIRS ở game.service); đếm bằng subquery trong cùng truy vấn, không thêm truy vấn.
+      ...(r.gameCount >= 1 ? { hasGame: true as const } : {}),
       ...(r.surveyId && r.surveyCount > 0 ? { survey: { id: r.surveyId, requiredIds: r.surveyRequired ?? [] } } : {}),
       course: {
         id: r.c_id,

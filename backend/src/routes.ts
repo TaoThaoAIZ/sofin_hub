@@ -35,6 +35,7 @@ import { greetingsRouter } from './modules/community-greetings/greetings.routes.
 import { onboardingRouter } from './modules/onboarding/onboarding.routes.js';
 import { quizRouter } from './modules/quiz/quiz.routes.js';
 import { surveyRouter } from './modules/survey/survey.routes.js';
+import { gameRouter } from './modules/game/game.routes.js';
 import { communityReferralRouter } from './modules/referrals/community-referral.routes.js';
 
 export const apiRouter = Router();
@@ -60,6 +61,7 @@ apiRouter.use('/', moderationRouter);
 apiRouter.use('/', classroomRouter);
 apiRouter.use('/', quizRouter);
 apiRouter.use('/', surveyRouter);
+apiRouter.use('/', gameRouter);
 apiRouter.use('/', onboardingRouter);
 apiRouter.use('/', communityReferralRouter);
 apiRouter.use('/', eventsRouter);
