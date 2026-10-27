@@ -11,7 +11,7 @@ import type {
   Post,
   PostQuery,
   QuizInput,
-  GameInput,
+  GamesInput,
   SurveyAnswer,
   SurveyInput,
   ReportAction,
@@ -484,23 +484,23 @@ export const useSurvey = (cid: string, lessonId: string) => {
   });
 };
 
-const gameKey = (cid: string, lessonId: string) => ['community', cid, 'lesson', lessonId, 'game'] as const;
+const gameKey = (cid: string, lessonId: string) => ['community', cid, 'lesson', lessonId, 'games'] as const;
 
-export const useGame = (cid: string, lessonId: string, enabled = true) => {
+export const useGames = (cid: string, lessonId: string, enabled = true) => {
   const { accessToken } = useAuth();
   return useQuery({
     queryKey: gameKey(cid, lessonId),
-    queryFn: ({ signal }) => api.fetchGame(cid, lessonId, accessToken!, signal),
+    queryFn: ({ signal }) => api.fetchGames(cid, lessonId, accessToken!, signal),
     enabled: enabled && !!accessToken && !!lessonId,
     retry: false,
   });
 };
 
-export const usePutGame = (cid: string, lessonId: string) => {
+export const usePutGames = (cid: string, lessonId: string) => {
   const token = useToken();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: GameInput) => api.putGame(cid, lessonId, body, token),
+    mutationFn: (body: GamesInput) => api.putGames(cid, lessonId, body, token),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: gameKey(cid, lessonId) });
       void qc.invalidateQueries({ queryKey: ['community', cid, 'lesson'] });
@@ -512,7 +512,7 @@ export const useSubmitGameResult = (cid: string, lessonId: string) => {
   const token = useToken();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: { moves: number; seconds: number }) => api.submitGameResult(cid, lessonId, body, token),
+    mutationFn: ({ gameId, ...body }: { gameId: string; moves: number; seconds: number }) => api.submitGameResult(cid, lessonId, gameId, body, token),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: gameKey(cid, lessonId) });
       void qc.invalidateQueries({ queryKey: ['community', cid, 'lesson'] });

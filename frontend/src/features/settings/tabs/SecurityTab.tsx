@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { ApiError } from '../../../lib/api';
 import i18n from '../../../i18n';
+import { shortEmail } from '../../../lib/email';
 import { useRevokeSession, useSessions } from '../../account/queries';
 import { useToast } from '../../admin/components/overlay';
 import { sendVerification } from '../../auth/api';
@@ -114,7 +115,7 @@ export function SecurityTab() {
     try {
       await sendVerification();
       setCooldown(60);
-      toast.success(t('securityTab.verifySent', { email: target }));
+      toast.success(t('securityTab.verifySent', { email: shortEmail(target) }));
     } catch (e) {
       if (e instanceof ApiError && e.status === 429) {
         setCooldown(60);
@@ -154,7 +155,7 @@ export function SecurityTab() {
               <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 text-[13px] text-stone-600">
                 {user.pendingEmail ? (
                   <span>
-                    {t('securityTab.pendingPrefix')} <b className="break-all">{user.pendingEmail}</b>{t('securityTab.pendingSuffix')}
+                    {t('securityTab.pendingPrefix')} <b className="inline-block max-w-[240px] truncate align-bottom" title={user.pendingEmail ?? undefined}>{user.pendingEmail}</b>{t('securityTab.pendingSuffix')}
                   </span>
                 ) : (
                   <span>{t('securityTab.emailUnverified')}</span>

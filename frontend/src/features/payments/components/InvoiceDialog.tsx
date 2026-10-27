@@ -54,10 +54,10 @@ export function InvoiceDialog({ paymentId, onClose }: { paymentId: string; onClo
               </div>
             </div>
             <dl className="mt-4 grid grid-cols-2 gap-3 text-[13px]">
-              <div>
+              <div className="min-w-0">
                 <dt className="text-stone-500">{t('invoice.buyer')}</dt>
                 <dd className="font-semibold">{inv.buyer.name}</dd>
-                {inv.buyer.email && <dd className="text-stone-500">{inv.buyer.email}</dd>}
+                {inv.buyer.email && <dd className="truncate text-stone-500" title={inv.buyer.email}>{inv.buyer.email}</dd>}
               </div>
               <div>
                 <dt className="text-stone-500">{t('invoice.community')}</dt>

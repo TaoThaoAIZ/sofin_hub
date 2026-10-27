@@ -8,7 +8,7 @@ import { fileKeyOf, refreshFileUrl, useFileUrl } from '../lib/files';
 import { ConfirmDialog, errText, ErrorNote, ghostBtn, isModPlus, primaryBtn, safeUrl, toast, ToastHost } from '../features/community/components/contentUi';
 import { LessonFormDialog } from '../features/community/components/ClassroomEditor';
 import { LessonCompleteCard } from '../features/community/components/LessonCompleteCard';
-import { MemoryGame } from '../features/community/components/MemoryGame';
+import { GamePlayer } from '../features/community/components/GamePlayer';
 import { useCommunityDetail } from '../features/courses/queries';
 import type { ClassroomLesson, LessonAttachment } from '../features/community/types';
 import { useCourseList, useDeleteLesson, useLesson, useLessons, useMarkVideoWatched, useProgress, useReorderLessons, useToggleLessonComplete } from '../features/community/queries';
@@ -317,7 +317,7 @@ export function LessonPage() {
   const [celebrate, setCelebrate] = useState(false);
   // Video đang xem trong danh sách (0 = video chính, các video sau là video bổ sung).
   const [activeVideo, setActiveVideo] = useState(0);
-  // Trò chơi lật thẻ cuối bài; `celebrateAfterGame` = chơi xong (hoặc bỏ qua) thì tiếp tục sang màn chúc mừng hoàn thành module.
+  // Trò chơi cuối bài; `celebrateAfterGame` = chơi xong (hoặc bỏ qua) thì tiếp tục sang màn chúc mừng hoàn thành module.
   const [gameOpen, setGameOpen] = useState(false);
   const [celebrateAfterGame, setCelebrateAfterGame] = useState(false);
   useEffect(() => {
@@ -443,7 +443,7 @@ export function LessonPage() {
           </div>
         )}
         {gameOpen ? (
-          <MemoryGame
+          <GamePlayer
             communityId={communityId}
             lessonId={l.id}
             onContinue={() => {
@@ -574,7 +574,7 @@ export function LessonPage() {
                   }}
                   className="mt-1 inline-flex cursor-pointer items-center gap-2 rounded-xl border border-[#fdba74] bg-[#fff9f4] px-4 py-2.5 text-[13.5px] font-bold text-[#e8590c] hover:bg-[#fff1e6] dark:border-white/15 dark:bg-white/5"
                 >
-                  <MaterialIcon name="style" size={19} filled color="#e8590c" /> {l.gamePlayed ? t('game.playAgain') : t('game.playNow')}
+                  <MaterialIcon name="sports_esports" size={19} filled color="#e8590c" /> {l.gamePlayed ? t('game.playAgain') : t('game.playNow')}
                 </button>
               )}
               {requirements.length > 0 && !l.completed && (

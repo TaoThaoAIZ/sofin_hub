@@ -237,7 +237,29 @@
     "filterQuestion": "Lọc theo câu hỏi",
     "filterNone": "Không lọc theo đáp án",
     "filterChoice": "Chọn đáp án",
-    "filterChoicePh": "Chọn đáp án cần lọc"
+    "filterChoicePh": "Chọn đáp án cần lọc",
+    "stats": {
+      "total": "Tổng khảo sát",
+      "responses": "Tổng lượt trả lời",
+      "avgRate": "Tỷ lệ hoàn thành TB",
+      "active": "Khảo sát đang hoạt động"
+    },
+    "cols": {
+      "survey": "Khảo sát",
+      "lesson": "Bài học",
+      "questions": "Số câu hỏi",
+      "responses": "Lượt trả lời",
+      "rate": "Tỷ lệ hoàn thành",
+      "status": "Trạng thái",
+      "updated": "Cập nhật gần nhất"
+    },
+    "status": {
+      "active": "Đang hoạt động",
+      "inactive": "Tạm ẩn"
+    },
+    "questionsShort": "{{count}} câu",
+    "viewResults": "Kết quả",
+    "noAnswerShort": "—"
   },
   "survey": {
     "needRequired": "Hãy trả lời các câu bắt buộc (*) trong khảo sát ở trên để hoàn thành bài học.",
@@ -351,41 +373,105 @@
     "errDup": "Câu {{n}}: các lựa chọn không được trùng nhau"
   },
   "game": {
-    "title": "Trò chơi lật thẻ ghi nhớ",
-    "hint": "Ghép thuật ngữ với định nghĩa đúng. Hoàn thành càng ít lượt lật càng nhiều sao, mỗi sao được {{n}} điểm (thưởng một lần cho mỗi bài).",
+    "title": "Trò chơi cuối bài",
     "loading": "Đang tải trò chơi…",
     "none": "Bài học này chưa có trò chơi.",
     "moves": "{{n}} lượt",
     "cardBack": "Thẻ úp, bấm để lật",
     "skip": "Bỏ qua trò chơi",
+    "back": "Chọn trò chơi khác",
+    "another": "Trò chơi khác",
     "continue": "Tiếp tục",
     "replay": "Chơi lại",
-    "playNow": "Chơi trò chơi ghi nhớ",
-    "playAgain": "Chơi lại trò chơi ghi nhớ",
+    "playNow": "Chơi trò chơi",
+    "playAgain": "Chơi lại trò chơi",
+    "pickTitle": "Chọn trò chơi",
+    "pickHint": "Mỗi trò chơi hoàn thành càng ít lượt càng nhiều sao, mỗi sao được {{n}} điểm (thưởng một lần cho mỗi trò chơi).",
+    "pairCount": "{{n}} cặp",
+    "notPlayed": "Chưa chơi",
     "starsAria": "{{n}} trên 3 sao",
     "rating": {
       "1": "Hoàn thành!",
       "2": "Làm tốt lắm!",
       "3": "Xuất sắc!"
     },
-    "stats": "{{moves}} lượt lật · {{time}}",
+    "stats": "{{moves}} lượt · {{time}}",
     "pointsEarned": "+{{n}} điểm",
     "pointsNeedComplete": "Hãy bấm Hoàn thành bài học để nhận điểm thưởng.",
-    "pointsOnce": "Điểm thưởng chỉ được cộng một lần cho mỗi bài."
+    "pointsOnce": "Điểm thưởng chỉ được cộng một lần cho mỗi trò chơi.",
+    "match": {
+      "terms": "Thuật ngữ",
+      "defs": "Định nghĩa"
+    },
+    "swipe": {
+      "term": "Thuật ngữ",
+      "def": "Định nghĩa",
+      "true": "Đúng",
+      "false": "Sai",
+      "right": "Chính xác!",
+      "wasTrue": "Chưa đúng — định nghĩa này khớp với thuật ngữ.",
+      "wasFalse": "Chưa đúng — định nghĩa đúng là: {{answer}}",
+      "keys": "Dùng phím ← (Sai) và → (Đúng), hoặc vuốt thẻ."
+    },
+    "scramble": {
+      "hintLabel": "Gợi ý",
+      "answer": "Đáp án của bạn",
+      "pool": "Các mảnh cần sắp xếp",
+      "clear": "Xóa và xếp lại"
+    },
+    "kinds": {
+      "memory": {
+        "name": "Lật thẻ",
+        "title": "Lật thẻ ghi nhớ",
+        "hint": "Lật từng đôi thẻ để ghép thuật ngữ với định nghĩa đúng. Càng ít lượt lật càng nhiều sao, mỗi sao được {{n}} điểm.",
+        "editorHint": "Học viên lật thẻ để ghép thuật ngữ với định nghĩa. Các định nghĩa không được trùng nhau.",
+        "termPh": "Thuật ngữ",
+        "defPh": "Định nghĩa / ý nghĩa"
+      },
+      "match": {
+        "name": "Nối cặp",
+        "title": "Nối cặp",
+        "hint": "Chọn một thuật ngữ rồi chọn định nghĩa tương ứng. Càng ít lần nối sai càng nhiều sao, mỗi sao được {{n}} điểm.",
+        "editorHint": "Học viên nối thuật ngữ ở cột trái với định nghĩa ở cột phải. Các định nghĩa không được trùng nhau.",
+        "termPh": "Thuật ngữ",
+        "defPh": "Định nghĩa / ý nghĩa"
+      },
+      "swipe": {
+        "name": "Đúng / Sai",
+        "title": "Đúng hay Sai?",
+        "hint": "Thuật ngữ và định nghĩa bên dưới có khớp nhau không? Trả lời càng ít sai càng nhiều sao, mỗi sao được {{n}} điểm.",
+        "editorHint": "Mỗi cặp được hiển thị lúc đúng lúc bị ghép nhầm với định nghĩa khác để học viên chọn Đúng/Sai. Nên có ít nhất 3 cặp để có nhiều câu hỏi đa dạng.",
+        "termPh": "Khái niệm",
+        "defPh": "Định nghĩa đúng"
+      },
+      "scramble": {
+        "name": "Xếp từ",
+        "title": "Xếp từ",
+        "hint": "Đọc gợi ý rồi sắp xếp các mảnh thành thuật ngữ đúng. Càng ít lần xếp sai càng nhiều sao, mỗi sao được {{n}} điểm.",
+        "editorHint": "Học viên đọc gợi ý rồi xếp lại thuật ngữ bị xáo trộn (một từ: xếp các chữ cái; nhiều từ: xếp các từ).",
+        "termPh": "Từ cần xếp (vd: Marketing)",
+        "defPh": "Gợi ý (mô tả từ này)"
+      }
+    },
+    "finished": "Hoàn thành! Đang tổng kết điểm…"
   },
   "gameEditor": {
-    "title": "Trò chơi lật thẻ cuối bài",
+    "title": "Trò chơi cuối bài",
     "optional": "(không bắt buộc)",
-    "rule": "Nhập {{min}}–{{max}} cặp thuật ngữ ↔ định nghĩa. Sau khi hoàn thành bài, học viên ghép các cặp này để nhận điểm thưởng. Để trống = bài không có trò chơi.",
-    "term": "Thuật ngữ của cặp {{n}}",
-    "def": "Định nghĩa của cặp {{n}}",
-    "termPh": "Thuật ngữ",
-    "defPh": "Định nghĩa / ý nghĩa",
+    "rule": "Mỗi bài gắn được tối đa {{maxGames}} trò chơi, mỗi trò chơi {{min}}–{{max}} cặp. Sau khi hoàn thành bài, học viên chơi để nhận điểm thưởng. Để trống = bài không có trò chơi.",
+    "gameN": "Trò chơi {{n}}",
+    "kindLabel": "Loại của trò chơi {{n}}",
+    "removeGame": "Xóa trò chơi {{n}}",
+    "addGame": "Thêm trò chơi ({{n}}/{{max}}):",
+    "term": "Cột trái của cặp {{n}}",
+    "def": "Cột phải của cặp {{n}}",
     "remove": "Xóa cặp {{n}}",
-    "add": "Thêm cặp thẻ ({{n}}/{{max}})",
-    "errBlank": "Trò chơi lật thẻ: mỗi cặp cần nhập đủ thuật ngữ và định nghĩa.",
-    "errMin": "Trò chơi lật thẻ: cần ít nhất {{min}} cặp (hoặc xóa hết để tắt trò chơi).",
-    "errDupTerm": "Trò chơi lật thẻ: các thuật ngữ không được trùng nhau.",
-    "errDupDef": "Trò chơi lật thẻ: các định nghĩa không được trùng nhau."
+    "add": "Thêm cặp ({{n}}/{{max}})",
+    "errGame": "Trò chơi {{n}} ({{kind}}): {{msg}}",
+    "errBlank": "mỗi cặp cần nhập đủ hai ô.",
+    "errMin": "cần ít nhất {{min}} cặp (hoặc xóa trò chơi này).",
+    "errDupTerm": "các thuật ngữ không được trùng nhau.",
+    "errDupDef": "các định nghĩa không được trùng nhau.",
+    "errScramble": "từ cần xếp phải có ít nhất 2 chữ cái (hoặc 2 từ) khác nhau."
   }
 }

@@ -57,7 +57,7 @@ export function verifyOAuthState(state: unknown, nonceCookie: unknown, provider:
   try {
     const p = jwt.verify(state, env.JWT_ACCESS_SECRET, { audience: STATE_AUDIENCE }) as Partial<StatePayload>;
     if (p.p !== provider || p.n !== nonceCookie) return null;
-    return { referralCode: typeof p.ref === 'string' ? p.ref : undefined };
+    return { referralCode: typeof p.ref === 'string' ? p.ref : undefined, mobileChallenge: typeof p.m === 'string' ? p.m : undefined };
   } catch {
     return null;
   }

@@ -288,14 +288,15 @@ export interface LessonDetail extends ClassroomLesson {
   hasSurvey?: boolean;
   surveyAnswered?: boolean;
   surveyRequired?: boolean;
-  /** Bài có trò chơi lật thẻ cuối bài; gamePlayed = người xem đã chơi ít nhất một ván. */
+  /** Bài có trò chơi cuối bài (một hoặc nhiều); gamePlayed = người xem đã chơi ít nhất một ván. */
   hasGame?: boolean;
   gamePlayed?: boolean;
   /** required = phải xem hết video mới làm được trắc nghiệm (mod+ không bị bắt buộc); watched = đã xem hết. */
   video?: { required: boolean; watched: boolean; /** Từng video theo thứ tự hiển thị (video chính trước); `watched` ở trên = đã xem hết mọi video. */ items?: { key: string; watched: boolean }[] };
 }
 
-/** Trò chơi lật thẻ ghi nhớ cuối bài. */
+/** Trò chơi cuối bài: lật thẻ / nối cặp / đúng-sai / xếp từ (xếp từ: term = từ cần xếp, definition = gợi ý). */
+export type GameKind = 'memory' | 'match' | 'swipe' | 'scramble';
 export interface GamePair {
   id: string;
   term: string;
@@ -307,12 +308,19 @@ export interface GameBest {
   seconds: number;
   plays: number;
 }
-export interface GameView {
-  canEdit: boolean;
-  game: { id: string; pairs: GamePair[]; pointsPerStar: number; best: GameBest | null } | null;
+export interface GameItem {
+  id: string;
+  kind: GameKind;
+  pairs: GamePair[];
+  pointsPerStar: number;
+  best: GameBest | null;
 }
-export interface GameInput {
-  pairs: { id?: string; term: string; definition: string }[];
+export interface GamesView {
+  canEdit: boolean;
+  games: GameItem[];
+}
+export interface GamesInput {
+  games: { id?: string; kind: GameKind; pairs: { id?: string; term: string; definition: string }[] }[];
 }
 export interface GameResult {
   stars: number;
@@ -400,6 +408,8 @@ export interface SurveyListItem {
   questionCount: number;
   responseCount: number;
   lastAnsweredAt: string | null;
+  /** Học viên đang thấy được khảo sát (bài không ẩn/gỡ, module đã xuất bản). */
+  active: boolean;
 }
 export interface SurveyList {
   memberCount: number;

@@ -32,6 +32,7 @@ import {
   socialEnabled,
   verifyOAuthState,
 } from './oauth.js';
+import { isMobileChallenge, MOBILE_REDIRECT, putMobileSession, takeMobileSession } from './oauth-mobile.js';
 import { parseUserAgent } from './user-agent.js';
 import { peekSessionId, REFRESH_COOKIE_MAX_AGE_MS, REFRESH_COOKIE_NAME, type SessionMeta } from './tokens.js';
 
@@ -120,16 +121,20 @@ authRouter.post('/register/resend', otpResendLimiter, async (req, res) => {
 
 // ---- Đăng nhập Google / Facebook (OAuth2 authorization code, xem oauth.ts) ----
 const oauthRedirect = (hash: string) => `${env.FRONTEND_URL.replace(/\/$/, '')}/oauth/callback${hash}`;
-const oauthFail = (res: import('express').Response, code: string) => {
+const oauthFail = (res: import('express').Response, code: string, mobile = false) => {
   res.clearCookie(OAUTH_NONCE_COOKIE, { path: '/api/auth/oauth' });
-  res.redirect(oauthRedirect(`#error=${encodeURIComponent(code)}`));
+  res.redirect(`${mobile ? `${MOBILE_REDIRECT}#` : oauthRedirect('#')}error=${encodeURIComponent(code)}`);
 };
 
 authRouter.get('/oauth/:provider/start', otpResendLimiter, (req, res) => {
   const provider = String(req.params.provider);
-  if (!isSocialProvider(provider) || !socialEnabled(provider)) return oauthFail(res, 'not_configured');
+  const isMobileStart = req.query.client === 'mobile';
+  if (!isSocialProvider(provider) || !socialEnabled(provider)) return oauthFail(res, 'not_configured', isMobileStart);
   const ref = typeof req.query.ref === 'string' ? req.query.ref.trim().slice(0, 64) : undefined;
-  const { state, nonce } = createOAuthState(provider, ref);
+  // App mobile: ?client=mobile&challenge=<base64url sha256(verifier)> -> callback chuyển về deep link (xem oauth-mobile.ts).
+  const challenge = isMobileStart && isMobileChallenge(req.query.challenge) ? req.query.challenge : undefined;
+  if (isMobileStart && !challenge) return oauthFail(res, 'invalid_state', true);
+  const { state, nonce } = createOAuthState(provider, ref, challenge);
   // Cookie của chính trình duyệt này, lax để vẫn được gửi khi nhà cung cấp chuyển hướng (GET cấp cao) về callback.
   res.cookie(OAUTH_NONCE_COOKIE, nonce, { httpOnly: true, secure: !isDev, sameSite: 'lax', maxAge: OAUTH_NONCE_MAX_AGE_MS, path: '/api/auth/oauth' });
   res.redirect(buildAuthUrl(provider, state));
@@ -140,13 +145,18 @@ authRouter.get('/oauth/:provider/callback', async (req, res) => {
   if (!isSocialProvider(provider) || !socialEnabled(provider)) return oauthFail(res, 'not_configured');
   const checked = verifyOAuthState(req.query.state, req.cookies?.[OAUTH_NONCE_COOKIE], provider);
   if (!checked) return oauthFail(res, 'invalid_state');
+  const mobile = Boolean(checked.mobileChallenge);
   const code = typeof req.query.code === 'string' ? req.query.code : '';
   // Người dùng bấm "Hủy" ở trang đồng ý (error=access_denied) hoặc thiếu code.
-  if (!code || req.query.error) return oauthFail(res, 'cancelled');
+  if (!code || req.query.error) return oauthFail(res, 'cancelled', mobile);
   try {
     const profile = await fetchSocialProfile(provider, code);
     const result = await authService.loginWithSocial(profile, checked.referralCode, metaOf(req));
     res.clearCookie(OAUTH_NONCE_COOKIE, { path: '/api/auth/oauth' });
+    if (checked.mobileChallenge) {
+      if ('twoFactorRequired' in result) return res.redirect(`${MOBILE_REDIRECT}#ticket=${encodeURIComponent(result.ticket)}`);
+      return res.redirect(`${MOBILE_REDIRECT}#code=${encodeURIComponent(putMobileSession(result, checked.mobileChallenge))}`);
+    }
     if ('twoFactorRequired' in result) return res.redirect(oauthRedirect(`#ticket=${encodeURIComponent(result.ticket)}`));
     // Phiên được giao qua cookie refresh (httpOnly); FE gọi /auth/refresh để lấy access token như khi tải lại trang. Không đưa token lên URL.
     setRefreshCookie(res, result.refreshToken);
@@ -154,8 +164,18 @@ authRouter.get('/oauth/:provider/callback', async (req, res) => {
   } catch (e) {
     const code = e instanceof HttpError ? (e.code === 'CONFLICT' ? 'email_conflict' : e.code.toLowerCase()) : 'failed';
     if (!(e instanceof HttpError)) console.error('[oauth] đăng nhập thất bại:', e instanceof Error ? e.message : e);
-    oauthFail(res, code);
+    oauthFail(res, code, mobile);
   }
+});
+
+// Mobile: đổi mã một lần (từ deep link) + verifier PKCE lấy phiên. Cần X-Client: mobile (sendSession mới trả refreshToken trong body).
+authRouter.post('/oauth/mobile/exchange', otpVerifyLimiter, (req, res) => {
+  if (!isMobileClient(req)) throw HttpError.unauthorized('Không hợp lệ');
+  const { code, verifier } = req.body ?? {};
+  const session =
+    typeof code === 'string' && typeof verifier === 'string' && verifier.length >= 32 && verifier.length <= 128 ? takeMobileSession(code, verifier) : null;
+  if (!session) throw HttpError.unauthorized('Mã đăng nhập không hợp lệ hoặc đã hết hạn');
+  sendSession(req, res, session);
 });
 
 authRouter.post('/login', loginLimiter, async (req, res) => {

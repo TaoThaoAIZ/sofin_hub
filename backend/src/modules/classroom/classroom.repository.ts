@@ -243,7 +243,7 @@ export const classroomRepository: ClassroomRepository = {
         q."id" AS "quizId", q."passPercent" AS "quizPass", COALESCE(jsonb_array_length(q."questions"), 0)::int AS "quizCount",
         sv."id" AS "surveyId", COALESCE(jsonb_array_length(sv."questions"), 0)::int AS "surveyCount",
         (SELECT jsonb_agg(e->>'id') FROM jsonb_array_elements(sv."questions") e WHERE e->>'required' = 'true') AS "surveyRequired",
-        COALESCE(jsonb_array_length(gm."pairs"), 0)::int AS "gameCount",
+        (SELECT count(*) FROM "LessonGame" gm WHERE gm."lessonId" = l."id" AND jsonb_array_length(gm."pairs") >= 2)::int AS "gameCount",
         c."id" AS "c_id", c."communityId" AS "c_communityId", c."title" AS "c_title", c."description" AS "c_description", c."thumbnailUrl" AS "c_thumbnailUrl",
         c."position" AS "c_position", c."publishStatus"::text AS "c_publishStatus", c."certificatesEnabled" AS "c_certificatesEnabled",
         c."removedAt" AS "c_removedAt", c."createdAt" AS "c_createdAt", c."updatedAt" AS "c_updatedAt"
@@ -252,7 +252,6 @@ export const classroomRepository: ClassroomRepository = {
       JOIN "LearningCourse" c ON c."id" = m."learningCourseId"
       LEFT JOIN "LessonQuiz" q ON q."lessonId" = l."id"
       LEFT JOIN "LessonSurvey" sv ON sv."lessonId" = l."id"
-      LEFT JOIN "LessonGame" gm ON gm."lessonId" = l."id"
       WHERE l."id" = ${lessonId} AND NOT l."hidden" AND l."removedAt" IS NULL
         ${communityId ? Prisma.sql`AND l."courseId" = ${communityId}` : Prisma.empty}
       LIMIT 1`;
@@ -274,8 +273,8 @@ export const classroomRepository: ClassroomRepository = {
       isPreview: r.isPreview,
       learningCourseId: r.learningCourseId,
       ...(r.quizId && r.quizCount > 0 && r.quizPass !== null ? { quiz: { id: r.quizId, passPercent: r.quizPass, questionCount: r.quizCount } } : {}),
-      // Trò chơi lật thẻ: cần >= 2 cặp (khớp MIN_GAME_PAIRS ở game.service); lấy cùng truy vấn JOIN, không thêm truy vấn.
-      ...(r.gameCount >= 2 ? { hasGame: true as const } : {}),
+      // Trò chơi cuối bài: có ít nhất một trò chơi đủ >= 2 cặp (khớp MIN_GAME_PAIRS ở game.service); đếm bằng subquery trong cùng truy vấn, không thêm truy vấn.
+      ...(r.gameCount >= 1 ? { hasGame: true as const } : {}),
       ...(r.surveyId && r.surveyCount > 0 ? { survey: { id: r.surveyId, requiredIds: r.surveyRequired ?? [] } } : {}),
       course: {
         id: r.c_id,

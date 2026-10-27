@@ -1071,7 +1071,7 @@ model ClassroomLesson {
   quiz      LessonQuiz?
   survey    LessonSurvey?
   videoWatches LessonVideoWatch[]
-  game      LessonGame?
+  games     LessonGame[]
   gamePlays LessonGamePlay[]
 
   @@index([moduleId, index])
@@ -2410,20 +2410,27 @@ model CommunityCommissionPayout {
   @@index([paidById])
 }
 
-/// Trò chơi lật thẻ ghi nhớ cuối bài học (chủ cộng đồng nhập). `pairs` = [{ id, term, definition }] (2..8 cặp).
+/// Trò chơi cuối bài học (chủ cộng đồng nhập); một bài có thể gắn nhiều trò chơi. `kind` = memory | match | swipe | scramble.
+/// `pairs` = [{ id, term, definition }] (2..8 cặp); scramble: term = từ cần xếp, definition = gợi ý.
 model LessonGame {
   id        String   @id @default(uuid())
-  lessonId  String   @unique
+  lessonId  String
+  kind      String   @default("memory")
+  position  Int      @default(0)
   pairs     Json     @default("[]")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   lesson ClassroomLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  plays  LessonGamePlay[]
+
+  @@index([lessonId, position])
 }
 
-/// Kết quả tốt nhất của một học viên ở trò chơi của bài (điểm thưởng chỉ cộng ở lần chơi đầu tiên).
+/// Kết quả tốt nhất của một học viên ở MỘT trò chơi (điểm thưởng chỉ cộng ở lần chơi đầu tiên của mỗi trò chơi).
 model LessonGamePlay {
   userId    String
+  gameId    String
   lessonId  String
   stars     Int
   moves     Int
@@ -2433,8 +2440,9 @@ model LessonGamePlay {
   updatedAt DateTime @updatedAt
 
   user   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game   LessonGame      @relation(fields: [gameId], references: [id], onDelete: Cascade)
   lesson ClassroomLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
-  @@id([userId, lessonId])
+  @@id([userId, gameId])
   @@index([lessonId])
 }

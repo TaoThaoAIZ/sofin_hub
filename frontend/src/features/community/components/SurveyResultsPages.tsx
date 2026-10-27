@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { Pager } from '../../../components/ui/Pager';
+import { formatDateTime } from '../../../lib/datetime';
 import { communityHome } from '../../../lib/paths';
 import { useCommunityDetail } from '../../courses/queries';
 import { Avatar } from '../../account/components/Avatar';
@@ -35,7 +36,23 @@ function StaffOnly() {
 const cardCls = 'rounded-2xl border border-[rgba(120,60,20,.1)] bg-white p-4';
 const searchCls = 'h-10 w-full rounded-xl border-[1.5px] border-[#e7e0da] bg-white px-3 text-[13.5px] outline-0 focus:border-brand';
 
-/** Trang "Khảo sát" của cộng đồng (mod+): danh sách khảo sát từng bài kèm số người trả lời / tỷ lệ trên tổng thành viên. */
+const pctOf = (responses: number, members: number) => (members ? Math.min(100, Math.round((responses / members) * 100)) : 0);
+
+function StatCard({ icon, tone, label, value }: { icon: string; tone: string; label: string; value: string }) {
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border border-[rgba(120,60,20,.1)] bg-white p-4">
+      <span className={`grid size-11 flex-none place-items-center rounded-xl ${tone}`}>
+        <MaterialIcon name={icon} size={24} filled color="currentColor" />
+      </span>
+      <div className="min-w-0">
+        <div className="truncate text-[13px] text-stone-500">{label}</div>
+        <div className="text-[26px] leading-tight font-extrabold">{value}</div>
+      </div>
+    </div>
+  );
+}
+
+/** Trang "Khảo sát" của cộng đồng (mod+): thẻ thống kê + bảng khảo sát từng bài (số người trả lời / tỷ lệ trên tổng thành viên); "Kết quả" mở trang chi tiết. */
 export function SurveysPage() {
   const { t } = useTranslation('course');
   const { id: communityId = '' } = useParams();
@@ -44,49 +61,90 @@ export function SurveysPage() {
   if (!course) return null;
   if (!isModPlus(course.viewerRole)) return <StaffOnly />;
   const data = list.data;
+  const surveys = data?.surveys ?? [];
+  const members = data?.memberCount ?? 0;
+  const totalResponses = surveys.reduce((n, s) => n + s.responseCount, 0);
+  const avgRate = surveys.length ? Math.round(surveys.reduce((n, s) => n + pctOf(s.responseCount, members), 0) / surveys.length) : 0;
+  const activeCount = surveys.filter((s) => s.active).length;
+  const th = 'px-3 py-3 text-left text-[12.5px] font-bold whitespace-nowrap text-stone-700';
 
   return (
     <main className="flex min-w-0 flex-col gap-4">
       <PageBanner image="cal-hero-bg.webp" icon="poll" title={t('surveyResults.pageTitle')} subtitle={t('surveyResults.pageSubtitle')} />
       {list.isPending && <p className="text-sm text-stone-400">{t('survey.loading')}</p>}
       {list.isError && <ErrorNote message={errText(list.error)} />}
-      {data && data.surveys.length === 0 && (
+      {data && (
+        <div className="grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-sm:grid-cols-1">
+          <StatCard icon="groups" tone="bg-[#eef0ff] text-[#5b5fe0] dark:bg-[#5b5fe0]/20" label={t('surveyResults.stats.total')} value={String(surveys.length)} />
+          <StatCard icon="person" tone="bg-[#fff0f3] text-[#e5486b] dark:bg-[#e5486b]/20" label={t('surveyResults.stats.responses')} value={totalResponses.toLocaleString()} />
+          <StatCard icon="menu_book" tone="bg-[#fff6dd] text-[#d99a06] dark:bg-[#d99a06]/20" label={t('surveyResults.stats.avgRate')} value={`${avgRate}%`} />
+          <StatCard icon="bar_chart" tone="bg-stone-100 text-stone-600 dark:bg-white/10" label={t('surveyResults.stats.active')} value={String(activeCount)} />
+        </div>
+      )}
+      {data && surveys.length === 0 && (
         <div className={`${cardCls} text-center text-[14px] text-stone-600`}>
           <MaterialIcon name="poll" size={34} color="#ff570a" />
           <p className="mt-2 mb-0">{t('surveyResults.empty')}</p>
         </div>
       )}
-      {data && data.surveys.length > 0 && (
-        <ul className="m-0 flex list-none flex-col gap-3 p-0">
-          {data.surveys.map((s) => {
-            const pct = data.memberCount ? Math.min(100, Math.round((s.responseCount / data.memberCount) * 100)) : 0;
-            return (
-              <li key={s.lessonId}>
-                <Link to={communityHome(communityId, `khao-sat/${s.lessonId}`)} className={`${cardCls} block hover:border-brand`}>
-                  <div className="flex flex-wrap items-start gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="text-[15px] font-bold break-words">{s.lessonTitle}</div>
-                      <div className="text-[12.5px] text-stone-500">{s.moduleTitle} · {t('surveyResults.questionCount', { count: s.questionCount })}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-[18px] font-extrabold text-brand">{s.responseCount}</div>
-                      <div className="text-[11.5px] text-stone-500">{t('surveyResults.responses')}</div>
-                    </div>
-                  </div>
-                  <div className="mt-3 flex items-center gap-3 text-[12px] text-stone-500">
-                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-stone-200">
-                      <div className="h-full rounded-full bg-brand" style={{ width: `${pct}%` }} />
-                    </div>
-                    <span className="flex-none">{t('surveyResults.rate', { pct, total: data.memberCount })}</span>
-                  </div>
-                  <div className="mt-1.5 text-[11.5px] text-stone-400">
-                    {s.lastAnsweredAt ? t('surveyResults.lastAnswered', { time: fmtDateTime(s.lastAnsweredAt) }) : t('surveyResults.noAnswerYet')}
-                  </div>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+      {data && surveys.length > 0 && (
+        <div className="overflow-x-auto rounded-3xl border border-[rgba(120,60,20,.1)] bg-white p-4 max-sm:p-2">
+          <table className="w-full min-w-[900px] border-separate border-spacing-0 text-[13.5px]">
+            <thead>
+              <tr className="bg-[#f5f1ed]">
+                <th className={`${th} rounded-l-xl`}>{t('surveyResults.cols.survey')}</th>
+                <th className={th}>{t('surveyResults.cols.lesson')}</th>
+                <th className={th}>{t('surveyResults.cols.questions')}</th>
+                <th className={th}>{t('surveyResults.cols.responses')}</th>
+                <th className={th}>{t('surveyResults.cols.rate')}</th>
+                <th className={th}>{t('surveyResults.cols.status')}</th>
+                <th className={th}>{t('surveyResults.cols.updated')}</th>
+                <th className={`${th} rounded-r-xl`}>
+                  <span className="sr-only">{t('surveyResults.viewResults')}</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {surveys.map((s) => {
+                const pct = pctOf(s.responseCount, members);
+                const cell = 'border-b border-[#f0ebe6] px-3 py-3.5 align-middle';
+                const to = communityHome(communityId, `khao-sat/${s.lessonId}`);
+                return (
+                  <tr key={s.lessonId}>
+                    <td className={`${cell} max-w-[240px] font-medium`}>
+                      <Link to={to} className="line-clamp-2 break-words hover:text-brand">{s.lessonTitle}</Link>
+                    </td>
+                    <td className={cell}>
+                      <span className="inline-block max-w-[160px] truncate rounded-full bg-stone-100 px-3 py-1 align-middle text-[12.5px] font-medium text-stone-600" title={s.moduleTitle}>{s.moduleTitle}</span>
+                    </td>
+                    <td className={`${cell} whitespace-nowrap`}>{t('surveyResults.questionsShort', { count: s.questionCount })}</td>
+                    <td className={`${cell} whitespace-nowrap`}>{s.responseCount}/{members}</td>
+                    <td className={cell}>
+                      <div className="flex items-center gap-3">
+                        <div className="h-2 w-28 flex-none overflow-hidden rounded-full bg-stone-200" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+                          <div className="h-full rounded-full bg-brand" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="w-10 flex-none text-stone-600">{pct}%</span>
+                      </div>
+                    </td>
+                    <td className={cell}>
+                      <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px] font-medium whitespace-nowrap ${s.active ? 'bg-[#dcfce7] text-[#15803d]' : 'bg-stone-100 text-stone-600'}`}>
+                        <span className={`size-1.5 rounded-full ${s.active ? 'bg-[#16a34a]' : 'bg-stone-400'}`} />
+                        {t(s.active ? 'surveyResults.status.active' : 'surveyResults.status.inactive')}
+                      </span>
+                    </td>
+                    <td className={`${cell} whitespace-nowrap text-stone-600`}>{s.lastAnsweredAt ? formatDateTime(s.lastAnsweredAt) : t('surveyResults.noAnswerShort')}</td>
+                    <td className={`${cell} text-right`}>
+                      <Link to={to} className="inline-flex h-9 items-center rounded-xl border border-brand px-4 text-[13px] font-semibold whitespace-nowrap text-brand hover:bg-brand/5">
+                        {t('surveyResults.viewResults')}
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
     </main>
   );
