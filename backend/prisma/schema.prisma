@@ -2444,5 +2444,6 @@ model LessonGamePlay {
   lesson ClassroomLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
   @@id([userId, gameId])
+  @@index([gameId])
   @@index([lessonId])
 }
