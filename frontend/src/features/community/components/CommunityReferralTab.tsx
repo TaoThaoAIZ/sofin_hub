@@ -6,6 +6,8 @@ import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { ApiError, apiGet, apiPut } from '../../../lib/api';
 import { useAuth } from '../../auth/AuthContext';
 import { ToastProvider } from '../../admin/components/overlay';
+import { AccountModal } from '../../settings/referral/Withdraw';
+import { useWithdraw } from '../../settings/referral/queries';
 import { ReferralTab as PlatformReferral } from '../../settings/tabs/ReferralTab';
 import { errText, ErrorNote, ghostBtn, primaryBtn } from './contentUi';
 import { OwnerPayoutSection } from './OwnerPayoutSection';
@@ -88,6 +90,29 @@ function RateBox({ communityId, program: p }: { communityId: string; program: Pr
   );
 }
 
+/** Cộng tác viên chưa nhập tài khoản nhận hoa hồng: nhắc ngay khi vào trang (link chia sẻ + rút tiền) để chủ cộng đồng có chỗ chuyển khoản. */
+function PayoutAccountPrompt() {
+  const { t } = useTranslation('settings');
+  const w = useWithdraw();
+  const [open, setOpen] = useState(false);
+  if (!w.data || w.data.account) return null;
+  return (
+    <section role="status" className="flex flex-wrap items-center gap-3 rounded-2xl border border-[#fdba74] bg-[#fff7f1] px-4 py-3.5 dark:border-[rgba(255,87,10,.45)]">
+      <span className="grid size-10 flex-none place-items-center rounded-xl bg-[#ffedd5]">
+        <MaterialIcon name="account_balance" size={22} filled color="#ea580c" />
+      </span>
+      <div className="min-w-0 flex-1 basis-[240px]">
+        <div className="text-[15px] font-extrabold">{t('referral.withdraw.promptTitle')}</div>
+        <p className="m-0 mt-0.5 text-[13px] text-stone-600">{t('referral.withdraw.promptBody')}</p>
+      </div>
+      <button type="button" onClick={() => setOpen(true)} className={`${primaryBtn} h-10 flex-none`}>
+        {t('referral.withdraw.promptBtn')}
+      </button>
+      {open && <AccountModal onClose={() => setOpen(false)} onSaved={() => setOpen(false)} />}
+    </section>
+  );
+}
+
 /**
  * Trang "Giới thiệu & hoa hồng" trong cộng đồng. Thứ tự: (chủ cộng đồng) khung đặt % hoa hồng ở TRÊN CÙNG → hero + link (chỉ khi đã bật %) →
  * số liệu → người đã giới thiệu + rút tiền. Mọi số liệu/tỉ lệ ở đây tính theo CỘNG ĐỒNG này.
@@ -119,6 +144,7 @@ export function CommunityReferralTab() {
       {owner && <RateBox communityId={communityId} program={program} />}
       {/* Bố cục theo thiết kế. Chủ cộng đồng: khung % → hero + link → chi trả cho cộng tác viên. Thành viên: hero + link, 4 chỉ số, người đã giới thiệu + rút tiền. */}
       <ToastProvider>
+        {!owner && <PayoutAccountPrompt />}
         <PlatformReferral kind="member" withdraw={!owner} heroOnly={owner} showPayoutLink={false} communityId={communityId} communityOwner={owner} />
         {owner && <OwnerPayoutSection communityId={communityId} />}
       </ToastProvider>

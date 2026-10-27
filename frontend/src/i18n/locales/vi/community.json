@@ -932,7 +932,14 @@
       "referredTitle": "Người được {{name}} mời",
       "referredBody": "Những người đã tham gia cộng đồng qua link giới thiệu của cộng tác viên này.",
       "referredEmpty": "Chưa có người được mời.",
-      "close": "Đóng"
+      "close": "Đóng",
+      "payeeBank": "Ngân hàng",
+      "payeeNumber": "Số tài khoản",
+      "payeeHolder": "Chủ tài khoản",
+      "payeeNone": "{{name}} chưa cập nhật tài khoản nhận hoa hồng. Hãy liên hệ để lấy thông tin chuyển khoản trước khi ghi nhận đã chi trả.",
+      "copyNumber": "Sao chép số tài khoản",
+      "copied": "Đã sao chép số tài khoản",
+      "exportNone": "Chưa có khoản hoa hồng nào cần thanh toán trong khoảng ngày này"
     },
     "pageTitle": "Giới thiệu & Hoa hồng",
     "ownerReferrers": "Người đang giới thiệu",

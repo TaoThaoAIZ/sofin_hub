@@ -533,7 +533,11 @@
       "requested": "Awaiting transfer",
       "paid": "Paid",
       "rejected": "Rejected",
-      "rejectedNote": "Reason: {{note}}. The amount was returned to your balance."
+      "rejectedNote": "Reason: {{note}}. The amount was returned to your balance.",
+      "shareNote": "This information is shared with the owner of the community where you refer members so they can transfer your commission.",
+      "promptTitle": "Add your payout account",
+      "promptBody": "Enter your bank and account number so the community owner can transfer your commission when paying you.",
+      "promptBtn": "Add account"
     }
   },
   "securityTab": {

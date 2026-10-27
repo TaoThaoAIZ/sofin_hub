@@ -932,7 +932,14 @@
       "referredTitle": "People invited by {{name}}",
       "referredBody": "People who joined the community through this collaborator's referral link.",
       "referredEmpty": "Nobody invited yet.",
-      "close": "Close"
+      "close": "Close",
+      "payeeBank": "Bank",
+      "payeeNumber": "Account number",
+      "payeeHolder": "Account holder",
+      "payeeNone": "{{name}} has not added a payout account yet. Contact them for transfer details before marking this as paid.",
+      "copyNumber": "Copy account number",
+      "copied": "Account number copied",
+      "exportNone": "No commission is due for payment in this date range"
     },
     "pageTitle": "Referrals & Commission",
     "ownerReferrers": "Active referrers",

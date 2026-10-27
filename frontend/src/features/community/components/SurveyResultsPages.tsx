@@ -88,7 +88,7 @@ export function SurveysPage() {
         </div>
       )}
       {data && surveys.length > 0 && (
-        <div className="overflow-x-auto rounded-3xl bg-white p-4 shadow-soft max-sm:p-2">
+        <div className="overflow-x-auto rounded-3xl bg-white shadow-soft max-sm:py-2 max-sm:pl-2 py-4 pl-4">
           <table className="w-full min-w-[1180px] border-separate border-spacing-0 text-[13.5px]">
             <thead>
               <tr className="bg-[#f5f1ed]">
@@ -99,7 +99,7 @@ export function SurveysPage() {
                 <th className={th}>{t('surveyResults.cols.rate')}</th>
                 <th className={th}>{t('surveyResults.cols.status')}</th>
                 <th className={th}>{t('surveyResults.cols.updated')}</th>
-                <th className={`${th} rounded-r-xl`}>
+                <th className={`${th} sticky right-0 bg-[#f5f1ed] pr-4`}>
                   <span className="sr-only">{t('surveyResults.viewResults')}</span>
                 </th>
               </tr>
@@ -134,7 +134,7 @@ export function SurveysPage() {
                       </span>
                     </td>
                     <td className={`${cell} whitespace-nowrap text-stone-600`}>{s.lastAnsweredAt ? formatDateTime(s.lastAnsweredAt) : t('surveyResults.noAnswerShort')}</td>
-                    <td className={`${cell} text-right`}>
+                    <td className={`${cell} sticky right-0 bg-white pr-4 text-right`}>
                       <Link to={to} className="inline-flex h-9 items-center rounded-xl border border-brand px-4 text-[13px] font-semibold whitespace-nowrap text-brand hover:bg-brand/5">
                         {t('surveyResults.viewResults')}
                       </Link>

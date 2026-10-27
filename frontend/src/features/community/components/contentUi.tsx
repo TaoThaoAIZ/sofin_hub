@@ -179,6 +179,7 @@ export function ConfirmDialog({
   pending,
   error,
   danger = true,
+  details,
   onConfirm,
   onClose,
 }: {
@@ -188,6 +189,8 @@ export function ConfirmDialog({
   pending?: boolean;
   error?: string | null;
   danger?: boolean;
+  /** Nội dung chi tiết đặt dưới câu hỏi (khối, không nằm trong thẻ <p>). */
+  details?: ReactNode;
   onConfirm: () => void;
   onClose: () => void;
 }) {
@@ -208,6 +211,7 @@ export function ConfirmDialog({
       }
     >
       <p className="m-0 leading-relaxed">{message}</p>
+      {details}
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-[13px] text-red-700">{error}</p>}
     </Dialog>
   );

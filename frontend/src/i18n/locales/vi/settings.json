@@ -533,7 +533,11 @@
       "requested": "Đang chờ chuyển",
       "paid": "Đã chuyển",
       "rejected": "Bị từ chối",
-      "rejectedNote": "Lý do: {{note}}. Số tiền đã được hoàn lại vào số dư."
+      "rejectedNote": "Lý do: {{note}}. Số tiền đã được hoàn lại vào số dư.",
+      "shareNote": "Thông tin này sẽ được chia sẻ với chủ cộng đồng nơi bạn giới thiệu thành viên để họ chuyển khoản hoa hồng cho bạn.",
+      "promptTitle": "Thêm tài khoản nhận hoa hồng",
+      "promptBody": "Nhập ngân hàng và số tài khoản để chủ cộng đồng có thể chuyển khoản hoa hồng khi chi trả cho bạn.",
+      "promptBtn": "Thêm tài khoản"
     }
   },
   "securityTab": {

@@ -184,4 +184,28 @@ describe('giới thiệu theo cộng đồng: chủ cộng đồng chi trả hoa
     assert.equal(String(typeof one.body === 'string' ? one.body : one.raw ?? '').trim().split(/\r?\n/).length, 2);
     assert.equal((await get('', a.token)).status, 403);
   });
+
+  it('chủ cộng đồng thấy tài khoản nhận (giải mã) của cộng tác viên ở bảng + CSV; chưa có tài khoản thì để trống; không có khoản cần chi thì không xuất file rỗng', async () => {
+    const { encryptSecret } = await import('../src/modules/referrals/referral-payout-crypto.js');
+    const { id, owner } = await community();
+    const a = await member(id, 'collf');
+    const b = await member(id, 'collg');
+    await checkoutAndPay(await signup('ff1'), id, a.code);
+    await checkoutAndPay(await signup('ff2'), id, b.code);
+    await db.prisma.referralPayoutAccount.create({ data: { userId: a.id, bankBin: '970436', bankName: 'Vietcombank', accountHolder: 'TRAN THI A', accountNumberEnc: encryptSecret('0123456789'), accountLast4: '6789' } });
+    const w = wide();
+
+    const rows = (await c.call('GET', `/communities/${id}/referral-program/payouts?from=${w.from}&to=${w.to}`, { token: owner.token })).body.data.rows as { userId: string; account: { bankName: string; accountNumber: string; accountHolder: string } | null }[];
+    assert.deepEqual(rows.find((r) => r.userId === a.id)?.account, { bankName: 'Vietcombank', accountHolder: 'TRAN THI A', accountNumber: '0123456789' });
+    assert.equal(rows.find((r) => r.userId === b.id)?.account, null);
+
+    const csv = String((await c.call('GET', `/communities/${id}/referral-program/payouts/export.csv?from=${w.from}&to=${w.to}`, { token: owner.token })).body);
+    assert.ok(csv.includes('"=""0123456789"""'), csv);
+    assert.ok(csv.includes('TRAN THI A'));
+    assert.ok(csv.includes('Chưa cập nhật')); // người chưa nhập tài khoản
+
+    await pay(id, owner.token, { referrerIds: [a.id, b.id], ...w });
+    const empty = await c.call('GET', `/communities/${id}/referral-program/payouts/export.csv?from=${w.from}&to=${w.to}`, { token: owner.token });
+    assert.equal(empty.status, 409);
+  });
 });

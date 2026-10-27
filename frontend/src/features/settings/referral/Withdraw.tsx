@@ -103,7 +103,7 @@ function Row({ k, v }: { k: string; v: string }) {
   );
 }
 
-function AccountModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+export function AccountModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
   const { t } = useTranslation('settings');
   const toast = useToast();
   const banks = useBanks();
@@ -152,6 +152,10 @@ function AccountModal({ onClose, onSaved }: { onClose: () => void; onSaved: () =
             <input value={holder} onChange={(e) => setHolder(e.target.value)} maxLength={80} placeholder="NGUYEN VAN A" className={`${BARE_INPUT} uppercase`} />
           </IconInput>
         </Field>
+        <p className="m-0 flex items-start gap-2 rounded-xl bg-[#eef6ff] px-3 py-2.5 text-[12.5px] leading-snug text-[#1e40af] dark:bg-[#16202c] dark:text-[#93c5fd]">
+          <MaterialIcon name="info" size={17} filled color="currentColor" />
+          <span>{t('referral.withdraw.shareNote')}</span>
+        </p>
         {error && (
           <p role="alert" className="m-0 text-sm text-[#dc2626]">
             {error}

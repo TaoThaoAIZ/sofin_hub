@@ -22,6 +22,8 @@ interface PayoutRow {
   dueCents: number;
   paidCents: number;
   status: RowStatus;
+  /** Tài khoản nhận hoa hồng cộng tác viên đã nhập (chỉ chủ cộng đồng thấy) — null = chưa nhập. */
+  account: { bankName: string; accountHolder: string; accountNumber: string } | null;
 }
 interface PayoutHistory {
   id: string;
@@ -129,6 +131,47 @@ function ReferredModal({ communityId, userId, name, onClose }: { communityId: st
   );
 }
 
+/** Thông tin chuyển khoản của người sắp được chi trả (ngân hàng, số tài khoản, chủ tài khoản) để chủ cộng đồng chuyển đúng rồi mới bấm xác nhận. */
+function PayeeList({ payees }: { payees: PayoutRow[] }) {
+  const { t } = useTranslation('community');
+  const toast = useToast();
+  const copy = (text: string) => void navigator.clipboard?.writeText(text).then(() => toast.success(t('referral.po.copied')), () => undefined);
+  return (
+    <ul className="m-0 mt-3 flex max-h-[320px] list-none flex-col gap-2.5 overflow-y-auto p-0">
+      {payees.map((r) => (
+        <li key={r.userId} className="rounded-xl bg-[#faf7f4] px-4 py-3 text-[13.5px]">
+          {payees.length > 1 && (
+            <div className="mb-1.5 flex items-center justify-between gap-3">
+              <b className="min-w-0 truncate">{r.name}</b>
+              <b className="flex-none text-brand">{formatCents(r.dueCents)}</b>
+            </div>
+          )}
+          {r.account ? (
+            <dl className="m-0 grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-1.5">
+              <dt className="text-stone-500">{t('referral.po.payeeBank')}</dt>
+              <dd className="m-0 text-right font-semibold">{r.account.bankName}</dd>
+              <dt className="text-stone-500">{t('referral.po.payeeNumber')}</dt>
+              <dd className="m-0 flex items-center justify-end gap-1.5 font-mono font-bold">
+                {r.account.accountNumber}
+                <button type="button" onClick={() => copy(r.account!.accountNumber)} aria-label={t('referral.po.copyNumber')} className="grid size-6 cursor-pointer place-items-center border-0 bg-transparent p-0 text-stone-500 hover:text-brand">
+                  <MaterialIcon name="content_copy" size={16} color="currentColor" />
+                </button>
+              </dd>
+              <dt className="text-stone-500">{t('referral.po.payeeHolder')}</dt>
+              <dd className="m-0 text-right font-semibold">{r.account.accountHolder}</dd>
+            </dl>
+          ) : (
+            <p className="m-0 flex items-start gap-2 text-[13px] text-[#b45309]">
+              <MaterialIcon name="warning" size={18} filled color="currentColor" />
+              <span>{t('referral.po.payeeNone', { name: r.name })}</span>
+            </p>
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /**
  * Chi trả hoa hồng cho cộng tác viên (chỉ CHỦ cộng đồng): chủ tự chuyển khoản rồi bấm "Chi trả" để ghi nhận.
  * Số liệu, bảng, lịch sử đều là dữ liệu thật; khoảng ngày lọc theo ngày phát sinh hoa hồng.
@@ -147,7 +190,7 @@ export function OwnerPayoutSection({ communityId }: { communityId: string }) {
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [histAll, setHistAll] = useState(false);
-  const [confirm, setConfirm] = useState<{ ids: string[]; amount: number; name?: string } | null>(null);
+  const [confirm, setConfirm] = useState<{ payees: PayoutRow[]; amount: number } | null>(null);
   const [viewing, setViewing] = useState<{ userId: string; name: string } | null>(null);
 
   const rangeOk = !!from && !!to && from <= to;
@@ -182,6 +225,8 @@ export function OwnerPayoutSection({ communityId }: { communityId: string }) {
   const allPageSelected = dueRows.length > 0 && dueRows.every((r) => selected.has(r.userId));
   const selectedDue = rows.filter((r) => selected.has(r.userId) && r.dueCents > 0);
   const selectedAmount = selectedDue.reduce((s, r) => s + r.dueCents, 0);
+  // Xuất danh sách = những người còn khoản CẦN chi: chưa có ai thì không có gì để xuất (tránh file chỉ có dòng tiêu đề).
+  const noDue = !o || o.kpis.due.cents <= 0;
 
   const toggle = (id: string) => setSelected((cur) => { const n = new Set(cur); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const togglePage = () => setSelected((cur) => { const n = new Set(cur); if (allPageSelected) dueRows.forEach((r) => n.delete(r.userId)); else dueRows.forEach((r) => n.add(r.userId)); return n; });
@@ -211,7 +256,7 @@ export function OwnerPayoutSection({ communityId }: { communityId: string }) {
   const openRowMenu = (e: React.MouseEvent<HTMLElement>, r: PayoutRow) =>
     openMenu(e, [
       { icon: 'groups', label: t('referral.po.menuReferred'), onClick: () => setViewing({ userId: r.userId, name: r.name }) },
-      ...(r.dueCents > 0 ? [{ icon: 'payments', label: t('referral.po.pay'), onClick: () => setConfirm({ ids: [r.userId], amount: r.dueCents, name: r.name }) }] : []),
+      ...(r.dueCents > 0 ? [{ icon: 'payments', label: t('referral.po.pay'), onClick: () => setConfirm({ payees: [r], amount: r.dueCents }) }] : []),
     ], undefined, 230);
 
   const history = o?.history ?? [];
@@ -284,8 +329,8 @@ export function OwnerPayoutSection({ communityId }: { communityId: string }) {
           </div>
 
           <div className="mt-3 overflow-x-auto">
-            <div className="min-w-[760px]">
-              <div className="grid grid-cols-[28px_minmax(180px,2fr)_90px_80px_120px_120px_120px_130px] items-center gap-2.5 rounded-xl bg-[#f7f4f1] px-3 py-3 text-[12.5px] text-stone-600">
+            <div className="min-w-[1000px]">
+              <div className="grid grid-cols-[28px_minmax(200px,2fr)_90px_80px_120px_120px_130px_130px] items-center gap-2.5 rounded-xl bg-[#f7f4f1] px-3 py-3 text-[12.5px] text-stone-600">
                 <input type="checkbox" checked={allPageSelected} disabled={dueRows.length === 0} onChange={togglePage} aria-label={t('referral.po.selectAll')} className="size-4 accent-brand" />
                 <span>{t('referral.po.colCollab')}</span>
                 <span>{t('referral.po.colReferred')}</span>
@@ -293,7 +338,7 @@ export function OwnerPayoutSection({ communityId }: { communityId: string }) {
                 <span>{t('referral.po.colTotal')}</span>
                 <span>{t('referral.po.colDue')}</span>
                 <span>{t('referral.po.colStatus')}</span>
-                <span>{t('referral.po.colAction')}</span>
+                <span className="sticky right-0 -my-3 flex items-center self-stretch bg-[#f7f4f1] pl-2">{t('referral.po.colAction')}</span>
               </div>
               {query.isPending && rangeOk && <p className="py-8 text-center text-stone-400">{t('referral.loading')}</p>}
               {query.isError && <p role="alert" className="py-8 text-center text-[#dc2626]">{errText(query.error)}</p>}
@@ -301,7 +346,7 @@ export function OwnerPayoutSection({ communityId }: { communityId: string }) {
               {rows.map((r) => {
                 const st = STATUS_STYLE[r.status];
                 return (
-                  <div key={r.userId} className="grid grid-cols-[28px_minmax(180px,2fr)_90px_80px_120px_120px_120px_130px] items-center gap-2.5 border-b border-[rgba(120,60,20,.08)] px-3 py-3 text-[13.5px]">
+                  <div key={r.userId} className="grid grid-cols-[28px_minmax(200px,2fr)_90px_80px_120px_120px_130px_130px] items-center gap-2.5 border-b border-[rgba(120,60,20,.08)] px-3 py-3 text-[13.5px]">
                     <input type="checkbox" checked={selected.has(r.userId)} disabled={r.dueCents <= 0} onChange={() => toggle(r.userId)} aria-label={t('referral.po.selectRow', { name: r.name })} className="size-4 accent-brand" />
                     <span className="flex min-w-0 items-center gap-2.5">
                       <Avatar name={r.name} url={r.avatarUrl} />
@@ -319,11 +364,11 @@ export function OwnerPayoutSection({ communityId }: { communityId: string }) {
                         {t(`referral.po.status.${r.status}`)}
                       </span>
                     </span>
-                    <span className="flex items-center gap-1.5">
+                    <span className="sticky right-0 -my-3 flex items-center gap-1.5 self-stretch bg-white pl-2">
                       <button
                         type="button"
                         disabled={r.dueCents <= 0 || pay.isPending}
-                        onClick={() => setConfirm({ ids: [r.userId], amount: r.dueCents, name: r.name })}
+                        onClick={() => setConfirm({ payees: [r], amount: r.dueCents })}
                         className="h-8 cursor-pointer rounded-lg border-0 bg-gradient-to-b from-[#ff8f45] to-[#ff570a] px-3.5 text-[12.5px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         {t('referral.po.pay')}
@@ -374,12 +419,12 @@ export function OwnerPayoutSection({ communityId }: { communityId: string }) {
             <button
               type="button"
               disabled={selectedDue.length === 0 || pay.isPending}
-              onClick={() => setConfirm({ ids: selectedDue.map((r) => r.userId), amount: selectedAmount })}
+              onClick={() => setConfirm({ payees: selectedDue, amount: selectedAmount })}
               className="h-11 w-full cursor-pointer rounded-xl border-0 bg-gradient-to-b from-[#ff8f45] to-[#ff570a] text-[14.5px] font-bold text-white shadow-[0_8px_20px_rgba(255,87,10,.25)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {selectedDue.length > 0 ? t('referral.po.payBulkN', { n: selectedDue.length }) : t('referral.po.payBulk')}
             </button>
-            <button type="button" onClick={() => void exportCsv()} disabled={!rangeOk} className="mt-2.5 flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#e7e0da] bg-white text-[14px] font-semibold disabled:opacity-50">
+            <button type="button" onClick={() => void exportCsv()} disabled={!rangeOk || noDue} title={noDue ? t('referral.po.exportNone') : undefined} className="mt-2.5 flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#e7e0da] bg-white text-[14px] font-semibold disabled:cursor-not-allowed disabled:opacity-50">
               <MaterialIcon name="download" size={19} color="currentColor" />
               {t('referral.po.export')}
             </button>
@@ -427,12 +472,13 @@ export function OwnerPayoutSection({ communityId }: { communityId: string }) {
       {confirm && (
         <ConfirmDialog
           title={t('referral.po.confirmTitle')}
-          message={confirm.name ? t('referral.po.confirmOne', { amount: formatCents(confirm.amount), name: confirm.name }) : t('referral.po.confirmMany', { amount: formatCents(confirm.amount), n: confirm.ids.length })}
+          message={confirm.payees.length === 1 ? t('referral.po.confirmOne', { amount: formatCents(confirm.amount), name: confirm.payees[0]!.name }) : t('referral.po.confirmMany', { amount: formatCents(confirm.amount), n: confirm.payees.length })}
+          details={<PayeeList payees={confirm.payees} />}
           confirmLabel={t('referral.po.confirmBtn')}
           danger={false}
           pending={pay.isPending}
           error={pay.isError ? errText(pay.error) : null}
-          onConfirm={() => pay.mutate(confirm.ids)}
+          onConfirm={() => pay.mutate(confirm.payees.map((r) => r.userId))}
           onClose={() => { pay.reset(); setConfirm(null); }}
         />
       )}

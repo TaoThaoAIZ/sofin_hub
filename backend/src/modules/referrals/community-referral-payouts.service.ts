@@ -3,6 +3,7 @@ import type { Prisma } from '../../generated/prisma/client.js';
 import { prisma } from '../../db/prisma.js';
 import { HttpError } from '../../utils/http-error.js';
 import { notify } from '../notifications/notifications.service.js';
+import { decryptSecret } from './referral-payout-crypto.js';
 import { referralWithdrawalsService } from './referral-withdrawals.service.js';
 
 const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Ngày phải có dạng YYYY-MM-DD');
@@ -36,6 +37,20 @@ function rangeOf(q: { from?: string | undefined; to?: string | undefined }, now 
   if (from.getTime() > to.getTime()) throw HttpError.badRequest('Ngày bắt đầu phải trước ngày kết thúc');
   const len = to.getTime() - from.getTime() + 1;
   return { from, to, prevFrom: new Date(from.getTime() - len), prevTo: new Date(from.getTime() - 1) };
+}
+/** Tài khoản nhận hoa hồng của cộng tác viên (giải mã số tài khoản) — chỉ trả cho CHỦ cộng đồng để họ chuyển khoản. Lỗi giải mã (đổi khóa) coi như chưa có. */
+type PayeeAccount = { bankName: string; accountHolder: string; accountNumber: string };
+async function payeeAccounts(userIds: string[]): Promise<Map<string, PayeeAccount>> {
+  const rows = await prisma.referralPayoutAccount.findMany({ where: { userId: { in: userIds } }, select: { userId: true, bankName: true, accountHolder: true, accountNumberEnc: true } });
+  const out = new Map<string, PayeeAccount>();
+  for (const r of rows) {
+    try {
+      out.set(r.userId, { bankName: r.bankName, accountHolder: r.accountHolder, accountNumber: decryptSecret(r.accountNumberEnc) });
+    } catch {
+      /* khóa mã hóa đã đổi: bỏ qua */
+    }
+  }
+  return out;
 }
 const pctChange = (cur: number, prev: number) => (prev > 0 ? Math.round(((cur - prev) / prev) * 100) : null);
 
@@ -111,7 +126,9 @@ export const communityReferralPayoutsService = {
       .filter((x) => (query.status === 'all' ? true : x.status === query.status))
       .sort((a, b) => b.dueCents - a.dueCents || b.totalCents - a.totalCents || a.name.localeCompare(b.name));
     const total = all.length;
-    const rows = all.slice((query.page - 1) * query.pageSize, query.page * query.pageSize);
+    const pageRows = all.slice((query.page - 1) * query.pageSize, query.page * query.pageSize);
+    const accounts = await payeeAccounts(pageRows.map((x) => x.userId));
+    const rows = pageRows.map((x) => ({ ...x, account: accounts.get(x.userId) ?? null }));
 
     const history = await prisma.communityCommissionPayout.findMany({
       where: { communityId },
@@ -209,23 +226,26 @@ export const communityReferralPayoutsService = {
       _sum: { amountCents: true },
       _count: { _all: true },
     });
+    // Không có ai cần chi trả thì không xuất file chỉ có dòng tiêu đề.
+    if (groups.length === 0) throw HttpError.coded(409, 'NOTHING_DUE', 'Chưa có khoản hoa hồng nào cần thanh toán trong khoảng ngày này');
     const ids = groups.map((g) => g.referrerId);
     const [users, accounts, referred, community] = await Promise.all([
       prisma.user.findMany({ where: { id: { in: ids } }, select: { id: true, firstName: true, lastName: true, email: true } }),
-      prisma.referralPayoutAccount.findMany({ where: { userId: { in: ids } }, select: { userId: true, bankName: true, accountHolder: true, accountLast4: true } }),
+      payeeAccounts(ids),
       prisma.communityReferral.groupBy({ by: ['referrerId'], where: { communityId, referrerId: { in: ids } }, _count: { _all: true } }),
       prisma.community.findFirst({ where: { id: communityId }, select: { referralRateBps: true } }),
     ]);
     const u = new Map(users.map((x) => [x.id, x]));
-    const a = new Map(accounts.map((x) => [x.userId, x]));
+    const a = accounts;
     const n = new Map(referred.map((x) => [x.referrerId, x._count._all]));
+    // Số tài khoản ghi dạng `="…"` (đã escape trong ô CSV) để Excel giữ nguyên chữ số, không đổi sang dạng khoa học / bỏ số 0 đầu.
     const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
-    const header = ['Cộng tác viên', 'Email', 'Người được giới thiệu', 'Tỷ lệ hoa hồng (%)', 'Số khoản hoa hồng', 'Cần chi trả (đ)', 'Ngân hàng', 'Chủ tài khoản', 'Số tài khoản (4 số cuối)'];
+    const header = ['Cộng tác viên', 'Email', 'Người được giới thiệu', 'Tỷ lệ hoa hồng (%)', 'Số khoản hoa hồng', 'Cần chi trả (đ)', 'Ngân hàng', 'Số tài khoản', 'Chủ tài khoản'];
     const lines = groups
       .map((g) => {
         const usr = u.get(g.referrerId);
         const acc = a.get(g.referrerId);
-        return [usr ? nameOf(usr) : g.referrerId, usr?.email ?? '', n.get(g.referrerId) ?? 0, (community?.referralRateBps ?? 0) / 100, g._count._all, g._sum.amountCents ?? 0, acc?.bankName ?? '', acc?.accountHolder ?? '', acc ? `••••${acc.accountLast4}` : ''];
+        return [usr ? nameOf(usr) : g.referrerId, usr?.email ?? '', n.get(g.referrerId) ?? 0, (community?.referralRateBps ?? 0) / 100, g._count._all, g._sum.amountCents ?? 0, acc?.bankName ?? 'Chưa cập nhật', acc ? `="${acc.accountNumber}"` : '', acc?.accountHolder ?? ''];
       })
       .sort((x, y) => Number(y[5]) - Number(x[5]));
     return `﻿${[header, ...lines].map((row) => row.map(esc).join(',')).join('\r\n')}\r\n`;
