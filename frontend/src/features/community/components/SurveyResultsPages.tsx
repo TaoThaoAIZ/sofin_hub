@@ -40,7 +40,7 @@ const pctOf = (responses: number, members: number) => (members ? Math.min(100, M
 
 function StatCard({ icon, tone, label, value }: { icon: string; tone: string; label: string; value: string }) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-[rgba(120,60,20,.1)] bg-white p-4">
+    <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-soft">
       <span className={`grid size-11 flex-none place-items-center rounded-xl ${tone}`}>
         <MaterialIcon name={icon} size={24} filled color="currentColor" />
       </span>
@@ -88,11 +88,11 @@ export function SurveysPage() {
         </div>
       )}
       {data && surveys.length > 0 && (
-        <div className="overflow-x-auto rounded-3xl border border-[rgba(120,60,20,.1)] bg-white p-4 max-sm:p-2">
-          <table className="w-full min-w-[900px] border-separate border-spacing-0 text-[13.5px]">
+        <div className="overflow-x-auto rounded-3xl bg-white p-4 shadow-soft max-sm:p-2">
+          <table className="w-full min-w-[1180px] border-separate border-spacing-0 text-[13.5px]">
             <thead>
               <tr className="bg-[#f5f1ed]">
-                <th className={`${th} rounded-l-xl`}>{t('surveyResults.cols.survey')}</th>
+                <th className={`${th} min-w-[340px] rounded-l-xl`}>{t('surveyResults.cols.survey')}</th>
                 <th className={th}>{t('surveyResults.cols.lesson')}</th>
                 <th className={th}>{t('surveyResults.cols.questions')}</th>
                 <th className={th}>{t('surveyResults.cols.responses')}</th>
@@ -111,7 +111,7 @@ export function SurveysPage() {
                 const to = communityHome(communityId, `khao-sat/${s.lessonId}`);
                 return (
                   <tr key={s.lessonId}>
-                    <td className={`${cell} max-w-[240px] font-medium`}>
+                    <td className={`${cell} min-w-[340px] max-w-[460px] font-medium`}>
                       <Link to={to} className="line-clamp-2 break-words hover:text-brand">{s.lessonTitle}</Link>
                     </td>
                     <td className={cell}>
