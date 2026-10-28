@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
 import { after, before, describe, it } from 'node:test';
-import { makeClient, startTestServer, type TestServer } from './helpers.js';
+import { makeClient, startTestServer, type TestServer , refundViaService } from './helpers.js';
 
 const ADMIN_EMAIL = 'padmin-modpay@test.local';
 process.env.PLATFORM_ADMIN_EMAILS = ADMIN_EMAIL;
@@ -204,7 +204,7 @@ describe('mua lẻ module trả phí', () => {
 
   it('hoàn tiền: thu hồi ModuleAccess (purchase), khóa lại module, giữ thành viên, doanh thu trừ lại', async () => {
     const before = (await c.call('GET', `${base}/revenue`, { token: owner.token })).body.data;
-    const rf = await c.call('POST', `/payments/${paymentId}/refund-request`, { token: buyer.token, body: { reason: 'Không cần nữa' } });
+    const rf = await refundViaService(paymentId, buyer.id, 'Không cần nữa');
     assert.equal(rf.status, 201);
     assert.equal(rf.body.data.status, 'approved');
     assert.equal(await prisma.moduleAccess.count({ where: { userId: buyer.id, moduleId: paidId } }), 0);

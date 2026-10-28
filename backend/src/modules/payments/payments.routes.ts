@@ -16,7 +16,6 @@ import {
   paginationQuery,
   paymentMethodInput,
   purchaseModuleBody,
-  refundRequestBody,
   resolvePayoutBody,
   resolveRefundBody,
   revenueQuery,
@@ -115,11 +114,9 @@ paymentsRouter.get('/payments/:paymentId/invoice', requireAuth, async (req, res)
   res.json({ data: await paymentsService.invoice(id(req.params.paymentId), req.userId!) });
 });
 
-// ---- hoàn tiền
-paymentsRouter.post('/payments/:paymentId/refund-request', requireAuth, async (req, res) => {
-  const body = refundRequestBody.parse(req.body);
-  const refund = await paymentsService.requestRefund(id(req.params.paymentId), req.userId!, body.reason);
-  res.status(201).json({ data: refund });
+// ---- hoàn tiền: người dùng không còn tự yêu cầu hoàn tiền (admin vẫn xử lý các yêu cầu cũ / chargeback)
+paymentsRouter.post('/payments/:paymentId/refund-request', requireAuth, async () => {
+  throw HttpError.coded(410, 'REFUND_DISABLED', 'Tính năng hoàn tiền đã ngừng hỗ trợ.');
 });
 
 paymentsRouter.get('/admin/refunds', ...adminOnly, async (req, res) => {

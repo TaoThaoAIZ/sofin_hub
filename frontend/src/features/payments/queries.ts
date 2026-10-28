@@ -170,14 +170,6 @@ export const useInvoice = (paymentId: string | null) =>
     retry: false,
   });
 
-export const useRequestRefund = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (v: { paymentId: string; reason: string }) => api.requestRefund(v.paymentId, v.reason),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['payments'] }),
-  });
-};
-
 export const useRevenue = (courseId: string, params: { from?: string; to?: string }) => {
   const { status } = useAuth();
   return useQuery({

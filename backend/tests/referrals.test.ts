@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
-import { makeClient, startTestServer, useTestDb, type TestDb, type TestServer } from './helpers.js';
+import { makeClient, startTestServer, useTestDb, type TestDb, type TestServer , refundViaService } from './helpers.js';
 
 const DAY = 86_400_000;
 
@@ -235,7 +235,7 @@ describe('chương trình giới thiệu: mã, ghi nhận, hoa hồng, KPI', () 
       const ref = await signup('void');
       const friend = await signup('void-f', await codeOf(ref));
       const p = await pay(friend, id);
-      const r = await c.call('POST', `/payments/${p.id}/refund-request`, { token: friend.token, body: { reason: 'đổi ý rồi' } });
+      const r = await refundViaService(p.id, friend.id, 'đổi ý rồi');
       assert.equal(r.status, 201, JSON.stringify(r.body));
       assert.equal(r.body.data.status, 'approved'); // trong cửa sổ hoàn tiền → tự duyệt
       const row = await db.prisma.referralCommission.findFirst({ where: { referrerId: ref.id } });

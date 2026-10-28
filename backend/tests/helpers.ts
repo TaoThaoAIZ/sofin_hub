@@ -277,3 +277,15 @@ export async function ensureMainCourse(prisma: PrismaClient, communityId: string
   await prisma.course.upsert({ where: { id }, create: { id, communityId, title: communityId, position: 1 }, update: {} });
   return id;
 }
+
+/** Người dùng không còn tự yêu cầu hoàn tiền qua API (route trả 410); test cần trạng thái "đã hoàn tiền" thì gọi thẳng service như admin/hệ thống. */
+export async function refundViaService(paymentId: string, userId: string, reason: string): Promise<{ status: number; body: any }> {
+  const { paymentsService } = await import('../src/modules/payments/payments.service.js');
+  try {
+    return { status: 201, body: { data: await paymentsService.requestRefund(paymentId, userId, reason) } };
+  } catch (e) {
+    const status = (e as { status?: number }).status;
+    if (!status) throw e;
+    return { status, body: { error: (e as Error).message } };
+  }
+}

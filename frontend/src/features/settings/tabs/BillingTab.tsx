@@ -10,11 +10,10 @@ import { useToast } from '../../admin/components/overlay';
 import { InvoiceDialog } from '../../payments/components/InvoiceDialog';
 import { PayNowDialog } from '../../payments/components/PayNowDialog';
 import { useMyPayments, useMySubscriptions } from '../../payments/queries';
-import type { PaymentRecord, Subscription } from '../../payments/types';
+import type { Subscription } from '../../payments/types';
 import { fetchAllPayments } from '../billing/api';
 import { buildPaymentsCsv, downloadTextFile, PAY_STATUS, paymentDescription } from '../billing/csv';
 import { useBillingSummary } from '../billing/queries';
-import { RefundModal } from '../billing/RefundModal';
 import { SubscriptionModal } from '../billing/SubscriptionModal';
 import { CommunityLogo, OUTLINE_BTN, SCard, SHead } from '../ui';
 
@@ -22,7 +21,6 @@ const errText = (e: unknown) => (e instanceof ApiError ? e.message : i18n.t('com
 
 type Modal =
   | { kind: 'sub'; sub: Subscription }
-  | { kind: 'refund'; payment: PaymentRecord }
   | null;
 
 /* ------------------------------------------------------------------ khoản chờ thanh toán */
@@ -259,8 +257,7 @@ export function BillingTab() {
       <SubscriptionsCard onModal={setModal} />
       <HistoryCard onInvoice={setInvoiceId} onPay={setPayId} />
 
-      {modal?.kind === 'sub' && <SubscriptionModal sub={modal.sub} onClose={close} onRefund={(payment) => setModal({ kind: 'refund', payment })} />}
-      {modal?.kind === 'refund' && <RefundModal payment={modal.payment} onClose={close} />}
+      {modal?.kind === 'sub' && <SubscriptionModal sub={modal.sub} onClose={close} />}
       {invoiceId && <InvoiceDialog paymentId={invoiceId} onClose={() => setInvoiceId(null)} />}
       {payId && <PayNowDialog paymentId={payId} onClose={() => setPayId(null)} />}
     </main>

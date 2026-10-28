@@ -55,8 +55,6 @@ export function CalendarTab() {
   const rsvp = useToggleRsvp(courseId);
   const cancelRsvp = useCancelRsvp(courseId);
   const createEvent = useCreateEvent(courseId);
-  const downloadIcs = useDownloadIcs();
-  const downloadDocx = useDownloadDocx();
 
   const today = useMemo(() => new Date(), []);
   const minStart = toLocalInput(new Date().toISOString());
@@ -157,28 +155,6 @@ export function CalendarTab() {
               </div>
             )}
           </div>
-
-          <button
-            type="button"
-            onClick={() => downloadIcs.mutate({ courseId }, { onSuccess: () => toast(t('calendar.icsToast')), onError: (e) => toast(errText(e), 'error') })}
-            disabled={downloadIcs.isPending}
-            className={toolBtn}
-            title={t('calendar.icsTitle')}
-          >
-            <MaterialIcon name="event_repeat" size={19} />
-            {t('calendar.subscribeAll')}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => downloadDocx.mutate({ courseId }, { onSuccess: () => toast(t('calendar.docxToast')), onError: (e) => toast(errText(e), 'error') })}
-            disabled={downloadDocx.isPending}
-            className={toolBtn}
-            title={t('calendar.docxTitle')}
-          >
-            <MaterialIcon name="description" size={19} />
-            {t('calendar.docxAll')}
-          </button>
 
           {canManage && <button onClick={() => setShowForm((s) => !s)} className="flex h-11 items-center gap-2 rounded-xl bg-brand px-[18px] text-sm font-bold text-white max-md:order-first max-md:w-full max-md:justify-center">
             <MaterialIcon name={showForm ? 'close' : 'add'} size={19} color="#fff" />
@@ -434,8 +410,7 @@ function EventDialog({
 
         {ev.cancelledAt ? (
           <p className="mt-5 text-center text-sm text-stone-500">{t('calendar.cancelledEvent')}</p>
-        ) : !ev.isPast ? (
-          <button
+        ) : !ev.isPast ? (canManage ? null : <button
             onClick={onRsvp}
             disabled={rsvpPending || full}
             className={`mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-xl text-sm font-bold disabled:opacity-60 ${ev.viewerRsvped ? 'bg-brand/10 text-brand' : 'bg-brand text-white'}`}

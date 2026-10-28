@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
-import { makeClient, startTestServer, useTestDb, type TestDb, type TestServer } from './helpers.js';
+import { makeClient, startTestServer, useTestDb, type TestDb, type TestServer , refundViaService } from './helpers.js';
 
 const DAY = 86_400_000;
 /** VND: 7 USD ≈ 175.000đ/tháng, 48 USD ≈ 1.200.000đ/năm (seedVnd). */
@@ -259,7 +259,7 @@ describe('gói thành viên theo năm, báo giá (không còn dùng thử), gói
       assert.equal(rev.activePaidMembers, 2);
       assert.equal(rev.grossCents, A + M);
 
-      const rf = await c.call('POST', `/payments/${ap.id}/refund-request`, { token: a.token, body: { reason: 'Đổi ý' } });
+      const rf = await refundViaService(ap.id, a.id, 'Đổi ý');
       assert.equal(rf.status, 201, JSON.stringify(rf.body));
       assert.equal(rf.body.data.status, 'approved');
       assert.equal(rf.body.data.amountCents, A);
@@ -372,7 +372,7 @@ describe('gói thành viên theo năm, báo giá (không còn dùng thử), gói
       assert.equal(pays[0]!.subscriptionId, s.id);
       assert.equal(await enrollmentService.isEnrolled(u.id, id), true);
       // hoàn tiền trong cửa sổ vẫn được
-      const rf = await c.call('POST', `/payments/${pays[0]!.id}/refund-request`, { token: u.token, body: { reason: 'Không dùng nữa' } });
+      const rf = await refundViaService(pays[0]!.id, u.id, 'Không dùng nữa');
       assert.equal(rf.body.data.status, 'approved');
     });
 

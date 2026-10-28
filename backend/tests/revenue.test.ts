@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
-import { makeClient, startTestServer, type TestServer } from './helpers.js';
+import { makeClient, startTestServer, type TestServer , refundViaService } from './helpers.js';
 
 // Đặt trước khi nạp env (dynamic import). Ngưỡng rút 100.000đ để test không cần quá nhiều giao dịch.
 const ADMIN_EMAIL = 'padmin-revenue@test.local';
@@ -180,7 +180,7 @@ describe('doanh thu & payout cho Owner', () => {
     const nb = await c.registerUser('refund-new');
     const np = await pay(nb);
     const before = (await c.call('GET', `/courses/${COURSE}/revenue`, { token: owner.token })).body.data;
-    const r = await c.call('POST', `/payments/${np.id}/refund-request`, { token: nb.token, body: { reason: 'Đổi ý' } });
+    const r = await refundViaService(np.id, nb.id, 'Đổi ý');
     assert.equal(r.body.data.status, 'approved');
     const after = (await c.call('GET', `/courses/${COURSE}/revenue`, { token: owner.token })).body.data;
     assert.equal(after.refundsCents, 175_000);

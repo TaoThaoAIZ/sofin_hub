@@ -16,7 +16,7 @@ const refundText = (s: PaymentRecord['refundStatus']) =>
  * "Quản lý" gói: hủy cuối kỳ (vẫn dùng tới hết kỳ) / hủy ngay / kích hoạt lại + lối vào "Yêu cầu hoàn tiền".
  * Đây là nơi giữ lại đủ khả năng của trang /billing cũ (hủy ngay, tiếp tục gói, hoàn tiền).
  */
-export function SubscriptionModal({ sub, onClose, onRefund }: { sub: Subscription; onClose: () => void; onRefund: (p: PaymentRecord) => void }) {
+export function SubscriptionModal({ sub, onClose }: { sub: Subscription; onClose: () => void }) {
   const { t } = useTranslation('settings');
   const toast = useToast();
   const cancel = useCancelSubscription();
@@ -83,11 +83,6 @@ export function SubscriptionModal({ sub, onClose, onRefund }: { sub: Subscriptio
       {(latest || lastState) && (
         <div className="flex items-center justify-between gap-3 rounded-xl bg-[#faf7f4] px-3.5 py-3 text-[13.5px]">
           <span className="text-stone-600">{refundText(lastState) ?? t('subscription.latestPayment', { amount: formatCents(latest!.amountCents ?? latest!.amountUsd) })}</span>
-          {latest && !lastState && (
-            <button type="button" onClick={() => onRefund(latest)} className="border-0 bg-transparent p-0 font-bold text-[#15803d] underline">
-              {t('subscription.requestRefund')}
-            </button>
-          )}
         </div>
       )}
       {error && <ModalError>{error}</ModalError>}

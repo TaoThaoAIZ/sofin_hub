@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
-import { makeClient, startTestServer, type TestServer } from './helpers.js';
+import { makeClient, startTestServer, type TestServer , refundViaService } from './helpers.js';
 
 // Phải đặt trước khi nạp app/env (dynamic import bên dưới).
 const ADMIN_EMAIL = 'padmin-payments@test.local';
@@ -286,11 +286,11 @@ describe('thanh toán chuyển khoản, gói thành viên, hoàn tiền, webhook
       const u = await c.registerUser('refund-in');
       const payment = await pay(u, 'ai');
       assert.equal((await c.call('POST', `/payments/${payment.id}/refund-request`, { body: { reason: 'không cần' } })).status, 401);
-      assert.equal((await c.call('POST', `/payments/${payment.id}/refund-request`, { token: u.token, body: {} })).status, 400);
+      assert.equal((await c.call('POST', `/payments/${payment.id}/refund-request`, { token: u.token, body: { reason: 'không cần' } })).status, 410); // người dùng không còn tự hoàn tiền qua API
       const other = await c.registerUser('refund-other');
-      assert.equal((await c.call('POST', `/payments/${payment.id}/refund-request`, { token: other.token, body: { reason: 'thử xem' } })).status, 403);
+      assert.equal((await refundViaService(payment.id, other.id, 'thử xem')).status, 403);
 
-      const r = await c.call('POST', `/payments/${payment.id}/refund-request`, { token: u.token, body: { reason: 'Không phù hợp' } });
+      const r = await refundViaService(payment.id, u.id, 'Không phù hợp');
       assert.equal(r.status, 201);
       assert.equal(r.body.data.status, 'approved');
       assert.equal(r.body.data.auto, true);
@@ -299,7 +299,7 @@ describe('thanh toán chuyển khoản, gói thành viên, hoàn tiền, webhook
       const hist = await c.call('GET', '/me/payments', { token: u.token });
       assert.equal(hist.body.data[0].status, 'refunded');
       assert.equal(hist.body.data[0].refundedCents, 175_000);
-      assert.equal((await c.call('POST', `/payments/${payment.id}/refund-request`, { token: u.token, body: { reason: 'lần nữa' } })).status, 409);
+      assert.equal((await refundViaService(payment.id, u.id, 'lần nữa')).status, 409);
     });
 
     it('ngoài cửa sổ: chuyển pending, Platform Admin duyệt / từ chối; người thường 403', async () => {
@@ -396,7 +396,7 @@ describe('thanh toán chuyển khoản, gói thành viên, hoàn tiền, webhook
     it('đã hoàn tiền (refunded) rồi nhận thêm giao dịch cùng mã: ghi nhận chuyển trùng, KHÔNG cấp lại quyền', async () => {
       const u = await c.registerUser('wh-refunded');
       const p = await pay(u, 'ux');
-      await c.call('POST', `/payments/${p.id}/refund-request`, { token: u.token, body: { reason: 'không cần' } });
+      await refundViaService(p.id, u.id, 'không cần');
       assert.equal(await enrollmentService.isEnrolled(u.id, 'ux'), false);
       const dup = c.sepayTx({ id: txId(), refCode: p.refCode, amount: p.amountCents });
       assert.equal((await c.bankWebhook(dup)).body.message, 'duplicate');
@@ -475,8 +475,8 @@ describe('thanh toán chuyển khoản, gói thành viên, hoàn tiền, webhook
       const u = await c.registerUser('refund-race');
       const p = await pay(u, 'ai');
       const [r1, r2] = await Promise.all([
-        c.call('POST', `/payments/${p.id}/refund-request`, { token: u.token, body: { reason: 'song song 1' } }),
-        c.call('POST', `/payments/${p.id}/refund-request`, { token: u.token, body: { reason: 'song song 2' } }),
+        refundViaService(p.id, u.id, 'song song 1'),
+        refundViaService(p.id, u.id, 'song song 2'),
       ]);
       assert.deepEqual([r1.status, r2.status].sort(), [201, 409]);
       assert.equal(await prisma.refundRequest.count({ where: { paymentId: p.id } }), 1);

@@ -207,7 +207,7 @@ export const communityReferralPayoutsService = {
           type: 'system',
           title: 'Chủ cộng đồng đã chi trả hoa hồng giới thiệu',
           body: `Bạn đã được chi trả ${vnd(done.paidCents)} hoa hồng giới thiệu. Khoản này được chuyển khoản trực tiếp nên không còn trong số dư rút của bạn.`,
-          link: `/communities/${communityId}/chuong-trinh-gioi-thieu`,
+          link: `/communities/${communityId}/community/chuong-trinh-gioi-thieu`,
           communityId,
         });
       }

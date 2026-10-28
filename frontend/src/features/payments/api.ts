@@ -8,7 +8,6 @@ import type {
   PaymentRecord,
   Payout,
   PayoutInput,
-  RefundRequest,
   RevenueSummary,
   Subscription,
   SubscriptionStatus,
@@ -73,9 +72,6 @@ export const fetchMyPayments = (params: { page: number; limit: number }, signal?
   apiGet<{ data: PaymentRecord[]; meta: PageMeta }>('/me/payments', params, signal);
 
 export const fetchInvoice = (paymentId: string) => apiGet<{ data: Invoice }>(`/payments/${paymentId}/invoice`).then((r) => r.data);
-
-export const requestRefund = (paymentId: string, reason: string) =>
-  apiPost<{ data: RefundRequest }>(`/payments/${paymentId}/refund-request`, { reason }).then((r) => r.data);
 
 export const fetchRevenue = (courseId: string, params: { from?: string; to?: string }, signal?: AbortSignal) =>
   apiGet<{ data: RevenueSummary }>(`/communities/${courseId}/revenue`, params, signal).then((r) => r.data);
