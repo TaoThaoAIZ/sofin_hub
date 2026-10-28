@@ -336,7 +336,10 @@
     "deleted": "Đã xóa sự kiện",
     "cancelled": "Đã hủy",
     "cancelledEvent": "Sự kiện này đã bị hủy",
-    "subtitle": "Quản lý và tham gia các sự kiện trong cộng đồng"
+    "subtitle": "Quản lý và tham gia các sự kiện trong cộng đồng",
+    "inviteAll": "Chọn tất cả thành viên",
+    "inviteClear": "Bỏ chọn tất cả ({{n}})",
+    "inviteCapped": "Đã đạt tối đa {{max}} người được mời"
   },
   "ui": {
     "close": "Đóng",

@@ -336,7 +336,10 @@
     "deleted": "Event deleted",
     "cancelled": "Cancelled",
     "cancelledEvent": "This event has been cancelled",
-    "subtitle": "Manage and join events in your community"
+    "subtitle": "Manage and join events in your community",
+    "inviteAll": "Select all members",
+    "inviteClear": "Clear all ({{n}})",
+    "inviteCapped": "Limit of {{max}} invitees reached"
   },
   "ui": {
     "close": "Close",
