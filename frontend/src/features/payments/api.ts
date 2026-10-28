@@ -71,6 +71,8 @@ export const resumeSubscription = (courseId: string) =>
 export const fetchMyPayments = (params: { page: number; limit: number }, signal?: AbortSignal) =>
   apiGet<{ data: PaymentRecord[]; meta: PageMeta }>('/me/payments', params, signal);
 
+export const cancelPayment = (paymentId: string) => apiPost<{ data: PaymentIntent }>(`/payments/${paymentId}/cancel`).then((r) => r.data);
+
 export const fetchInvoice = (paymentId: string) => apiGet<{ data: Invoice }>(`/payments/${paymentId}/invoice`).then((r) => r.data);
 
 export const fetchRevenue = (courseId: string, params: { from?: string; to?: string }, signal?: AbortSignal) =>

@@ -15,7 +15,8 @@
     "createCommunity": "Create community",
     "language": "Language",
     "themeToDark": "Switch to dark mode",
-    "themeToLight": "Switch to light mode"
+    "themeToLight": "Switch to light mode",
+    "account": "{{name}}'s account"
   },
   "time": {
     "justNow": "just now",
@@ -35,5 +36,25 @@
     "music": "Music",
     "sports": "Sports",
     "spirituality": "Spirituality"
+  },
+  "pageTitle": {
+    "home": "SofinHub – Learn new skills, grow with the community",
+    "login": "Log in",
+    "register": "Sign up",
+    "verifyOtp": "Verify email",
+    "forgotPassword": "Forgot password",
+    "resetPassword": "Reset password",
+    "search": "Search",
+    "messages": "Messages",
+    "notifications": "Notifications",
+    "settings": "Settings",
+    "myCommunities": "My communities",
+    "tools": "Tools",
+    "faq": "FAQ",
+    "terms": "Terms of Use",
+    "privacy": "Privacy Policy",
+    "contact": "Contact",
+    "createCommunity": "Create community",
+    "admin": "Admin"
   }
 }

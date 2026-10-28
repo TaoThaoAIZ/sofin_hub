@@ -5,8 +5,8 @@ import { enrollmentService } from '../enrollments/enrollments.service.js';
 import { getRole, isPlatformAdmin } from '../permissions/policy.js';
 import { FILE_URL_PREFIX, isPublicPurpose, type UploadRecord } from './uploads.types.js';
 
-/** Hạn sống của URL ký cho file riêng tư (giây). Đủ để <img>/<a> tải xong; muốn xem lại thì xin URL mới. */
-export const FILE_URL_TTL_SEC = 300;
+/** Hạn sống của URL ký cho file riêng tư (giây): 1 giờ để trang mở lâu (ảnh tin nhắn tải muộn, cuộn dài) không gặp link hết hạn; URL gắn với người xin và quyền vẫn kiểm lại mỗi lần GET. */
+export const FILE_URL_TTL_SEC = 3600;
 
 const mac = (key: string, userId: string, exp: number) =>
   createHmac('sha256', env.UPLOAD_SIGNING_SECRET).update(`file|${key}|${userId}|${exp}`).digest('base64url');

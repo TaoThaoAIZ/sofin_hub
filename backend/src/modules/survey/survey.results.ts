@@ -17,6 +17,9 @@ const pageQuery = {
   limit: z.coerce.number().int().min(1).max(50).default(20),
   q: z.string().trim().max(100).optional(),
 };
+/** Giờ Việt Nam (UTC+7) dạng `YYYY-MM-DD HH:mm` cho file CSV (giao diện cũng hiện giờ VN). */
+const vnTime = (d: Date) => new Date(d.getTime() + 7 * 3_600_000).toISOString().slice(0, 16).replace('T', ' ');
+
 export const textsQuery = z.object({ ...pageQuery, questionId: z.string().trim().min(1).max(64) });
 export const responsesQuery = z.object({ ...pageQuery, questionId: z.string().trim().max(64).optional(), choice: z.string().max(200).optional() });
 export type TextsQuery = z.infer<typeof textsQuery>;
@@ -173,7 +176,7 @@ export const surveyResults = {
           const a = answers.find((x) => x.questionId === q.id);
           return a ? [...a.choices, ...(a.text ? [a.text] : [])].join('; ') : '';
         });
-        yield `${[name, r.updatedAt.toISOString(), ...cells].map(esc).join(',')}\r\n`;
+        yield `${[name, vnTime(r.updatedAt), ...cells].map(esc).join(',')}\r\n`;
       }
       cursorId = rows[rows.length - 1]!.id;
     }

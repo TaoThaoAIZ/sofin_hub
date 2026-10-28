@@ -7,7 +7,7 @@ import { useClickOutside } from '../../../lib/useClickOutside';
 import { useCommunityDetail } from '../../courses/queries';
 import { useCancelRsvp, useCreateEvent, useDeleteEvent, useDownloadDocx, useDownloadIcs, useEvents, useToggleRsvp, useUpdateEvent } from '../queries';
 import type { CommunityEvent } from '../types';
-import { areaCls, ConfirmDialog, Dialog, errText, ErrorNote, ghostBtn, inputCls, isModPlus, primaryBtn, safeUrl, toast, ToastHost, toLocalInput } from './contentUi';
+import { areaCls, ConfirmDialog, Dialog, errText, ErrorNote, ghostBtn, inputCls, isModPlus, primaryBtn, safeUrl, toast, ToastHost, toLocalInput, useEscapeKey } from './contentUi';
 import { InviteePicker } from './InviteePicker';
 import { PageBanner } from './shared';
 import { useAuth } from '../../auth/AuthContext';
@@ -171,6 +171,10 @@ export function CalendarTab() {
                 toast(t('calendar.pastDateError'), 'error');
                 return;
               }
+              if (meetingLink.trim() && !safeUrl(meetingLink.trim())) {
+                toast(t('calendar.linkError'), 'error');
+                return;
+              }
               createEvent.mutate(
                 {
                   title,
@@ -303,6 +307,7 @@ function EventDialog({
   const remove = useDeleteEvent(courseId);
   const downloadIcs = useDownloadIcs();
   const downloadDocx = useDownloadDocx();
+  useEscapeKey(onClose);
   const [editing, setEditing] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false);
   const [title, setTitle] = useState(ev.title);
@@ -331,6 +336,8 @@ function EventDialog({
               onClick={() =>
                 startAt !== toLocalInput(ev.startAt) && new Date(startAt).getTime() < Date.now()
                   ? toast(t('calendar.pastDateError'), 'error')
+                  : meetingLink.trim() && !safeUrl(meetingLink.trim())
+                  ? toast(t('calendar.linkError'), 'error')
                   : update.mutate(
                   {
                     eventId: ev.id,
@@ -378,7 +385,7 @@ function EventDialog({
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4">
-      <div role="dialog" aria-label={ev.title} onClick={(e) => e.stopPropagation()} className="max-h-[92vh] w-full max-w-md overflow-x-hidden overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl">
+      <div role="dialog" aria-modal="true" aria-label={ev.title} onClick={(e) => e.stopPropagation()} className="max-h-[92vh] w-full max-w-md overflow-x-hidden overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl">
         <div className="flex items-start gap-3">
           <span className="grid size-12 flex-none place-items-center rounded-xl bg-brand/10">
             <MaterialIcon name="event" size={26} filled color="#ff570a" />

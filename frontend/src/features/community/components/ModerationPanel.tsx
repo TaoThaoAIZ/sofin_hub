@@ -82,9 +82,9 @@ function ReportCard({ report, courseId }: { report: Report; courseId: string | n
                 <MaterialIcon name="visibility_off" size={18} /> {t('moderation.hideBtn')}
               </button>
             )}
-            <button type="button" disabled={resolve.isPending} onClick={() => setConfirmBan(true)} className={`${ghostBtn} !text-red-600`}>
+            {report.targetRole !== 'owner' && <button type="button" disabled={resolve.isPending} onClick={() => setConfirmBan(true)} className={`${ghostBtn} !text-red-600`}>
               <MaterialIcon name="gavel" size={18} color="#dc2626" /> {t('moderation.banBtn')}
-            </button>
+            </button>}
           </div>
           <ErrorNote message={resolve.isError && !confirmBan ? errText(resolve.error) : null} />
         </div>

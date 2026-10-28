@@ -114,6 +114,17 @@ export async function copyText(text: string): Promise<boolean> {
   }
 }
 
+/** Esc đóng hộp thoại đang mở. */
+export function useEscapeKey(onClose: () => void) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+}
+
 export function Dialog({
   title,
   subtitle,
@@ -130,6 +141,7 @@ export function Dialog({
   wide?: boolean;
 }) {
   const { t } = useTranslation('community');
+  useEscapeKey(onClose);
   // Portal ra body: các thẻ `glass` (backdrop-filter) biến thành containing block của `fixed` nên dialog bị cắt trong thẻ cha.
   return createPortal(
     <div className="fixed inset-0 z-50 flex overflow-y-auto bg-black/40 p-3 sm:p-4">

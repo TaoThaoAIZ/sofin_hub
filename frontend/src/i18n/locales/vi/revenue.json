@@ -48,14 +48,14 @@
     "held": "Đang giữ (chờ hoàn tiền/tranh chấp)",
     "heldHint": "rút được sau {{days}} ngày",
     "reserve": "Quỹ dự phòng",
-    "reserveHint": "giữ lại {{pct}}%",
+    "reserveHint": "giữ lại {{pct}}% số tiền đã đủ điều kiện rút",
     "mrr": "MRR",
     "mrrHint": "{{paid}} thành viên trả phí",
     "pending": "Đang chờ rút"
   },
   "debt": "Bạn đang còn nợ {{amount}} do hoàn tiền/chargeback sau khi đã rút. Tính năng rút tiền tạm khóa cho đến khi doanh thu mới bù trừ khoản nợ này.",
-  "policy": "Chính sách rút tiền: tiền mới thu chỉ rút được sau {{hold}} ngày (cửa sổ hoàn tiền {{refund}} ngày + tranh chấp {{dispute}} ngày), và luôn giữ lại {{reserve}}% làm quỹ dự phòng.",
-  "estimateNote": "Hoa hồng và phí cổng là giá trị TẠM/mô phỏng, có thể thay đổi khi chốt mô hình doanh thu. Số dư có thể rút không phụ thuộc bộ lọc ngày.",
+  "policy": "Chính sách rút tiền: tiền mới thu chỉ rút được sau {{hold}} ngày, và luôn giữ lại {{reserve}}% số tiền đã đủ điều kiện làm quỹ dự phòng.",
+  "estimateNote": "Số dư có thể rút không phụ thuộc bộ lọc ngày.",
   "recent": {
     "title": "Giao dịch gần nhất",
     "time": "THỜI GIAN",

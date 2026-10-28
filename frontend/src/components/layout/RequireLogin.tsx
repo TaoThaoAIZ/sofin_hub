@@ -6,7 +6,7 @@ import { ButtonLink } from '../ui/Button';
 import { Header } from './Header';
 
 /** Bọc các trang cần đăng nhập: hiện Header + thông báo (thay vì chuyển hướng cứng) khi chưa đăng nhập. */
-export function RequireLogin({ children, active = 'discover' }: { children: ReactNode; active?: string }) {
+export function RequireLogin({ children, active }: { children: ReactNode; active?: string }) {
   const { t } = useTranslation('layout');
   const { status } = useAuth();
   const location = useLocation();

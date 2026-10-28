@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requireAuth } from '../../middlewares/auth.js';
+import { optionalAuth, requireAuth } from '../../middlewares/auth.js';
 import { searchRateLimit } from './search.ratelimit.js';
 import { searchQuery, suggestQuery } from './search.schema.js';
 import { searchService } from './search.service.js';
@@ -11,6 +11,7 @@ searchRouter.get('/search/suggest', requireAuth, searchRateLimit, async (req, re
   res.json({ data: await searchService.suggest(req.userId!, q) });
 });
 
-searchRouter.get('/search', requireAuth, searchRateLimit, async (req, res) => {
-  res.json(await searchService.search(req.userId!, searchQuery.parse(req.query)));
+// Khách vẫn tìm được khóa học công khai; bài viết/thành viên chỉ trả cho người đã đăng nhập.
+searchRouter.get('/search', optionalAuth, searchRateLimit, async (req, res) => {
+  res.json(await searchService.search(req.userId, searchQuery.parse(req.query)));
 });

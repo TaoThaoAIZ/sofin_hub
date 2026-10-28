@@ -64,6 +64,7 @@ export function EmailModal({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState<string | null>(null);
 
   const submit = async () => {
+    if (!email.trim() && !pw) return setError(t('modals.enterEmailAndPw'));
     const invalid = validateEmail(email);
     if (invalid) return setError(invalid === t('validation.emailRequired', { ns: 'auth' }) ? t('modals.invalidEmail') : invalid);
     if (!pw) return setError(t('modals.enterCurrentPw'));

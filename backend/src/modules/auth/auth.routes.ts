@@ -22,6 +22,7 @@ import {
 } from './auth.schema.js';
 import { accountService } from './account.service.js';
 import { authService, FORGOT_PASSWORD_MESSAGE, type AuthSession } from './auth.service.js';
+import { peekOneTimeToken } from './one-time-tokens.js';
 import {
   buildAuthUrl,
   createOAuthState,
@@ -244,6 +245,11 @@ authRouter.post('/forgot-password', forgotLimiter, async (req, res) => {
   const { email } = forgotPasswordBody.parse(req.body);
   await authService.forgotPassword(email);
   res.json({ data: { message: FORGOT_PASSWORD_MESSAGE } });
+});
+
+authRouter.get('/reset-password/check', async (req, res) => {
+  const token = typeof req.query.token === 'string' ? req.query.token : '';
+  res.json({ data: { valid: token.length > 0 && token.length <= 200 && (await peekOneTimeToken(token, 'reset-password')) } });
 });
 
 authRouter.post('/reset-password', async (req, res) => {

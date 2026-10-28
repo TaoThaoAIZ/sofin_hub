@@ -33,6 +33,12 @@ export async function consumeOneTimeToken(token: string, purpose: OneTimePurpose
   return row.userId;
 }
 
+/** Chỉ kiểm tra token còn hợp lệ, KHÔNG tiêu thụ (để trang đặt lại mật khẩu báo ngay link hỏng). */
+export async function peekOneTimeToken(token: string, purpose: OneTimePurpose): Promise<boolean> {
+  const row = await prisma.oneTimeToken.findUnique({ where: { tokenHash: sha256(token) } });
+  return !!row && oneTimePurposeToDomain(row.purpose) === purpose && row.expiresAt.getTime() >= Date.now();
+}
+
 export async function purgeOneTimeTokens(userId: string): Promise<void> {
   await prisma.oneTimeToken.deleteMany({ where: { userId } });
 }

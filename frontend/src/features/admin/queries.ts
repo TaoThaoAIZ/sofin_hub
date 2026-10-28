@@ -10,15 +10,38 @@ import type { DecisionType } from './types';
  * Cách xác định Platform Admin ở FE: gọi GET /admin/me. 200 = admin; 403 = không phải admin.
  * Quyền thật vẫn do BE quyết định — đây chỉ để bảo vệ route/hiện menu.
  */
+const NOT_ADMIN_TTL_MS = 10 * 60_000;
+/** Nhớ tạm "không phải admin" để các lần tải trang sau không gọi /admin/me nữa (tránh 403 đỏ trong console ở mọi trang). */
+const notAdminCache = {
+  has: (id?: string) => {
+    try {
+      return !!id && Date.now() - Number(localStorage.getItem(`sofinhub.notAdmin.${id}`) ?? 0) < NOT_ADMIN_TTL_MS;
+    } catch {
+      return false;
+    }
+  },
+  set: (id?: string) => {
+    try {
+      if (id) localStorage.setItem(`sofinhub.notAdmin.${id}`, String(Date.now()));
+    } catch {
+      /* bỏ qua */
+    }
+  },
+};
+
 export const useAdminMe = () => {
   const { status, user } = useAuth();
   return useQuery({
     queryKey: ['admin-session', user?.id],
     queryFn: async ({ signal }) => {
+      if (notAdminCache.has(user?.id)) return null;
       try {
         return await api.fetchAdminMe(signal);
       } catch (e) {
-        if (e instanceof ApiError && (e.status === 403 || e.status === 401)) return null;
+        if (e instanceof ApiError && (e.status === 403 || e.status === 401)) {
+          notAdminCache.set(user?.id);
+          return null;
+        }
         throw e;
       }
     },

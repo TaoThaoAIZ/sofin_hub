@@ -15,7 +15,8 @@
     "createCommunity": "Tạo cộng đồng",
     "language": "Ngôn ngữ",
     "themeToDark": "Chuyển sang giao diện tối",
-    "themeToLight": "Chuyển sang giao diện sáng"
+    "themeToLight": "Chuyển sang giao diện sáng",
+    "account": "Tài khoản của {{name}}"
   },
   "time": {
     "justNow": "vừa xong",
@@ -35,5 +36,25 @@
     "music": "Âm nhạc",
     "sports": "Thể thao",
     "spirituality": "Tâm linh"
+  },
+  "pageTitle": {
+    "home": "SofinHub – Học kỹ năng mới, phát triển cùng cộng đồng",
+    "login": "Đăng nhập",
+    "register": "Đăng ký",
+    "verifyOtp": "Xác thực email",
+    "forgotPassword": "Quên mật khẩu",
+    "resetPassword": "Đặt lại mật khẩu",
+    "search": "Tìm kiếm",
+    "messages": "Tin nhắn",
+    "notifications": "Thông báo",
+    "settings": "Cài đặt",
+    "myCommunities": "Cộng đồng của tôi",
+    "tools": "Công cụ",
+    "faq": "Câu hỏi thường gặp",
+    "terms": "Điều khoản sử dụng",
+    "privacy": "Chính sách bảo mật",
+    "contact": "Liên hệ",
+    "createCommunity": "Tạo cộng đồng",
+    "admin": "Quản trị"
   }
 }

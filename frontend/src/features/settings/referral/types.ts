@@ -73,6 +73,17 @@ export interface WithdrawOverview {
   withdrawableCents: number;
   account: PayoutAccount | null;
   withdrawals: Withdrawal[];
+  directPayouts: DirectPayout[];
+}
+
+/** Khoản chủ cộng đồng đã chuyển khoản trực tiếp cho người giới thiệu. */
+export interface DirectPayout {
+  id: string;
+  amountCents: number;
+  communityId: string;
+  communityTitle: string;
+  note: string | null;
+  createdAt: string;
 }
 
 export interface Bank {

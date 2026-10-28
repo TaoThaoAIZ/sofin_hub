@@ -121,7 +121,27 @@
         "title": "Community support",
         "desc": "Q&A, share experience"
       }
-    }
+    },
+    "facts": {
+      "label": {
+        "members": "Members",
+        "lessons": "Lessons",
+        "admins": "Admins",
+        "cost": "Membership fee",
+        "community": "Community"
+      },
+      "value": {
+        "free": "Free",
+        "private": "Private",
+        "public": "Public",
+        "perMonth": "{{price}} VND/month"
+      },
+      "note": {
+        "cancelAnytime": "Cancel anytime",
+        "trial": "{{n}}-day free trial"
+      }
+    },
+    "cancelRequestConfirm": "Cancel your request to join this community?"
   },
   "lesson": {
     "reqTitle": "To complete this lesson you need to:",
@@ -344,7 +364,7 @@
     "score": "Score: {{pct}}% ({{ok}}/{{total}} correct)",
     "passed": "Passed",
     "failed": "Not passed (need at least {{need}}%)",
-    "passedHint": "You passed! Press \"Complete\" above to mark the lesson done.",
+    "passedHint": "You passed! Go back to the lesson page and click \"Complete\" to mark the lesson done.",
     "needPass": "You need at least {{pct}}% on the quiz to complete this lesson."
   },
   "quizEditor": {

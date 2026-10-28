@@ -5,7 +5,7 @@ export interface LevelDef {
   minPoints: number;
 }
 
-const NAMED = ['Tân Binh', 'Creator', 'YouTuber', 'Pro Creator', 'Master', 'Legend'];
+const NAMED = ['Tân Binh', 'Creator', 'YouTuber', 'Pro Creator', 'Master', 'Legend', 'Grandmaster', 'Mythic', 'Immortal'];
 const THRESHOLDS = [0, 20, 60, 120, 200, 300, 450, 650, 900];
 
 export const LEVELS: LevelDef[] = THRESHOLDS.map((minPoints, i) => ({

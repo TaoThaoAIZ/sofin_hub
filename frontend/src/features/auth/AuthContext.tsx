@@ -26,6 +26,29 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+/**
+ * Đã biết chắc là khách (refresh thất bại / vừa đăng xuất): lần tải trang sau bỏ qua lệnh /auth/refresh để console không có lỗi 401 vô ích.
+ * Đăng nhập thành công (kể cả ở tab khác) xóa cờ này.
+ */
+const GUEST_FLAG = 'sofinhub.guest';
+const guestFlag = {
+  get: () => {
+    try {
+      return localStorage.getItem(GUEST_FLAG) === '1';
+    } catch {
+      return false;
+    }
+  },
+  set: (on: boolean) => {
+    try {
+      if (on) localStorage.setItem(GUEST_FLAG, '1');
+      else localStorage.removeItem(GUEST_FLAG);
+    } catch {
+      /* bỏ qua: trình duyệt chặn storage */
+    }
+  },
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
@@ -34,6 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const applySession = useCallback((session: AuthSession) => {
     setUser(session.user);
     setAccessToken(session.accessToken);
+    guestFlag.set(false);
     setAuthToken(session.accessToken); // để lib/api.ts tự đính kèm token cho các request khác
   }, []);
 
@@ -46,12 +70,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setAccessToken(null);
     setAuthToken(null);
+    guestFlag.set(true);
     setStatus('guest');
   }, []);
 
   // Khi tải lại trang: thử lấy access token mới từ refresh-token cookie (httpOnly) để giữ phiên đăng nhập.
   useEffect(() => {
     let cancelled = false;
+    if (guestFlag.get()) {
+      setStatus('guest');
+      return;
+    }
     authApi
       .refresh()
       .then((session) => {
@@ -60,7 +89,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setStatus('authenticated');
       })
       .catch(() => {
-        if (!cancelled) setStatus('guest');
+        if (cancelled) return;
+        guestFlag.set(true);
+        setStatus('guest');
       });
     return () => {
       cancelled = true;

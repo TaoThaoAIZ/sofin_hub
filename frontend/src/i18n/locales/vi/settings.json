@@ -60,7 +60,10 @@
     "colAmount": "Số tiền (VND)",
     "colRefunded": "Đã hoàn (VND)",
     "colStatus": "Trạng thái",
-    "colInvoice": "Số hóa đơn"
+    "colInvoice": "Số hóa đơn",
+    "statusExpired": "Hết hạn",
+    "statusCancelled": "Đã hủy",
+    "modulePurchase": "Mua module"
   },
   "communities": {
     "errGeneric": "Có lỗi xảy ra, vui lòng thử lại.",
@@ -71,7 +74,8 @@
       "cancelledToast": "Đã hủy yêu cầu gia nhập {{title}}",
       "cancel": "Hủy yêu cầu",
       "loading": "Đang tải…",
-      "empty": "Không có yêu cầu hay lời mời nào đang chờ."
+      "empty": "Không có yêu cầu hay lời mời nào đang chờ.",
+      "cancelConfirm": "Hủy yêu cầu tham gia \"{{title}}\"?"
     },
     "drafts": {
       "title": "Bản nháp cộng đồng",
@@ -232,7 +236,8 @@
     "deleteBody": "Hồ sơ của bạn sẽ bị xóa và không thể khôi phục. Bài viết và bình luận cũ vẫn được giữ lại dưới tên “Thành viên đã xóa”.",
     "deleteTitle": "Xóa tài khoản vĩnh viễn?",
     "deleteCta": "Xóa tài khoản",
-    "deleteTypeLabel": "Gõ {{word}} để xác nhận"
+    "deleteTypeLabel": "Gõ {{word}} để xác nhận",
+    "enterEmailAndPw": "Vui lòng nhập email mới và mật khẩu hiện tại"
   },
   "billing": {
     "loading": "Đang tải…",
@@ -252,7 +257,7 @@
       "pastDue": "Quá hạn",
       "perYear": "năm",
       "perMonth": "tháng",
-      "lineCanceling": "{{price}} / {{per}} · Hết hạn {{date}}",
+      "lineCanceling": "{{price}} / {{per}} · Còn dùng tới {{date}}",
       "lineTrial": "Dùng thử · thanh toán {{price}} trước {{date}}",
       "lineActive": "{{price}} / {{per}} · Kỳ tiếp theo {{date}}",
       "lineEnded": "{{price}} / {{per}} · Kết thúc {{date}}",
@@ -261,7 +266,8 @@
       "empty": "Bạn chưa có gói thành viên trả phí hoặc dùng thử nào.",
       "community": "Cộng đồng",
       "manage": "Quản lý",
-      "open": "Mở cộng đồng {{title}}"
+      "open": "Mở cộng đồng {{title}}",
+      "canceling": "Đã hủy gia hạn"
     },
     "history": {
       "noRows": "Chưa có giao dịch nào để tải",
@@ -286,7 +292,10 @@
       "sub": "Gói thành viên không tự động trừ tiền — bạn thanh toán bằng chuyển khoản QR.",
       "empty": "Hiện không có khoản nào cần thanh toán.",
       "until": "hạn {{date}}",
-      "payNow": "Thanh toán ngay"
+      "payNow": "Thanh toán ngay",
+      "cancel": "Hủy hóa đơn",
+      "cancelConfirm": "Hủy hóa đơn này? Bạn có thể tạo lại khi cần thanh toán.",
+      "cancelled": "Đã hủy hóa đơn"
     }
   },
   "communitiesTab": {
@@ -394,7 +403,7 @@
     "bio": "Giới thiệu",
     "bioPh": "Vài dòng về bạn",
     "linksTitle": "Liên kết & vị trí",
-    "linksSub": "Hiển dưới dạng biểu tượng trên hồ sơ của bạn.",
+    "linksSub": "Hiển thị dưới dạng biểu tượng trên hồ sơ của bạn.",
     "showOnMap": "Hiện vị trí của tôi trên bản đồ thành viên",
     "showOnMapSub": "Giúp các thành viên khác dễ dàng tìm thấy bạn trong khu vực.",
     "showOnMapLabel": "Hiện vị trí trên bản đồ thành viên",
@@ -537,7 +546,8 @@
       "shareNote": "Thông tin này sẽ được chia sẻ với chủ cộng đồng nơi bạn giới thiệu thành viên để họ chuyển khoản hoa hồng cho bạn.",
       "promptTitle": "Thêm tài khoản nhận hoa hồng",
       "promptBody": "Nhập ngân hàng và số tài khoản để chủ cộng đồng có thể chuyển khoản hoa hồng khi chi trả cho bạn.",
-      "promptBtn": "Thêm tài khoản"
+      "promptBtn": "Thêm tài khoản",
+      "directPaid": "Chủ cộng đồng đã chi trả"
     }
   },
   "securityTab": {

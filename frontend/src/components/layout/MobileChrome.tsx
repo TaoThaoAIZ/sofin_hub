@@ -101,7 +101,7 @@ export function MobileTopBar() {
               )}
             </Link>
           ) : (
-            <Link to="/login" aria-label={t('mobile.login')} className={circleBtn}>
+            <Link to="/login" state={{ from: pathname }} aria-label={t('mobile.login')} className={circleBtn}>
               <MaterialIcon name="person" size={20} filled color="currentColor" />
             </Link>
           )}

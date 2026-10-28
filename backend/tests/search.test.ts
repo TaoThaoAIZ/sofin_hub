@@ -305,7 +305,7 @@ describe('tìm kiếm Postgres: toàn văn + trigram', () => {
     assert.equal((await search(me.token, `type=posts&courseId=${pub}&q=${w}`)).status, 403);
   });
 
-  it('thành viên: role admin/member, handle, link và tìm theo handle (phần tên)', async () => {
+  it('thành viên: role member/owner, handle, link và tìm theo handle (phần tên)', async () => {
     const me = await c.registerUser('mem');
     const adm = await c.registerUser('boss');
     const course = await mkCourse();
@@ -313,10 +313,10 @@ describe('tìm kiếm Postgres: toàn văn + trigram', () => {
     await join(adm.id, course, 'owner');
     const r = await search(me.token, `type=members&courseId=${course}&q=boss`);
     const item = r.body.data.find((x: any) => x.id === adm.id);
-    assert.equal(item.role, 'admin');
+    assert.equal(item.role, 'owner');
     assert.equal(item.courseId, course);
     assert.match(item.handle, /^test-boss-\d{4}$/);
-    assert.equal(item.link, `/courses/${course}/community?tab=members`);
+    assert.equal(item.link, `/communities/${course}/community?tab=members`);
     const byHandle = await search(me.token, `type=members&courseId=${course}&q=test-boss`);
     assert.ok(ids(byHandle).includes(adm.id));
   });

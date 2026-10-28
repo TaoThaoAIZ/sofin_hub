@@ -110,6 +110,10 @@ paymentsRouter.get('/me/payments', requireAuth, async (req, res) => {
   res.json(await paymentsService.myPayments(req.userId!, q.page, q.limit));
 });
 
+paymentsRouter.post('/payments/:paymentId/cancel', requireAuth, async (req, res) => {
+  res.json({ data: await paymentsService.cancelPending(id(req.params.paymentId), req.userId!) });
+});
+
 paymentsRouter.get('/payments/:paymentId/invoice', requireAuth, async (req, res) => {
   res.json({ data: await paymentsService.invoice(id(req.params.paymentId), req.userId!) });
 });

@@ -26,7 +26,7 @@ export interface PaymentIntent {
   createdAt: string;
   confirmedAt?: string;
   amountCents?: number;
-  kind?: 'initial' | 'renewal';
+  kind?: 'initial' | 'renewal' | 'module';
   subscriptionId?: string;
   invoiceNumber?: string;
   refundedCents?: number;
@@ -77,6 +77,10 @@ export interface PaymentRecord extends PaymentIntent {
   courseTitle?: string;
   /** Trạng thái yêu cầu hoàn tiền mới nhất của giao dịch (null = chưa yêu cầu). */
   refundStatus?: RefundStatus | 'refunding' | null;
+  /** Giao dịch "đầu" nhưng người dùng từng trả tiền cộng đồng này (vd. gia hạn gói đã hết hạn). */
+  returning?: boolean;
+  /** Tên module khi giao dịch là mua lẻ một module. */
+  moduleTitle?: string | null;
 }
 
 export interface Invoice {

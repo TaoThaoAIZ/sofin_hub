@@ -1,5 +1,8 @@
 import { useQueryClient } from '@tanstack/react-query';
+import { useDocumentTitle } from '../components/PageTitle';
+import { Markdown } from '../lib/markdown';
 import { useEffect, useRef, useState } from 'react';
+import { factLabel, factValue, priceNote } from '../features/courses/factText';
 import { Trans, useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import i18n from '../i18n';
@@ -47,7 +50,7 @@ function sidebarPerks(course: CommunityDetail): string[] {
   return [
     ...(lessons > 0 ? [i18n.t('detail.perkLessons', { ns: 'course', n: lessons })] : []),
     i18n.t('detail.perkDiscuss', { ns: 'course' }),
-    ...course.priceNotes,
+    ...course.priceNotes.map(priceNote),
   ];
 }
 
@@ -58,7 +61,7 @@ function ShortText({ text }: { text: string }) {
   const long = text.length > 220 || text.split('\n').length > 4;
   return (
     <div className="max-w-[1000px]">
-      <p className={`m-0 text-[clamp(16px,1.11vw,20px)] leading-[1.6] text-[#57524e] text-pretty whitespace-pre-line break-words dark:text-[#bababa] ${long && !open ? 'line-clamp-4' : ''}`}>{text}</p>
+      <Markdown text={text} className={`text-[clamp(16px,1.11vw,20px)] leading-[1.6] text-[#57524e] text-pretty dark:text-[#bababa] ${long && !open ? 'line-clamp-4' : ''}`} />
       {long && (
         <button type="button" onClick={() => setOpen((o) => !o)} className="mt-1 border-0 bg-transparent p-0 text-sm font-semibold text-brand hover:underline">
           {open ? t('detail.showLess') : t('detail.showMore')}
@@ -76,6 +79,7 @@ export function CourseDetailPage() {
   const { status } = useAuth();
   const { data: categories = [] } = useCategories();
   const { data: course, isPending, error } = useCommunityDetail(id);
+  useDocumentTitle(course?.title);
   const enroll = useToggleEnrollment(id);
   const toolsCount = useTools().data?.tools.length;
   const qc = useQueryClient();
@@ -214,6 +218,7 @@ export function CourseDetailPage() {
 
   const handleCancelRequest = () => {
     if (!pendingRequest || pendingRequest === 'unknown') return;
+    if (!window.confirm(t('detail.cancelRequestConfirm'))) return;
     cancelRequest.mutate(pendingRequest, {
       onSuccess: () => {
         savePendingRequestId(id, null);
@@ -397,8 +402,8 @@ export function CourseDetailPage() {
                   <PathIcon d={f.icon} stroke={f.fg} size={24} />
                 </div>
                 <div className="min-w-0 leading-normal">
-                  <div className="text-xl font-bold whitespace-nowrap text-[#201d1b] dark:text-white">{f.value}</div>
-                  <div className="text-sm whitespace-nowrap text-[#827b75] dark:text-[#bababa]">{f.label}</div>
+                  <div className="text-xl font-bold whitespace-nowrap text-[#201d1b] dark:text-white">{factValue(f.value)}</div>
+                  <div className="text-sm whitespace-nowrap text-[#827b75] dark:text-[#bababa]">{factLabel(f.label)}</div>
                 </div>
               </div>
             ))}
@@ -555,7 +560,7 @@ function OverviewTab({ course }: { course: CommunityDetail; priceLabel: string }
     <div className="flex flex-col gap-5">
       <section className={`${CARD} flex flex-col gap-4`}>
         <h2 className={CARD_TITLE}>{t('detail.tabs.overview')}</h2>
-        <p className="m-0 text-base leading-6 text-[#5c5855] text-pretty whitespace-pre-line break-words dark:text-[#bababa]">{course.about}</p>
+        <Markdown text={course.about} className="text-base leading-6 text-[#5c5855] text-pretty dark:text-[#bababa]" />
         {course.highlights.length > 0 && (
           <div className="flex flex-col gap-[13px]">
             {course.highlights.map((h) => (

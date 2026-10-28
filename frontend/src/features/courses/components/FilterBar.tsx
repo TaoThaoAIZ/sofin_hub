@@ -114,7 +114,7 @@ export function FilterBar({ filters, onFilterChange, view, onViewChange, total }
   const [openKey, setOpenKey] = useState<string | null>(null);
 
   return (
-    <div className="relative z-[5] flex min-h-[60px] flex-wrap items-center justify-between gap-x-6 gap-y-3">
+    <div className="relative z-20 flex min-h-[60px] flex-wrap items-center justify-between gap-x-6 gap-y-3">
       <div className="flex flex-wrap items-start gap-[15px]">
         {FILTER_DROPDOWNS.map((def) => (
           <Dropdown

@@ -57,7 +57,8 @@ export const usersService = {
       coverUrl: user.coverUrl ?? null,
       joinedAt: user.createdAt,
       communities,
-      communityCount: isSelf ? memberships.length : communities.length,
+      // Chính chủ: tính cả cộng đồng riêng tư nhưng chỉ những cộng đồng còn tồn tại (đúng số ở trang "Cộng đồng của tôi").
+      communityCount: isSelf ? memberships.filter((m) => briefs.has(m.communityId)).length : communities.length,
       totalPoints: points.total,
       level: levelFor(points.total).level,
     };

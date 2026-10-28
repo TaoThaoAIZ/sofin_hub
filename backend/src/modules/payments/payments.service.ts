@@ -24,7 +24,7 @@ import {
 import { cfg } from '../settings/settings.service.js';
 import { communityReferralService } from '../referrals/community-referral.service.js';
 import { referralsService } from '../referrals/referrals.service.js';
-import { refundStatuses } from './payments.cards.js';
+import { refundStatuses, returningPaymentIds } from './payments.cards.js';
 import type { PaymentMethodInput } from './payments.schema.js';
 import type { BillingInterval, PaymentCardView, PaymentIntent, PaymentMethod, Payout, RefundRequest, Subscription } from './payments.types.js';
 
@@ -231,7 +231,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
         type: 'payment_succeeded',
         title: 'Thanh toán thành công',
         body: `Bạn đã thanh toán ${vnd(intent.amountCents)}. Hóa đơn ${invoiceNumber}.`,
-        link: `/courses/${intent.communityId}/community`,
+        link: `/communities/${intent.communityId}/community`,
         communityId: intent.communityId,
       });
       return { payment: final!, voided: false };
@@ -350,7 +350,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
       type: 'payment_succeeded',
       title: 'Gia hạn gói thành công',
       body: `Gói của bạn được gia hạn đến ${end.toISOString().slice(0, 10)}. Hóa đơn ${invoiceNumber}.`,
-      link: `/courses/${intent.communityId}/community`,
+      link: `/communities/${intent.communityId}/community`,
       communityId: intent.communityId,
     });
     return { payment: final!, voided: false };
@@ -371,7 +371,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
         : payment.moduleId
         ? `Bạn đã sở hữu module này nên khoản thanh toán ${vnd(payment.amountCents)} bị trùng đã được hoàn lại.`
         : `Bạn đã có gói thành viên nên khoản thanh toán ${vnd(payment.amountCents)} bị trùng đã được hoàn lại.`,
-      link: `/courses/${payment.communityId}`,
+      link: `/communities/${payment.communityId}`,
       communityId: payment.communityId,
     });
   }
@@ -400,7 +400,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
         type: 'payment_failed',
         title: 'Thanh toán thất bại',
         body: `Giao dịch không thành công (${reason}). Vui lòng thử lại hoặc dùng phương thức khác.`,
-        link: `/courses/${intent.communityId}`,
+        link: `/communities/${intent.communityId}`,
         communityId: intent.communityId,
       });
     }
@@ -417,7 +417,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
         type: 'system',
         title: 'Gói thành viên đã kết thúc',
         body: why,
-        link: `/courses/${sub.communityId}`,
+        link: `/communities/${sub.communityId}`,
         communityId: sub.communityId,
       });
     }
@@ -499,7 +499,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
       type: 'system',
       title: 'Hoàn tiền thành công',
       body: `Đã hoàn ${vnd(refund.amountCents)} cho giao dịch của bạn.`,
-      link: `/courses/${refund.communityId}`,
+      link: `/communities/${refund.communityId}`,
       communityId: refund.communityId,
     });
     return updated;
@@ -564,7 +564,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
         await endSubscription(ops, after, sub, 'canceled', at, why);
       } else if (!sub.cancelAtPeriodEnd) {
         await ops.updateSubscription(sub.id, { cancelAtPeriodEnd: true, canceledAt: at.toISOString() });
-        later(after, { userId, type: 'system', title: 'Gói thành viên sẽ không gia hạn', body: why, link: `/courses/${communityId}`, communityId });
+        later(after, { userId, type: 'system', title: 'Gói thành viên sẽ không gia hạn', body: why, link: `/communities/${communityId}`, communityId });
       }
       return true;
     });
@@ -672,6 +672,14 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
         }
         throw e;
       }
+    },
+
+    /** Người dùng tự hủy hóa đơn đang chờ thanh toán (chưa chuyển khoản): chuyển sang failed/cancelled, không thông báo "thất bại". */
+    async cancelPending(paymentId: string, userId: string) {
+      const p = await service.getOrThrow(paymentId);
+      if (p.userId !== userId) throw HttpError.forbidden();
+      if (p.status !== 'pending') throw HttpError.conflict('Chỉ hóa đơn đang chờ thanh toán mới hủy được');
+      return (await repo.transition(p.id, ['pending'], { status: 'failed', failureReason: 'cancelled' })) ?? (await service.getOrThrow(paymentId));
     },
 
     async getOrThrow(paymentIntentId: string) {
@@ -858,7 +866,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
           const when = sub.currentPeriodEnd.slice(0, 10);
           const text = `Dùng thử "${title}" của bạn kết thúc vào ngày ${when}. Để tiếp tục tham gia, hãy thanh toán ${vnd(sub.priceCents)} bằng chuyển khoản QR trước ngày đó (vào trang cộng đồng và chọn "Tham gia"). Nếu không thanh toán, quyền truy cập sẽ kết thúc.`;
           if (user?.email) await mailService.send({ to: user.email, subject: `Dùng thử "${title}" sắp kết thúc`, text });
-          notify({ userId: sub.userId, type: 'system', title: 'Dùng thử sắp kết thúc', body: text, link: `/courses/${sub.communityId}`, communityId: sub.communityId });
+          notify({ userId: sub.userId, type: 'system', title: 'Dùng thử sắp kết thúc', body: text, link: `/communities/${sub.communityId}`, communityId: sub.communityId });
           sent++;
         } catch (err) {
           console.error('sendTrialReminders: bỏ qua 1 gói do lỗi:', err);
@@ -982,7 +990,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
                   type: 'payment_failed',
                   title: 'Gói thành viên đã hết hạn',
                   body: 'Chúng tôi chưa nhận được tiền gia hạn nên gói đã hết hiệu lực. Hãy đăng ký lại để tiếp tục.',
-                  link: `/courses/${sub.communityId}`,
+                  link: `/communities/${sub.communityId}`,
                   communityId: sub.communityId,
                 });
                 st.outcome = 'renewalFailed';
@@ -1155,9 +1163,10 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
       const titles = new Map<string, string>();
       for (const id of new Set(items.map((p) => p.communityId))) titles.set(id, await courseTitle(id));
       const refunds = await refundStatuses(items.map((p) => p.id));
+      const returning = await returningPaymentIds(userId, items);
       const moduleTitles = await repo.moduleTitles([...new Set(items.flatMap((p) => (p.moduleId ? [p.moduleId] : [])))]);
       return {
-        data: items.map((p) => ({ ...p, courseTitle: titles.get(p.communityId), ...(p.moduleId ? { moduleTitle: moduleTitles.get(p.moduleId) ?? null } : {}), refundStatus: refunds.get(p.id) ?? null })),
+        data: items.map((p) => ({ ...p, courseTitle: titles.get(p.communityId), ...(p.moduleId ? { moduleTitle: moduleTitles.get(p.moduleId) ?? null } : {}), refundStatus: refunds.get(p.id) ?? null, returning: returning.has(p.id) })),
         meta: pageMeta(total, page, limit),
       };
     },
@@ -1353,7 +1362,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
         return await inTx(async (ops, after) => {
           const sub = await ops.findSubscription(subId);
           if (!sub) throw HttpError.notFound('Không tìm thấy gói thành viên');
-          const tell = (t: string, body: string) => later(after, { userId: sub.userId, type: 'system', title: t, body, link: `/courses/${sub.communityId}`, communityId: sub.communityId });
+          const tell = (t: string, body: string) => later(after, { userId: sub.userId, type: 'system', title: t, body, link: `/communities/${sub.communityId}`, communityId: sub.communityId });
           if (action === 'pause') {
             if (!['trialing', 'active', 'past_due'].includes(sub.status)) throw HttpError.conflict('Chỉ tạm dừng được gói đang hoạt động');
             await ops.updateSubscription(sub.id, { status: 'paused' });

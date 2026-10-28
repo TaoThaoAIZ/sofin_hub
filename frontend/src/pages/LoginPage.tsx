@@ -1,7 +1,7 @@
 import { BrandLogo } from '../components/ui/BrandLogo';
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
 import { ApiError } from '../lib/api';
@@ -17,7 +17,7 @@ interface FieldErrors {
 
 export function LoginPage() {
   const { t } = useTranslation('auth');
-  const { login, completeTwoFactor } = useAuth();
+  const { login, completeTwoFactor, status } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const redirectTo = (location.state as { from?: string } | null)?.from ?? '/';
@@ -84,6 +84,9 @@ export function LoginPage() {
       setSubmitting(false);
     }
   };
+
+  // Đã đăng nhập thì không ở lại màn đăng nhập (sau khi đăng nhập xong cũng rơi vào nhánh này → về trang đang xem).
+  if (status === 'authenticated') return <Navigate to={redirectTo} replace />;
 
   return (
     <div

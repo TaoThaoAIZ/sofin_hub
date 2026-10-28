@@ -8,7 +8,7 @@ import { useToast } from '../../admin/components/overlay';
 import { ModalActions, SettingsModal } from '../billing/Modal';
 import { BARE_INPUT, IconInput, OUTLINE_BTN, PRIMARY_BTN } from '../ui';
 import { useBanks, useRequestWithdraw, useSaveAccount, useWithdraw, useWithdrawalStatus } from './queries';
-import type { Withdrawal } from './types';
+import type { DirectPayout, Withdrawal } from './types';
 
 const vnd = (n: number) => formatMoney(n, 'VND');
 const errMsg = (e: unknown, fallback: string) => (e instanceof ApiError ? e.message : fallback);
@@ -89,7 +89,7 @@ export function WithdrawCard() {
 
       {modal === 'account' && <AccountModal onClose={() => setModal(null)} onSaved={() => setModal(null)} />}
       {modal === 'withdraw' && w && <WithdrawModal onClose={() => setModal(null)} />}
-      {modal === 'history' && <HistoryModal items={w?.withdrawals ?? []} onClose={() => setModal(null)} />}
+      {modal === 'history' && <HistoryModal items={w?.withdrawals ?? []} direct={w?.directPayouts ?? []} onClose={() => setModal(null)} />}
     </aside>
   );
 }
@@ -276,15 +276,25 @@ function PendingView({ w, onClose, onCopied }: { w: Withdrawal; onClose: () => v
   );
 }
 
-function HistoryModal({ items, onClose }: { items: Withdrawal[]; onClose: () => void }) {
+function HistoryModal({ items, direct, onClose }: { items: Withdrawal[]; direct: DirectPayout[]; onClose: () => void }) {
   const { t } = useTranslation('settings');
   const tone: Record<Withdrawal['status'], string> = { requested: 'bg-[#fef3c7] text-[#b45309]', paid: 'bg-[#dcfce7] text-[#15803d]', rejected: 'bg-[#fee2e2] text-[#b91c1c]' };
   return (
     <SettingsModal title={t('referral.withdraw.hTitle')} onClose={onClose}>
-      {items.length === 0 ? (
+      {items.length === 0 && direct.length === 0 ? (
         <p className="rounded-xl bg-[#faf7f4] px-4 py-5 text-center text-sm text-stone-500">{t('referral.withdraw.hEmpty')}</p>
       ) : (
         <ul className="m-0 flex max-h-[360px] list-none flex-col gap-2 overflow-y-auto p-0">
+          {direct.map((d) => (
+            <li key={d.id} className="rounded-xl border border-[#f0ebe6] px-3.5 py-3 text-sm">
+              <div className="flex items-center justify-between gap-3">
+                <b className="text-[15px]">{vnd(d.amountCents)}</b>
+                <span className="rounded-lg bg-[#dcfce7] px-2.5 py-1 text-[12px] font-semibold whitespace-nowrap text-[#15803d]">{t('referral.withdraw.directPaid')}</span>
+              </div>
+              <div className="mt-1 truncate text-xs text-stone-500" title={d.communityTitle}>{formatDate(d.createdAt)} · {d.communityTitle}</div>
+              {d.note && <div className="mt-1 text-xs break-words text-stone-500">{d.note}</div>}
+            </li>
+          ))}
           {items.map((x) => (
             <li key={x.id} className="rounded-xl border border-[#f0ebe6] px-3.5 py-3 text-sm">
               <div className="flex items-center justify-between gap-3">

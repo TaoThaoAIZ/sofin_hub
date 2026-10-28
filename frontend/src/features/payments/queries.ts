@@ -153,6 +153,14 @@ export const useResumeSubscription = () => {
   });
 };
 
+export const useCancelPayment = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (paymentId: string) => api.cancelPayment(paymentId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['payments'] }),
+  });
+};
+
 export const useMyPayments = (page: number) => {
   const { status } = useAuth();
   return useQuery({

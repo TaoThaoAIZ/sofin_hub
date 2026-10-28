@@ -23,6 +23,7 @@
     "edit": "Edit profile",
     "communities": "Joined communities",
     "noCommunities": "Hasn’t joined any public communities yet.",
-    "roleSince": "{{role}} · since {{date}}"
+    "roleSince": "{{role}} · since {{date}}",
+    "message": "Message"
   }
 }

@@ -16,7 +16,7 @@ import type { CreateEventBody, UpdateEventBody } from './events.schema.js';
  */
 const EVENT_NOTIFY_BATCH = 500;
 
-export const eventPath = (e: Pick<CommunityEvent, 'communityId'>) => `/courses/${e.communityId}/community/lich`;
+export const eventPath = (e: Pick<CommunityEvent, 'communityId'>) => `/communities/${e.communityId}/community/lich`;
 
 export function createEventsService(repo: EventsRepository = eventsRepository) {
   async function toViews(events: CommunityEvent[], viewerId: string): Promise<CommunityEventView[]> {

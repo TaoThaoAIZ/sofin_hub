@@ -90,10 +90,12 @@ export const referralWithdrawalsService = {
 
   /** Màn "Rút tiền hoa hồng": số dư + tài khoản nhận + lịch sử gần đây. */
   async overview(userId: string) {
-    const [balance, account, list] = await Promise.all([
+    const [balance, account, list, direct] = await Promise.all([
       balanceOf(prisma, userId),
       prisma.referralPayoutAccount.findUnique({ where: { userId } }),
       prisma.referralWithdrawal.findMany({ where: { userId }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: 20 }),
+      // Chủ cộng đồng chuyển khoản trực tiếp: không phải yêu cầu rút nhưng vẫn là tiền đã nhận, nên hiện chung trong lịch sử.
+      prisma.communityCommissionPayout.findMany({ where: { referrerId: userId }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: 20, include: { community: { select: { title: true } } } }),
     ]);
     return {
       currency: 'VND',
@@ -101,6 +103,7 @@ export const referralWithdrawalsService = {
       ...balance,
       account: account ? accountView(account) : null,
       withdrawals: list.map(withdrawalView),
+      directPayouts: direct.map((d) => ({ id: d.id, amountCents: d.amountCents, communityId: d.communityId, communityTitle: d.community.title, note: d.note, createdAt: d.createdAt.toISOString() })),
     };
   },
 

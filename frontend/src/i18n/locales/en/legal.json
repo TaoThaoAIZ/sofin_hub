@@ -130,7 +130,7 @@
       "q2": "What if I forget my password?",
       "a2": "On the Login page, click \"Forgot password\" and enter your email. We email you a password reset link; the link expires and can only be used once. You can also change your password at any time in Account Settings.",
       "q3": "Can I log in with Google/Facebook?",
-      "a3": "Not yet. For now you log in with your email and password.",
+      "a3": "Yes. Besides email and password, you can sign in with Google. Facebook sign-in is not supported yet.",
       "q4": "How do I log out or manage my personal information?",
       "a4": "Click your name in the top-right corner of the header: there you will find Profile, Account Settings (change your details, password and signed-in devices), Notifications, Messages, Plans & billing and the \"Log out\" button."
     },
@@ -156,7 +156,7 @@
       "q2": "Can I cancel my plan at any time?",
       "a2": "Yes. You cancel under \"Plans & billing\"; your access remains until the end of the period you have paid for and you will not be charged again.",
       "q3": "Are refunds available?",
-      "a3": "Yes, within the platform's refund window. Contact support with your transaction details; your request will be reviewed and the invoice will show the \"Refunded\" status once it is complete."
+      "a3": "Refunds are not currently supported. You can cancel your plan at any time to avoid being charged for the next period; for billing errors (for example a double charge), contact support with your transaction details."
     },
     "support": {
       "title": "Support",

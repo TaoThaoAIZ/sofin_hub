@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { stripMarkdown } from '../../../lib/markdown';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../../i18n';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -200,7 +201,9 @@ export function ClassroomTab() {
   const totalPages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
   const start = (page - 1) * PAGE_SIZE;
   const shown = list.slice(start, start + PAGE_SIZE);
-  const totalLessons = list.reduce((n, m) => n + m.lessonsCount, 0);
+  // Thống kê chỉ tính module đã xuất bản (module nháp chỉ mod+ thấy trong danh sách).
+  const live = list.filter((m) => m.publishStatus !== 'draft');
+  const totalLessons = live.reduce((n, m) => n + m.lessonsCount, 0);
   // Module đang khóa trong cộng đồng có phí (hoặc module bán riêng) → đưa người học sang trang thanh toán để mở khóa.
   const unlockOf = (m: ClassroomModule) => unlockFor(m, { staff: canEdit, communityId, communityPriceUsd: community?.priceUsd, onBuy: setBuying });
   const prog = progress.data;
@@ -217,7 +220,7 @@ export function ClassroomTab() {
         </div>
         <div className="ml-auto flex items-center divide-x divide-stone-200/80 py-2 max-md:hidden">
           {[
-            { icon: 'school', value: list.length, label: t('classroom.statModules') },
+            { icon: 'school', value: live.length, label: t('classroom.statModules') },
             { icon: 'article', value: totalLessons, label: t('classroom.statLessons') },
             { icon: 'group', value: formatCompact(community?.stats.members ?? 0), label: t('classroom.statStudents') },
           ].map((s) => (
@@ -253,7 +256,7 @@ export function ClassroomTab() {
                 className={`glass flex w-[250px] flex-none items-center gap-3 rounded-2xl p-2.5 text-left transition-transform hover:-translate-y-0.5 ${active ? 'ring-2 ring-brand' : ''}`}
               >
                 <span className="grid size-[52px] flex-none place-items-center overflow-hidden rounded-xl bg-brand/10">
-                  {thumb ? <img src={thumb} alt="" className="size-full object-cover" /> : <MaterialIcon name="school" size={26} filled color="#ff570a" />}
+                  {thumb ? <img src={thumb} alt="" loading="lazy" decoding="async" className="size-full object-cover" /> : <MaterialIcon name="school" size={26} filled color="#ff570a" />}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[13.5px] font-bold">{c.title}</span>
@@ -330,7 +333,7 @@ export function ClassroomTab() {
               className={`glass flex flex-col overflow-hidden rounded-[20px] transition-transform hover:-translate-y-0.5`}
             >
               <div className="relative aspect-video w-full overflow-hidden bg-[#110d0b]">
-                <img src={thumb} alt={m.title} className="size-full object-cover" />
+                <img src={thumb} alt={m.title} loading="lazy" decoding="async" className="size-full object-cover" />
                 {canEdit && (
                   <div className="absolute top-3 right-3 z-[3] flex items-center gap-2">
                     <button
@@ -375,8 +378,8 @@ export function ClassroomTab() {
                 )}
               </div>
               <div className="flex flex-1 flex-col gap-1 px-[18px] pt-3.5 pb-4">
-                <div className="truncate text-[15.5px] font-bold">#{m.index - 1}: {m.title}</div>
-                <div className="truncate text-[12.5px] text-stone-500">{t('classroom.lessonsDesc', { n: m.lessonsCount, desc: m.description })}</div>
+                <div className="truncate text-[15.5px] font-bold">#{m.index}: {m.title}</div>
+                <div className="truncate text-[12.5px] text-stone-500">{t('classroom.lessonsDesc', { n: m.lessonsCount, desc: stripMarkdown(m.description) })}</div>
                 <div className="mt-auto flex items-center gap-2.5 pt-2.5">
                   <span className="rounded-lg bg-brand/10 px-2 py-1 text-[11.5px] font-bold">{m.pct}%</span>
                   <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-[rgba(120,60,20,.08)]">

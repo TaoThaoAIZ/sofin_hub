@@ -33,8 +33,8 @@ export function OAuthCallbackPage() {
     started.current = true;
     const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
     // Xóa hash (có thể chứa vé 2FA) khỏi thanh địa chỉ / lịch sử ngay.
+    const error = hash.get('error') ?? new URLSearchParams(window.location.search).get('error'); // lỗi có thể đến qua hash hoặc query; đọc TRƯỚC khi xóa khỏi thanh địa chỉ
     window.history.replaceState(null, '', window.location.pathname);
-    const error = hash.get('error');
     const ticket = hash.get('ticket');
     if (error) {
       setState({ kind: 'error', message: t(`oauth.errors.${error}`, { defaultValue: t('oauth.errors.failed') }) });

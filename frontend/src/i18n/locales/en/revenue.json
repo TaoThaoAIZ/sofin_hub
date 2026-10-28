@@ -48,14 +48,14 @@
     "held": "On hold (pending refunds/disputes)",
     "heldHint": "withdrawable after {{days}} days",
     "reserve": "Reserve fund",
-    "reserveHint": "{{pct}}% retained",
+    "reserveHint": "{{pct}}% of eligible funds retained",
     "mrr": "MRR",
     "mrrHint": "{{paid}} paying members",
     "pending": "Pending payouts"
   },
   "debt": "You owe {{amount}} due to refunds/chargebacks after withdrawal. Payouts are temporarily locked until new revenue offsets this debt.",
-  "policy": "Payout policy: new revenue can only be withdrawn after {{hold}} days ({{refund}}-day refund window + {{dispute}}-day dispute window), and {{reserve}}% is always retained as a reserve fund.",
-  "estimateNote": "Commission and gateway fees are TEMPORARY/simulated values and may change once the revenue model is finalized. The withdrawable balance does not depend on the date filter.",
+  "policy": "Payout policy: new revenue can be withdrawn after {{hold}} days, and {{reserve}}% of eligible funds is always retained as a reserve.",
+  "estimateNote": "The withdrawable balance does not depend on the date filter.",
   "recent": {
     "title": "Recent transactions",
     "time": "TIME",

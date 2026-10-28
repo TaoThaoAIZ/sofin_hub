@@ -240,6 +240,7 @@ export interface Report {
   targetId: string;
   targetExcerpt?: string;
   targetUserName?: string;
+  targetRole?: 'member' | 'mod' | 'admin' | 'owner' | null;
   reporterName?: string;
   reason: ReportReason;
   detail?: string;

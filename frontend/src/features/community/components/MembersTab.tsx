@@ -191,7 +191,7 @@ export function MembersTab() {
                             }`}
                             title={t(`roles.${m.roleDetail}`)}
                           >
-                            {m.roleDetail === 'owner' ? 'Owner' : m.roleDetail === 'admin' ? 'Admin' : 'Mod'}
+                            {t(`roles.${m.roleDetail}`)}
                           </span>
                         )}
                       </div>

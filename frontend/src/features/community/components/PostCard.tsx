@@ -551,7 +551,7 @@ export function PostCard({
               </button>
               {menuOpen && (
                 <div role="menu" className="absolute right-0 bottom-full z-20 mb-1 w-52 rounded-xl border border-[rgba(120,60,20,.12)] bg-white p-1.5 shadow-lg">
-                  {(isAuthor || mod) && (
+                  {isAuthor && (
                     <button role="menuitem" type="button" className={menuItem} onClick={startEdit}>
                       <MaterialIcon name="edit" size={18} /> {t('post.editPost')}
                     </button>

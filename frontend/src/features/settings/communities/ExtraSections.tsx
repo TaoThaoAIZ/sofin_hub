@@ -31,7 +31,7 @@ export function PendingSection() {
             <div key={p.id} className="flex flex-wrap items-center gap-4 border-b border-[#f3eee9] py-3.5 last:border-b-0">
               <CommunityLogo name={p.title} seed={p.communityId} size={52} src={p.logoUrl} />
               <div className="min-w-[200px] flex-1">
-                <Link to={`/courses/${p.communityId}`} className="text-base font-bold text-stone-900 no-underline">
+                <Link to={`/communities/${p.communityId}`} className="text-base font-bold text-stone-900 no-underline">
                   {p.title}
                 </Link>
                 <div className="mt-[3px] text-sm text-stone-500">{t('communities.pending.requested', { ago: agoText(p.createdAt) })}</div>
@@ -39,7 +39,7 @@ export function PendingSection() {
               <button
                 type="button"
                 disabled={cancel.isPending}
-                onClick={() => cancel.mutate(p.id, { onSuccess: () => toast.success(t('communities.pending.cancelledToast', { title: p.title })), onError: (e) => toast.error(errMsg(e)) })}
+                onClick={() => window.confirm(t('communities.pending.cancelConfirm', { title: p.title })) && cancel.mutate(p.id, { onSuccess: () => toast.success(t('communities.pending.cancelledToast', { title: p.title })), onError: (e) => toast.error(errMsg(e)) })}
                 className={`${OUTLINE_BTN} h-11 min-w-[200px] whitespace-nowrap`}
               >
                 {t('communities.pending.cancel')}

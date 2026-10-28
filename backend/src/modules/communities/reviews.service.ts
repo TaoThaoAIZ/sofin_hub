@@ -74,6 +74,7 @@ export function createReviewsService(repo: CommunitiesRepository = communitiesRe
     async upsert(userId: string, communityId: string, input: { rating: number; text: string }) {
       await catalogService.getById(communityId);
       await enrollmentService.requireMembership(userId, communityId);
+      if ((await enrollmentService.getActiveRole(userId, communityId)) === 'owner') throw HttpError.forbidden('Chủ cộng đồng không thể tự đánh giá cộng đồng của mình');
       const { review, created } = await repo.upsertReview(communityId, userId, input.rating, input.text);
       return { review: await view(review), created };
     },

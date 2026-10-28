@@ -33,7 +33,8 @@ function Logo() {
 const PILL =
   'border border-white bg-white/80 shadow-[1px_6px_30px_2px_rgba(121,81,54,0.1)] dark:border-[rgba(81,81,81,.2)] dark:bg-[rgba(51,51,51,.3)] dark:shadow-none';
 
-export function Header({ active = 'discover' }: { active?: string }) {
+/** `active` không truyền: chỉ trang chủ tô sáng "Khám phá"; các trang khác (tin nhắn, thông báo, tìm kiếm…) không tô mục nào. */
+export function Header({ active }: { active?: string }) {
   const { t, i18n } = useTranslation('common');
   const { user, status, logout } = useAuth();
   const toggleLanguage = useToggleLanguage();
@@ -41,6 +42,7 @@ export function Header({ active = 'discover' }: { active?: string }) {
   const { isAdmin } = useIsPlatformAdmin();
   const navigate = useNavigate();
   const location = useLocation();
+  const current = active ?? (location.pathname === '/' ? 'discover' : '');
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   useClickOutside(menuRef, () => setMenuOpen(false));
@@ -59,7 +61,7 @@ export function Header({ active = 'discover' }: { active?: string }) {
 
       <nav className="hidden min-w-0 flex-1 flex-wrap items-center justify-center gap-x-[clamp(16px,1.8vw,32px)] overflow-hidden text-[clamp(15px,1vw,18px)] leading-[1.5] whitespace-nowrap md:flex">
         {NAV_ITEMS.map((item) => {
-          const className = item.key === active ? 'font-bold text-brand' : 'font-normal text-[#201e1c] hover:text-brand dark:text-white dark:hover:text-brand';
+          const className = item.key === current ? 'font-bold text-brand' : 'font-normal text-[#201e1c] hover:text-brand dark:text-white dark:hover:text-brand';
           return (
             <Link key={item.key} to={item.to} className={className}>
               {t(`nav.${item.key}`)}
@@ -100,6 +102,9 @@ export function Header({ active = 'discover' }: { active?: string }) {
             <button
               type="button"
               onClick={() => setMenuOpen((o) => !o)}
+              aria-label={t('header.account', { name: user.firstName })}
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
               className={`flex h-[clamp(42px,2.8vw,50px)] items-center gap-2.5 overflow-clip rounded-[20px] px-[9px] text-[clamp(15px,1vw,18px)] leading-[1.5] text-[#201e1c] dark:text-white ${PILL}`}
             >
               {user.avatarUrl ? (
@@ -112,7 +117,7 @@ export function Header({ active = 'discover' }: { active?: string }) {
               <span className="hidden max-w-[120px] truncate pr-1 sm:inline">{user.firstName}</span>
             </button>
             {menuOpen && (
-              <div className="absolute top-[calc(100%+8px)] right-0 z-30 flex w-56 max-w-[calc(100vw-48px)] flex-col gap-1 rounded-2xl border border-[rgba(120,60,20,.1)] bg-white p-2 text-sm shadow-[0_16px_40px_rgba(120,60,20,.18)] dark:shadow-[0_16px_40px_rgba(0,0,0,.5)]">
+              <div role="menu" className="absolute top-[calc(100%+8px)] right-0 z-30 flex w-56 max-w-[calc(100vw-48px)] flex-col gap-1 rounded-2xl border border-[rgba(120,60,20,.1)] bg-white p-2 text-sm shadow-[0_16px_40px_rgba(120,60,20,.18)] dark:shadow-[0_16px_40px_rgba(0,0,0,.5)]">
                 <div className="truncate px-3 py-1.5 text-stone-500" title={user.email}>{user.email}</div>
                 {/* Mobile: thanh điều hướng/chuông/tin nhắn/nút tạo bị ẩn ở header nên đưa vào menu này. */}
                 {[
@@ -125,6 +130,7 @@ export function Header({ active = 'discover' }: { active?: string }) {
                 ].map((item) => (
                   <Link
                     key={item.to}
+                    role="menuitem"
                     to={item.to}
                     onClick={() => setMenuOpen(false)}
                     className={`rounded-xl px-3 py-2.5 text-left font-medium text-stone-900 hover:bg-brand/10 hover:text-brand ${item.cls}`}
@@ -134,6 +140,7 @@ export function Header({ active = 'discover' }: { active?: string }) {
                 ))}
                 <button
                   type="button"
+                  role="menuitem"
                   onClick={doLogout}
                   className="rounded-xl px-3 py-2 text-left font-medium text-stone-900 hover:bg-brand/10 hover:text-brand"
                 >
@@ -145,7 +152,7 @@ export function Header({ active = 'discover' }: { active?: string }) {
         ) : (
           <Link
             to="/login"
-            state={{ from: location.pathname }}
+            state={{ from: location.pathname + location.search }}
             className={`flex h-[clamp(42px,2.8vw,50px)] items-center rounded-[20px] px-[18px] text-[clamp(15px,1vw,18px)] text-[#201e1c] dark:text-white ${PILL}`}
           >
             {t('header.login')}

@@ -21,6 +21,7 @@ export function createModerationService(repo: ModerationRepository = moderationR
       ...r,
       reporterName: (await userBriefView(r.reporterId)).name,
       targetUserName: (await userBriefView(r.targetUserId)).name,
+      targetRole: (await enrollmentService.getMember(r.targetUserId, r.communityId))?.role ?? null,
     };
   }
 
@@ -123,7 +124,7 @@ export function createModerationService(repo: ModerationRepository = moderationR
             type: 'system',
             title: 'Nội dung của bạn đã bị ẩn',
             body: `${report.targetType === 'post' ? 'Bài viết' : 'Bình luận'} của bạn${course ? ` trong "${course.title}"` : ''} đã bị điều hành viên ẩn vì vi phạm nội quy.`,
-            link: `/courses/${report.communityId}/community`,
+            link: `/communities/${report.communityId}/community`,
             communityId: report.communityId,
           });
         } else if (body.action === 'ban_member') {

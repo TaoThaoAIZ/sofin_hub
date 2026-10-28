@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { useMyCommunities } from '../../search/queries';
 import { Link, useNavigate } from 'react-router-dom';
 import { usePopup } from '../../../components/ui/usePopup';
 import { Avatar } from '../../account/components/Avatar';
@@ -40,12 +41,14 @@ export function CommunityRightSidebar({ course }: { course: CommunityDetail }) {
       onError: (e) => toast(errText(e), 'error'),
     });
   };
-  const suggested = useCommunities({ page: 1, limit: 4, sort: 'trending' });
+  const suggested = useCommunities({ page: 1, limit: 12, sort: 'trending' });
+  const mine = useMyCommunities(); // không gợi ý cộng đồng mình đã tham gia / đang làm chủ
+  const joinedIds = new Set((mine.data ?? []).map((m) => m.id));
   const shownMembers = members.data?.data.slice(0, 6) ?? [];
   // Tổng thành viên lấy từ chính danh sách thật (cùng nguồn với dãy avatar) để số và avatar luôn khớp.
   const totalMembers = members.data?.counts.all ?? course.stats.members;
   const remaining = Math.max(0, totalMembers - shownMembers.length);
-  const suggestedCourses = (suggested.data?.data ?? []).filter((c) => c.id !== course.id).slice(0, 3);
+  const suggestedCourses = mine.isPending ? [] : (suggested.data?.data ?? []).filter((c) => c.id !== course.id && !joinedIds.has(c.id)).slice(0, 3);
 
   return (
     <aside className="sticky top-[72px] flex flex-col gap-4 max-lg:static">

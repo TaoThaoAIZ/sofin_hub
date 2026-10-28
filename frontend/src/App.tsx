@@ -3,6 +3,7 @@ import { lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 import { LegacyCourseRedirect } from './components/LegacyCourseRedirect';
+import { PageTitle } from './components/PageTitle';
 import { ScrollToTop } from './components/ScrollToTop';
 import { ReferralCapture } from './features/referral/ReferralCapture';
 import { ChatWidget } from './features/chatbot/ChatWidget';
@@ -63,6 +64,7 @@ export default function App() {
     <NotificationsProvider>
       <MessagesProvider>
       <ScrollToTop />
+      <PageTitle />
       <ReferralCapture />
       <ChatWidget />
       <Routes>

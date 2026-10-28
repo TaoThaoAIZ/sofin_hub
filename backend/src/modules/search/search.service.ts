@@ -3,11 +3,11 @@ import { enrollmentService } from '../enrollments/enrollments.service.js';
 import { isPlatformAdmin } from '../permissions/policy.js';
 import { buildTerms, searchRepository as defaultRepo, trgmSchema, type PageSpec, type SearchTerms } from './search.repository.js';
 import type { SearchQuery } from './search.schema.js';
-import { highlightNeedle, makeSnippetFor, type Segment } from './search.text.js';
+import { highlightNeedle, makeSnippetFor, stripMarkdown, type Segment } from './search.text.js';
 
 export type SearchResult =
   | { type: 'course'; id: string; title: Segment[]; snippet: Segment[]; link: string }
-  | { type: 'member'; id: string; courseId: string; communityId: string; courseTitle: string; name: Segment[]; handle: string; role: 'admin' | 'member'; link: string }
+  | { type: 'member'; id: string; courseId: string; communityId: string; courseTitle: string; name: Segment[]; handle: string; role: 'member' | 'mod' | 'admin' | 'owner'; link: string }
   | { type: 'post'; id: string; courseId: string; communityId: string; courseTitle: string; author: string; snippet: Segment[]; createdAt: string; link: string };
 
 type Repo = typeof defaultRepo;
@@ -33,8 +33,8 @@ export function createSearchService(repo: Repo = defaultRepo) {
     type: 'course',
     id: c.id,
     title: makeSnippetFor(c.title, t.needle, t.tokens, 100),
-    snippet: makeSnippetFor(c.description, t.needle, t.tokens),
-    link: `/courses/${c.id}`,
+    snippet: makeSnippetFor(stripMarkdown(c.description), t.needle, t.tokens),
+    link: `/communities/${c.id}`,
   });
 
   const toMember = (m: Awaited<ReturnType<Repo['pageMembers']>>[number], t: SearchTerms): SearchResult => {
@@ -47,8 +47,8 @@ export function createSearchService(repo: Repo = defaultRepo) {
       courseTitle: m.courseTitle,
       name: makeSnippetFor(name, t.needle, t.tokens, 100),
       handle: handleFor(name, m.id),
-      role: m.role === 'member' ? 'member' : 'admin',
-      link: `/courses/${m.courseId}/community?tab=members`,
+      role: m.role,
+      link: `/communities/${m.courseId}/community?tab=members`,
     };
   };
 
@@ -61,7 +61,7 @@ export function createSearchService(repo: Repo = defaultRepo) {
     author: p.authorName,
     snippet: makeSnippetFor(highlightNeedle(p.content, t.needle, t.tokens) ? p.content : `${p.tags.join(' ')} ${p.content}`, t.needle, t.tokens),
     createdAt: p.createdAt.toISOString(),
-    link: `/courses/${p.courseId}/community?post=${p.id}`,
+    link: `/communities/${p.courseId}/community?post=${p.id}`,
   });
 
   const fetchGroup = {
@@ -72,17 +72,18 @@ export function createSearchService(repo: Repo = defaultRepo) {
   };
 
   return {
-    async search(userId: string, query: SearchQuery) {
+    /** `userId` undefined = khách chưa đăng nhập: chỉ tìm được khóa học công khai (bài viết/thành viên cần là thành viên). */
+    async search(userId: string | undefined, query: SearchQuery) {
       const t = await termsOf(query.q);
-      const want = (g: Group) => query.type === 'all' || query.type === g;
+      const want = (g: Group) => (query.type === 'all' || query.type === g) && (userId !== undefined || g === 'courses');
       // Khóa học là công khai nên type=courses không cần là thành viên; posts/members thì bắt buộc.
-      const ids = want('members') || want('posts') ? await scopeIds(userId, query.communityId) : [];
-      const pa = want('posts') && ids.length > 0 ? await isPlatformAdmin(userId) : false;
+      const ids = userId && (want('members') || want('posts')) ? await scopeIds(userId, query.communityId) : [];
+      const pa = userId && want('posts') && ids.length > 0 ? await isPlatformAdmin(userId) : false;
 
       const [nCourses, nMembers, nPosts] = await Promise.all([
         want('courses') ? repo.countCourses(t, query.communityId) : 0,
         want('members') ? repo.countMembers(ids, t) : 0,
-        want('posts') ? repo.countPosts(ids, t, userId, pa) : 0,
+        want('posts') ? repo.countPosts(ids, t, userId ?? '', pa) : 0,
       ]);
       const sizes: Record<Group, number> = { courses: nCourses, members: nMembers, posts: nPosts };
       const total = nCourses + nMembers + nPosts;
@@ -96,7 +97,7 @@ export function createSearchService(repo: Repo = defaultRepo) {
         const lo = Math.max(start, offset) - offset;
         const hi = Math.min(end, offset + sizes[g]) - offset;
         offset += sizes[g];
-        if (hi > lo) jobs.push(fetchGroup[g](t, ids, userId, pa, { offset: lo, limit: hi - lo }, query.communityId));
+        if (hi > lo) jobs.push(fetchGroup[g](t, ids, userId ?? '', pa, { offset: lo, limit: hi - lo }, query.communityId));
       }
       const data = (await Promise.all(jobs)).flat();
       return {

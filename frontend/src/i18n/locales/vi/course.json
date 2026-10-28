@@ -121,7 +121,27 @@
         "title": "Hỗ trợ từ cộng đồng",
         "desc": "Hỏi đáp, chia sẻ kinh nghiệm"
       }
-    }
+    },
+    "facts": {
+      "label": {
+        "members": "Thành viên",
+        "lessons": "Bài học",
+        "admins": "Quản trị viên",
+        "cost": "Chi phí tham gia",
+        "community": "Cộng đồng"
+      },
+      "value": {
+        "free": "Miễn phí",
+        "private": "Riêng tư",
+        "public": "Công khai",
+        "perMonth": "{{price}}đ/tháng"
+      },
+      "note": {
+        "cancelAnytime": "Hủy bất kỳ lúc nào",
+        "trial": "Miễn phí dùng thử {{n}} ngày"
+      }
+    },
+    "cancelRequestConfirm": "Hủy yêu cầu tham gia cộng đồng này?"
   },
   "lesson": {
     "reqTitle": "Để hoàn thành bài học, bạn cần:",
@@ -344,7 +364,7 @@
     "score": "Điểm: {{pct}}% ({{ok}}/{{total}} câu đúng)",
     "passed": "Đạt",
     "failed": "Chưa đạt (cần tối thiểu {{need}}%)",
-    "passedHint": "Bạn đã đạt! Bấm \"Hoàn thành\" ở phía trên để đánh dấu bài học.",
+    "passedHint": "Bạn đã đạt! Quay lại trang bài học và bấm \"Hoàn thành\" để đánh dấu bài học.",
     "needPass": "Cần đạt tối thiểu {{pct}}% bài trắc nghiệm mới hoàn thành được bài học này."
   },
   "quizEditor": {

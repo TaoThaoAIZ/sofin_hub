@@ -1,7 +1,7 @@
 import { BrandLogo } from '../components/ui/BrandLogo';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { FieldError } from '../components/ui/FieldMessage';
 import { FormField } from '../components/ui/FormField';
@@ -55,7 +55,7 @@ function clearDraft() {
 
 export function RegisterPage() {
   const { t } = useTranslation('auth');
-  const { register } = useAuth();
+  const { register, status } = useAuth();
   const navigate = useNavigate();
 
   const [draft] = useState(loadDraft);
@@ -111,6 +111,8 @@ export function RegisterPage() {
       setSubmitting(false);
     }
   };
+
+  if (status === 'authenticated') return <Navigate to="/" replace />;
 
   return (
     <div
@@ -205,13 +207,14 @@ export function RegisterPage() {
               <input
                 type="checkbox"
                 checked={agreed}
+                aria-labelledby="register-agree-text"
                 onChange={(e) => {
                   setAgreed(e.target.checked);
                   clearFieldError('agree');
                 }}
                 className="mt-0.5 size-4 flex-none accent-brand"
               />
-              <span>
+              <span id="register-agree-text">
                 {t('register.agreePrefix')}{' '}
                 <Link to="/terms?from=register" className="font-semibold text-brand underline">
                   {t('register.terms')}

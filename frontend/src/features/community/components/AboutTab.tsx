@@ -1,4 +1,6 @@
 import { useTranslation } from 'react-i18next';
+import { Markdown } from '../../../lib/markdown';
+import { priceNote } from '../../courses/factText';
 import { useParams } from 'react-router-dom';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { formatCompact } from '../../../lib/format';
@@ -53,7 +55,7 @@ export function AboutTab() {
         <section className="rounded-[22px] border border-brand/15 bg-gradient-to-br from-[#fff3e8] to-[#ffe9d9] px-7 py-[22px] max-md:border-0 max-md:bg-none max-md:bg-white max-md:px-4 max-md:py-4 max-md:shadow-soft dark:max-md:bg-[rgba(63,63,63,.3)]">
           <div className="max-w-[760px]">
             <div className="text-[22px] font-extrabold text-[#e8590c]">{course.title}</div>
-            <p className="mt-2.5 text-[15px] leading-[1.65] text-stone-700 whitespace-pre-line break-words">{course.about}</p>
+            <Markdown text={course.about} className="mt-2.5 text-[15px] leading-[1.65] text-stone-700" />
           </div>
         </section>
 
@@ -107,7 +109,7 @@ export function AboutTab() {
                 </span>
               </div>
               {course.priceUsd === 0 && <div className="py-1 text-[14.5px] text-stone-500">{t('about.communityFree')}</div>}
-              {course.priceNotes.map((x) => (
+              {course.priceNotes.map(priceNote).map((x) => (
                 <div key={x} className="flex items-start gap-3 py-1 text-[14.5px] text-stone-800">
                   <MaterialIcon name="check" size={20} color="#ff570a" />
                   {x}

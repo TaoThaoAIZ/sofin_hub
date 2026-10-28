@@ -43,7 +43,7 @@
     "premium1": "Truy cập khóa học độc quyền",
     "premium2": "Tài liệu chuyên sâu",
     "premium3": "Hỗ trợ 1:1 từ chuyên gia",
-    "comingSoonTitle": "Sắp ra mắt — Giai đoạn 8 trong PLAN.md (chưa chốt cổng thanh toán gói Premium)",
+    "comingSoonTitle": "Sắp ra mắt",
     "upgrade": "Nâng cấp (sắp ra mắt)",
     "leave": "Rời cộng đồng",
     "leaving": "Đang rời…",
@@ -170,7 +170,7 @@
     "sortJoined": "Mới tham gia",
     "filterAll": "Tất cả",
     "filterOnline": "Đang trực tuyến",
-    "filterAdmin": "Quản trị viên",
+    "filterAdmin": "Quản trị & điều hành",
     "closeNotice": "Đóng thông báo",
     "title": "Thành viên",
     "subtitle": "Kết nối, học hỏi và phát triển cùng cộng đồng.",
@@ -339,7 +339,8 @@
     "subtitle": "Quản lý và tham gia các sự kiện trong cộng đồng",
     "inviteAll": "Chọn tất cả thành viên",
     "inviteClear": "Bỏ chọn tất cả ({{n}})",
-    "inviteCapped": "Đã đạt tối đa {{max}} người được mời"
+    "inviteCapped": "Đã đạt tối đa {{max}} người được mời",
+    "linkError": "Link họp phải là đường dẫn http(s) hợp lệ, ví dụ https://meet.google.com/abc"
   },
   "ui": {
     "close": "Đóng",
@@ -529,7 +530,7 @@
     "statModules": "Module",
     "statLessons": "Bài học",
     "statStudents": "Học viên",
-    "addLesson": "Thêm bài học",
+    "addLesson": "Thêm module",
     "pickCourse": "Chọn khóa học",
     "courseMeta": "{{modules}} module · {{lessons}} bài",
     "progressNamed": "Tiến độ: {{title}}",

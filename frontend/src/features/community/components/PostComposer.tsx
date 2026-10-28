@@ -64,6 +64,14 @@ export function PostComposer({ courseId }: { courseId: string }) {
     const el = textRef.current;
     const pos = el?.selectionStart ?? content.length;
     const before = content.slice(0, pos);
+    // Đang có "@" chờ gắn thẻ ngay trước con trỏ: bấm lại = hủy (xóa "@" thừa) thay vì chèn thêm một "@" nữa.
+    if (showPicker && before.endsWith('@')) {
+      setContent(before.slice(0, -1).replace(/ $/, '') + content.slice(pos));
+      setCaret(Math.max(0, before.slice(0, -1).replace(/ $/, '').length));
+      setPickerOpen(false);
+      requestAnimationFrame(() => el?.focus());
+      return;
+    }
     const lead = before && !/\s$/.test(before) ? ' ' : '';
     setContent(before + lead + '@' + content.slice(pos));
     const np = pos + lead.length + 1;

@@ -43,7 +43,7 @@
     "premium1": "Access exclusive courses",
     "premium2": "In-depth resources",
     "premium3": "1:1 support from experts",
-    "comingSoonTitle": "Coming soon — Phase 8 in PLAN.md (Premium payment gateway not finalized)",
+    "comingSoonTitle": "Coming soon",
     "upgrade": "Upgrade (coming soon)",
     "leave": "Leave community",
     "leaving": "Leaving…",
@@ -170,7 +170,7 @@
     "sortJoined": "Newest members",
     "filterAll": "All",
     "filterOnline": "Online now",
-    "filterAdmin": "Admins",
+    "filterAdmin": "Admins & mods",
     "closeNotice": "Dismiss notice",
     "title": "Members",
     "subtitle": "Connect, learn and grow with the community.",
@@ -339,7 +339,8 @@
     "subtitle": "Manage and join events in your community",
     "inviteAll": "Select all members",
     "inviteClear": "Clear all ({{n}})",
-    "inviteCapped": "Limit of {{max}} invitees reached"
+    "inviteCapped": "Limit of {{max}} invitees reached",
+    "linkError": "The meeting link must be a valid http(s) URL, e.g. https://meet.google.com/abc"
   },
   "ui": {
     "close": "Close",
@@ -529,7 +530,7 @@
     "statModules": "Modules",
     "statLessons": "Lessons",
     "statStudents": "Students",
-    "addLesson": "Add lesson",
+    "addLesson": "Add module",
     "pickCourse": "Choose a course",
     "courseMeta": "{{modules}} modules · {{lessons}} lessons",
     "progressNamed": "Progress: {{title}}",

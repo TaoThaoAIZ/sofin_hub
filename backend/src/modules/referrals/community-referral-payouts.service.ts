@@ -63,15 +63,16 @@ export const communityReferralPayoutsService = {
     if (!community) throw HttpError.notFound('Không tìm thấy cộng đồng');
 
     const refs = await prisma.communityReferral.findMany({ where: { communityId }, select: { referrerId: true, referredUserId: true, createdAt: true }, orderBy: { createdAt: 'asc' } });
+    // "Người được giới thiệu" chỉ tính người đã thực sự tham gia cộng đồng (lượt mở link nhưng chưa vào thì chưa tính).
+    const joinedIds = new Set((await prisma.enrollment.findMany({ where: { communityId, userId: { in: refs.map((x) => x.referredUserId) } }, select: { userId: true } })).map((e) => e.userId));
+    const joinedRefs = refs.filter((x) => joinedIds.has(x.referredUserId));
     const firstSeen = new Map<string, Date>();
     const referredCount = new Map<string, number>();
-    for (const x of refs) {
-      if (!firstSeen.has(x.referrerId)) firstSeen.set(x.referrerId, x.createdAt);
-      referredCount.set(x.referrerId, (referredCount.get(x.referrerId) ?? 0) + 1);
-    }
+    for (const x of refs) if (!firstSeen.has(x.referrerId)) firstSeen.set(x.referrerId, x.createdAt);
+    for (const x of joinedRefs) referredCount.set(x.referrerId, (referredCount.get(x.referrerId) ?? 0) + 1);
     const inRange = (d: Date) => d >= r.from && d <= r.to;
     const newReferrers = [...firstSeen.values()].filter(inRange).length;
-    const newReferred = refs.filter((x) => inRange(x.createdAt)).length;
+    const newReferred = joinedRefs.filter((x) => inRange(x.createdAt)).length;
 
     const base: Prisma.ReferralCommissionWhereInput = { kind: 'community', communityId, status: { not: 'void' } };
     const [commissions, prevCommission, paidNow, paidPrev] = await Promise.all([
@@ -142,7 +143,7 @@ export const communityReferralPayoutsService = {
       rateBps: community.referralRateBps,
       kpis: {
         collaborators: { value: firstSeen.size, delta: newReferrers > 0 ? newReferrers : null },
-        referred: { value: refs.length, delta: newReferred > 0 ? newReferred : null },
+        referred: { value: joinedRefs.length, delta: newReferred > 0 ? newReferred : null },
         due: { cents: dueTotal, deltaPct: pctChange(commissionTotal, prevCommission._sum.amountCents ?? 0) },
         paid: { cents: paidTotal, deltaPct: pctChange(paidTotal, paidPrev._sum.amountCents ?? 0) },
       },

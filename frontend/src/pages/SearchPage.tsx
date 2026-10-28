@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
-import { RequireLogin } from '../components/layout/RequireLogin';
+import { useAuth } from '../features/auth/AuthContext';
 import { MaterialIcon } from '../components/ui/MaterialIcon';
 import { Pager } from '../components/ui/Pager';
 import { ApiError } from '../lib/api';
@@ -38,7 +38,7 @@ function ResultRow({ r }: { r: SearchResult }) {
               <Highlight segments={r.name} /> <span className="text-[12.5px] font-normal text-stone-500">@{r.handle}</span>
             </span>
             <span className="text-[12px] text-stone-500">
-              {t('row.member', { role: r.role, course: r.courseTitle })}
+              {t('row.member', { role: t(`row.role.${r.role}`, { defaultValue: r.role }), course: r.courseTitle })}
             </span>
           </>
         )}
@@ -66,6 +66,8 @@ function SearchInner() {
   const page = Math.max(1, Number(params.get('page')) || 1);
   const [input, setInput] = useState(q);
   useEffect(() => setInput(q), [q]);
+  const { status } = useAuth();
+  const guest = status !== 'authenticated';
   const communities = useMyCommunities();
   const tooShort = q.trim().length < 2;
   const result = useSearch({ q: q.trim(), type, courseId: courseId || undefined, page });
@@ -110,7 +112,7 @@ function SearchInner() {
         </form>
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          {TABS.map((t) => (
+          {TABS.filter((x) => !guest || x.key === 'all' || x.key === 'courses').map((t) => (
             <button
               key={t.key}
               type="button"
@@ -123,7 +125,7 @@ function SearchInner() {
               {countOf[t.key] !== undefined && <span className="text-[11.5px] opacity-80">{countOf[t.key]}</span>}
             </button>
           ))}
-          <select
+          {!guest && <select
             value={courseId}
             onChange={(e) => update({ courseId: e.target.value || null, page: null })}
             aria-label={tr('page.filterAria')}
@@ -135,7 +137,7 @@ function SearchInner() {
                 {c.title}
               </option>
             ))}
-          </select>
+          </select>}
         </div>
 
         <div className="glass mt-4 overflow-hidden rounded-3xl">
@@ -160,9 +162,5 @@ function SearchInner() {
 }
 
 export function SearchPage() {
-  return (
-    <RequireLogin>
-      <SearchInner />
-    </RequireLogin>
-  );
+  return <SearchInner />;
 }

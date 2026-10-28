@@ -85,7 +85,7 @@ export function ReviewsSection({
         <span className="text-[15px] text-stone-600">{t('reviews.count', { count: summary?.ratingCount ?? fallbackCount })}</span>
       </div>
 
-      {viewerEnrolled ? (
+      {viewerRole === 'owner' ? null : viewerEnrolled ? (
         // key theo id đánh giá của tôi: khi dữ liệu tải xong/đổi, form nạp lại giá trị mới
         <ReviewForm
           key={mine?.id ?? 'new'}

@@ -701,7 +701,7 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
           type: 'system',
           title: 'Bạn đã nhận được chứng nhận hoàn thành',
           body: `Chúc mừng! Bạn đã hoàn thành khóa "${course.title}" và được cấp chứng nhận.`,
-          link: `/courses/${communityId}/community/lop-hoc`,
+          link: `/communities/${communityId}/community/lop-hoc`,
           communityId,
         });
       }

@@ -60,7 +60,10 @@
     "colAmount": "Amount (VND)",
     "colRefunded": "Refunded (VND)",
     "colStatus": "Status",
-    "colInvoice": "Invoice no."
+    "colInvoice": "Invoice no.",
+    "statusExpired": "Expired",
+    "statusCancelled": "Canceled",
+    "modulePurchase": "Module purchase"
   },
   "communities": {
     "errGeneric": "Something went wrong. Please try again.",
@@ -71,7 +74,8 @@
       "cancelledToast": "Join request to {{title}} canceled",
       "cancel": "Cancel request",
       "loading": "Loading…",
-      "empty": "No pending requests or invitations."
+      "empty": "No pending requests or invitations.",
+      "cancelConfirm": "Cancel your request to join \"{{title}}\"?"
     },
     "drafts": {
       "title": "Community drafts",
@@ -232,7 +236,8 @@
     "deleteBody": "Your profile will be deleted and cannot be recovered. Your past posts and comments will remain under the name “Deleted member”.",
     "deleteTitle": "Delete your account permanently?",
     "deleteCta": "Delete account",
-    "deleteTypeLabel": "Type {{word}} to confirm"
+    "deleteTypeLabel": "Type {{word}} to confirm",
+    "enterEmailAndPw": "Please enter your new email and current password"
   },
   "billing": {
     "loading": "Loading…",
@@ -252,7 +257,7 @@
       "pastDue": "Past due",
       "perYear": "year",
       "perMonth": "month",
-      "lineCanceling": "{{price}} / {{per}} · Expires {{date}}",
+      "lineCanceling": "{{price}} / {{per}} · Active until {{date}}",
       "lineTrial": "Trial · pay {{price}} by {{date}}",
       "lineActive": "{{price}} / {{per}} · Next period {{date}}",
       "lineEnded": "{{price}} / {{per}} · Ended {{date}}",
@@ -261,7 +266,8 @@
       "empty": "You don’t have any paid or trial memberships yet.",
       "community": "Community",
       "manage": "Manage",
-      "open": "Open community {{title}}"
+      "open": "Open community {{title}}",
+      "canceling": "Won't renew"
     },
     "history": {
       "noRows": "No transactions to download",
@@ -286,7 +292,10 @@
       "sub": "Memberships are not charged automatically — you pay by QR bank transfer.",
       "empty": "Nothing needs payment right now.",
       "until": "due {{date}}",
-      "payNow": "Pay now"
+      "payNow": "Pay now",
+      "cancel": "Cancel invoice",
+      "cancelConfirm": "Cancel this invoice? You can create a new one whenever you want to pay.",
+      "cancelled": "Invoice canceled"
     }
   },
   "communitiesTab": {
@@ -537,7 +546,8 @@
       "shareNote": "This information is shared with the owner of the community where you refer members so they can transfer your commission.",
       "promptTitle": "Add your payout account",
       "promptBody": "Enter your bank and account number so the community owner can transfer your commission when paying you.",
-      "promptBtn": "Add account"
+      "promptBtn": "Add account",
+      "directPaid": "Paid by community owner"
     }
   },
   "securityTab": {

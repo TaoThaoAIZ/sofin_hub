@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { stripMarkdown } from '../../../lib/markdown';
 import { Link } from 'react-router-dom';
 import { ThemedImg } from '../../../components/ui/ThemedImg';
 import { formatCompact } from '../../../lib/format';
@@ -17,7 +18,7 @@ export function CourseCard({ course, view }: { course: Course; view: ViewMode })
 
   return (
     <article
-      className={`relative flex cursor-pointer overflow-hidden rounded-[28px] bg-white px-2.5 pt-2.5 pb-4 max-md:rounded-[20px] max-md:p-2 max-md:pb-4 shadow-[1px_6px_15px_rgba(121,81,54,0.08)] transition duration-200 hover:-translate-y-[3px] hover:shadow-card-hover dark:bg-[rgba(63,63,63,.3)] dark:shadow-[1px_6px_30px_rgba(255,255,255,0.08)] ${
+      className={`relative isolate flex cursor-pointer overflow-hidden rounded-[28px] bg-white px-2.5 pt-2.5 pb-4 max-md:rounded-[20px] max-md:p-2 max-md:pb-4 shadow-[1px_6px_15px_rgba(121,81,54,0.08)] transition duration-200 hover:-translate-y-[3px] hover:shadow-card-hover dark:bg-[rgba(63,63,63,.3)] dark:shadow-[1px_6px_30px_rgba(255,255,255,0.08)] ${
         list ? 'flex-row gap-3' : 'flex-col'
       }`}
     >
@@ -41,7 +42,7 @@ export function CourseCard({ course, view }: { course: Course; view: ViewMode })
               {course.title}
             </Link>
           </h3>
-          <p className="m-0 line-clamp-2 text-[clamp(14px,0.89vw,16px)] leading-6 max-md:text-sm max-md:leading-5 text-[#62635f] dark:text-[#bababa]">{course.description}</p>
+          <p className="m-0 line-clamp-2 text-[clamp(14px,0.89vw,16px)] leading-6 max-md:text-sm max-md:leading-5 text-[#62635f] dark:text-[#bababa]">{stripMarkdown(course.description)}</p>
         </div>
 
         <div className="mt-auto flex flex-col items-stretch gap-2 px-3 max-md:flex-row max-md:items-center max-md:justify-between max-md:gap-3 max-md:px-2">

@@ -11,7 +11,7 @@ const LEGAL = [
 ] as const;
 
 const CONTACTS = [
-  { icon: 'f_mail', text: 'Contact@sofin.ai' },
+  { icon: 'f_mail', text: 'support@sofinhub.com' },
   { icon: 'f_phone', text: '0335 456 789' },
   { icon: 'f_map', text: '216 - 218 Trần Hưng Đạo St., Da Nang' },
 ] as const;

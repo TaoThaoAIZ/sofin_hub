@@ -180,11 +180,10 @@ function RevenueInner() {
             {pol && (
               <p className="mt-3 rounded-xl bg-stone-50 px-4 py-2.5 text-[12.5px] text-stone-600">
                 {t('policy', { hold: pol.holdDays, refund: pol.refundWindowDays, dispute: pol.disputeWindowDays, reserve: pol.reservePct })}
-                {pol.note ? ` ${pol.note}.` : ''}
               </p>
             )}
             <p className="mt-3 rounded-xl bg-amber-50 px-4 py-2.5 text-[12.5px] text-amber-800">
-              * {d.assumptions.note}. {t('estimateNote')}
+              {t('estimateNote')}
             </p>
 
             <h2 className="mt-8 mb-3 text-lg font-extrabold">{t('recent.title')}</h2>

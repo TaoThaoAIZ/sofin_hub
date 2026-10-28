@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { useDocumentTitle } from '../components/PageTitle';
 import { Navigate, Outlet, useParams } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { CommunitySidebar } from '../features/community/components/CommunitySidebar';
@@ -10,6 +11,7 @@ export function CommunityPage() {
   const { t } = useTranslation('community');
   const { id = '' } = useParams();
   const { data: course, isPending } = useCommunityDetail(id);
+  useDocumentTitle(course?.title);
 
   if (isPending) {
     return (

@@ -38,4 +38,6 @@ export interface Report {
 export interface ReportView extends Report {
   reporterName: string;
   targetUserName: string;
+  /** Vai trò hiện tại của người bị báo cáo trong cộng đồng (null = đã rời). FE ẩn nút cấm với chủ cộng đồng. */
+  targetRole: 'member' | 'mod' | 'admin' | 'owner' | null;
 }
