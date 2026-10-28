@@ -48,7 +48,7 @@
     "held": "Đang giữ (chờ hoàn tiền/tranh chấp)",
     "heldHint": "rút được sau {{days}} ngày",
     "reserve": "Quỹ dự phòng",
-    "reserveHint": "giữ lại {{pct}}% số tiền đã đủ điều kiện rút",
+    "reserveHint": "giữ lại {{pct}}% tổng thực nhận",
     "mrr": "MRR",
     "mrrHint": "{{paid}} thành viên trả phí",
     "pending": "Đang chờ rút"

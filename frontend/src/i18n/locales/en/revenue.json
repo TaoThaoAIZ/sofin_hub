@@ -48,7 +48,7 @@
     "held": "On hold (pending refunds/disputes)",
     "heldHint": "withdrawable after {{days}} days",
     "reserve": "Reserve fund",
-    "reserveHint": "{{pct}}% of eligible funds retained",
+    "reserveHint": "{{pct}}% of net revenue retained",
     "mrr": "MRR",
     "mrrHint": "{{paid}} paying members",
     "pending": "Pending payouts"

@@ -143,6 +143,8 @@ export interface RevenueSummary {
   /** Còn trong cửa sổ hoàn tiền/tranh chấp. */
   heldCents?: number;
   reserveCents?: number;
+  /** Quỹ dự phòng trên toàn bộ thực nhận (hiển thị). */
+  reserveTotalCents?: number;
   debtCents?: number;
   payoutPolicy?: { nextEligibleAt?: string | null; minPayoutCents?: number; holdDays: number; refundWindowDays: number; disputeWindowDays: number; reservePct: number; note?: string };
   payoutRequestedCents: number;

@@ -97,6 +97,8 @@ export function balanceView(b: BalanceFigures, reservePct: number) {
     total,
     held: Math.max(0, b.net - b.eligible),
     reserve,
+    /** Quỹ dự phòng theo TOÀN BỘ thực nhận (kể cả phần còn trong holding period) — để hiển thị; `reserve` chỉ tính phần đã đủ điều kiện và dùng cho số dư rút được. */
+    reserveTotal: Math.floor((Math.max(0, b.net) * bp(reservePct)) / 10_000),
     withdrawable: Math.max(0, Math.min(b.eligible - reserve - b.requested, total)),
     debt: Math.max(0, -total),
   };
@@ -1435,7 +1437,8 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
         // --- thêm mới (chỉ thêm): phân rã số dư ---
         totalBalanceCents: bal.total, // net − payout đã yêu cầu (có thể âm = còn nợ)
         heldCents: bal.held, // còn trong holding period
-        reserveCents: bal.reserve, // rolling reserve
+        reserveCents: bal.reserve, // rolling reserve (phần đã đủ điều kiện rút)
+        reserveTotalCents: bal.reserveTotal, // rolling reserve tính trên toàn bộ thực nhận
         debtCents: bal.debt, // nợ do hoàn tiền/chargeback sau khi đã rút
         payoutPolicy: {
           // Ngày số tiền đang giữ đầu tiên được phép rút (giao dịch sớm nhất còn trong holding period + holdDays); null = không có tiền đang giữ.
