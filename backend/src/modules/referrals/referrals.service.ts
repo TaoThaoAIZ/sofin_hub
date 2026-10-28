@@ -76,7 +76,8 @@ export function createReferralsService() {
     // Trang trong một cộng đồng: chỉ tính hoa hồng phát sinh ở CỘNG ĐỒNG đó.
     const earned = await repo.earnedByUser(referrerId, kind as ReferralKind, ids, kind === 'member' ? communityId : undefined);
     // Hoa hồng của chương trình giới thiệu theo cộng đồng (kind = 'community') cộng vào cùng cột "Hoa hồng đã nhận" của người đó.
-    if (kind === 'member' && communityId) {
+    // Trang tổng (không chọn cộng đồng) cộng cả hoa hồng cộng đồng ở mọi cộng đồng, để khớp "Số dư có thể rút".
+    if (kind === 'member') {
       for (const [uid, cents] of await repo.earnedByUser(referrerId, 'community' as ReferralKind, ids, communityId)) earned.set(uid, (earned.get(uid) ?? 0) + cents);
     }
     // "Đã tham gia" (đang là thành viên) cao hơn "Đã hủy" (gói cũ đã hủy): người đã hủy gói ở cộng đồng này nhưng đang ở cộng đồng khác vẫn là đã tham gia.

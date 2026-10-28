@@ -13,8 +13,13 @@ describe('tìm kiếm toàn cục', () => {
   });
   after(() => server.close());
 
-  it('401 khi thiếu token; 400 khi q quá ngắn/dài/thiếu', async () => {
-    assert.equal((await c.call('GET', '/search?q=abc')).status, 401);
+  it('khách: /search chỉ trả khóa học (không bài viết/thành viên); /suggest 401; 400 khi q quá ngắn/dài/thiếu', async () => {
+    const guest = await c.call('GET', '/search?q=abc');
+    assert.equal(guest.status, 200);
+    assert.equal(guest.body.counts.members, 0);
+    assert.equal(guest.body.counts.posts, 0);
+    assert.ok(guest.body.data.every((x: any) => x.type === 'course'));
+    assert.deepEqual((await c.call('GET', '/search?q=abc&type=members')).body.data, []);
     assert.equal((await c.call('GET', '/search/suggest?q=abc')).status, 401);
     const u = await c.registerUser('s0');
     assert.equal((await c.call('GET', '/search?q=a', { token: u.token })).status, 400);
