@@ -23,3 +23,17 @@ Cấu hình qua env: `MOBILE_MIN_VERSION`, `MOBILE_LATEST_VERSION`, `MOBILE_IOS_
 - B2 đăng nhập Google/Apple native: cần OAuth client ID Android/iOS (Google Cloud), Apple Developer.
 - B3 push: bảng thiết bị + gửi qua Expo Push API.
 - B4 deep link: `assetlinks.json` cần SHA-256 chứng chỉ ký app; `apple-app-site-association` cần Apple Team ID; cả hai cần domain thật.
+
+## Đăng nhập Google qua trình duyệt hệ thống (B2, phần Google)
+
+Dùng lại OAuth ở server (`oauth.ts`, client ID **Web** hiện có) — không cần client ID Android/iOS. Module: `oauth-mobile.ts`, route trong `auth.routes.ts`. Test: `tests/auth-mobile-oauth.test.ts`.
+
+1. App tạo `verifier` (≥32 ký tự ngẫu nhiên), mở bằng trình duyệt hệ thống:
+   `GET /auth/oauth/google/start?client=mobile&challenge=<base64url(sha256(verifier))>` (thêm `&ref=` nếu có mã giới thiệu).
+2. Server chạy OAuth như web. Xong chuyển về deep link `sofinhub://oauth#...`:
+   - `#code=<mã>`: thành công. Mã dùng 1 lần, sống 60 giây, gắn với challenge.
+   - `#ticket=<vé>`: tài khoản bật 2FA — gọi `POST /auth/login/2fa` như đăng nhập thường.
+   - `#error=<mã>`: `not_configured`, `invalid_state`, `cancelled`, `oauth_no_email`, `email_conflict`, … (cùng bộ mã với web).
+3. `POST /auth/oauth/mobile/exchange` `{ code, verifier }` + header `X-Client: mobile` → phiên (`user`, `accessToken`, `refreshToken`). Sai verifier/mã hết hạn/dùng lại → 401 (mã bị hủy ngay).
+
+Lưu ý: mã đổi giữ trong bộ nhớ tiến trình (đủ cho 1 instance; nhiều instance cần chuyển sang Redis/DB). Dev trên emulator: đặt `EXPO_PUBLIC_API_URL=http://localhost:4000/api` + `adb reverse tcp:4000 tcp:4000` vì Google chỉ nhận redirect `localhost`/https.

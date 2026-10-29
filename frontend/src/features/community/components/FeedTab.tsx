@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
-import { useAuth } from '../../auth/AuthContext';
 import { useCommunityDetail } from '../../courses/queries';
 import { useOnboarding, usePost, usePostsFeed } from '../queries';
 import { categoryLabel, POST_CATEGORIES, type PostCategory } from '../types';
@@ -20,16 +19,9 @@ const FILTERS: { key: 'all' | 'trending' | PostCategory; icon?: string; color?: 
   ...POST_CATEGORIES.map((c) => ({ key: c, icon: CATEGORY_META[c].icon, color: CATEGORY_META[c].color })),
 ];
 
-const WELCOME_ACTIONS = [
-  { key: 'video', icon: 'play_arrow', comingSoon: true },
-  { key: 'popular', icon: 'description', comingSoon: false },
-  { key: 'app', icon: 'groups', comingSoon: true },
-] as const;
-
 export function FeedTab() {
   const { t } = useTranslation('community');
   const { id: courseId = '' } = useParams();
-  const { user } = useAuth();
   const { data: course } = useCommunityDetail(courseId);
   const [params, setParams] = useSearchParams();
   const tag = params.get('tag') ?? undefined;
@@ -81,40 +73,6 @@ export function FeedTab() {
               document.getElementById('community-feed-filters')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }}
           />
-        )}
-
-        {!showOnboarding && (
-        <div className="relative min-h-[210px] overflow-hidden rounded-[24px] border border-brand/15 bg-gradient-to-br from-[#fff6ef] to-[#ffe6d4] p-6 dark:border-[rgba(255,220,197,.1)] dark:from-[rgba(63,63,63,.3)] dark:to-[rgba(74,29,0,.3)]">
-          <img
-            src="/images/community-welcome-art.webp"
-            alt=""
-            className="pointer-events-none absolute inset-0 size-full object-cover dark:hidden"
-          />
-          <div className="relative z-10">
-            <h2 className="m-0 text-[26px] font-extrabold tracking-tight">{t('feed.welcome', { name: user?.firstName ?? t('feed.welcomeFallbackName') })}</h2>
-            <p className="mt-2 max-w-[520px] text-[14.5px] text-stone-700">
-              {t('feed.welcomeSub', { title: course?.title ?? '' })}
-            </p>
-            <div className="mt-[22px] flex max-w-[800px] flex-wrap gap-3.5 max-md:flex-col">
-              {WELCOME_ACTIONS.map((a) => (
-                <button
-                  key={a.key}
-                  type="button"
-                  disabled={a.comingSoon}
-                  title={a.comingSoon ? t('feed.comingSoon') : undefined}
-                  onClick={a.key === 'popular' ? () => setSort('popular') : undefined}
-                  className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl bg-white/90 px-4 py-3.5 max-md:flex-none text-left shadow-[0_6px_18px_rgba(120,60,20,.08)] hover:bg-white dark:bg-white/[.07] dark:hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                  <MaterialIcon name={a.icon} size={28} filled color="#ff570a" className="flex-none" />
-                  <div className="min-w-0">
-                    <div className="truncate text-[14.5px] font-bold">{t(`feed.actions.${a.key}.title`)}</div>
-                    <div className="mt-[3px] truncate text-xs text-stone-500">{t(`feed.actions.${a.key}.desc`)}</div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
         )}
 
         <div className="no-scrollbar flex flex-wrap gap-2 max-md:flex-nowrap max-md:overflow-x-auto">
