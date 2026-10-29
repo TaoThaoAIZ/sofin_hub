@@ -62,7 +62,9 @@ export const communityReferralPayoutsService = {
     const community = await prisma.community.findFirst({ where: { id: communityId, deletedAt: null }, select: { referralRateBps: true } });
     if (!community) throw HttpError.notFound('Không tìm thấy cộng đồng');
 
-    const refs = await prisma.communityReferral.findMany({ where: { communityId }, select: { referrerId: true, referredUserId: true, createdAt: true }, orderBy: { createdAt: 'asc' } });
+    // Chủ cộng đồng không phải cộng tác viên của chính mình (không tự chi trả cho mình): loại khỏi danh sách và hoa hồng.
+    const ownerIds = (await prisma.enrollment.findMany({ where: { communityId, role: 'owner' }, select: { userId: true } })).map((e) => e.userId);
+    const refs = await prisma.communityReferral.findMany({ where: { communityId, referrerId: { notIn: ownerIds } }, select: { referrerId: true, referredUserId: true, createdAt: true }, orderBy: { createdAt: 'asc' } });
     // "Người được giới thiệu" chỉ tính người đã thực sự tham gia cộng đồng (lượt mở link nhưng chưa vào thì chưa tính).
     const joinedIds = new Set((await prisma.enrollment.findMany({ where: { communityId, userId: { in: refs.map((x) => x.referredUserId) } }, select: { userId: true } })).map((e) => e.userId));
     const joinedRefs = refs.filter((x) => joinedIds.has(x.referredUserId));
@@ -74,7 +76,7 @@ export const communityReferralPayoutsService = {
     const newReferrers = [...firstSeen.values()].filter(inRange).length;
     const newReferred = joinedRefs.filter((x) => inRange(x.createdAt)).length;
 
-    const base: Prisma.ReferralCommissionWhereInput = { kind: 'community', communityId, status: { not: 'void' } };
+    const base: Prisma.ReferralCommissionWhereInput = { kind: 'community', communityId, status: { not: 'void' }, referrerId: { notIn: ownerIds } };
     const [commissions, prevCommission, paidNow, paidPrev] = await Promise.all([
       prisma.referralCommission.groupBy({ by: ['referrerId', 'status', 'payoutId'], where: { ...base, createdAt: { gte: r.from, lte: r.to } }, _sum: { amountCents: true } }),
       prisma.referralCommission.aggregate({ where: { ...base, createdAt: { gte: r.prevFrom, lte: r.prevTo } }, _sum: { amountCents: true } }),
@@ -169,7 +171,8 @@ export const communityReferralPayoutsService = {
    */
   async pay(communityId: string, ownerId: string, body: PayBody, now = new Date()) {
     const r = rangeOf(body, now);
-    const referrers = await prisma.communityReferral.findMany({ where: { communityId, referrerId: { in: body.referrerIds } }, distinct: ['referrerId'], select: { referrerId: true } });
+    const ownerIds = (await prisma.enrollment.findMany({ where: { communityId, role: 'owner' }, select: { userId: true } })).map((e) => e.userId);
+    const referrers = await prisma.communityReferral.findMany({ where: { communityId, referrerId: { in: body.referrerIds.filter((x) => !ownerIds.includes(x)) } }, distinct: ['referrerId'], select: { referrerId: true } });
     const valid = new Set(referrers.map((x) => x.referrerId));
     const results: { referrerId: string; paidCents: number; commissionCount: number; leftCents: number; reason: 'ok' | 'nothing_due' | 'already_withdrawn' | 'not_referrer' }[] = [];
 
@@ -223,7 +226,7 @@ export const communityReferralPayoutsService = {
     const wanted = query.ids ? new Set(query.ids.split(',').map((s) => s.trim()).filter(Boolean)) : null;
     const groups = await prisma.referralCommission.groupBy({
       by: ['referrerId'],
-      where: { kind: 'community', communityId, status: 'pending', payoutId: null, createdAt: { gte: r.from, lte: r.to }, ...(wanted ? { referrerId: { in: [...wanted] } } : {}) },
+      where: { kind: 'community', communityId, status: 'pending', payoutId: null, referrerId: { notIn: (await prisma.enrollment.findMany({ where: { communityId, role: 'owner' }, select: { userId: true } })).map((e) => e.userId) }, createdAt: { gte: r.from, lte: r.to }, ...(wanted ? { referrerId: { in: [...wanted] } } : {}) },
       _sum: { amountCents: true },
       _count: { _all: true },
     });

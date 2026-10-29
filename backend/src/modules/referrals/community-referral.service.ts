@@ -182,7 +182,8 @@ export const communityReferralService = {
         const found = await repo.findCode(code);
         const referrerId = found?.userId ?? (await repo.findUserByHandle(code))?.id;
         if (!referrerId || referrerId === payerId) return false;
-        if (!(await enrollmentService.getActiveRole(referrerId, communityId))) return false;
+        const referrerRole = await enrollmentService.getActiveRole(referrerId, communityId);
+        if (!referrerRole || referrerRole === 'owner') return false; // chủ cộng đồng không nhận hoa hồng từ chính doanh thu của mình
         if (await enrollmentService.getActiveRole(payerId, communityId)) return false;
         try {
           await prisma.communityReferral.create({ data: { communityId, referrerId, referredUserId: payerId, code } });
@@ -206,6 +207,7 @@ export const communityReferralService = {
         prisma.community.findUnique({ where: { id: p.communityId }, select: { referralRateBps: true } }),
       ]);
       if (!ref || !community || community.referralRateBps <= 0) return;
+      if ((await enrollmentService.getActiveRole(ref.referrerId, p.communityId)) === 'owner') return; // dữ liệu cũ: chủ cộng đồng tự giới thiệu
       const at = p.confirmedAt ? new Date(p.confirmedAt) : new Date();
       try {
         await repo.createCommission({
