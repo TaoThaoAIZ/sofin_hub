@@ -2,7 +2,8 @@
 -- Hủy các khoản đã phát sinh trước khi có quy tắc này mà chưa được chi trả / chưa nằm trong đợt chi trả nào.
 UPDATE "ReferralCommission" rc
 SET "status" = 'void'
-WHERE rc."kind" = 'community'
+-- Lưu ý: 'community' được thêm vào enum ReferralKind bằng ALTER TYPE ở migration trước; các test gộp mọi migration trong MỘT transaction nên không được dùng giá trị enum mới đó trực tiếp -> so sánh qua ::text.
+WHERE rc."kind"::text = 'community'
   AND rc."status" = 'pending'
   AND rc."payoutId" IS NULL
   AND EXISTS (
