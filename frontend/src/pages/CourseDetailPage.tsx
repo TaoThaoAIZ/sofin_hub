@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useDocumentTitle } from '../components/PageTitle';
 import { Markdown } from '../lib/markdown';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { factLabel, factValue, priceNote } from '../features/courses/factText';
 import { Trans, useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -41,8 +41,6 @@ const MEMBERSHIP_PERKS = [
   { key: 'updates', icon: 'sync', color: '#3b82f6' },
   { key: 'support', icon: 'chat_bubble', color: '#ef4466' },
 ] as const;
-type TabKey = 'overview' | 'content' | 'faq';
-const TABS: { key: TabKey | 'reviews' }[] = [{ key: 'overview' }, { key: 'content' }, { key: 'reviews' }, { key: 'faq' }];
 
 /** Danh sách quyền lợi chỉ gồm điều thật: số bài học thật, cộng đồng, và ghi chú giá/dùng thử từ API. */
 function sidebarPerks(course: CommunityDetail): string[] {
@@ -54,14 +52,17 @@ function sidebarPerks(course: CommunityDetail): string[] {
   ];
 }
 
-/** Mô tả hiển thị gọn (tối đa ~4 dòng); dài hơn thì có nút Xem thêm / Thu gọn. */
+/** Mô tả hiển thị gọn (2 dòng); dài hơn thì có nút Xem thêm / Thu gọn. */
 function ShortText({ text }: { text: string }) {
   const { t } = useTranslation('course');
   const [open, setOpen] = useState(false);
-  const long = text.length > 220 || text.split('\n').length > 4;
+  const long = text.length > 110 || text.split('\n').length > 2;
   return (
     <div className="max-w-[1000px]">
-      <Markdown text={text} className={`text-[clamp(16px,1.11vw,20px)] leading-[1.6] text-[#57524e] text-pretty dark:text-[#bababa] ${long && !open ? 'line-clamp-4' : ''}`} />
+      {/* line-clamp không chạy với nội dung Markdown nhiều khối (flex) nên thu gọn bằng chiều cao: 2 dòng × line-height 1.6. */}
+      <div className={`text-[clamp(16px,1.11vw,20px)] leading-[1.6] text-[#57524e] text-pretty dark:text-[#bababa] ${long && !open ? 'max-h-[3.2em] overflow-hidden' : ''}`}>
+        <Markdown text={text} />
+      </div>
       {long && (
         <button type="button" onClick={() => setOpen((o) => !o)} className="mt-1 border-0 bg-transparent p-0 text-sm font-semibold text-brand hover:underline">
           {open ? t('detail.showLess') : t('detail.showMore')}
@@ -83,9 +84,7 @@ export function CourseDetailPage() {
   const enroll = useToggleEnrollment(id);
   const toolsCount = useTools().data?.tools.length;
   const qc = useQueryClient();
-  const [tab, setTab] = useState<TabKey>('overview');
   const [showPaidDialog, setShowPaidDialog] = useState(false);
-  const reviewsRef = useRef<HTMLDivElement>(null);
   // Luồng cộng đồng riêng tư: hộp thoại gửi yêu cầu + trạng thái yêu cầu đang chờ ('unknown' = biết là đang chờ nhưng không còn id để hủy)
   const [showRequestDialog, setShowRequestDialog] = useState(false);
   const [pendingRequest, setPendingRequest] = useState<string | null>(() => loadPendingRequestId(id));
@@ -148,9 +147,6 @@ export function CourseDetailPage() {
   const tag = course.tag ? TAG_UI[course.tag] : null;
   const categoryName = categories.find((c) => c.id === course.category)?.name ?? course.category;
   const priceLabel = course.priceUsd === 0 ? t('detail.free') : formatCents(course.priceUsd);
-
-  const scrollToReviews = () =>
-    reviewsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   const approved = !!course.viewerApproved && !course.viewerEnrolled;
   // Đã được duyệt thì không còn là bước xin phép: đi tiếp luồng thanh toán như cộng đồng công khai.
@@ -409,33 +405,13 @@ export function CourseDetailPage() {
             ))}
           </div>
 
-          <div className="no-scrollbar flex items-center gap-2 overflow-x-auto rounded-[20px] p-1.5">
-            {TABS.filter((tb) => tb.key !== 'faq' || course.faqs.length > 0).map((tb) => {
-              const isActive = tb.key === tab;
-              return (
-                <button
-                  key={tb.key}
-                  type="button"
-                  onClick={() => (tb.key === 'reviews' ? scrollToReviews() : setTab(tb.key))}
-                  className={`h-[42px] flex-none rounded-[18px] border-0 px-[22px] text-[15px] leading-[1.45] whitespace-nowrap ${
-                    isActive
-                      ? 'bg-[linear-gradient(180deg,#ff8b3d,#ff7825_80%,#ef5a08)] font-bold text-white shadow-[0_9px_20px_rgba(237,109,35,0.25)]'
-                      : 'bg-transparent font-normal text-[#5c5855] hover:text-brand dark:text-[#bababa]'
-                  }`}
-                >
-                  {t(`detail.tabs.${tb.key}`)}
-                </button>
-              );
-            })}
-          </div>
-
-          {tab === 'overview' && <OverviewTab course={course} priceLabel={priceLabel} />}
-          {tab === 'content' && <ContentTab courseId={id} enrolled={!!course.viewerEnrolled} lessons={Number(course.facts.find((f) => f.label === 'Bài học')?.value ?? 0)} />}
-          {tab === 'faq' && course.faqs.length > 0 && <FaqTab faqs={course.faqs} />}
+          {<OverviewTab course={course} priceLabel={priceLabel} />}
+          {<ContentTab courseId={id} enrolled={!!course.viewerEnrolled} lessons={Number(course.facts.find((f) => f.label === 'Bài học')?.value ?? 0)} />}
+          {course.faqs.length > 0 && <FaqTab faqs={course.faqs} />}
 
           <div className="md:hidden">{supportCard}</div>
 
-          <div ref={reviewsRef} className="scroll-mt-24">
+          <div className="scroll-mt-24">
             <ReviewsSection
               courseId={id}
               viewerEnrolled={!!course.viewerEnrolled}
