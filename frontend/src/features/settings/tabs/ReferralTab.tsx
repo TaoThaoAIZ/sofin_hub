@@ -366,7 +366,7 @@ export function ReferralTab({ kind: fixedKind, showPayoutLink = true, withdraw =
           </div>
         )}
       </SCard>
-        {withdraw && <WithdrawCard />}
+        {withdraw && <WithdrawCard {...(communityId ? { communityId } : {})} />}
       </div>
       {withdraw && <WithdrawProcess />}
       </>

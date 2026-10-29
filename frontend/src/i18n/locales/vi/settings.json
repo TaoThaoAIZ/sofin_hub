@@ -547,7 +547,8 @@
       "promptTitle": "Thêm tài khoản nhận hoa hồng",
       "promptBody": "Nhập ngân hàng và số tài khoản để chủ cộng đồng có thể chuyển khoản hoa hồng khi chi trả cho bạn.",
       "promptBtn": "Thêm tài khoản",
-      "directPaid": "Chủ cộng đồng đã chi trả"
+      "directPaid": "Chủ cộng đồng đã chi trả",
+      "fromCommunity": "Trong đó từ cộng đồng này: {{amount}}"
     }
   },
   "securityTab": {

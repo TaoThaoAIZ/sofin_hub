@@ -15,9 +15,9 @@ const errMsg = (e: unknown, fallback: string) => (e instanceof ApiError ? e.mess
 const digits = (s: string) => s.replace(/\D/g, '');
 
 /** Thẻ "Rút tiền hoa hồng": số dư, tài khoản nhận (thêm/đổi), nút "Rút tiền ngay" và lịch sử. */
-export function WithdrawCard() {
+export function WithdrawCard({ communityId }: { communityId?: string } = {}) {
   const { t } = useTranslation('settings');
-  const q = useWithdraw();
+  const q = useWithdraw(communityId);
   const [modal, setModal] = useState<'account' | 'withdraw' | 'history' | null>(null);
   const w = q.data;
   const canWithdraw = !!w && w.withdrawableCents >= w.minCents;
@@ -42,6 +42,7 @@ export function WithdrawCard() {
         </span>
       </div>
       <div className="mt-1 text-[32px] leading-tight font-extrabold tracking-[-.02em]">{w ? vnd(w.withdrawableCents) : '…'}</div>
+      {w && w.communityEarnedCents !== undefined && <div className="mt-1 text-[12.5px] text-stone-500">{t('referral.withdraw.fromCommunity', { amount: vnd(w.communityEarnedCents) })}</div>}
       {w && w.pendingCents > 0 && <div className="mt-1 text-[12.5px] text-stone-500">{t('referral.withdraw.pendingNote', { amount: vnd(w.pendingCents) })}</div>}
 
       <div className="mt-4 text-sm font-semibold">{t('referral.withdraw.method')}</div>

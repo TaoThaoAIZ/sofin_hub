@@ -10,7 +10,7 @@ export const fetchCommissions = (userId: string, kind: ReferralKind, communityId
 export const remindUser = (userId: string, kind: ReferralKind) => apiPost<{ data: { sent: true } }>(`/me/referral/users/${userId}/remind?kind=${kind}`).then((r) => r.data);
 
 // ---- Rút hoa hồng
-export const fetchWithdraw = (signal?: AbortSignal) => apiGet<{ data: WithdrawOverview }>('/me/referral/withdraw', undefined, signal).then((r) => r.data);
+export const fetchWithdraw = (signal?: AbortSignal, communityId?: string) => apiGet<{ data: WithdrawOverview }>('/me/referral/withdraw', communityId ? { communityId } : undefined, signal).then((r) => r.data);
 export const fetchBanks = (signal?: AbortSignal) => apiGet<{ data: Bank[] }>('/me/referral/withdraw/banks', undefined, signal).then((r) => r.data);
 export const saveAccount = (body: { bankBin: string; accountNumber: string; accountHolder: string }) =>
   apiPut<{ data: PayoutAccount }>('/me/referral/withdraw/account', body).then((r) => r.data);

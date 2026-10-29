@@ -27,9 +27,9 @@ export const useRemind = () => useMutation({ mutationFn: (v: { userId: string; k
 // ---- Rút hoa hồng
 export const withdrawKeys = { overview: ['referral', 'withdraw'] as const, banks: ['referral', 'banks'] as const };
 
-export const useWithdraw = () => {
+export const useWithdraw = (communityId?: string) => {
   const { status } = useAuth();
-  return useQuery({ queryKey: withdrawKeys.overview, queryFn: ({ signal }) => api.fetchWithdraw(signal), enabled: status === 'authenticated' });
+  return useQuery({ queryKey: communityId ? [...withdrawKeys.overview, communityId] : withdrawKeys.overview, queryFn: ({ signal }) => api.fetchWithdraw(signal, communityId), enabled: status === 'authenticated' });
 };
 export const useBanks = () => useQuery({ queryKey: withdrawKeys.banks, queryFn: ({ signal }) => api.fetchBanks(signal), staleTime: Infinity });
 export const useSaveAccount = () => {

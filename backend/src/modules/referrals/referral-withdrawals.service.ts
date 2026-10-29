@@ -89,19 +89,24 @@ export const referralWithdrawalsService = {
   balanceInTx: (tx: Prisma.TransactionClient, userId: string) => balanceOf(tx, userId),
 
   /** Màn "Rút tiền hoa hồng": số dư + tài khoản nhận + lịch sử gần đây. */
-  async overview(userId: string) {
-    const [balance, account, list, direct] = await Promise.all([
+  async overview(userId: string, communityId?: string) {
+    const [balance, account, list, direct, fromCommunity] = await Promise.all([
       balanceOf(prisma, userId),
       prisma.referralPayoutAccount.findUnique({ where: { userId } }),
       prisma.referralWithdrawal.findMany({ where: { userId }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: 20 }),
       // Chủ cộng đồng chuyển khoản trực tiếp: không phải yêu cầu rút nhưng vẫn là tiền đã nhận, nên hiện chung trong lịch sử.
-      prisma.communityCommissionPayout.findMany({ where: { referrerId: userId }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: 20, include: { community: { select: { title: true } } } }),
+      prisma.communityCommissionPayout.findMany({ where: { referrerId: userId, ...(communityId ? { communityId } : {}) }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: 20, include: { community: { select: { title: true } } } }),
+      // Trang trong một cộng đồng: phần hoa hồng chưa rút/chưa được chi trả sinh ra từ CỘNG ĐỒNG đó (ví vẫn là một).
+      communityId
+        ? prisma.referralCommission.aggregate({ where: { referrerId: userId, communityId, status: { not: 'void' }, kind: { in: ['member', 'community'] }, payoutId: null }, _sum: { amountCents: true } })
+        : null,
     ]);
     return {
       currency: 'VND',
       minCents: MIN_WITHDRAW_CENTS,
       ...balance,
       account: account ? accountView(account) : null,
+      ...(communityId ? { communityEarnedCents: fromCommunity?._sum.amountCents ?? 0 } : {}),
       withdrawals: list.map(withdrawalView),
       directPayouts: direct.map((d) => ({ id: d.id, amountCents: d.amountCents, communityId: d.communityId, communityTitle: d.community.title, note: d.note, createdAt: d.createdAt.toISOString() })),
     };

@@ -114,7 +114,9 @@ export function createReferralsService() {
       }
     }
 
-    return refs.map((r) => {
+    // Trang trong một cộng đồng: chỉ giữ người LIÊN QUAN tới cộng đồng đó (đã vào / có gói / chờ duyệt, hoặc được mời qua link của cộng đồng này) — không lẫn người đăng ký ở nơi khác.
+    const relevant = kind === 'member' && communityId ? new Set([...pick.keys(), ...inCommunity.map((x) => x.referredUserId)]) : null;
+    return refs.filter((r) => !relevant || relevant.has(r.referredUserId)).map((r) => {
       const p = pick.get(r.referredUserId);
       return {
         userId: r.referredUserId,

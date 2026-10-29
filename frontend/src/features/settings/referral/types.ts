@@ -74,6 +74,8 @@ export interface WithdrawOverview {
   account: PayoutAccount | null;
   withdrawals: Withdrawal[];
   directPayouts: DirectPayout[];
+  /** Chỉ có khi xem trong một cộng đồng: hoa hồng chưa rút sinh ra từ cộng đồng đó (ví vẫn là một). */
+  communityEarnedCents?: number;
 }
 
 /** Khoản chủ cộng đồng đã chuyển khoản trực tiếp cho người giới thiệu. */

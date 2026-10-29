@@ -14,7 +14,7 @@ referralWithdrawalsRouter.get('/me/referral/withdraw/banks', requireAuth, (_req,
   res.json({ data: BANKS.map((b) => ({ bin: b.bin, short: b.short, name: b.name })) });
 });
 referralWithdrawalsRouter.get('/me/referral/withdraw', requireAuth, async (req, res) => {
-  res.json({ data: await svc.overview(req.userId!) });
+  res.json({ data: await svc.overview(req.userId!, typeof req.query.communityId === 'string' && req.query.communityId ? req.query.communityId : undefined) });
 });
 referralWithdrawalsRouter.put('/me/referral/withdraw/account', requireAuth, requireVerifiedEmail, async (req, res) => {
   res.json({ data: await svc.saveAccount(req.userId!, accountBody.parse(req.body)) });

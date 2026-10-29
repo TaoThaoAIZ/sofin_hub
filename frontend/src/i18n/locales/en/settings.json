@@ -547,7 +547,8 @@
       "promptTitle": "Add your payout account",
       "promptBody": "Enter your bank and account number so the community owner can transfer your commission when paying you.",
       "promptBtn": "Add account",
-      "directPaid": "Paid by community owner"
+      "directPaid": "Paid by community owner",
+      "fromCommunity": "Of which from this community: {{amount}}"
     }
   },
   "securityTab": {
