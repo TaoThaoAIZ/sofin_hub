@@ -52,26 +52,6 @@ function sidebarPerks(course: CommunityDetail): string[] {
   ];
 }
 
-/** Mô tả hiển thị gọn (2 dòng); dài hơn thì có nút Xem thêm / Thu gọn. */
-function ShortText({ text }: { text: string }) {
-  const { t } = useTranslation('course');
-  const [open, setOpen] = useState(false);
-  const long = text.length > 110 || text.split('\n').length > 2;
-  return (
-    <div className="max-w-[1000px]">
-      {/* line-clamp không chạy với nội dung Markdown nhiều khối (flex) nên thu gọn bằng chiều cao: 2 dòng × line-height 1.6. */}
-      <div className={`text-[clamp(16px,1.11vw,20px)] leading-[1.6] text-[#57524e] text-pretty dark:text-[#bababa] ${long && !open ? 'max-h-[3.2em] overflow-hidden' : ''}`}>
-        <Markdown text={text} />
-      </div>
-      {long && (
-        <button type="button" onClick={() => setOpen((o) => !o)} className="mt-1 border-0 bg-transparent p-0 text-sm font-semibold text-brand hover:underline">
-          {open ? t('detail.showLess') : t('detail.showMore')}
-        </button>
-      )}
-    </div>
-  );
-}
-
 export function CourseDetailPage() {
   const { t } = useTranslation('course');
   const { id = '' } = useParams();
@@ -382,7 +362,6 @@ export function CourseDetailPage() {
                 <Trans t={t} i18nKey="detail.by" values={{ name: course.instructor.name }} components={{ b: <b className="text-[#201d1b] dark:text-white" /> }} />
               </span>
             </div>
-            <ShortText text={course.description} />
             <div className="md:hidden">{joinControls}</div>
           </div>
 
@@ -405,8 +384,7 @@ export function CourseDetailPage() {
             ))}
           </div>
 
-          {<OverviewTab course={course} priceLabel={priceLabel} />}
-          {<ContentTab courseId={id} enrolled={!!course.viewerEnrolled} lessons={Number(course.facts.find((f) => f.label === 'Bài học')?.value ?? 0)} />}
+                    <OverviewTab course={course} priceLabel={priceLabel} />
           {course.faqs.length > 0 && <FaqTab faqs={course.faqs} />}
 
           <div className="md:hidden">{supportCard}</div>
@@ -527,6 +505,20 @@ export function CourseDetailPage() {
   );
 }
 
+
+function FaqTab({ faqs }: { faqs: CourseFaq[] }) {
+  return (
+    <section className="flex flex-col gap-2.5">
+      {faqs.map((f) => (
+        <div key={f.question} className="rounded-[18px] bg-white px-5 py-4 shadow-[1px_6px_15px_rgba(121,81,54,0.08)] dark:bg-[rgba(63,63,63,.3)] dark:shadow-none">
+          <div className="text-[15px] font-bold">{f.question}</div>
+          <div className="mt-1.5 text-sm leading-[1.6] text-stone-600">{f.answer}</div>
+        </div>
+      ))}
+    </section>
+  );
+}
+
 const CARD = 'rounded-[25px] bg-white p-6 shadow-[1px_6px_30px_2px_rgba(121,81,54,0.1)] dark:bg-[rgba(63,63,63,.3)] dark:shadow-none';
 const CARD_TITLE = 'm-0 text-[22px] leading-[30px] font-bold text-[#201e1c] dark:text-white';
 
@@ -570,37 +562,5 @@ function OverviewTab({ course }: { course: CommunityDetail; priceLabel: string }
         </section>
       )}
     </div>
-  );
-}
-
-function ContentTab({ courseId, enrolled, lessons }: { courseId: string; enrolled: boolean; lessons: number }) {
-  const { t } = useTranslation('course');
-  // Module/bài học thật nằm trong Lớp học của cộng đồng (chỉ thành viên xem được), không có bản "xem trước" bịa ở đây.
-  return (
-    <section className={`${CARD} flex flex-col items-center gap-3 p-8 text-center`}>
-      <p className="m-0 text-[15px] text-[#5c5855] dark:text-[#bababa]">
-        {lessons > 0
-          ? t('detail.contentSome', { n: lessons })
-          : t('detail.contentNone')}
-      </p>
-      {enrolled && (
-        <Link to={`/communities/${courseId}/community/lop-hoc`} className="text-sm font-semibold text-brand hover:underline">
-          {t('detail.openClassroom')}
-        </Link>
-      )}
-    </section>
-  );
-}
-
-function FaqTab({ faqs }: { faqs: CourseFaq[] }) {
-  return (
-    <section className="flex flex-col gap-2.5">
-      {faqs.map((f) => (
-        <div key={f.question} className="rounded-[18px] bg-white px-5 py-4 shadow-[1px_6px_15px_rgba(121,81,54,0.08)] dark:bg-[rgba(63,63,63,.3)] dark:shadow-none">
-          <div className="text-[15px] font-bold">{f.question}</div>
-          <div className="mt-1.5 text-sm leading-[1.6] text-stone-600">{f.answer}</div>
-        </div>
-      ))}
-    </section>
   );
 }
