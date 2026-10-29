@@ -2019,6 +2019,8 @@ model ReferralWithdrawal {
   bankTxExternalId  String?                  @unique
   resolvedById      String?
   paidAt            DateTime?
+  /// Rút từ hoa hồng của riêng một cộng đồng (NULL = ví chung, dữ liệu cũ).
+  communityId       String?
   createdAt         DateTime                 @default(now())
   updatedAt         DateTime                 @updatedAt
 
@@ -2026,6 +2028,7 @@ model ReferralWithdrawal {
 
   @@index([userId, createdAt])
   @@index([status, createdAt])
+  @@index([communityId, userId])
 }
 
 // =====================================================================// CHATBOT HỖ TRỢ (chatbot.md) — kho câu hỏi mẫu, tài liệu tri thức, hội thoại

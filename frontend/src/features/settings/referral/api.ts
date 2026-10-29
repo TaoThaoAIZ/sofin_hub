@@ -14,5 +14,5 @@ export const fetchWithdraw = (signal?: AbortSignal, communityId?: string) => api
 export const fetchBanks = (signal?: AbortSignal) => apiGet<{ data: Bank[] }>('/me/referral/withdraw/banks', undefined, signal).then((r) => r.data);
 export const saveAccount = (body: { bankBin: string; accountNumber: string; accountHolder: string }) =>
   apiPut<{ data: PayoutAccount }>('/me/referral/withdraw/account', body).then((r) => r.data);
-export const requestWithdraw = (amountCents: number) => apiPost<{ data: Withdrawal }>('/me/referral/withdrawals', { amountCents }).then((r) => r.data);
+export const requestWithdraw = (body: { amountCents: number; communityId?: string }) => apiPost<{ data: Withdrawal }>('/me/referral/withdrawals', body).then((r) => r.data);
 export const fetchWithdrawal = (id: string, signal?: AbortSignal) => apiGet<{ data: Withdrawal }>(`/me/referral/withdrawals/${id}`, undefined, signal).then((r) => r.data);

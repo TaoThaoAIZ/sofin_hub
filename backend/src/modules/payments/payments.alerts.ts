@@ -94,7 +94,7 @@ export async function announcePaid(p: PaymentIntent): Promise<void> {
         type: 'payment_succeeded',
         title: p.kind === 'renewal' ? 'Một thành viên đã gia hạn' : p.kind === 'module' ? 'Có người mua module' : 'Có thành viên mới thanh toán',
         body: `${buyer ? `${buyer.firstName} ${buyer.lastName}`.trim() : 'Một thành viên'} đã thanh toán ${vnd(p.amountCents)} — ${what}.`,
-        link: `/courses/${p.communityId}/revenue`,
+        link: `/communities/${p.communityId}/community/doanh-thu`,
         communityId: p.communityId,
       });
     }

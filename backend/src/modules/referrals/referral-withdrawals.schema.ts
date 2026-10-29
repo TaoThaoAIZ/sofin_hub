@@ -5,7 +5,7 @@ export const accountBody = z.object({
   accountNumber: z.string().trim().min(6, 'Nhập số tài khoản').max(30),
   accountHolder: z.string().trim().min(2, 'Nhập tên chủ tài khoản').max(80),
 });
-export const withdrawBody = z.object({ amountCents: z.number({ error: 'Nhập số tiền cần rút' }).int('Số tiền phải là số nguyên') });
+export const withdrawBody = z.object({ amountCents: z.number({ error: 'Nhập số tiền cần rút' }).int('Số tiền phải là số nguyên'), communityId: z.string().trim().min(1).max(64).optional() });
 export const adminWithdrawalsQuery = z.object({
   status: z.enum(['requested', 'paid', 'rejected']).optional(),
   page: z.coerce.number().int().min(1).default(1),

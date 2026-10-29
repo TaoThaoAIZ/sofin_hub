@@ -545,7 +545,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
   }
 
   function notifyPayout(p: Payout, title: string, body: string) {
-    notify({ userId: p.ownerId, type: 'system', title, body, link: `/courses/${p.communityId}/revenue`, communityId: p.communityId });
+    notify({ userId: p.ownerId, type: 'system', title, body, link: `/communities/${p.communityId}/community/doanh-thu`, communityId: p.communityId });
   }
 
   async function idempotentReplay(userId: string, communityId: string, key: string) {

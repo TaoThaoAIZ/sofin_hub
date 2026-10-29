@@ -57,8 +57,8 @@ describe('rút hoa hồng giới thiệu', () => {
     assert.equal((await c.call('PUT', '/me/referral/withdraw/account', { token: u.token, body: { ...account, bankBin: '111111' } })).status, 400);
     assert.equal((await c.call('PUT', '/me/referral/withdraw/account', { token: u.token, body: { ...account, accountNumber: '12ab' } })).status, 400);
 
-    const low = await c.call('POST', '/me/referral/withdrawals', { token: u.token, body: { amountCents: 100_000 } });
-    assert.equal(low.body.error.code, 'BELOW_MIN');
+    // Không có mức tối thiểu: chỉ cần > 0 và không vượt số dư.
+    assert.equal((await c.call('POST', '/me/referral/withdrawals', { token: u.token, body: { amountCents: 0 } })).status, 400);
     const over = await c.call('POST', '/me/referral/withdrawals', { token: u.token, body: { amountCents: 600_000 } });
     assert.equal(over.body.error.code, 'INSUFFICIENT_BALANCE');
     assert.equal((await c.call('POST', '/me/referral/withdrawals', { token: u.token, body: {} })).status, 400);

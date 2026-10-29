@@ -20,7 +20,7 @@ referralWithdrawalsRouter.put('/me/referral/withdraw/account', requireAuth, requ
   res.json({ data: await svc.saveAccount(req.userId!, accountBody.parse(req.body)) });
 });
 referralWithdrawalsRouter.post('/me/referral/withdrawals', requireAuth, requireVerifiedEmail, async (req, res) => {
-  res.status(201).json({ data: await svc.request(req.userId!, withdrawBody.parse(req.body).amountCents) });
+  res.status(201).json({ data: await (() => { const b = withdrawBody.parse(req.body); return svc.request(req.userId!, b.amountCents, b.communityId); })() });
 });
 referralWithdrawalsRouter.get('/me/referral/withdrawals/:id', requireAuth, async (req, res) => {
   res.json({ data: await svc.get(req.userId!, id(req.params.id)) });

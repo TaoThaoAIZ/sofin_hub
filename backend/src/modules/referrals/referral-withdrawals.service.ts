@@ -3,7 +3,7 @@ import type { ReferralWithdrawal } from '../../generated/prisma/client.js';
 import { prisma } from '../../db/prisma.js';
 import { HttpError } from '../../utils/http-error.js';
 import { announceWithdrawal } from '../payments/payments.alerts.js';
-import { makeRefCode, MAX_SINGLE_AMOUNT } from '../payments/payments.bank.js';
+import { makeRefCode } from '../payments/payments.bank.js';
 import { notify } from '../notifications/notifications.service.js';
 import { cfg } from '../settings/settings.service.js';
 import { bankByBin } from './referral-banks.js';
@@ -30,12 +30,12 @@ type Db = Prisma.TransactionClient | typeof prisma;
  * Số dư rút được = hoa hồng (trừ `void`) − các yêu cầu rút CHƯA bị từ chối. Hoa hồng người tạo cộng đồng tính theo tiền của gói hosting:
  * chỉ cộng vào khi tiền đó là VND (rút luôn bằng VND).
  */
-async function balanceOf(db: Db, userId: string) {
+async function balanceOf(db: Db, userId: string, communityId?: string) {
   const kinds = cfg().owner.currency === 'VND' ? (['creator', 'member', 'community'] as const) : (['member', 'community'] as const);
   const [earned, active] = await Promise.all([
     // Hoa hồng cộng đồng đã được CHỦ CỘNG ĐỒNG tự chuyển khoản (payoutId có giá trị) thì người nhận không rút lại qua nền tảng nữa.
-    db.referralCommission.aggregate({ where: { referrerId: userId, status: { not: 'void' }, kind: { in: [...kinds] }, payoutId: null }, _sum: { amountCents: true } }),
-    db.referralWithdrawal.groupBy({ by: ['status'], where: { userId, status: { in: ['requested', 'paid'] } }, _sum: { amountCents: true } }),
+    db.referralCommission.aggregate({ where: { referrerId: userId, status: { not: 'void' }, kind: { in: [...kinds] }, payoutId: null, ...(communityId ? { communityId } : {}) }, _sum: { amountCents: true } }),
+    db.referralWithdrawal.groupBy({ by: ['status'], where: { userId, status: { in: ['requested', 'paid'] }, ...(communityId ? { communityId } : {}) }, _sum: { amountCents: true } }),
   ]);
   const sum = (s: string) => active.find((x) => x.status === s)?._sum.amountCents ?? 0;
   const earnedCents = earned._sum.amountCents ?? 0;
@@ -84,16 +84,16 @@ export type SettleOutcome = 'paid' | 'already' | 'unmatched' | 'underpaid' | 'du
 
 export const referralWithdrawalsService = {
   MIN_WITHDRAW_CENTS,
-  balanceOf: (userId: string) => balanceOf(prisma, userId),
+  balanceOf: (userId: string, communityId?: string) => balanceOf(prisma, userId, communityId),
   /** Như balanceOf nhưng đọc trong một transaction đang mở (đã giữ khóa rút tiền của user). */
-  balanceInTx: (tx: Prisma.TransactionClient, userId: string) => balanceOf(tx, userId),
+  balanceInTx: (tx: Prisma.TransactionClient, userId: string, communityId?: string) => balanceOf(tx, userId, communityId),
 
   /** Màn "Rút tiền hoa hồng": số dư + tài khoản nhận + lịch sử gần đây. */
   async overview(userId: string, communityId?: string) {
     const [balance, account, list, direct, fromCommunity, sources] = await Promise.all([
-      balanceOf(prisma, userId),
+      balanceOf(prisma, userId, communityId),
       prisma.referralPayoutAccount.findUnique({ where: { userId } }),
-      prisma.referralWithdrawal.findMany({ where: { userId }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: 20 }),
+      prisma.referralWithdrawal.findMany({ where: { userId, ...(communityId ? { communityId } : {}) }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: 20 }),
       // Chủ cộng đồng chuyển khoản trực tiếp: không phải yêu cầu rút nhưng vẫn là tiền đã nhận, nên hiện chung trong lịch sử.
       prisma.communityCommissionPayout.findMany({ where: { referrerId: userId, ...(communityId ? { communityId } : {}) }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: 20, include: { community: { select: { title: true } } } }),
       // Trang trong một cộng đồng: phần hoa hồng chưa rút/chưa được chi trả sinh ra từ CỘNG ĐỒNG đó (ví vẫn là một).
@@ -110,8 +110,8 @@ export const referralWithdrawalsService = {
     const titles = new Map((await prisma.community.findMany({ where: { id: { in: sources.flatMap((s) => (s.communityId ? [s.communityId] : [])) } }, select: { id: true, title: true } })).map((c) => [c.id, c.title]));
     return {
       currency: 'VND',
-      minCents: MIN_WITHDRAW_CENTS,
-      ...balance,
+      minCents: 0, // không có mức rút tối thiểu
+      ...balance, // trong trang cộng đồng: số liệu của riêng cộng đồng đó
       account: account ? accountView(account) : null,
       sources: sources
         .map((s) => ({ communityId: s.communityId, communityTitle: s.communityId ? (titles.get(s.communityId) ?? null) : null, kind: s.kind, cents: s._sum.amountCents ?? 0 }))
@@ -139,15 +139,13 @@ export const referralWithdrawalsService = {
    * Bấm "Rút tiền ngay": tạo yêu cầu (requested) có mã tham chiếu, trừ khỏi số dư rút được ngay. Khóa advisory theo user để hai request
    * song song không cùng rút một khoản.
    */
-  async request(userId: string, amountCents: number) {
+  async request(userId: string, amountCents: number, communityId?: string) {
     if (!Number.isInteger(amountCents) || amountCents <= 0) throw HttpError.badRequest('Số tiền không hợp lệ');
-    if (amountCents < MIN_WITHDRAW_CENTS) throw HttpError.coded(400, 'BELOW_MIN', `Số tiền rút tối thiểu là ${vnd(MIN_WITHDRAW_CENTS)}`);
-    if (amountCents > MAX_SINGLE_AMOUNT) throw HttpError.coded(400, 'ABOVE_MAX', `Mỗi lần rút tối đa ${vnd(MAX_SINGLE_AMOUNT)}`);
     const created = await prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`refwd:${userId}`}))`;
       const account = await tx.referralPayoutAccount.findUnique({ where: { userId } });
       if (!account) throw HttpError.coded(409, 'NO_ACCOUNT', 'Hãy thêm tài khoản ngân hàng nhận tiền trước khi rút');
-      const bal = await balanceOf(tx, userId);
+      const bal = await balanceOf(tx, userId, communityId);
       if (amountCents > bal.withdrawableCents) throw HttpError.coded(409, 'INSUFFICIENT_BALANCE', `Số dư rút được chỉ còn ${vnd(bal.withdrawableCents)}`);
       for (let i = 0; i < 5; i++) {
         try {
@@ -155,6 +153,7 @@ export const referralWithdrawalsService = {
             data: {
               userId,
               amountCents,
+              ...(communityId ? { communityId } : {}),
               refCode: makeRefCode(),
               bankBin: account.bankBin,
               bankName: account.bankName,

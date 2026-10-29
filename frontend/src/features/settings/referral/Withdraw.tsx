@@ -20,7 +20,7 @@ export function WithdrawCard({ communityId }: { communityId?: string } = {}) {
   const q = useWithdraw(communityId);
   const [modal, setModal] = useState<'account' | 'withdraw' | 'history' | null>(null);
   const w = q.data;
-  const canWithdraw = !!w && w.withdrawableCents >= w.minCents;
+  const canWithdraw = !!w && w.withdrawableCents > 0;
 
   return (
     <aside className="flex min-w-0 flex-col self-start rounded-[20px] border-[1.5px] border-[#fdba74] bg-white p-5 dark:border-[rgba(255,87,10,.45)]">
@@ -42,8 +42,7 @@ export function WithdrawCard({ communityId }: { communityId?: string } = {}) {
         </span>
       </div>
       <div className="mt-1 text-[32px] leading-tight font-extrabold tracking-[-.02em]">{w ? vnd(w.withdrawableCents) : '…'}</div>
-      {w && w.communityEarnedCents !== undefined && <div className="mt-1 text-[12.5px] text-stone-500">{t('referral.withdraw.fromCommunity', { amount: vnd(w.communityEarnedCents) })}</div>}
-      {w?.sources && w.sources.length > 0 && (
+      {!communityId && w?.sources && w.sources.length > 0 && (
         <details className="mt-1.5 text-[12.5px] text-stone-500">
           <summary className="cursor-pointer font-medium text-stone-600">{t('referral.withdraw.sourcesTitle')}</summary>
           <ul className="m-0 mt-1 flex list-none flex-col gap-1 p-0">
@@ -101,10 +100,9 @@ export function WithdrawCard({ communityId }: { communityId?: string } = {}) {
         <MaterialIcon name="schedule" size={15} />
         {t('referral.withdraw.processing')}
       </div>
-      {w && <div className="mt-1 text-center text-[12px] text-stone-400">{t('referral.withdraw.minNote', { min: vnd(w.minCents) })}</div>}
 
       {modal === 'account' && <AccountModal onClose={() => setModal(null)} onSaved={() => setModal(null)} />}
-      {modal === 'withdraw' && w && <WithdrawModal onClose={() => setModal(null)} />}
+      {modal === 'withdraw' && w && <WithdrawModal communityId={communityId} onClose={() => setModal(null)} />}
       {modal === 'history' && <HistoryModal items={w?.withdrawals ?? []} direct={w?.directPayouts ?? []} onClose={() => setModal(null)} />}
     </aside>
   );
@@ -194,10 +192,10 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 }
 
 /** Bước 1: nhập số tiền. Bước 2 (sau khi gửi): màn chờ chuyển khoản có mã tham chiếu, tự cập nhật khi đã chuyển (giống màn chờ thanh toán). */
-function WithdrawModal({ onClose }: { onClose: () => void }) {
+function WithdrawModal({ communityId, onClose }: { communityId?: string | undefined; onClose: () => void }) {
   const { t } = useTranslation('settings');
   const toast = useToast();
-  const overview = useWithdraw();
+  const overview = useWithdraw(communityId);
   const w = overview.data!;
   const request = useRequestWithdraw();
   const [amount, setAmount] = useState(String(w.withdrawableCents));
@@ -207,7 +205,7 @@ function WithdrawModal({ onClose }: { onClose: () => void }) {
   const cur = live.data ?? created;
 
   const value = Number(digits(amount) || 0);
-  const valid = value >= w.minCents && value <= w.withdrawableCents;
+  const valid = value > 0 && value <= w.withdrawableCents;
 
   if (cur) return <PendingView w={cur} onClose={onClose} onCopied={() => toast.success(t('referral.withdraw.copied'))} />;
 
@@ -231,7 +229,7 @@ function WithdrawModal({ onClose }: { onClose: () => void }) {
         </Field>
         {value > 0 && !valid && (
           <p role="alert" className="m-0 text-sm text-[#dc2626]">
-            {t('referral.withdraw.wInvalid', { min: vnd(w.minCents), max: vnd(w.withdrawableCents) })}
+            {t('referral.withdraw.wInvalid', { max: vnd(w.withdrawableCents) })}
           </p>
         )}
         {w.account && (
@@ -255,7 +253,7 @@ function WithdrawModal({ onClose }: { onClose: () => void }) {
         onCancel={onClose}
         pending={request.isPending}
         disabled={!valid}
-        onOk={() => request.mutate(value, { onSuccess: setCreated, onError: (e) => setError(errMsg(e, t('common.genericError'))) })}
+        onOk={() => request.mutate({ amountCents: value, ...(communityId ? { communityId } : {}) }, { onSuccess: setCreated, onError: (e) => setError(errMsg(e, t('common.genericError'))) })}
       />
     </SettingsModal>
   );
@@ -333,10 +331,8 @@ function HistoryModal({ items, direct, onClose }: { items: Withdrawal[]; direct:
 /** "Quy trình rút tiền": 4 bước. */
 export function WithdrawProcess() {
   const { t } = useTranslation('settings');
-  const q = useWithdraw();
-  const min = vnd(q.data?.minCents ?? 200_000);
   const steps = [
-    { n: '1', t: t('referral.withdraw.s1'), s: t('referral.withdraw.s1b', { min }) },
+    { n: '1', t: t('referral.withdraw.s1'), s: t('referral.withdraw.s1b') },
     { n: '2', t: t('referral.withdraw.s2'), s: t('referral.withdraw.s2b') },
     { n: '3', t: t('referral.withdraw.s3'), s: t('referral.withdraw.s3b') },
     { n: '4', t: t('referral.withdraw.s4'), s: t('referral.withdraw.s4b') },

@@ -15,6 +15,12 @@ export function QuizLoadingScreen({ onEnded }: { onEnded: () => void }) {
     endedRef.current = onEnded;
   });
 
+  // Video dài ~4s và nặng ~4MB: chỉ chờ tối đa 1.8s (kể cả khi video chưa tải xong) rồi vào làm trắc nghiệm.
+  useEffect(() => {
+    const id = setTimeout(() => endedRef.current(), 1800);
+    return () => clearTimeout(id);
+  }, []);
+
   // Trình duyệt chặn tự phát (hiếm vì video tắt tiếng): không để người học kẹt ở màn chờ, vào thẳng trắc nghiệm.
   useEffect(() => {
     ref.current?.play().catch((e: unknown) => {

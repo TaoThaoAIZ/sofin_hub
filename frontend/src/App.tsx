@@ -123,6 +123,7 @@ export default function App() {
         <Route path="/billing" element={<Navigate to="/settings/thanh-toan" replace />} />
         <Route path="/gioi-thieu/:code" element={<ReferralLandingPage />} />
         <Route path="/communities/:id/revenue-dashboard" element={<LegacyRevenueRedirect />} />
+        <Route path="/communities/:id/revenue" element={<LegacyRevenueRedirect />} />
         <Route path="/admin/reports" element={<Navigate to="/admin/moderation" replace />} />
         <Route
           path="/admin/*"
