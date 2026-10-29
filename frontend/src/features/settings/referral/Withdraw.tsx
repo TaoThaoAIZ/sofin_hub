@@ -43,6 +43,21 @@ export function WithdrawCard({ communityId }: { communityId?: string } = {}) {
       </div>
       <div className="mt-1 text-[32px] leading-tight font-extrabold tracking-[-.02em]">{w ? vnd(w.withdrawableCents) : '…'}</div>
       {w && w.communityEarnedCents !== undefined && <div className="mt-1 text-[12.5px] text-stone-500">{t('referral.withdraw.fromCommunity', { amount: vnd(w.communityEarnedCents) })}</div>}
+      {w?.sources && w.sources.length > 0 && (
+        <details className="mt-1.5 text-[12.5px] text-stone-500">
+          <summary className="cursor-pointer font-medium text-stone-600">{t('referral.withdraw.sourcesTitle')}</summary>
+          <ul className="m-0 mt-1 flex list-none flex-col gap-1 p-0">
+            {w.sources.slice(0, 8).map((s) => (
+              <li key={`${s.communityId ?? 'none'}:${s.kind}`} className="flex items-baseline justify-between gap-3">
+                <span className="min-w-0 truncate" title={s.communityTitle ?? undefined}>
+                  {s.communityTitle ?? t('referral.withdraw.sourceNoCommunity')} · {t(`referral.withdraw.kind.${s.kind}`)}
+                </span>
+                <b className="flex-none font-semibold text-stone-700">{vnd(s.cents)}</b>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
       {w && w.pendingCents > 0 && <div className="mt-1 text-[12.5px] text-stone-500">{t('referral.withdraw.pendingNote', { amount: vnd(w.pendingCents) })}</div>}
 
       <div className="mt-4 text-sm font-semibold">{t('referral.withdraw.method')}</div>

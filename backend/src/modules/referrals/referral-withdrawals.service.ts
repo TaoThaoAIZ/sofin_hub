@@ -90,7 +90,7 @@ export const referralWithdrawalsService = {
 
   /** Màn "Rút tiền hoa hồng": số dư + tài khoản nhận + lịch sử gần đây. */
   async overview(userId: string, communityId?: string) {
-    const [balance, account, list, direct, fromCommunity] = await Promise.all([
+    const [balance, account, list, direct, fromCommunity, sources] = await Promise.all([
       balanceOf(prisma, userId),
       prisma.referralPayoutAccount.findUnique({ where: { userId } }),
       prisma.referralWithdrawal.findMany({ where: { userId }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: 20 }),
@@ -100,12 +100,23 @@ export const referralWithdrawalsService = {
       communityId
         ? prisma.referralCommission.aggregate({ where: { referrerId: userId, communityId, status: { not: 'void' }, kind: { in: ['member', 'community'] }, payoutId: null }, _sum: { amountCents: true } })
         : null,
+      // Nguồn của số dư: gộp theo cộng đồng + loại hoa hồng (để người dùng thấy tiền đến từ đâu, kể cả khi không thuộc cộng đồng đang xem).
+      prisma.referralCommission.groupBy({
+        by: ['communityId', 'kind'],
+        where: { referrerId: userId, status: { not: 'void' }, payoutId: null, kind: { in: [...(cfg().owner.currency === 'VND' ? (['creator', 'member', 'community'] as const) : (['member', 'community'] as const))] } },
+        _sum: { amountCents: true },
+      }),
     ]);
+    const titles = new Map((await prisma.community.findMany({ where: { id: { in: sources.flatMap((s) => (s.communityId ? [s.communityId] : [])) } }, select: { id: true, title: true } })).map((c) => [c.id, c.title]));
     return {
       currency: 'VND',
       minCents: MIN_WITHDRAW_CENTS,
       ...balance,
       account: account ? accountView(account) : null,
+      sources: sources
+        .map((s) => ({ communityId: s.communityId, communityTitle: s.communityId ? (titles.get(s.communityId) ?? null) : null, kind: s.kind, cents: s._sum.amountCents ?? 0 }))
+        .filter((s) => s.cents > 0)
+        .sort((a, b) => b.cents - a.cents),
       ...(communityId ? { communityEarnedCents: fromCommunity?._sum.amountCents ?? 0 } : {}),
       withdrawals: list.map(withdrawalView),
       directPayouts: direct.map((d) => ({ id: d.id, amountCents: d.amountCents, communityId: d.communityId, communityTitle: d.community.title, note: d.note, createdAt: d.createdAt.toISOString() })),

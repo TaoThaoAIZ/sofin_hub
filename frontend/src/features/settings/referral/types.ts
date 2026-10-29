@@ -76,6 +76,8 @@ export interface WithdrawOverview {
   directPayouts: DirectPayout[];
   /** Chỉ có khi xem trong một cộng đồng: hoa hồng chưa rút sinh ra từ cộng đồng đó (ví vẫn là một). */
   communityEarnedCents?: number;
+  /** Số dư đến từ đâu: gộp theo cộng đồng + loại hoa hồng. */
+  sources?: { communityId: string | null; communityTitle: string | null; kind: 'member' | 'community' | 'creator'; cents: number }[];
 }
 
 /** Khoản chủ cộng đồng đã chuyển khoản trực tiếp cho người giới thiệu. */

@@ -548,7 +548,14 @@
       "promptBody": "Enter your bank and account number so the community owner can transfer your commission when paying you.",
       "promptBtn": "Add account",
       "directPaid": "Paid by community owner",
-      "fromCommunity": "Of which from this community: {{amount}}"
+      "fromCommunity": "Of which from this community: {{amount}}",
+      "sourcesTitle": "Where does this balance come from?",
+      "sourceNoCommunity": "Platform program",
+      "kind": {
+        "member": "Member commission",
+        "community": "Community commission",
+        "creator": "Creator commission"
+      }
     }
   },
   "securityTab": {
