@@ -41,6 +41,8 @@ export function CommunityRightSidebar({ course }: { course: CommunityDetail }) {
       onError: (e) => toast(errText(e), 'error'),
     });
   };
+  // Gợi ý cộng đồng TƯƠNG TỰ: cùng danh mục với cộng đồng đang xem (thiếu thì bổ sung bằng cộng đồng nổi bật khác).
+  const similar = useCommunities({ page: 1, limit: 12, sort: 'trending', category: course.category });
   const suggested = useCommunities({ page: 1, limit: 12, sort: 'trending' });
   const mine = useMyCommunities(); // không gợi ý cộng đồng mình đã tham gia / đang làm chủ
   const joinedIds = new Set((mine.data ?? []).map((m) => m.id));
@@ -48,7 +50,11 @@ export function CommunityRightSidebar({ course }: { course: CommunityDetail }) {
   // Tổng thành viên lấy từ chính danh sách thật (cùng nguồn với dãy avatar) để số và avatar luôn khớp.
   const totalMembers = members.data?.counts.all ?? course.stats.members;
   const remaining = Math.max(0, totalMembers - shownMembers.length);
-  const suggestedCourses = mine.isPending ? [] : (suggested.data?.data ?? []).filter((c) => c.id !== course.id && !joinedIds.has(c.id)).slice(0, 3);
+  const suggestedCourses = mine.isPending
+    ? []
+    : [...(similar.data?.data ?? []), ...(suggested.data?.data ?? [])]
+        .filter((c, i, all) => c.id !== course.id && !joinedIds.has(c.id) && all.findIndex((x) => x.id === c.id) === i)
+        .slice(0, 3);
 
   return (
     <aside className="sticky top-[72px] flex flex-col gap-4 max-lg:static">
