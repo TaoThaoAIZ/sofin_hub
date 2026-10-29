@@ -262,7 +262,7 @@ export function PostComposer({ courseId }: { courseId: string }) {
         </div>
       )}
 
-      <div className="flex items-center gap-1 max-md:flex-nowrap max-md:overflow-x-auto md:flex-wrap [&::-webkit-scrollbar]:hidden">
+      <div className="flex flex-wrap items-center gap-1">
         <input ref={imageInput} type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden onChange={(e) => { void pickImage(e.target.files?.[0]); e.target.value = ''; }} />
         <input ref={videoInput} type="file" accept="video/mp4" hidden onChange={(e) => { void pickFile(e.target.files?.[0]); e.target.value = ''; }} />
         <input ref={fileInput} type="file" hidden onChange={(e) => { void pickFile(e.target.files?.[0]); e.target.value = ''; }} />

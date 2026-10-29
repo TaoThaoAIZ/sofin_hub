@@ -95,7 +95,7 @@ export function FeedTab() {
             <p className="mt-2 max-w-[520px] text-[14.5px] text-stone-700">
               {t('feed.welcomeSub', { title: course?.title ?? '' })}
             </p>
-            <div className="mt-[22px] flex max-w-[800px] flex-wrap gap-3.5">
+            <div className="mt-[22px] flex max-w-[800px] flex-wrap gap-3.5 max-md:flex-col">
               {WELCOME_ACTIONS.map((a) => (
                 <button
                   key={a.key}
@@ -103,7 +103,7 @@ export function FeedTab() {
                   disabled={a.comingSoon}
                   title={a.comingSoon ? t('feed.comingSoon') : undefined}
                   onClick={a.key === 'popular' ? () => setSort('popular') : undefined}
-                  className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl bg-white/90 px-4 py-3.5 text-left shadow-[0_6px_18px_rgba(120,60,20,.08)] hover:bg-white dark:bg-white/[.07] dark:hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-70"
+                  className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl bg-white/90 px-4 py-3.5 max-md:flex-none text-left shadow-[0_6px_18px_rgba(120,60,20,.08)] hover:bg-white dark:bg-white/[.07] dark:hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   <MaterialIcon name={a.icon} size={28} filled color="#ff570a" className="flex-none" />
                   <div className="min-w-0">
