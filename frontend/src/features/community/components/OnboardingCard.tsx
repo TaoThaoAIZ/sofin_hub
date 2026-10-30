@@ -31,7 +31,18 @@ function Ring({ done, total }: { done: number; total: number }) {
   );
 }
 
-/** Minh họa tên lửa: dùng ảnh /images/community-onboarding-rocket.webp nếu có, không thì vẽ SVG đơn giản. */
+/** Minh họa tên lửa (chỉ mobile): SVG nhỏ ở góc phải, nằm sau danh sách bước. */
+function Rocket() {
+  return (
+    <svg viewBox="0 0 120 120" aria-hidden className="pointer-events-none absolute top-5 right-3 z-0 hidden size-[112px] max-sm:block">
+      <path d="M60 8c18 14 26 38 20 66H40C34 46 42 22 60 8Z" fill="#fff" stroke="#ff9a5c" strokeWidth="3" />
+      <circle cx="60" cy="42" r="9" fill="#ff570a" />
+      <path d="M40 60 24 84l18-4ZM80 60l16 24-18-4Z" fill="#ff570a" />
+      <path d="M50 78h20l-10 26Z" fill="#ffb347" />
+      <path d="M100 18l3 8 8 3-8 3-3 8-3-8-8-3 8-3Z" fill="#ff9a5c" />
+    </svg>
+  );
+}
 
 /**
  * "Bắt đầu hành trình của bạn": vòng tiến độ n/total + checklist (xem video giới thiệu · bình luận một bài · tải ứng dụng).
@@ -63,19 +74,20 @@ export function OnboardingCard({ communityId, data, onExplore }: { communityId: 
   };
 
   return (
-    <section aria-label={t('onboarding.title')} className="relative overflow-hidden rounded-[24px] border border-brand/15 bg-gradient-to-br from-[#fff6ef] to-[#ffe6d4] p-6 dark:border-[rgba(255,220,197,.1)] dark:from-[rgba(63,63,63,.3)] dark:to-[rgba(74,29,0,.3)]">
-      <img src="/images/community-welcome-art.webp" alt="" className="pointer-events-none absolute inset-0 size-full object-cover opacity-60 dark:hidden" />
+    <section aria-label={t('onboarding.title')} className="relative overflow-hidden rounded-[24px] border border-brand/15 bg-gradient-to-br from-[#fff6ef] to-[#ffe6d4] p-6 max-sm:p-4 dark:border-[rgba(255,220,197,.1)] dark:from-[rgba(63,63,63,.3)] dark:to-[rgba(74,29,0,.3)]">
+      <img src="/images/community-welcome-art.webp" alt="" className="pointer-events-none absolute inset-0 size-full object-cover opacity-60 max-sm:hidden dark:hidden" />
+      <Rocket />
       <div className="relative z-10">
-        <h2 className="m-0 text-[24px] font-extrabold tracking-tight">{t('onboarding.title')}</h2>
-        <p className="mt-1 mb-4 text-[14px] text-stone-600">{t('onboarding.sub', { count: left })}</p>
+        <h2 className="m-0 text-[24px] font-extrabold tracking-tight max-sm:text-[20px]">{t('onboarding.title')}</h2>
+        <p className="mt-1 mb-4 max-w-[62%] text-[14px] text-stone-600 sm:max-w-none">{t('onboarding.sub', { count: left })}</p>
         <div className="flex items-center gap-6 max-sm:flex-col max-sm:items-stretch">
-          <div className="flex flex-col items-center gap-2">
+          <div className="flex flex-col items-center gap-2 max-sm:hidden">
             <Ring done={data.done} total={data.total} />
             <span className="text-[12.5px] text-stone-500">{t('onboarding.completed')}</span>
           </div>
           <ul className="m-0 flex min-w-0 w-full flex-1 list-none flex-col gap-2.5 p-0 pr-[20px] max-[900px]:pr-0">
             {data.steps.map((s) => (
-              <li key={s.key} className="flex items-center gap-3 rounded-2xl bg-white/90 dark:bg-white/[.07] px-3.5 py-2.5 shadow-[0_2px_8px_rgba(120,60,20,.06)]">
+              <li key={s.key} onClick={() => act(s.key)} className="flex items-center gap-3 rounded-2xl bg-white/90 dark:bg-white/[.07] px-3.5 py-2.5 shadow-[0_2px_8px_rgba(120,60,20,.06)] max-sm:cursor-pointer max-sm:self-start">
                 <span aria-hidden className={`grid size-6 flex-none place-items-center rounded-full ${s.done ? 'bg-brand' : 'border-[1.5px] border-stone-300 bg-white dark:border-white/40 dark:bg-transparent'}`}>
                   {s.done && <MaterialIcon name="check" size={16} color="#fff" weight={700} />}
                 </span>
@@ -84,7 +96,7 @@ export function OnboardingCard({ communityId, data, onExplore }: { communityId: 
                 <button
                   type="button"
                   onClick={() => act(s.key)}
-                  className={`h-9 flex-none rounded-xl px-4 text-[13.5px] font-bold ${s.done ? 'bg-[#e8e2dd] text-stone-700 hover:bg-[#ddd5ce] dark:bg-white/10 dark:text-white/80 dark:hover:bg-white/15' : 'border-[1.5px] border-brand bg-white text-brand hover:bg-brand-soft dark:bg-transparent'}`}
+                  className={`h-9 flex-none rounded-xl px-4 text-[13.5px] font-bold max-sm:hidden ${s.done ? 'bg-[#e8e2dd] text-stone-700 hover:bg-[#ddd5ce] dark:bg-white/10 dark:text-white/80 dark:hover:bg-white/15' : 'border-[1.5px] border-brand bg-white text-brand hover:bg-brand-soft dark:bg-transparent'}`}
                 >
                   {t(`onboarding.steps.${STEP_LABEL[s.key]}.${s.done ? 'again' : 'cta'}`)}
                 </button>
