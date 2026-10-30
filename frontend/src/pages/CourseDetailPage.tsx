@@ -1,4 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
+import { CommunityToolsSection } from '../features/tools/CommunityToolsSection';
 import { useDocumentTitle } from '../components/PageTitle';
 import { Markdown } from '../lib/markdown';
 import { useEffect, useState } from 'react';
@@ -561,6 +562,8 @@ function OverviewTab({ course }: { course: CommunityDetail; priceLabel: string }
           </div>
         </section>
       )}
+
+      <CommunityToolsSection className={CARD} titleClassName={CARD_TITLE} />
     </div>
   );
 }

@@ -6,11 +6,13 @@ import { useCommunityDetail } from '../../courses/queries';
 import { useOnboarding, usePost, usePostsFeed } from '../queries';
 import { categoryLabel, POST_CATEGORIES, type PostCategory } from '../types';
 import { CommunityRightSidebar } from './CommunityRightSidebar';
+import { SuggestedCommunities } from './SuggestedCommunities';
 import { OnboardingCard } from './OnboardingCard';
 import { errText, ErrorNote, ghostBtn, isModPlus, ToastHost } from './contentUi';
 import { CATEGORY_META, PostCard } from './PostCard';
 import { PinManagerModal } from '../../community-greetings/PinManagerModal';
 import { PostComposer } from './PostComposer';
+import { FeedTour } from './FeedTour';
 
 // Tên icon + màu chuyên mục: xem CATEGORY_META trong PostCard.tsx (lấy từ file thiết kế gốc).
 const FILTERS: { key: 'all' | 'trending' | PostCategory; icon?: string; color?: string }[] = [
@@ -61,6 +63,8 @@ export function FeedTab() {
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_320px] items-start gap-6 max-[1180px]:grid-cols-1">
       <ToastHost />
+      {/* Tour lần đầu (chỉ mobile): chờ bảng tin + thẻ khởi đầu tải xong để biết bước nào có phần tử để tô sáng. */}
+      <FeedTour ready={posts.isSuccess && !onboarding.isPending} hasPendingComment={!!onboarding.data?.steps.some((s) => s.key === 'comment' && !s.done)} />
       <div className="flex flex-col gap-4">
         <PostComposer courseId={courseId} />
 
@@ -75,7 +79,7 @@ export function FeedTab() {
           />
         )}
 
-        <div className="no-scrollbar flex flex-wrap gap-2 max-md:flex-nowrap max-md:overflow-x-auto">
+        <div data-tour="topics" className="no-scrollbar flex flex-wrap gap-2 max-md:flex-nowrap max-md:overflow-x-auto">
           {isModPlus(viewerRole) && (
             <button
               type="button"
@@ -154,6 +158,8 @@ export function FeedTab() {
           </button>
         )}
         {posts.isFetchNextPageError && <ErrorNote message={errText(posts.error, t('feed.loadMoreFailed'))} />}
+        {/* Mobile không có cột phải: đề xuất cộng đồng tương tự nằm cuối bảng tin. */}
+        {course && <SuggestedCommunities course={course} className="md:hidden" />}
       </div>
 
       {/* Mobile (Figma) không có cột phải; thông tin/đề xuất/Premium chỉ hiện từ md. */}

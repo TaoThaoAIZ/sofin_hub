@@ -1013,5 +1013,54 @@
       "cta": "Create a community now",
       "note": "Free to create · Takes only 1 minute"
     }
+  },
+  "tour": {
+    "replay": "How to use",
+    "later": "Later",
+    "start": "Quick tour",
+    "skip": "Skip",
+    "back": "Back",
+    "next": "Next",
+    "finish": "Let's go",
+    "stepOf": "STEP {{n}}/{{total}}",
+    "introTitle": "Welcome, new member!",
+    "introBody": "A quick look at posting, filtering topics and interacting: {{count}} steps, about 40 seconds.",
+    "checklistNote": "The “leave a comment” item is covered in a later step.",
+    "postNote": "Comment on your first post to finish the getting-started card!",
+    "post": {
+      "like": "Like posts you enjoy",
+      "comment": "Comment to ask more or give feedback",
+      "share": "Share with people who need it"
+    },
+    "steps": {
+      "composer": {
+        "title": "Share with the community",
+        "body": "Write a question or anything you want to share, then send. Attach a photo, video or file, tag people, or create a poll to ask for opinions."
+      },
+      "checklist": {
+        "title": "Finish the getting-started steps",
+        "body": "Complete the items in this card to be ready to explore every feature. Finished items get an orange tick."
+      },
+      "topics": {
+        "title": "Filter posts by topic",
+        "body": "Pick Trending to see top posts, or a topic such as General discussion. Swipe sideways for more topics."
+      },
+      "post": {
+        "title": "Interact with posts",
+        "body": ""
+      },
+      "menu": {
+        "title": "Open the menu to go anywhere",
+        "body": "Tap here for the community's sections such as Classroom, Events, Members, Leaderboard and Tools, plus general items like My communities, Chat and Profile settings."
+      },
+      "search": {
+        "title": "Find what you need fast",
+        "body": "Tap the magnifier to search courses, tools or topics you care about without scrolling the whole feed."
+      },
+      "bell": {
+        "title": "Never miss new activity",
+        "body": "The number on the bell is your unread notifications. Tap to see what's new in the community."
+      }
+    }
   }
 }

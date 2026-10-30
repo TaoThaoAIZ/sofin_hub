@@ -159,7 +159,7 @@ export function PostComposer({ courseId }: { courseId: string }) {
     `flex h-9 flex-none items-center gap-2 rounded-lg px-3 text-[13px] font-medium whitespace-nowrap max-md:gap-1 max-md:px-2 max-md:text-xs hover:bg-stone-100 disabled:opacity-50 ${active ? 'bg-brand/10 text-brand' : 'text-stone-700'}`;
 
   return (
-    <div className="glass flex flex-col gap-3 rounded-2xl p-4">
+    <div data-tour="composer" className="glass flex flex-col gap-3 rounded-2xl p-4">
       <div className="flex items-start gap-3">
         <Avatar url={user?.avatarUrl} name={user?.firstName ?? '?'} size={48} className="bg-brand/10 text-brand" />
         <div className="relative flex-1">

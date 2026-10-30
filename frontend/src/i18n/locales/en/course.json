@@ -141,7 +141,9 @@
         "trial": "{{n}}-day free trial"
       }
     },
-    "cancelRequestConfirm": "Cancel your request to join this community?"
+    "cancelRequestConfirm": "Cancel your request to join this community?",
+    "toolsTitle": "Tools in this community",
+    "toolsSub": "SofinHub tools available to members to help you make videos, automate work and move faster."
   },
   "lesson": {
     "reqTitle": "To complete this lesson you need to:",

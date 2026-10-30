@@ -76,7 +76,7 @@ export function MobileTopBar() {
               <MaterialIcon name="arrow_back" size={20} color="currentColor" />
             </button>
           )}
-          <button type="button" onClick={() => setOpenAt(pathname)} aria-label={t('mobile.menu')} aria-expanded={open} className={circleBtn}>
+          <button type="button" data-tour="menu" onClick={() => setOpenAt(pathname)} aria-label={t('mobile.menu')} aria-expanded={open} className={circleBtn}>
             <MaterialIcon name="notes" size={20} color="currentColor" />
           </button>
         </div>
@@ -88,11 +88,11 @@ export function MobileTopBar() {
           </Link>
         )}
         <div className="flex items-center gap-1.5">
-          <Link to="/search" aria-label={t('mobile.search')} className={circleBtn}>
+          <Link to="/search" data-tour="search" aria-label={t('mobile.search')} className={circleBtn}>
             <MaterialIcon name="search" size={20} filled color="currentColor" />
           </Link>
           {status === 'authenticated' ? (
-            <Link to="/notifications" aria-label={t('mobile.notifications')} className={`${circleBtn} relative`}>
+            <Link to="/notifications" data-tour="bell" aria-label={t('mobile.notifications')} className={`${circleBtn} relative`}>
               <MaterialIcon name="notifications" size={20} filled color="currentColor" />
               {unreadCount > 0 && (
                 <span className="absolute -top-px left-[21px] grid size-4 place-items-center rounded-full bg-brand text-[11px] leading-none font-semibold text-white">
@@ -179,6 +179,16 @@ function MobileDrawer({ onClose }: { onClose: () => void }) {
           <section aria-label={course?.title}>
             <div className="mb-1 truncate px-1 text-[13px] font-semibold text-[#696460] dark:text-[#bababa]">{course?.title}</div>
             <CommunityNavList onNavigate={onClose} />
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                navigate(`/communities/${id}/community`, { state: { tour: true } });
+              }}
+              className={`${link} w-full border-0 bg-transparent text-left`}
+            >
+              <MaterialIcon name="help" size={22} color="currentColor" /> {t('tour.replay')}
+            </button>
           </section>
         )}
 

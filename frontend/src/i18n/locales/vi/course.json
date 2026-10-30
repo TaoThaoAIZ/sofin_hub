@@ -141,7 +141,9 @@
         "trial": "Miễn phí dùng thử {{n}} ngày"
       }
     },
-    "cancelRequestConfirm": "Hủy yêu cầu tham gia cộng đồng này?"
+    "cancelRequestConfirm": "Hủy yêu cầu tham gia cộng đồng này?",
+    "toolsTitle": "Công cụ hỗ trợ trong cộng đồng",
+    "toolsSub": "Bộ công cụ SofinHub dành cho thành viên, giúp bạn làm video, tự động hóa và tăng tốc công việc."
   },
   "lesson": {
     "reqTitle": "Để hoàn thành bài học, bạn cần:",

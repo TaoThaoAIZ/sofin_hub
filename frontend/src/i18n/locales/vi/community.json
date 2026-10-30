@@ -1013,5 +1013,54 @@
       "cta": "Tạo cộng đồng ngay",
       "note": "Có thể tạo miễn phí · Chỉ mất 1 phút"
     }
+  },
+  "tour": {
+    "replay": "Hướng dẫn sử dụng",
+    "later": "Để sau",
+    "start": "Xem nhanh",
+    "skip": "Bỏ qua",
+    "back": "Quay lại",
+    "next": "Tiếp theo",
+    "finish": "Bắt đầu thôi",
+    "stepOf": "BƯỚC {{n}}/{{total}}",
+    "introTitle": "Chào mừng thành viên mới!",
+    "introBody": "Xem nhanh cách đăng bài, lọc chủ đề và tương tác: {{count}} bước, khoảng 40 giây.",
+    "checklistNote": "Mục “để lại bình luận” sẽ được hướng dẫn ở bước tiếp theo.",
+    "postNote": "Bình luận bài đầu tiên để hoàn thành bước khởi đầu!",
+    "post": {
+      "like": "Thích bài viết hay",
+      "comment": "Bình luận để hỏi thêm hoặc góp ý",
+      "share": "Chia sẻ cho người cần đọc"
+    },
+    "steps": {
+      "composer": {
+        "title": "Chia sẻ với cộng đồng",
+        "body": "Viết câu hỏi hay điều bạn muốn chia sẻ rồi nhấn gửi. Đính kèm Ảnh, Video, File, gắn thẻ, hoặc tạo Poll để hỏi ý kiến mọi người."
+      },
+      "checklist": {
+        "title": "Hoàn thành bước khởi đầu",
+        "body": "Làm lần lượt các mục trong thẻ này để sẵn sàng khám phá mọi tính năng. Mục đã xong có dấu tích cam."
+      },
+      "topics": {
+        "title": "Lọc bài theo chủ đề",
+        "body": "Chọn Đang thịnh hành để xem bài nổi bật, hoặc một chủ đề như Thảo luận chung. Vuốt ngang để xem thêm chủ đề."
+      },
+      "post": {
+        "title": "Tương tác với bài viết",
+        "body": ""
+      },
+      "menu": {
+        "title": "Mở Menu để đi tới mọi nơi",
+        "body": "Bấm vào đây để xem các mục của cộng đồng như Lớp học, Lịch sự kiện, Thành viên, Bảng xếp hạng, Công cụ hỗ trợ, cùng các mục chung như Cộng đồng của tôi, Chat, Cài đặt hồ sơ."
+      },
+      "search": {
+        "title": "Tìm nhanh điều bạn cần",
+        "body": "Chạm kính lúp để tìm khóa học, công cụ hoặc chủ đề bạn quan tâm, không cần lướt hết bảng tin."
+      },
+      "bell": {
+        "title": "Không bỏ lỡ hoạt động mới",
+        "body": "Con số trên chuông là thông báo chưa đọc. Chạm vào để xem hoạt động mới trong cộng đồng."
+      }
+    }
   }
 }

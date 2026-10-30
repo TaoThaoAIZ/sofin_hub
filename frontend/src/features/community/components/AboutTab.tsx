@@ -7,6 +7,7 @@ import { formatCompact } from '../../../lib/format';
 import { MediaGallery } from '../../courses/components/MediaGallery';
 import { useCommunityDetail } from '../../courses/queries';
 import { Avatar } from '../../account/components/Avatar';
+import { CommunityToolsSection } from '../../tools/CommunityToolsSection';
 import { CommunityInfoCard, initials } from './shared';
 
 import { formatCents } from '../../../lib/datetime';
@@ -124,6 +125,8 @@ export function AboutTab() {
             </div>
           </div>
         </section>
+
+        <CommunityToolsSection className={`${glass} px-6 py-[22px]`} titleClassName="m-0 text-[21px] font-extrabold" />
       </main>
 
       {/* Mobile (Figma) không có thẻ thông tin bên phải. */}
