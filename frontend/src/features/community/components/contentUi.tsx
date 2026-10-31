@@ -43,7 +43,7 @@ export function toLocalInput(iso: string): string {
 
 export const inputCls = 'h-10 w-full rounded-xl border border-[rgba(120,60,20,.12)] bg-white px-3.5 text-sm outline-0 focus:border-brand';
 export const areaCls = 'w-full rounded-xl border border-[rgba(120,60,20,.12)] bg-white px-3.5 py-2.5 text-sm outline-0 focus:border-brand';
-export const primaryBtn = 'inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-b from-[#ff8f45] to-brand px-4 text-sm font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,.45),0_8px_18px_rgba(242,106,27,.28)] disabled:opacity-50';
+export const primaryBtn = 'inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-b from-[#ff8f45] to-brand px-4 text-sm font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,.45),0_8px_18px_rgba(255,87,10,.28)] disabled:opacity-50';
 export const ghostBtn =
   'inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[rgba(120,60,20,.12)] bg-white px-4 text-sm font-semibold text-stone-700 hover:bg-stone-50 disabled:opacity-50';
 export const dangerBtn = 'inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-sm font-bold text-white disabled:opacity-50';
@@ -82,7 +82,7 @@ export function ToastHost() {
         <div
           key={t.id}
           className={`pointer-events-auto flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-lg ${
-            t.kind === 'ok' ? 'bg-stone-900' : 'bg-red-600'
+            t.kind === 'ok' ? 'bg-[#1c1917] dark:border dark:border-white/10 dark:bg-[#2a3036]' : 'bg-red-600'
           }`}
         >
           <MaterialIcon name={t.kind === 'ok' ? 'check_circle' : 'error'} size={18} color="#fff" />
@@ -114,6 +114,17 @@ export async function copyText(text: string): Promise<boolean> {
   }
 }
 
+/** Esc đóng hộp thoại đang mở. */
+export function useEscapeKey(onClose: () => void) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+}
+
 export function Dialog({
   title,
   subtitle,
@@ -130,9 +141,10 @@ export function Dialog({
   wide?: boolean;
 }) {
   const { t } = useTranslation('community');
+  useEscapeKey(onClose);
   // Portal ra body: các thẻ `glass` (backdrop-filter) biến thành containing block của `fixed` nên dialog bị cắt trong thẻ cha.
   return createPortal(
-    <div className="fixed inset-0 z-50 flex overflow-y-auto bg-black/40 p-3 sm:p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex overflow-y-auto bg-black/40 p-3 sm:p-4">
       <div
         role="dialog"
         aria-modal="true"
@@ -179,6 +191,7 @@ export function ConfirmDialog({
   pending,
   error,
   danger = true,
+  details,
   onConfirm,
   onClose,
 }: {
@@ -188,6 +201,8 @@ export function ConfirmDialog({
   pending?: boolean;
   error?: string | null;
   danger?: boolean;
+  /** Nội dung chi tiết đặt dưới câu hỏi (khối, không nằm trong thẻ <p>). */
+  details?: ReactNode;
   onConfirm: () => void;
   onClose: () => void;
 }) {
@@ -208,6 +223,7 @@ export function ConfirmDialog({
       }
     >
       <p className="m-0 leading-relaxed">{message}</p>
+      {details}
       {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-[13px] text-red-700">{error}</p>}
     </Dialog>
   );

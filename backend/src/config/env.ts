@@ -63,23 +63,35 @@ const schema = z.object({
   FACEBOOK_APP_ID: z.string().optional().transform((v) => v?.trim() || undefined),
   FACEBOOK_APP_SECRET: z.string().optional().transform((v) => v?.trim() || undefined),
 
+  // --- App mobile: cổng phiên bản (GET /meta/app-version). Trống = không ép cập nhật. Dạng "1.2.3". ---
+  MOBILE_MIN_VERSION: z.string().optional().transform((v) => v?.trim() || undefined),
+  MOBILE_LATEST_VERSION: z.string().optional().transform((v) => v?.trim() || undefined),
+  MOBILE_IOS_STORE_URL: z.string().optional().transform((v) => v?.trim() || undefined),
+  MOBILE_ANDROID_STORE_URL: z.string().optional().transform((v) => v?.trim() || undefined),
+
+  // Khóa mã hóa số tài khoản nhận hoa hồng (AES-256-GCM). Trống = dẫn xuất từ UPLOAD_SIGNING_SECRET. KHÔNG đổi sau khi đã có dữ liệu.
+  PAYOUT_ENC_KEY: z.string().optional().transform((v) => v?.trim() || undefined),
+
   // --- Upload file (module uploads) ---
   UPLOAD_DIR: z.string().default('data/uploads'),
   // Bí mật ký vé upload (HMAC). BẮT BUỘC đặt riêng khi production.
   UPLOAD_SIGNING_SECRET: z.string().min(1).default('dev-upload-secret-change-me'),
   UPLOAD_TICKET_TTL_SEC: z.coerce.number().int().positive().default(600),
   UPLOAD_MAX_IMAGE_MB: z.coerce.number().positive().default(5),
-  UPLOAD_MAX_FILE_MB: z.coerce.number().positive().default(25),
+  UPLOAD_MAX_FILE_MB: z.coerce.number().positive().default(2048),
   UPLOAD_MAX_AVATAR_MB: z.coerce.number().positive().default(3),
   UPLOAD_MAX_COVER_MB: z.coerce.number().positive().default(8),
   /** Video bài học tải từ máy (stream thẳng xuống kho, không nạp vào RAM). Cần nginx `client_max_body_size` >= giá trị này. */
   UPLOAD_MAX_VIDEO_MB: z.coerce.number().positive().default(2048),
   /** Slide bài giảng (PDF/PPT/PPTX/PPSX). */
-  UPLOAD_MAX_SLIDE_MB: z.coerce.number().positive().default(200),
-  UPLOAD_USER_QUOTA_MB: z.coerce.number().positive().default(10240),
+  UPLOAD_MAX_SLIDE_MB: z.coerce.number().positive().default(2048),
+  /** Hạn mức lưu trữ mỗi người (MB). 0 = KHÔNG giới hạn (mặc định). */
+  UPLOAD_USER_QUOTA_MB: z.coerce.number().min(0).default(0),
   // Có S3_BUCKET = lưu file ở S3 (bucket private, backend vẫn là cổng kiểm quyền); bỏ trống = LocalDiskStorage (UPLOAD_DIR).
   // Credentials lấy theo chuỗi mặc định của AWS SDK (IAM role của EC2/ECS) — KHÔNG đặt access key tĩnh vào .env.
   S3_BUCKET: z.string().optional().transform((v) => v?.trim() || undefined),
+  /** Role cho AWS MediaConvert (đọc bucket gốc, ghi web/*). Có biến này = tự chuyển mã video bài học sang bản web nhẹ + faststart. */
+  MEDIACONVERT_ROLE_ARN: z.string().optional().transform((v) => v?.trim() || undefined),
   S3_REGION: z.string().optional().transform((v) => v?.trim() || undefined),
 
   // --- State chia sẻ giữa các instance (SSE fan-out, vé, rate limit...). Bỏ trống = in-memory (đúng cho 1 instance). ---

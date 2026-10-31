@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { Link, useParams } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Footer } from '../components/layout/Footer';
 import { Header } from '../components/layout/Header';
 import { ButtonLink } from '../components/ui/Button';
@@ -8,6 +9,7 @@ import { ApiError, resolveApiPath } from '../lib/api';
 import { useAuth } from '../features/auth/AuthContext';
 import { RequireAuth } from '../features/auth/RequireAuth';
 import { Avatar } from '../features/account/components/Avatar';
+import { useStartConversation } from '../features/messages/useStartConversation';
 import { usePublicProfile } from '../features/account/queries';
 import { roleLabel, formatDate } from '../features/account/roles';
 
@@ -27,9 +29,15 @@ function ProfileContent() {
   const { id = '' } = useParams();
   const { user } = useAuth();
   const { data: profile, isPending, error } = usePublicProfile(id);
+  const navigate = useNavigate();
+  const chat = useStartConversation();
+  // URL đẹp: đã có handle thì dùng /users/<handle> thay vì UUID.
+  useEffect(() => {
+    if (profile?.handle && id.replace(/^@/, '').toLowerCase() !== profile.handle) navigate(`/users/${profile.handle}`, { replace: true });
+  }, [profile?.handle, id, navigate]);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen">
       <Header />
       <main className="mx-auto flex w-full max-w-[860px] flex-col gap-6 px-4 py-8 md:py-12">
         {isPending && <p className="py-16 text-center text-stone-500">{t('profile.loading')}</p>}
@@ -57,6 +65,7 @@ function ProfileContent() {
               <Avatar url={profile.avatarUrl} name={profile.name} size={88} />
               <div className="min-w-0 flex-1 basis-[240px]">
                 <h1 className="m-0 truncate text-[clamp(24px,3vw,32px)] font-extrabold tracking-[-.5px]">{profile.name}</h1>
+                {profile.handle && <div className="mt-0.5 text-sm text-stone-500">@{profile.handle}</div>}
                 {profile.bio && <p className="mt-2 mb-0 whitespace-pre-line text-[15px] leading-[1.6] text-stone-700">{profile.bio}</p>}
                 <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-stone-600">
                   {profile.location && (
@@ -82,6 +91,14 @@ function ProfileContent() {
                   <div className="text-2xl font-extrabold text-brand">{profile.totalPoints}</div>
                   <div className="text-xs text-stone-500">{t('profile.totalPoints')}</div>
                 </div>
+                {user && user.id !== profile.id && (
+                  <>
+                    <button type="button" disabled={chat.pendingUserId === profile.id} onClick={() => void chat.startConversation(profile.id)} className="glass-chip flex h-10 items-center gap-2 rounded-[14px] px-4 text-sm font-semibold text-stone-900 disabled:opacity-60">
+                      <MaterialIcon name="chat" size={18} /> {t('profile.message')}
+                    </button>
+                    {chat.error && <p role="alert" className="m-0 max-w-[220px] text-right text-xs text-red-600">{chat.error}</p>}
+                  </>
+                )}
                 {user?.id === profile.id && (
                   <ButtonLink to="/settings" className="h-10 rounded-[14px] px-4 text-sm font-semibold">
                     {t('profile.edit')}

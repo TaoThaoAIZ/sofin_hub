@@ -30,7 +30,7 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <aside className="flex h-full w-[260px] flex-none flex-col border-r border-[rgba(120,60,20,.08)] bg-white">
       <Link to="/admin" onClick={onNavigate} className="flex h-[68px] flex-none items-center gap-2.5 px-[22px] text-xl font-extrabold tracking-[-.02em] text-stone-900 no-underline">
-        <span className="grid size-8 place-items-center rounded-[9px] bg-gradient-to-b from-[#ff8f45] to-[#f26a1b] text-lg text-white shadow-[0_6px_14px_rgba(242,106,27,.3)]">S</span>
+        <span className="grid size-8 place-items-center rounded-[9px] bg-gradient-to-b from-[#ff8f45] to-[#ff570a] text-lg text-white shadow-[0_6px_14px_rgba(255,87,10,.3)]">S</span>
         <span>
           Sofin<span className="text-brand">Hub</span>
         </span>
@@ -45,7 +45,7 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           const rowCls = `mb-0.5 flex h-[42px] w-full flex-none items-center gap-3 rounded-xl border-0 px-3 text-left text-sm no-underline ${on ? 'font-bold text-stone-900' : 'font-medium text-stone-700'} ${on && !hasKids ? 'bg-[#fff1e6]' : 'bg-transparent hover:bg-[#faf5f1]'}`;
           const inner = (
             <>
-              <MaterialIcon name={g.icon} size={21} filled={on} color={on ? '#f26a1b' : '#78716c'} />
+              <MaterialIcon name={g.icon} size={21} filled={on} color={on ? '#ff570a' : '#78716c'} />
               <span className="min-w-0 flex-1">{g.label}</span>
               {badge && <span className="grid h-5 min-w-6 place-items-center rounded-full bg-brand px-[7px] text-[11px] font-bold text-white">{badge}</span>}
               {hasKids && <MaterialIcon name="expand_more" size={19} color="#a8a29e" className={`transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />}
@@ -182,7 +182,7 @@ function GlobalSearch() {
               {g.items.map((it) => (
                 <button key={it.id + it.to} type="button" onClick={() => go(it.to)} className="flex w-full items-center gap-2.5 rounded-[10px] border-0 bg-transparent px-2.5 py-2 text-left hover:bg-[#fff4ec]">
                   <span className="grid size-8 flex-none place-items-center rounded-[9px] bg-[#fff1e6]">
-                    <MaterialIcon name={it.icon} size={18} color="#f26a1b" />
+                    <MaterialIcon name={it.icon} size={18} color="#ff570a" />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[13.5px] font-semibold">{it.t}</span>
@@ -245,7 +245,7 @@ function Topbar({ onMenu }: { onMenu: () => void }) {
         }
         className="hidden h-10 flex-none items-center gap-1.5 rounded-[11px] border-[1.5px] border-[#ece5df] bg-white px-3.5 text-[13.5px] font-semibold whitespace-nowrap text-stone-800 hover:bg-[#fff4ec] md:flex"
       >
-        <MaterialIcon name="bolt" size={19} filled color="#f26a1b" />
+        <MaterialIcon name="bolt" size={19} filled color="#ff570a" />
         {t('layout.topbar.quickActions')}
       </button>
       <button
@@ -332,7 +332,7 @@ function GuardedOutlet() {
         <p className="m-0 text-sm leading-relaxed text-stone-600">
           {me?.adminRole ? <Trans t={t} i18nKey="layout.guard.withRole" values={{ role: ROLE_LABEL[me.adminRole.key] ?? me.adminRole.name }} components={{ b: <b /> }} /> : t('layout.guard.noRole')}
         </p>
-        <Link to="/admin" className="mt-5 inline-flex h-10 items-center rounded-[11px] bg-gradient-to-b from-[#ff8f45] to-[#f26a1b] px-[15px] text-[13.5px] font-semibold text-white no-underline shadow-[0_6px_16px_rgba(242,106,27,.28)]">
+        <Link to="/admin" className="mt-5 inline-flex h-10 items-center rounded-[11px] bg-gradient-to-b from-[#ff8f45] to-[#ff570a] px-[15px] text-[13.5px] font-semibold text-white no-underline shadow-[0_6px_16px_rgba(255,87,10,.28)]">
           {t('layout.guard.backToOverview')}
         </Link>
       </div>
@@ -389,7 +389,7 @@ export function AdminLayout() {
     return (
       <div className="grid min-h-screen place-items-center bg-[#faf8f6] p-6 text-center">
         <div className="max-w-sm">
-          <MaterialIcon name="lock" size={36} filled color="#f26a1b" />
+          <MaterialIcon name="lock" size={36} filled color="#ff570a" />
           <p className="mt-2 mb-4 text-stone-600">{t('layout.needLogin')}</p>
           <Link to="/login" state={{ from: location.pathname + location.search }} className="inline-flex h-10 items-center rounded-[14px] bg-brand px-[18px] text-sm font-semibold text-white no-underline">
             {t('layout.login')}

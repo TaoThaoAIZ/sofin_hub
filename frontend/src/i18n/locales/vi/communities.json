@@ -143,7 +143,7 @@
     "mediaRemove": "Xóa",
     "mediaUploading": "Đang tải lên…",
     "mediaAdd": "Thêm ảnh / video",
-    "mediaHint": "Chọn nhiều tệp một lần (ảnh JPG/PNG/WEBP/GIF hoặc video MP4, tối đa 25MB mỗi tệp, 12 mục). Mục đầu tiên hiển thị chính ở trang giới thiệu.",
+    "mediaHint": "Chọn nhiều tệp một lần (ảnh JPG/PNG/WEBP/GIF hoặc video MP4, tối đa 2GB mỗi tệp, 12 mục). Mục đầu tiên hiển thị chính ở trang giới thiệu.",
     "errTitle": "Tên cộng đồng phải từ 3 đến 80 ký tự",
     "errDesc": "Vui lòng nhập mô tả",
     "errPrice": "Giá phải là số nguyên từ 0 đến 50.000.000 (VND)",

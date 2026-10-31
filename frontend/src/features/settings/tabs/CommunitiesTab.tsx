@@ -15,7 +15,7 @@ type Filter = 'all' | 'own' | 'mem';
 
 const errMsg = (e: unknown) => (e instanceof ApiError ? e.message : i18n.t('communitiesTab.errGeneric', { ns: 'settings' }));
 const SIDE_BTN =
-  'inline-flex h-11 items-center gap-2 rounded-xl border-[1.5px] border-[#e7e0da] bg-white px-[18px] text-sm font-bold whitespace-nowrap text-stone-900 no-underline hover:border-[#fdba74]';
+  'inline-flex h-11 items-center gap-2 rounded-xl border-[1.5px] border-[#e7e0da] bg-white px-[18px] text-sm font-bold whitespace-nowrap text-stone-900 no-underline hover:border-[#fdba74] max-md:h-10 max-md:px-3.5';
 
 export function CommunitiesTab() {
   const { t } = useTranslation('settings');
@@ -124,19 +124,19 @@ export function CommunitiesTab() {
                 e.preventDefault();
                 onDrop(c);
               }}
-              className={`flex items-center gap-4 border-b border-[#f3eee9] py-[18px] ${dragId === c.id ? 'bg-[#fff8f3]' : ''}`}
+              className={`flex items-center gap-4 border-b border-[#f3eee9] py-[18px] max-md:grid max-md:grid-cols-[auto_auto_minmax(0,1fr)] max-md:items-start max-md:gap-x-2.5 max-md:gap-y-3 max-md:py-4 ${dragId === c.id ? 'bg-[#fff8f3]' : ''}`}
             >
-              <MaterialIcon name="drag_indicator" size={22} color="#c7bfb8" className="cursor-grab" />
-              <CommunityLogo name={c.title} seed={c.id} size={60} src={c.logoUrl} />
+              <MaterialIcon name="drag_indicator" size={22} color="#c7bfb8" className="cursor-grab max-md:mt-4" />
+              <CommunityLogo name={c.title} seed={c.id} size={52} src={c.logoUrl} />
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2.5">
                   <span className="text-[16.5px] font-bold">{c.title}</span>
                   <span className={`rounded-lg px-2.5 py-1 text-[12.5px] font-bold whitespace-nowrap ${owner ? 'bg-[#1e293b] text-white' : 'bg-[#dcfce7] text-[#15803d]'}`}>{roleText(c)}</span>
-                  {c.pinned && <MaterialIcon name="keep" size={18} filled color="#f26a1b" />}
+                  {c.pinned && <MaterialIcon name="keep" size={18} filled color="#ff570a" />}
                 </div>
                 <div className="mt-1 text-sm leading-normal text-stone-500">{lineText(c)}</div>
               </div>
-              <div className="flex flex-none items-center gap-3">
+              <div className="flex flex-none items-center gap-3 max-md:col-span-3 max-md:justify-end">
                 {owner ? (
                   <Link to={`/communities/${c.id}/community/cai-dat`} title={t('communitiesTab.communitySettings')} className={SIDE_BTN}>
                     <MaterialIcon name="settings" size={20} />
@@ -164,8 +164,8 @@ export function CommunitiesTab() {
 
       <div className="flex min-w-0 flex-col gap-[18px]">
         <section className="relative overflow-hidden rounded-[20px] border border-[#fde3cf] bg-gradient-to-br from-[#fff4ea] to-[#ffe3cd] p-6">
-          <span className="mx-auto mb-4 grid size-[84px] place-items-center rounded-full bg-white shadow-[0_10px_24px_rgba(242,106,27,.18)]">
-            <MaterialIcon name="groups" size={44} filled color="#f26a1b" />
+          <span className="mx-auto mb-4 grid size-[84px] place-items-center rounded-full bg-white shadow-[0_10px_24px_rgba(255,87,10,.18)]">
+            <MaterialIcon name="groups" size={44} filled color="#ff570a" />
           </span>
           <div className="text-xl leading-[1.35] font-extrabold">
             {t('communitiesTab.promoTitle')}
@@ -175,7 +175,7 @@ export function CommunitiesTab() {
           <div className="mt-2 text-[14.5px] leading-[1.55] text-stone-600">{t('communitiesTab.promoSub')}</div>
           <Link
             to="/communities/new"
-            className="mt-[18px] flex h-[50px] items-center justify-center gap-2 rounded-xl bg-gradient-to-b from-[#ff8f45] to-[#f26a1b] text-[15px] font-bold text-white no-underline shadow-[0_10px_24px_rgba(242,106,27,.3)]"
+            className="mt-[18px] flex h-[50px] items-center justify-center gap-2 rounded-xl bg-gradient-to-b from-[#ff8f45] to-[#ff570a] text-[15px] font-bold text-white no-underline shadow-[0_10px_24px_rgba(255,87,10,.3)]"
           >
             {t('communitiesTab.create')}
             <MaterialIcon name="arrow_forward" size={19} />

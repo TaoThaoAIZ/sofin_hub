@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { ApiError } from '../../../lib/api';
 import i18n from '../../../i18n';
+import { shortEmail } from '../../../lib/email';
 import { useRevokeSession, useSessions } from '../../account/queries';
 import { useToast } from '../../admin/components/overlay';
 import { sendVerification } from '../../auth/api';
@@ -25,7 +26,7 @@ const CARD = 'min-w-0 rounded-[20px] border border-[rgba(120,60,20,.07)] bg-whit
 const ROW_BTN = 'h-[46px] whitespace-nowrap rounded-xl border-[1.5px] border-[#e7e0da] bg-white px-5 text-sm font-bold hover:border-[#fdba74] disabled:opacity-50';
 const SELECT = 'min-w-0 flex-1 cursor-pointer border-0 bg-transparent text-[15px] font-medium outline-0';
 const THEMES = [
-  { id: 'light', label: 'securityTab.light', icon: 'light_mode', color: '#f26a1b' },
+  { id: 'light', label: 'securityTab.light', icon: 'light_mode', color: '#ff570a' },
   { id: 'dark', label: 'securityTab.dark', icon: 'dark_mode', color: '#1e3a8a' },
   { id: 'system', label: 'securityTab.system', icon: 'desktop_windows', color: '#1c1917' },
 ] as const;
@@ -34,7 +35,7 @@ function CardHead({ icon, title, sub, className = '', action }: { icon: string; 
   return (
     <div className={`flex flex-wrap items-start gap-3.5 ${className}`}>
       <span className="grid size-11 flex-none place-items-center rounded-full bg-[#fff1e6]">
-        <MaterialIcon name={icon} size={22} filled color="#f26a1b" />
+        <MaterialIcon name={icon} size={22} filled color="#ff570a" />
       </span>
       <div className="min-w-[200px] flex-1">
         <div className="text-[19px] font-extrabold">{title}</div>
@@ -114,7 +115,7 @@ export function SecurityTab() {
     try {
       await sendVerification();
       setCooldown(60);
-      toast.success(t('securityTab.verifySent', { email: target }));
+      toast.success(t('securityTab.verifySent', { email: shortEmail(target) }));
     } catch (e) {
       if (e instanceof ApiError && e.status === 429) {
         setCooldown(60);
@@ -154,7 +155,7 @@ export function SecurityTab() {
               <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 text-[13px] text-stone-600">
                 {user.pendingEmail ? (
                   <span>
-                    {t('securityTab.pendingPrefix')} <b className="break-all">{user.pendingEmail}</b>{t('securityTab.pendingSuffix')}
+                    {t('securityTab.pendingPrefix')} <b className="inline-block max-w-[240px] truncate align-bottom" title={user.pendingEmail ?? undefined}>{user.pendingEmail}</b>{t('securityTab.pendingSuffix')}
                   </span>
                 ) : (
                   <span>{t('securityTab.emailUnverified')}</span>

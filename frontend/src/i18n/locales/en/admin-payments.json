@@ -359,6 +359,38 @@
       "paid": "Paid",
       "void": "Void"
     },
-    "kindCommunity": "Community referral"
+    "kindCommunity": "Community referral",
+    "tabWithdrawals": "Withdrawals"
+  },
+  "refWithdrawals": {
+    "tableTitle": "Commission withdrawals",
+    "tableSub": "{{count}} requests",
+    "colDate": "Time",
+    "colUser": "Requested by",
+    "colNote": "Note",
+    "bank": "Bank",
+    "accountNo": "Account number",
+    "holder": "Account holder",
+    "amount": "Amount (VND)",
+    "content": "Transfer content / code",
+    "transfer": "Transfer",
+    "reject": "Reject",
+    "markPaid": "Mark as paid",
+    "transferTitle": "Transfer commission",
+    "transferBody": "Send {{amount}} to {{name}}. Scan the QR (amount and content prefilled) or enter manually.",
+    "autoNote": "Keep the transfer content as is: when SePay reports an outgoing transfer matching the code and amount, the request is marked paid automatically. You can also confirm manually.",
+    "clickCopy": "Click to copy",
+    "copied": "Copied",
+    "paidDone": "Marked as paid",
+    "rejectTitle": "Reject withdrawal",
+    "rejectBody": "Reject {{name}}'s withdrawal of {{amount}}. The amount returns to their balance and they are notified.",
+    "reason": "Reason (shown to the user)",
+    "rejectedDone": "Request rejected",
+    "empty": "No withdrawal requests",
+    "status": {
+      "requested": "Awaiting transfer",
+      "paid": "Paid",
+      "rejected": "Rejected"
+    }
   }
 }

@@ -5,7 +5,7 @@ import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
 import { ApiError } from '../lib/api';
 import { useAuth } from '../features/auth/AuthContext';
-import { clearReferralCode } from '../features/referral/storage';
+import { clearReferralCode, readReferralDestination } from '../features/referral/storage';
 import { AuthShell } from '../features/account/components/AuthShell';
 import { Alert } from '../features/account/components/Field';
 
@@ -33,8 +33,8 @@ export function OAuthCallbackPage() {
     started.current = true;
     const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
     // Xóa hash (có thể chứa vé 2FA) khỏi thanh địa chỉ / lịch sử ngay.
+    const error = hash.get('error') ?? new URLSearchParams(window.location.search).get('error'); // lỗi có thể đến qua hash hoặc query; đọc TRƯỚC khi xóa khỏi thanh địa chỉ
     window.history.replaceState(null, '', window.location.pathname);
-    const error = hash.get('error');
     const ticket = hash.get('ticket');
     if (error) {
       setState({ kind: 'error', message: t(`oauth.errors.${error}`, { defaultValue: t('oauth.errors.failed') }) });
@@ -43,8 +43,9 @@ export function OAuthCallbackPage() {
     } else {
       completeSocialLogin()
         .then(() => {
+          const referralDest = readReferralDestination(); // lấy trước khi xóa: người đăng ký từ link giới thiệu vào đúng cộng đồng
           clearReferralCode();
-          navigate('/', { replace: true });
+          navigate(referralDest ?? '/', { replace: true });
         })
         .catch(() => setState({ kind: 'error', message: t('login.socialFail') }));
     }
@@ -61,8 +62,9 @@ export function OAuthCallbackPage() {
     setCodeError(null);
     try {
       await completeTwoFactor(state.ticket, code);
+      const referralDest = readReferralDestination();
       clearReferralCode();
-      navigate('/', { replace: true });
+      navigate(referralDest ?? '/', { replace: true });
     } catch (err) {
       setCodeError(err instanceof ApiError ? err.message : t('login.verifyFail'));
       if (err instanceof ApiError && err.status === 401 && /hết hạn, vui lòng đăng nhập lại/.test(err.message)) {

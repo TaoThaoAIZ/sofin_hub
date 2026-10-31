@@ -284,6 +284,8 @@ export interface PaymentsOps {
    * (qua `policy.eligibleBefore`, cộng mọi khoản net âm). Không truyền policy ⇒ eligible = net (hành vi cũ).
    */
   balance(communityId: string, rates: RevenueRates, policy?: BalancePolicy): Promise<BalanceFigures>;
+  /** Giao dịch thu tiền (chưa tính hoàn) sớm nhất còn trong holding period (sau `eligibleBefore`) — để báo ngày số dư đầu tiên được rút. null = không có. */
+  earliestHeldAt(communityId: string, eligibleBefore: Date): Promise<Date | null>;
   addLedgerEntry(entry: LedgerEntryInput): Promise<void>;
   /** Tổng nợ đã ghi sổ (giá trị dương) của cộng đồng — để hiển thị/đối soát. */
   ledgerDebtCents(communityId: string): Promise<number>;
@@ -880,13 +882,20 @@ function makeOps(db: Db): PaymentsOps {
       const cTo = range.to ? Prisma.sql`AND "createdAt" <= ${ts(range.to)}` : Prisma.empty;
       const [rc] = await db.$queryRaw<{ total: bigint }[]>`
         SELECT COALESCE(SUM("amountCents"), 0)::bigint AS total FROM "ReferralCommission"
-        WHERE "communityId" = ${communityId} AND "kind" = 'community' AND "status" <> 'void' ${cFrom} ${cTo}`;
+        WHERE "communityId" = ${communityId} AND "kind" = 'community' AND "status" <> 'void' AND "payoutId" IS NULL ${cFrom} ${cTo}`;
       const gross = num(r?.gross);
       const refunds = num(r?.refunds);
       const commission = num(r?.commission);
       const fee = num(r?.fee);
       const referral = num(rc?.total);
       return { grossCents: gross, refundsCents: refunds, platformCommissionCents: commission, gatewayFeeCents: fee, referralCommissionCents: referral, netCents: gross - refunds - commission - fee - referral };
+    },
+    async earliestHeldAt(communityId, eligibleBefore) {
+      const [r] = await db.$queryRaw<{ at: Date | null }[]>`
+        SELECT MIN(COALESCE("confirmedAt", "createdAt")) AS "at" FROM "Payment"
+        WHERE "courseId" = ${communityId} AND "kind" <> 'hosting' AND "status" IN ('succeeded', 'refunded')
+          AND "amountCents" - "refundedCents" > 0 AND COALESCE("confirmedAt", "createdAt") > ${ts(eligibleBefore)}`;
+      return r?.at ?? null;
     },
     async balance(communityId, rates, policy) {
       // `n` = net của từng giao dịch (đã trừ hoàn tiền, hoa hồng trên phần giữ lại, phí cổng). Giao dịch đủ điều kiện rút khi đã qua
@@ -906,7 +915,7 @@ function makeOps(db: Db): PaymentsOps {
       // Hoa hồng giới thiệu của cộng đồng là khoản phải trả cho người mời, lấy từ phần creator nhận: trừ ngay (không chờ holding period).
       const [rc] = await db.$queryRaw<{ total: bigint }[]>`
         SELECT COALESCE(SUM("amountCents"), 0)::bigint AS total FROM "ReferralCommission"
-        WHERE "communityId" = ${communityId} AND "kind" = 'community' AND "status" <> 'void'`;
+        WHERE "communityId" = ${communityId} AND "kind" = 'community' AND "status" <> 'void' AND "payoutId" IS NULL`;
       const referral = num(rc?.total);
       const net = num(r?.net) - referral;
       return { net, requested: num(r?.requested), eligible: policy ? num(r?.eligible) - referral : net };

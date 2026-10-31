@@ -9,7 +9,7 @@ export function validateRequired(value: string, label: string): string | null {
 export function validateEmail(value: string): string | null {
   if (!value.trim()) return i18n.t('validation.emailRequired', { ns: 'auth' });
   if (!EMAIL_RE.test(value.trim())) return i18n.t('validation.emailInvalid', { ns: 'auth' });
-  if (value.trim().length > 30) return i18n.t('validation.emailTooLong', { ns: 'auth' });
+  if (value.trim().length > 80) return i18n.t('validation.emailTooLong', { ns: 'auth' });
   return null;
 }
 

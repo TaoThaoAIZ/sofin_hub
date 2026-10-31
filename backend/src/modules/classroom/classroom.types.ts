@@ -4,8 +4,10 @@ export interface LessonAttachment {
   name: string;
   url: string;
   size?: number;
-  /** 'slide' = slide bài giảng; bỏ trống = tệp đính kèm thường. */
-  kind?: 'slide';
+  /** 'slide' = slide bài giảng; 'video' = video bổ sung (ngoài video chính `videoUrl`); bỏ trống = tệp đính kèm thường. */
+  kind?: 'slide' | 'video';
+  /** Chỉ kind = 'video' dùng link YouTube/Vimeo: URL nhúng do BE dựng; video tải lên không có. */
+  embedUrl?: string;
 }
 
 export interface ClassroomLesson {
@@ -85,6 +87,8 @@ export interface ClassroomModuleView {
   publishStatus: CoursePublishStatus;
   hasPreview: boolean;
   lockReason: LockReason;
+  /** Module bán riêng mà người xem CHƯA mua (kể cả khi đang bị khóa vì chưa xong module trước, lúc đó lockReason = previous_module): FE hiện phí song song với lý do khóa. */
+  needsPurchase?: boolean;
 }
 
 export interface ClassroomLessonView extends Omit<ClassroomLesson, 'moduleId' | 'courseId' | 'communityId'> {
@@ -94,6 +98,8 @@ export interface ClassroomLessonView extends Omit<ClassroomLesson, 'moduleId' | 
 }
 
 export interface ClassroomLessonDetail extends ClassroomLessonView {
+  /** Module chứa bài còn khóa với người xem (bài đang mở được là bài học thử miễn phí): FE báo "mua module để học tiếp". */
+  moduleLocked: boolean;
   learningCourseId: string;
   communityId: string;
   moduleId: string;
@@ -106,6 +112,20 @@ export interface ClassroomLessonDetail extends ClassroomLessonView {
   nextLessonLocked: boolean;
   /** Trắc nghiệm của bài (null = không có). `required` = người xem phải đạt điểm mới hoàn thành được bài (mod+ không bị bắt buộc). */
   quiz: { questionCount: number; passPercent: number; passed: boolean; required: boolean } | null;
+  /** true khi bài có khảo sát với câu BẮT BUỘC mà người xem (không phải mod+) chưa trả lời: chưa được hoàn thành bài. */
+  surveyBlocks: boolean;
+  /** Bài có khảo sát (dù bắt buộc hay không). */
+  hasSurvey: boolean;
+  /** Người xem đã nộp khảo sát của bài (nộp lại vẫn được). */
+  surveyAnswered: boolean;
+  /** Khảo sát có câu BẮT BUỘC (dù người xem đã trả lời hay chưa). */
+  surveyRequired: boolean;
+  /** Video bài học: `required` = bài có video, phải xem hết video mới làm được trắc nghiệm (áp dụng cho mọi người); `watched` = đã xem hết. */
+  /** `items` = từng video theo thứ tự hiển thị (video chính trước); `watched` = đã xem hết MỌI video. */
+  /** Bài có trò chơi cuối bài (một hoặc nhiều); `gamePlayed` = người xem đã chơi ít nhất một ván. */
+  hasGame: boolean;
+  gamePlayed: boolean;
+  video: { required: boolean; watched: boolean; items: { key: string; watched: boolean }[] };
 }
 
 export interface ClassroomProgress {

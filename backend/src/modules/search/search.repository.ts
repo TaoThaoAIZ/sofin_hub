@@ -197,17 +197,22 @@ export const searchRepository = {
   async countMembers(ids: string[], t: SearchTerms): Promise<number> {
     if (ids.length === 0) return 0;
     const S = await trgmSchema();
-    const [r] = await prisma.$queryRaw<{ n: number }[]>`SELECT count(*)::int AS n ${memberFrom(ids, t, S)}`;
+    const [r] = await prisma.$queryRaw<{ n: number }[]>`SELECT count(DISTINCT u."id")::int AS n ${memberFrom(ids, t, S)}`;
     return r?.n ?? 0;
   },
 
+  /** Mỗi người một dòng (dù ở nhiều cộng đồng): lấy cộng đồng hoạt động gần nhất làm đại diện. */
   async pageMembers(ids: string[], t: SearchTerms, page: PageSpec): Promise<MemberHit[]> {
     if (ids.length === 0) return [];
     const S = await trgmSchema();
     return prisma.$queryRaw<MemberHit[]>`
-      SELECT u."id", e."courseId", c."title" AS "courseTitle", u."firstName", u."lastName", e."role"::text AS "role"
-      ${memberFrom(ids, t, S)}
-      ORDER BY ${userScore('u', t, S)} DESC, e."lastActiveAt" DESC, u."id", e."courseId"
+      SELECT x."id", x."courseId", x."courseTitle", x."firstName", x."lastName", x."role" FROM (
+        SELECT DISTINCT ON (u."id") u."id", e."courseId", c."title" AS "courseTitle", u."firstName", u."lastName", e."role"::text AS "role",
+               ${userScore('u', t, S)} AS "score", e."lastActiveAt" AS "active"
+        ${memberFrom(ids, t, S)}
+        ORDER BY u."id", e."lastActiveAt" DESC, e."courseId"
+      ) x
+      ORDER BY x."score" DESC, x."active" DESC, x."id"
       LIMIT ${page.limit} OFFSET ${page.offset}`;
   },
 

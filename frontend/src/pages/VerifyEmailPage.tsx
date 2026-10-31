@@ -48,7 +48,7 @@ export function VerifyEmailPage() {
         <>
           <Alert kind="error">{state.message}</Alert>
           <p className="m-0 text-center text-sm text-stone-600">
-            {t('verify.expiredHint')}
+            {t(status === 'authenticated' ? 'verify.expiredHintAuthed' : 'verify.expiredHint')}
           </p>
           <ButtonLink to="/settings" className="h-[52px] rounded-2xl text-base font-bold">
             {t('verify.openSettings')}

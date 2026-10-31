@@ -1,9 +1,13 @@
 import { useTranslation } from 'react-i18next';
+import { Markdown } from '../../../lib/markdown';
+import { priceNote } from '../../courses/factText';
 import { useParams } from 'react-router-dom';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { formatCompact } from '../../../lib/format';
 import { MediaGallery } from '../../courses/components/MediaGallery';
 import { useCommunityDetail } from '../../courses/queries';
+import { Avatar } from '../../account/components/Avatar';
+import { CommunityToolsSection } from '../../tools/CommunityToolsSection';
 import { CommunityInfoCard, initials } from './shared';
 
 import { formatCents } from '../../../lib/datetime';
@@ -23,7 +27,7 @@ export function AboutTab() {
     { icon: course.visibility === 'private' ? 'lock' : 'public', t: course.visibility === 'private' ? t('about.private') : t('about.public'), s: course.visibility === 'private' ? t('about.membersOnly') : t('about.openCommunity') },
     { icon: 'group', t: t('about.membersChip', { n: formatCompact(course.stats.members) }), s: t('about.active') },
     { icon: 'sell', t: course.priceUsd === 0 ? t('about.free') : t('about.perMonth', { price: formatCents(course.priceUsd) }), s: course.priceUsd === 0 ? t('about.joinNow') : t('about.membership') },
-    { face: initials(course.instructor.name), t: t('about.byInstructor', { name: course.instructor.name }), s: t('about.roleAdmin', { role: course.instructor.role }) },
+    { face: course.instructor.name, t: t('about.byInstructor', { name: course.instructor.name }), s: t('about.roleAdmin', { role: course.instructor.role }) },
   ];
   const lessons = Number(course.facts.find((f) => f.label === 'Bài học')?.value ?? 0);
   const free = [
@@ -39,8 +43,8 @@ export function AboutTab() {
         <div className="grid grid-cols-4 gap-3 max-md:grid-cols-2">
           {chips.map((c) => (
             <div key={c.t} className="glass flex min-w-0 items-center gap-3 rounded-[18px] px-4 py-3.5">
-              {c.icon && <MaterialIcon name={c.icon} size={28} color="#f26a1b" />}
-              {c.face && <span className="grid size-[38px] flex-none place-items-center rounded-full bg-[#e7d3c6] text-xs font-bold text-[#7c2d12]">{c.face}</span>}
+              {c.icon && <MaterialIcon name={c.icon} size={28} color="#ff570a" />}
+              {c.face && <Avatar url={course.instructor.avatarUrl} name={c.face} size={38} text={initials(c.face)} />}
               <div className="min-w-0">
                 <div className="truncate text-[14.5px] font-semibold">{c.t}</div>
                 <div className="mt-0.5 text-[12.5px] text-stone-500">{c.s}</div>
@@ -49,10 +53,10 @@ export function AboutTab() {
           ))}
         </div>
 
-        <section className="rounded-[22px] border border-brand/15 bg-gradient-to-br from-[#fff3e8] to-[#ffe9d9] px-7 py-[22px]">
+        <section className="rounded-[22px] border border-brand/15 bg-gradient-to-br from-[#fff3e8] to-[#ffe9d9] px-7 py-[22px] max-md:border-0 max-md:bg-none max-md:bg-white max-md:px-4 max-md:py-4 max-md:shadow-soft dark:max-md:bg-[rgba(63,63,63,.3)]">
           <div className="max-w-[760px]">
             <div className="text-[22px] font-extrabold text-[#e8590c]">{course.title}</div>
-            <p className="mt-2.5 text-[15px] leading-[1.65] text-stone-700 whitespace-pre-line break-words">{course.about}</p>
+            <Markdown text={course.about} className="mt-2.5 text-[15px] leading-[1.65] text-stone-700" />
           </div>
         </section>
 
@@ -60,7 +64,7 @@ export function AboutTab() {
         <section className={`${glass} px-6 py-[22px]`}>
           <div className="mb-[18px] flex items-center gap-3.5">
             <span className="grid size-[42px] place-items-center rounded-full bg-brand/10">
-              <MaterialIcon name="bolt" size={24} filled color="#f26a1b" />
+              <MaterialIcon name="bolt" size={24} filled color="#ff570a" />
             </span>
             <span className="text-[21px] font-extrabold">{t('about.whatYouGet')}</span>
           </div>
@@ -68,7 +72,7 @@ export function AboutTab() {
             {course.gains.map((g, i) => (
               <div key={g.title} className="flex items-center gap-[18px]">
                 <span className="grid size-[60px] flex-none place-items-center rounded-2xl bg-brand/10">
-                  <MaterialIcon name={GAIN_ICONS[i % GAIN_ICONS.length]!} size={28} filled color="#f26a1b" />
+                  <MaterialIcon name={GAIN_ICONS[i % GAIN_ICONS.length]!} size={28} filled color="#ff570a" />
                 </span>
                 <div>
                   <div className="text-[15px] leading-normal font-semibold text-stone-800">{g.title}</div>
@@ -82,7 +86,7 @@ export function AboutTab() {
 
         <section className={`${glass} px-6 pt-[22px] pb-[18px]`}>
           <div className="mb-4 flex items-center gap-3.5">
-            <MaterialIcon name="menu_book" size={32} filled color="#f26a1b" />
+            <MaterialIcon name="menu_book" size={32} filled color="#ff570a" />
             <span className="text-[21px] font-extrabold">{t('about.highlights')}</span>
           </div>
           <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4">
@@ -106,9 +110,9 @@ export function AboutTab() {
                 </span>
               </div>
               {course.priceUsd === 0 && <div className="py-1 text-[14.5px] text-stone-500">{t('about.communityFree')}</div>}
-              {course.priceNotes.map((x) => (
+              {course.priceNotes.map(priceNote).map((x) => (
                 <div key={x} className="flex items-start gap-3 py-1 text-[14.5px] text-stone-800">
-                  <MaterialIcon name="check" size={20} color="#f26a1b" />
+                  <MaterialIcon name="check" size={20} color="#ff570a" />
                   {x}
                 </div>
               ))}
@@ -116,14 +120,19 @@ export function AboutTab() {
           </div>
           <div className="mt-4 flex flex-wrap items-center gap-4">
             <div className="flex items-center gap-3">
-              <span className="grid size-10 place-items-center rounded-full bg-[#e7d3c6] text-xs font-bold text-[#7c2d12]">{initials(course.instructor.name)}</span>
+              <Avatar url={course.instructor.avatarUrl} name={course.instructor.name} size={40} text={initials(course.instructor.name)} />
               <span className="text-[15px]">{t('about.founder', { name: course.instructor.name })}</span>
             </div>
           </div>
         </section>
+
+        <CommunityToolsSection className={`${glass} px-6 py-[22px]`} titleClassName="m-0 text-[21px] font-extrabold" />
       </main>
 
-      <CommunityInfoCard course={course} coverHeight={170} />
+      {/* Mobile (Figma) không có thẻ thông tin bên phải. */}
+      <div className="max-md:hidden">
+        <CommunityInfoCard course={course} coverHeight={170} />
+      </div>
     </div>
   );
 }

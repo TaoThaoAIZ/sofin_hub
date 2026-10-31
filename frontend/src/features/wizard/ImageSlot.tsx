@@ -59,7 +59,7 @@ export function ImageSlot({
           <img src={resolveApiPath(value)} alt="" className="size-full object-cover" />
         ) : (
           <span className="flex flex-col items-center gap-1 px-3 text-center text-[12.5px] text-stone-500">
-            <MaterialIcon name="cloud_upload" size={24} color="#f26a1b" />
+            <MaterialIcon name="cloud_upload" size={24} color="#ff570a" />
             {placeholder}
           </span>
         )}

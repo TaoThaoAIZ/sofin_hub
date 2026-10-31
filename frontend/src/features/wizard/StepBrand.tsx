@@ -54,7 +54,7 @@ export function StepBrand({ form, set, errors }: StepProps) {
 
       <div className="flex gap-4">
         <span className="grid size-10 flex-none place-items-center rounded-full bg-[#fff1e6]">
-          <MaterialIcon name="star" size={20} color="#f26a1b" filled />
+          <MaterialIcon name="star" size={20} color="#ff570a" filled />
         </span>
         <div className="flex min-w-0 flex-1 flex-col gap-2.5">
           <div className="text-[15.5px] font-bold">{t('brand.benefitsTitle', { count: form.benefits.length })}</div>
@@ -157,11 +157,11 @@ export function DiscoverPreview({ form, initials, priceLabel }: { form: WizardFo
       <div className="mt-3 min-h-11 text-sm leading-[1.6] text-stone-600">{form.description || t('preview.descriptionFallback')}</div>
       <div className="mt-3.5 flex items-center justify-between text-sm">
         <span className="flex items-center gap-2 text-stone-600">
-          <MaterialIcon name="groups" size={22} color="#f26a1b" filled />{t('preview.oneMember')}
+          <MaterialIcon name="groups" size={22} color="#ff570a" filled />{t('preview.oneMember')}
         </span>
         <span className="flex items-center gap-1 font-bold">
           {priceLabel}
-          <MaterialIcon name="arrow_forward" size={18} color="#f26a1b" />
+          <MaterialIcon name="arrow_forward" size={18} color="#ff570a" />
         </span>
       </div>
     </div>

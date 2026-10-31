@@ -68,7 +68,7 @@ export function ModulePurchaseDialog({ communityId, module: mod, onClose }: { co
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex overflow-y-auto bg-stone-900/45 p-3 backdrop-blur-[2px] sm:p-4" onClick={() => !purchase.isPending && onClose()}>
+    <div className="fixed inset-0 z-50 flex overflow-y-auto bg-stone-900/45 p-3 backdrop-blur-[2px] sm:p-4">
       <div role="dialog" aria-modal="true" aria-label={t('modulePurchase.title')} className="m-auto w-full max-w-[460px]" onClick={(e) => e.stopPropagation()}>
         <div className="relative overflow-hidden rounded-[28px] bg-white shadow-2xl">
           <button type="button" aria-label={t('join.close')} onClick={onClose} disabled={purchase.isPending} className="absolute top-4 right-4 grid size-9 place-items-center rounded-full border border-[rgba(120,60,20,.1)] bg-white shadow-sm">
@@ -76,7 +76,7 @@ export function ModulePurchaseDialog({ communityId, module: mod, onClose }: { co
           </button>
           <div className="bg-[linear-gradient(180deg,#fff1e6,#fff)] px-6 pt-8 pb-5 text-center">
             <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-brand/10">
-              <MaterialIcon name={done ? 'lock_open' : 'lock'} size={30} filled color="#f26a1b" />
+              <MaterialIcon name={done ? 'lock_open' : 'lock'} size={30} filled color="#ff570a" />
             </span>
             <h2 className="mt-3 mb-0 text-xl font-extrabold tracking-[-0.3px]">{done ? t('modulePurchase.unlocked') : t('modulePurchase.title')}</h2>
             <p className="mt-1 mb-0 text-sm font-semibold text-stone-800">{quote?.title ?? mod.title}</p>
@@ -133,7 +133,7 @@ export function ModulePurchaseDialog({ communityId, module: mod, onClose }: { co
                 </div>
                 <div className="mt-3 flex items-start gap-3 rounded-2xl border border-[#f0ebe6] bg-[#fdfbf9] p-3.5">
                   <span className="grid size-10 flex-none place-items-center rounded-xl bg-[#fff1e6]">
-                    <MaterialIcon name="qr_code_2" size={24} filled color="#f26a1b" />
+                    <MaterialIcon name="qr_code_2" size={24} filled color="#ff570a" />
                   </span>
                   <div className="text-[13px] leading-relaxed text-stone-600">
                     <div className="text-sm font-bold text-stone-900">{t('join.bankMethod')}</div>

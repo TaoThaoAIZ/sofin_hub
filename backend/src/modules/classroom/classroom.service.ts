@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto';
+import { env } from '../../config/env.js';
 import { HttpError } from '../../utils/http-error.js';
 import { userBriefView } from '../auth/user-view.js';
 import { catalogService } from '../catalog/catalog.service.js';
@@ -8,6 +9,9 @@ import { levelFor } from '../points/points.levels.js';
 import { pointsService } from '../points/points.service.js';
 import { postsService } from '../posts/posts.service.js';
 import { quizStore } from '../quiz/quiz.store.js';
+import { surveyStore } from '../survey/survey.store.js';
+import { hasPlayedGame } from '../game/game.service.js';
+import { lessonVideoKeys, lessonWatchStore } from './lesson-watch.store.js';
 import { toEmbedUrl, uploadedVideoPath } from './classroom.schema.js';
 import { classroomRepository, type ClassroomRepository, type LessonPatch, type ModulePatch } from './classroom.repository.js';
 import {
@@ -123,12 +127,12 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
     const grantable = staff ? [] : modules.filter((m) => m.accessMode === 'paid' || m.accessMode === 'selected').map((m) => m.id);
     const granted = await repo.accessModuleIds(userId, grantable);
 
-    let prevFullyDone = true;
+    let prevFullyDone: boolean = true;
     const states: ModuleState[] = [];
     for (const m of modules) {
       const completedCount = m.lessonIds.filter((id) => doneIds.has(id)).length;
       const pct = m.lessonIds.length ? Math.round((completedCount / m.lessonIds.length) * 100) : 0;
-      const orderLocked = !staff && !prevFullyDone;
+      const orderLocked: boolean = !staff && !prevFullyDone;
       const accessReason: 'level' | 'paid' | 'selected' | null =
         staff || orderLocked
           ? null
@@ -137,7 +141,7 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
             : (m.accessMode === 'paid' || m.accessMode === 'selected') && !granted.has(m.id)
               ? m.accessMode
               : null;
-      const locked = orderLocked || accessReason !== null;
+      const locked: boolean = orderLocked || accessReason !== null;
       const lockedLessons = new Set<string>();
       if (orderLocked) m.lessonIds.forEach((id) => lockedLessons.add(id));
       else if (accessReason) m.lessonIds.filter((id) => !m.previewIds.includes(id)).forEach((id) => lockedLessons.add(id));
@@ -170,11 +174,14 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
           publishStatus: m.publishStatus,
           hasPreview: m.previewIds.length > 0,
           lockReason: orderLocked ? 'previous_module' : accessReason,
+          ...(!staff && m.accessMode === 'paid' && !granted.has(m.id) ? { needsPurchase: true } : {}),
         },
         lockedLessons,
         orderLocked,
       });
-      prevFullyDone = completedCount === m.lessonIds.length;
+      // Module còn khóa (chưa mua / chưa đủ cấp độ / chưa được chọn / còn khóa thứ tự) chưa được coi là đã xong, dù mọi bài trong đó là bài học thử đã hoàn thành:
+      // nếu không, học thử xong bài miễn phí của module trả phí sẽ mở luôn module kế tiếp mà chưa thanh toán.
+      prevFullyDone = completedCount === m.lessonIds.length && !locked;
     }
     return { modules, states, doneIds, doneAt, staff };
   }
@@ -208,6 +215,15 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
     const embedUrl = toEmbedUrl(videoUrl);
     if (!embedUrl) throw HttpError.badRequest('Chỉ chấp nhận link video YouTube hoặc Vimeo hợp lệ, hoặc video mp4 tải lên');
     return { videoUrl: videoUrl.trim(), embedUrl };
+  }
+
+  /** Video bổ sung (attachments kind = 'video'): chuẩn hóa như video chính — video tải lên lưu đường dẫn nội bộ, link YouTube/Vimeo kèm embedUrl do BE dựng. */
+  function normalizeAttachments(list: LessonAttachment[]): LessonAttachment[] {
+    return list.map((a) => {
+      if (a.kind !== 'video') return a;
+      const { videoUrl, embedUrl } = videoFields(a.url) as { videoUrl?: string; embedUrl?: string };
+      return { ...a, url: videoUrl ?? a.url, ...(embedUrl ? { embedUrl } : {}) };
+    });
   }
 
   /** Id bài của khóa theo thứ tự module → bài: suy ra từ `modules[].lessonIds` đã có (không nạp thân bài cả khóa). */
@@ -309,7 +325,12 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
     if (flags.announce) {
       try {
         const desc = mod.description ? `\n${mod.description}` : '';
-        await postsService.create(communityId, actorId, `Module mới: ${mod.title}${desc}\nXem tại Lớp học: ${link}`.slice(0, 4000), 'Thông báo', []);
+        // Bài đăng cần link ĐẦY ĐỦ (có origin) để bấm được; mở thẳng khóa học chứa module (?khoa=) thay vì trang Lớp học chung.
+        const url = `${env.FRONTEND_URL.replace(/\/$/, '')}${link}${mod.learningCourseId ? `?khoa=${encodeURIComponent(mod.learningCourseId)}` : ''}`;
+        // Cắt phần MÔ TẢ (không phải dòng link) nếu quá dài: link ở cuối bài luôn còn nguyên để bấm được.
+        const tail = `\nXem tại Lớp học: ${url}`;
+        const head = `Module mới: ${mod.title}${desc}`.slice(0, Math.max(0, 4000 - tail.length));
+        await postsService.create(communityId, actorId, `${head}${tail}`, 'Thông báo', []);
       } catch (e) {
         console.error('[classroom] đăng bài thông báo module mới lỗi', e instanceof Error ? e.message : e);
       }
@@ -431,12 +452,13 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
       const isLocked = (id: string | undefined) => !!id && states.some((x) => x.lockedLessons.has(id));
       // Tóm tắt trắc nghiệm đi kèm truy vấn findLesson (không thêm truy vấn khi bài không có trắc nghiệm).
       const q = lesson.quiz;
-      const quiz = q ? { questionCount: q.questionCount, passPercent: q.passPercent, passed: await quizStore.hasPassed(q.id, userId), required: !staff } : null;
+      const quiz = q ? { questionCount: q.questionCount, passPercent: q.passPercent, passed: await quizStore.hasPassed(q.id, userId), required: true } : null;
       return {
         ...lessonView(lesson, doneIds),
         learningCourseId: course.id,
         communityId,
         moduleId: s.module.id,
+        moduleLocked: s.view.locked,
         moduleTitle: s.module.title,
         moduleIndex: s.module.index,
         prevLessonId: flat[i - 1] ?? null,
@@ -444,7 +466,33 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
         prevLessonLocked: isLocked(flat[i - 1]),
         nextLessonLocked: isLocked(flat[i + 1]),
         quiz,
+        surveyBlocks: !doneIds.has(lessonId) && !!lesson.survey && (await surveyStore.unansweredRequired(lesson.survey.id, lesson.survey.requiredIds, userId)),
+        hasSurvey: !!lesson.survey,
+        surveyAnswered: !!lesson.survey && (await surveyStore.answered(lesson.survey.id, userId)),
+        surveyRequired: !!lesson.survey && lesson.survey.requiredIds.length > 0,
+        hasGame: !!lesson.hasGame,
+        gamePlayed: !!lesson.hasGame && (await hasPlayedGame(lessonId, userId)),
+        video: await (async () => {
+          const keys = lessonVideoKeys(lesson);
+          const seen = keys.length > 0 ? await lessonWatchStore.watchedKeys(userId, lessonId) : new Set<string>();
+          const items = keys.map((key) => ({ key, watched: seen.has(key) }));
+          return { required: keys.length > 0, watched: items.every((i) => i.watched), items };
+        })(),
       };
+    },
+
+    /** FE báo video bài học đã chạy hết: ghi nhận để mở khóa trắc nghiệm của bài (bài không có video thì bỏ qua). */
+    async markVideoWatched(communityId: string, lessonId: string, userId: string, videoKey: string = 'main') {
+      const { lesson, course, staff } = await lessonContext(communityId, lessonId, userId);
+      const { states } = await state(communityId, course, userId, staff);
+      const s = states.find((x) => x.module.id === lesson.moduleId);
+      if (!s) throw HttpError.notFound('Không tìm thấy module');
+      assertLessonOpen(s, lesson);
+      const keys = lessonVideoKeys(lesson);
+      if (keys.length === 0) return { watched: true };
+      if (!keys.includes(videoKey)) throw HttpError.badRequest('Video không thuộc bài học này');
+      await lessonWatchStore.markWatched(userId, lessonId, videoKey);
+      return { watched: true };
     },
 
     async toggleLessonComplete(communityId: string, lessonId: string, userId: string) {
@@ -454,11 +502,19 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
       const s = states.find((x) => x.module.id === lesson.moduleId);
       if (!s) throw HttpError.notFound('Không tìm thấy module');
       assertLessonOpen(s, lesson);
-      // Bài có trắc nghiệm: muốn ĐÁNH DẤU hoàn thành phải đã đạt điểm (bỏ đánh dấu thì không cần). Mod+ không bị bắt buộc.
-      if (!staff && !doneIds.has(lessonId)) {
+      // Muốn ĐÁNH DẤU hoàn thành phải học hết bài (bỏ đánh dấu thì không cần). Áp dụng cho MỌI người, kể cả mod/chủ cộng đồng:
+      // xem hết video (nếu có) -> đạt trắc nghiệm (nếu có) -> trả lời các câu khảo sát bắt buộc (nếu có).
+      if (!doneIds.has(lessonId)) {
+        if (!(await lessonWatchStore.hasWatchedAll(userId, lesson))) {
+          throw HttpError.coded(409, 'VIDEO_REQUIRED', 'Bạn cần xem hết tất cả video của bài học trước khi hoàn thành');
+        }
         const q = lesson.quiz;
         if (q && !(await quizStore.hasPassed(q.id, userId))) {
           throw HttpError.coded(409, 'QUIZ_REQUIRED', `Bạn cần đạt tối thiểu ${q.passPercent}% bài trắc nghiệm để hoàn thành bài học này`);
+        }
+        // Khảo sát có câu BẮT BUỘC: phải trả lời đủ mới hoàn thành bài (và mới sang được bài tiếp theo khi học tuần tự).
+        if (await surveyStore.hasUnansweredRequired(lessonId, userId)) {
+          throw HttpError.coded(409, 'SURVEY_REQUIRED', 'Bạn cần trả lời các câu hỏi bắt buộc trong khảo sát để hoàn thành bài học này');
         }
       }
       // firstTime chỉ true đúng một lần (dòng LessonProgress được tạo nguyên tử) => điểm không bị cộng đôi kể cả gọi song song.
@@ -574,7 +630,7 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
     ) {
       await managedModule(communityId, moduleId, courseId);
       const { videoUrl, attachments, isPreview, ...base } = input;
-      return (await repo.createLesson(communityId, moduleId, { ...base, attachments: attachments ?? [], ...(isPreview !== undefined ? { isPreview } : {}), ...videoFields(videoUrl) }))!;
+      return (await repo.createLesson(communityId, moduleId, { ...base, attachments: normalizeAttachments(attachments ?? []), ...(isPreview !== undefined ? { isPreview } : {}), ...videoFields(videoUrl) }))!;
     },
 
     async updateLesson(
@@ -583,8 +639,8 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
       input: Partial<{ title: string; type: LessonType; durationMin: number; body: string; videoUrl: string | null; attachments: LessonAttachment[]; isPreview: boolean }>,
     ) {
       await requireLesson(communityId, lessonId);
-      const { videoUrl, ...rest } = input;
-      const patch: LessonPatch = { ...rest };
+      const { videoUrl, attachments, ...rest } = input;
+      const patch: LessonPatch = { ...rest, ...(attachments !== undefined ? { attachments: normalizeAttachments(attachments) } : {}) };
       if (videoUrl === null) patch.videoUrl = null;
       else if (videoUrl !== undefined) Object.assign(patch, videoFields(videoUrl));
       return (await repo.updateLesson(lessonId, patch))!;
@@ -645,7 +701,7 @@ export function createClassroomService(repo: ClassroomRepository = classroomRepo
           type: 'system',
           title: 'Bạn đã nhận được chứng nhận hoàn thành',
           body: `Chúc mừng! Bạn đã hoàn thành khóa "${course.title}" và được cấp chứng nhận.`,
-          link: `/courses/${communityId}/community/lop-hoc`,
+          link: `/communities/${communityId}/community/lop-hoc`,
           communityId,
         });
       }

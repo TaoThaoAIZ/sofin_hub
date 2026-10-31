@@ -7,12 +7,20 @@ export const referralKindQuery = z.object({
   kind: z.enum(REFERRAL_KINDS, { error: 'kind phải là creator hoặc member' }).default('creator'),
 });
 
+/** Tổng quan của trang trong một cộng đồng (tab member): số liệu + tỉ lệ tính theo CỘNG ĐỒNG đó (chương trình giới thiệu do chủ cộng đồng đặt %). */
+export const referralOverviewQuery = referralKindQuery.extend({ communityId: z.string().trim().max(64).optional() });
+
+/** Chi tiết hoa hồng của 1 người: trang trong cộng đồng gửi thêm communityId để thấy cả hoa hồng chương trình giới thiệu của cộng đồng. */
+export const referralCommissionsQuery = referralKindQuery.extend({ communityId: z.string().trim().max(64).optional() });
+
 export const referralUsersQuery = referralKindQuery.extend({
   /** true = trả toàn bộ (tối đa MAX_ROWS), mặc định chỉ vài dòng đầu như bảng thu gọn. */
   all: z
     .enum(['true', 'false', '1', '0'])
     .default('false')
     .transform((v) => v === 'true' || v === '1'),
+  /** Trang trong một cộng đồng: tab member gộp thêm người được mời VÀO CỘNG ĐỒNG đó qua link (bảng CommunityReferral), không chỉ người đăng ký tài khoản. */
+  communityId: z.string().trim().max(64).optional(),
 });
 
 /** Mã giới thiệu đi kèm lúc đăng ký (đã chuẩn hoá chữ thường). Mã lạ bị bỏ qua êm ở service, không báo lỗi. */

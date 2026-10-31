@@ -21,7 +21,7 @@
     "unsupported": "Loại tệp không được hỗ trợ. Chỉ nhận: {{types}}",
     "labels": {
       "images": "ảnh JPG, PNG, WEBP, GIF",
-      "files": "PDF, ZIP, DOCX, XLSX, PPTX, PPT, DOC, XLS, CSV, TXT, MP4",
+      "files": "PDF, ZIP, DOCX, XLSX, PPTX, PPT, DOC, XLS, CSV, TXT, ảnh, MP4, WEBM, MOV",
       "message": "ảnh, PDF, ZIP, DOCX, XLSX, PPTX, PPT, DOC, XLS, CSV, TXT",
       "media": "ảnh JPG, PNG, WEBP, GIF hoặc video MP4",
       "video": "video MP4, WEBM hoặc MOV",

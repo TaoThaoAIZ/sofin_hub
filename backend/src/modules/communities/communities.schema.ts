@@ -67,6 +67,8 @@ export const joinRequestBody = z.object({
   /** Trả lời các câu hỏi gia nhập (theo thứ tự `joinQuestions` của cộng đồng). */
   answers: z.array(z.string().trim().max(500, 'Câu trả lời tối đa 500 ký tự')).max(10).optional(),
   acceptRules: z.boolean().optional(),
+  /** Mã giới thiệu từ link cộng đồng (?cref=). Mã lạ/chương trình tắt bị bỏ qua êm. */
+  referralCode: z.string().trim().toLowerCase().max(64).optional(),
 });
 export const joinRequestsQuery = z.object({
   status: z.enum(['pending', 'approved', 'rejected']).optional(),

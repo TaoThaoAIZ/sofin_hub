@@ -18,22 +18,27 @@ describe('đánh giá cộng đồng', () => {
       token: owner.token,
       body: { title: 'Nhóm đánh giá', description: 'Mô tả', category: 'hobby', priceUsd: 0, visibility: 'public' },
     });
-    return { owner, id: r.body.data.id as string };
+    const id = r.body.data.id as string;
+    // Chủ cộng đồng không tự đánh giá được, nên có sẵn một thành viên thường để đánh giá.
+    const member = await c.registerUser('rater');
+    await c.call('POST', `/courses/${id}/enroll`, { token: member.token });
+    return { owner, member, id };
   }
 
   it('chỉ thành viên được đánh giá; 401/403/400; 1 review/user (gọi lại thì cập nhật)', async () => {
-    const { owner, id } = await setup();
+    const { owner, member, id } = await setup();
     const outsider = await c.registerUser('out');
     assert.equal((await c.call('POST', `/courses/${id}/reviews`, { body: { rating: 5 } })).status, 401);
     assert.equal((await c.call('POST', `/courses/${id}/reviews`, { token: outsider.token, body: { rating: 5 } })).status, 403);
-    assert.equal((await c.call('POST', `/courses/${id}/reviews`, { token: owner.token, body: { rating: 6 } })).status, 400);
-    assert.equal((await c.call('POST', `/courses/${id}/reviews`, { token: owner.token, body: { rating: 0 } })).status, 400);
-    assert.equal((await c.call('POST', `/courses/${id}/reviews`, { token: owner.token, body: { rating: 4, text: 'a'.repeat(1001) } })).status, 400);
-    assert.equal((await c.call('POST', `/courses/nope/reviews`, { token: owner.token, body: { rating: 4 } })).status, 404);
+    assert.equal((await c.call('POST', `/courses/${id}/reviews`, { token: member.token, body: { rating: 6 } })).status, 400);
+    assert.equal((await c.call('POST', `/courses/${id}/reviews`, { token: member.token, body: { rating: 0 } })).status, 400);
+    assert.equal((await c.call('POST', `/courses/${id}/reviews`, { token: member.token, body: { rating: 4, text: 'a'.repeat(1001) } })).status, 400);
+    assert.equal((await c.call('POST', `/courses/nope/reviews`, { token: member.token, body: { rating: 4 } })).status, 404);
 
-    const first = await c.call('POST', `/courses/${id}/reviews`, { token: owner.token, body: { rating: 4, text: 'Tốt' } });
+    assert.equal((await c.call('POST', `/courses/${id}/reviews`, { token: owner.token, body: { rating: 5 } })).status, 403, 'chủ cộng đồng không tự đánh giá');
+    const first = await c.call('POST', `/courses/${id}/reviews`, { token: member.token, body: { rating: 4, text: 'Tốt' } });
     assert.equal(first.status, 201);
-    const again = await c.call('POST', `/courses/${id}/reviews`, { token: owner.token, body: { rating: 2, text: 'Tạm' } });
+    const again = await c.call('POST', `/courses/${id}/reviews`, { token: member.token, body: { rating: 2, text: 'Tạm' } });
     assert.equal(again.status, 200);
     const list = await c.call('GET', `/courses/${id}/reviews`); // công khai
     assert.equal(list.body.meta.total, 1);
@@ -42,10 +47,10 @@ describe('đánh giá cộng đồng', () => {
   });
 
   it('cập nhật rating & ratingCount trung bình thật; xóa của mình thì tính lại', async () => {
-    const { owner, id } = await setup();
+    const { owner, member, id } = await setup();
     const u2 = await c.registerUser('u2');
     await c.call('POST', `/courses/${id}/enroll`, { token: u2.token });
-    await c.call('POST', `/courses/${id}/reviews`, { token: owner.token, body: { rating: 5 } });
+    await c.call('POST', `/courses/${id}/reviews`, { token: member.token, body: { rating: 5 } });
     await c.call('POST', `/courses/${id}/reviews`, { token: u2.token, body: { rating: 2, text: 'Ổn' } });
     let d = (await c.call('GET', `/courses/${id}`)).body.data;
     assert.equal(d.ratingCount, 2);
@@ -59,8 +64,8 @@ describe('đánh giá cộng đồng', () => {
   });
 
   it('chi tiết khóa học: chỉ có review thật (không có review minh họa)', async () => {
-    const { owner, id } = await setup();
-    await c.call('POST', `/courses/${id}/reviews`, { token: owner.token, body: { rating: 5, text: 'Review thật của tôi' } });
+    const { owner, member, id } = await setup();
+    await c.call('POST', `/courses/${id}/reviews`, { token: member.token, body: { rating: 5, text: 'Review thật của tôi' } });
     const d = (await c.call('GET', `/courses/${id}`)).body.data;
     assert.equal(d.reviews[0].text, 'Review thật của tôi');
     assert.equal(d.reviews[0].rating, 5);

@@ -1,10 +1,10 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Button, ButtonLink } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
 import { ApiError } from '../lib/api';
-import { resetPassword } from '../features/auth/api';
+import { checkResetToken, resetPassword } from '../features/auth/api';
 import { validateNewPassword } from '../features/auth/validation';
 import { AuthShell } from '../features/account/components/AuthShell';
 import { Alert } from '../features/account/components/Field';
@@ -18,6 +18,17 @@ export function ResetPasswordPage() {
   const [errors, setErrors] = useState<{ password?: string; confirm?: string }>({});
   const [error, setError] = useState<string | null>(null);
   const [tokenInvalid, setTokenInvalid] = useState(false);
+  // Kiểm tra link ngay khi mở trang: link sai/hết hạn thì báo luôn thay vì để nhập mật khẩu rồi mới lỗi.
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    checkResetToken(token)
+      .then((valid) => !cancelled && !valid && setTokenInvalid(true))
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
   const [done, setDone] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 

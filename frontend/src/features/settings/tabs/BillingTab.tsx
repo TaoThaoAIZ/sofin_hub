@@ -9,12 +9,11 @@ import { formatCents, formatDate, formatDateTime } from '../../../lib/datetime';
 import { useToast } from '../../admin/components/overlay';
 import { InvoiceDialog } from '../../payments/components/InvoiceDialog';
 import { PayNowDialog } from '../../payments/components/PayNowDialog';
-import { useMyPayments, useMySubscriptions } from '../../payments/queries';
-import type { PaymentRecord, Subscription } from '../../payments/types';
+import { useCancelPayment, useMyPayments, useMySubscriptions } from '../../payments/queries';
+import type { Subscription } from '../../payments/types';
 import { fetchAllPayments } from '../billing/api';
-import { buildPaymentsCsv, downloadTextFile, PAY_STATUS, paymentDescription } from '../billing/csv';
+import { buildPaymentsCsv, downloadTextFile, PAY_STATUS, payStatusKey, paymentDescription } from '../billing/csv';
 import { useBillingSummary } from '../billing/queries';
-import { RefundModal } from '../billing/RefundModal';
 import { SubscriptionModal } from '../billing/SubscriptionModal';
 import { CommunityLogo, OUTLINE_BTN, SCard, SHead } from '../ui';
 
@@ -22,7 +21,6 @@ const errText = (e: unknown) => (e instanceof ApiError ? e.message : i18n.t('com
 
 type Modal =
   | { kind: 'sub'; sub: Subscription }
-  | { kind: 'refund'; payment: PaymentRecord }
   | null;
 
 /* ------------------------------------------------------------------ khoản chờ thanh toán */
@@ -30,6 +28,12 @@ function PendingPaymentsCard({ onPay }: { onPay: (id: string) => void }) {
   const { t } = useTranslation('settings');
   const payments = useMyPayments(1);
   const pending = (payments.data?.data ?? []).filter((p) => p.status === 'pending');
+  const cancel = useCancelPayment();
+  const toast = useToast();
+  const onCancel = (id: string) => {
+    if (!window.confirm(t('billing.pending.cancelConfirm'))) return;
+    cancel.mutate(id, { onSuccess: () => toast.success(t('billing.pending.cancelled')), onError: (e) => toast.error(errText(e)) });
+  };
   return (
     <SCard>
       <SHead icon="qr_code_2" size="lg" title={t('billing.pending.title')} sub={t('billing.pending.sub')} className="mb-[18px]" />
@@ -49,6 +53,9 @@ function PendingPaymentsCard({ onPay }: { onPay: (id: string) => void }) {
             <button type="button" onClick={() => onPay(p.id)} className="inline-flex h-[42px] items-center gap-2 rounded-xl bg-brand px-5 text-sm font-bold text-white hover:opacity-90">
               <MaterialIcon name="qr_code_2" size={18} color="#fff" />
               {t('billing.pending.payNow')}
+            </button>
+            <button type="button" disabled={cancel.isPending} onClick={() => onCancel(p.id)} className="inline-flex h-[42px] items-center rounded-xl border border-[#e7e0da] bg-white px-4 text-sm font-semibold text-stone-600 hover:bg-stone-50 disabled:opacity-60">
+              {t('billing.pending.cancel')}
             </button>
           </div>
         ))}
@@ -88,7 +95,7 @@ const tr = (key: string, opts: Record<string, unknown> = {}) => i18n.t(key, { ns
 
 function subStatus(s: Subscription): { text: string; tone: 'green' | 'amber' | 'gray' } {
   if (s.status === 'active' || s.status === 'trialing') {
-    if (s.cancelAtPeriodEnd) return { text: tr('billing.sub.canceled'), tone: 'gray' };
+    if (s.cancelAtPeriodEnd) return { text: tr('billing.sub.canceling'), tone: 'gray' };
     return s.status === 'trialing' ? { text: tr('billing.sub.trialing'), tone: 'amber' } : { text: tr('billing.sub.active'), tone: 'green' };
   }
   if (s.status === 'canceled') return { text: tr('billing.sub.canceled'), tone: 'gray' };
@@ -203,7 +210,7 @@ function HistoryCard({ onInvoice, onPay }: { onInvoice: (id: string) => void; on
           {payments.isError && <p role="alert" className="py-8 text-center text-[#dc2626]">{errText(payments.error)}</p>}
           {payments.data?.data.length === 0 && <p className="py-8 text-center text-stone-500">{t('billing.history.empty')}</p>}
           {payments.data?.data.map((p) => {
-            const st = PAY_STATUS[p.status] ?? { text: p.status, color: '#57534e', dot: '#a8a29e' };
+            const st = PAY_STATUS[payStatusKey(p)] ?? { text: p.status, color: '#57534e', dot: '#a8a29e' };
             const cents = p.amountCents ?? p.amountUsd;
             return (
               <div key={p.id} className={`grid ${COLS} items-center gap-3 border-b border-[#f3eee9] px-[18px] py-4 text-[15px]`}>
@@ -259,8 +266,7 @@ export function BillingTab() {
       <SubscriptionsCard onModal={setModal} />
       <HistoryCard onInvoice={setInvoiceId} onPay={setPayId} />
 
-      {modal?.kind === 'sub' && <SubscriptionModal sub={modal.sub} onClose={close} onRefund={(payment) => setModal({ kind: 'refund', payment })} />}
-      {modal?.kind === 'refund' && <RefundModal payment={modal.payment} onClose={close} />}
+      {modal?.kind === 'sub' && <SubscriptionModal sub={modal.sub} onClose={close} />}
       {invoiceId && <InvoiceDialog paymentId={invoiceId} onClose={() => setInvoiceId(null)} />}
       {payId && <PayNowDialog paymentId={payId} onClose={() => setPayId(null)} />}
     </main>

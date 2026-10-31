@@ -9,7 +9,8 @@
     "post": "Đăng bài viết",
     "like_received": "Được thích bài viết",
     "lesson_complete": "Hoàn thành bài học",
-    "event_rsvp": "Đăng ký sự kiện"
+    "event_rsvp": "Đăng ký sự kiện",
+    "game_play": "Chơi trò chơi cuối bài"
   },
   "profile": {
     "loading": "Đang tải hồ sơ…",
@@ -22,6 +23,7 @@
     "edit": "Chỉnh sửa hồ sơ",
     "communities": "Cộng đồng đã tham gia",
     "noCommunities": "Chưa tham gia cộng đồng công khai nào.",
-    "roleSince": "{{role}} · từ {{date}}"
+    "roleSince": "{{role}} · từ {{date}}",
+    "message": "Nhắn tin"
   }
 }

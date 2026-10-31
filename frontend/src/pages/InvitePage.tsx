@@ -22,10 +22,6 @@ function Shell({ children }: { children: ReactNode }) {
   return (
     <div
       className="min-h-screen pb-16"
-      style={{
-        background:
-          'radial-gradient(700px 500px at 0% 20%, rgba(255,186,140,.3), transparent 70%), radial-gradient(700px 600px at 100% 30%, rgba(251,207,232,.28), transparent 70%), #fff',
-      }}
     >
       <Header active="myCommunities" />
       <div className="mx-auto max-w-[520px] px-4 pt-10">{children}</div>
@@ -38,7 +34,7 @@ function Problem({ icon, title, message }: { icon: string; title: string; messag
   return (
     <div className="glass rounded-[26px] p-8 text-center">
       <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-brand/10">
-        <MaterialIcon name={icon} size={28} color="#f26a1b" />
+        <MaterialIcon name={icon} size={28} color="#ff570a" />
       </div>
       <h1 className="mt-4 text-xl font-extrabold">{title}</h1>
       <p className="mt-2 text-sm text-stone-600">{message}</p>
@@ -134,15 +130,15 @@ export function InvitePage() {
           <h1 className="mt-1 text-2xl font-extrabold tracking-tight break-words">{course.title}</h1>
           <div className="mt-3 flex flex-wrap gap-2 text-[13px]">
             <span className="glass-chip flex items-center gap-1.5 rounded-full px-3 py-1.5">
-              <MaterialIcon name="group" size={16} color="#f26a1b" />
+              <MaterialIcon name="group" size={16} color="#ff570a" />
               {t('invitePage.members', { n: formatCompact(course.members) })}
             </span>
             <span className="glass-chip flex items-center gap-1.5 rounded-full px-3 py-1.5">
-              <MaterialIcon name={course.visibility === 'private' ? 'lock' : 'public'} size={16} color="#f26a1b" />
+              <MaterialIcon name={course.visibility === 'private' ? 'lock' : 'public'} size={16} color="#ff570a" />
               {course.visibility === 'private' ? t('invitePage.private') : t('invitePage.public')}
             </span>
             <span className="glass-chip flex items-center gap-1.5 rounded-full px-3 py-1.5">
-              <MaterialIcon name="sell" size={16} color="#f26a1b" />
+              <MaterialIcon name="sell" size={16} color="#ff570a" />
               {paid ? t('invitePage.perMonth', { price: formatCents(course.priceUsd) }) : t('invitePage.free')}
             </span>
           </div>

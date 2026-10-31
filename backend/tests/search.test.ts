@@ -13,8 +13,13 @@ describe('tìm kiếm toàn cục', () => {
   });
   after(() => server.close());
 
-  it('401 khi thiếu token; 400 khi q quá ngắn/dài/thiếu', async () => {
-    assert.equal((await c.call('GET', '/search?q=abc')).status, 401);
+  it('khách: /search chỉ trả khóa học (không bài viết/thành viên); /suggest 401; 400 khi q quá ngắn/dài/thiếu', async () => {
+    const guest = await c.call('GET', '/search?q=abc');
+    assert.equal(guest.status, 200);
+    assert.equal(guest.body.counts.members, 0);
+    assert.equal(guest.body.counts.posts, 0);
+    assert.ok(guest.body.data.every((x: any) => x.type === 'course'));
+    assert.deepEqual((await c.call('GET', '/search?q=abc&type=members')).body.data, []);
     assert.equal((await c.call('GET', '/search/suggest?q=abc')).status, 401);
     const u = await c.registerUser('s0');
     assert.equal((await c.call('GET', '/search?q=a', { token: u.token })).status, 400);
@@ -305,7 +310,7 @@ describe('tìm kiếm Postgres: toàn văn + trigram', () => {
     assert.equal((await search(me.token, `type=posts&courseId=${pub}&q=${w}`)).status, 403);
   });
 
-  it('thành viên: role admin/member, handle, link và tìm theo handle (phần tên)', async () => {
+  it('thành viên: role member/owner, handle, link và tìm theo handle (phần tên)', async () => {
     const me = await c.registerUser('mem');
     const adm = await c.registerUser('boss');
     const course = await mkCourse();
@@ -313,10 +318,10 @@ describe('tìm kiếm Postgres: toàn văn + trigram', () => {
     await join(adm.id, course, 'owner');
     const r = await search(me.token, `type=members&courseId=${course}&q=boss`);
     const item = r.body.data.find((x: any) => x.id === adm.id);
-    assert.equal(item.role, 'admin');
+    assert.equal(item.role, 'owner');
     assert.equal(item.courseId, course);
     assert.match(item.handle, /^test-boss-\d{4}$/);
-    assert.equal(item.link, `/courses/${course}/community?tab=members`);
+    assert.equal(item.link, `/communities/${course}/community?tab=members`);
     const byHandle = await search(me.token, `type=members&courseId=${course}&q=test-boss`);
     assert.ok(ids(byHandle).includes(adm.id));
   });

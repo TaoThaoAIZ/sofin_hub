@@ -133,6 +133,12 @@ classroomRouter.get(legacy('/lessons/:lessonId'), requireAuth, async (req, res) 
   res.json({ data: await classroomService.getLesson(communityId, req.params.lessonId as string, req.userId!) });
 });
 
+classroomRouter.post(legacy('/lessons/:lessonId/watched'), requireAuth, async (req, res) => {
+  const communityId = communityOf(req);
+  await member(communityId, req.userId!);
+  res.json({ data: await classroomService.markVideoWatched(communityId, req.params.lessonId as string, req.userId!, typeof req.body?.videoKey === 'string' ? req.body.videoKey : undefined) });
+});
+
 classroomRouter.post(legacy('/lessons/:lessonId/complete'), requireAuth, async (req, res) => {
   const communityId = communityOf(req);
   await member(communityId, req.userId!);

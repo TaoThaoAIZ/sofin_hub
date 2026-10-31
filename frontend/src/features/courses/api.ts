@@ -1,3 +1,4 @@
+import { readCommunityRef } from '../referral/communityRef';
 import { apiGet, apiPost } from '../../lib/api';
 import type { Category, Course, CourseDetail, CourseQuery, Paginated, PlatformStats } from './types';
 
@@ -14,4 +15,4 @@ export const fetchCourseDetail = (id: string, token?: string, signal?: AbortSign
   apiGet<{ data: CourseDetail }>(`/communities/${id}`, undefined, signal, { token }).then((r) => r.data);
 
 export const toggleEnrollment = (id: string, token: string) =>
-  apiPost<{ data: { enrolled: boolean } }>(`/communities/${id}/enroll`, undefined, { token }).then((r) => r.data);
+  apiPost<{ data: { enrolled: boolean } }>(`/communities/${id}/enroll`, { referralCode: readCommunityRef(id) }, { token }).then((r) => r.data);

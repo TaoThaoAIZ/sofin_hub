@@ -1,26 +1,60 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PathIcon } from '../../../components/ui/icons';
-import { ALL_CATEGORY_ICON, CATEGORY_UI } from '../constants';
+import { MaterialIcon } from '../../../components/ui/MaterialIcon';
+import { ThemedImg } from '../../../components/ui/ThemedImg';
+import { ALL_CATEGORY_ICON } from '../constants';
+import { useCategoryName } from '../useCategoryName';
 import type { Category, CategoryId } from '../types';
 
 interface Props {
   categories: Category[];
   active: CategoryId | undefined;
   onChange: (id: CategoryId | undefined) => void;
+  /** Mobile: bật/tắt hàng bộ lọc (nút tròn ở cuối hàng danh mục). */
+  onToggleFilters?: () => void;
+  filtersOpen?: boolean;
 }
 
+const CATEGORY_ICON_NAME: Record<CategoryId, string> = {
+  business: 'cat1',
+  content: 'cat2',
+  tech: 'cat3',
+  finance: 'cat4',
+  health: 'cat5',
+  self: 'cat6',
+  hobby: 'cat7',
+  relationships: 'cat8',
+};
+
+/** Danh mục chưa có icon trong Figma (Âm nhạc, Thể thao, Tâm linh...): dùng icon Material Symbols + màu nhấn; id lạ -> icon chung. */
+const FALLBACK_ICON: Record<string, { name: string; color: string }> = {
+  music: { name: 'music_note', color: '#a855f7' },
+  sports: { name: 'sports_soccer', color: '#22c55e' },
+  spirituality: { name: 'self_improvement', color: '#06b6d4' },
+};
+
+function CategoryIcon({ id }: { id: string }) {
+  const figma = (CATEGORY_ICON_NAME as Record<string, string | undefined>)[id];
+  if (figma) return <ThemedImg name={figma} className="size-6 flex-none max-md:size-4" />;
+  const f = FALLBACK_ICON[id] ?? { name: 'category', color: '#ff570a' };
+  return (
+    <span className="cat-fallback grid size-6 flex-none place-items-center max-md:size-4 max-md:scale-[.67]" style={{ color: f.color }}>
+      <MaterialIcon name={f.name} size={24} color="currentColor" />
+    </span>
+  );
+}
+
+/** Chip danh mục (Figma "Course category"): cao 60px, bo 20px, trắng + bóng mềm; đang chọn = cam, icon chuyển trắng. */
 function TabButton({
   label,
-  d,
-  color,
+  icon,
   on,
   onClick,
   ...rest
 }: {
   label: string;
-  d: string;
-  color: string;
+  icon: ReactNode;
   on: boolean;
   onClick: () => void;
   'data-on'?: string;
@@ -31,27 +65,21 @@ function TabButton({
       onClick={onClick}
       aria-pressed={on}
       {...rest}
-      className={`flex h-12 flex-none items-center gap-[clamp(6px,0.6vw,10px)] rounded-[14px] py-0 pr-[clamp(12px,1.1vw,20px)] pl-[clamp(10px,0.9vw,16px)] text-sm font-medium whitespace-nowrap ${
+      className={`flex h-[clamp(48px,3.33vw,60px)] flex-none items-center justify-center gap-[clamp(8px,0.78vw,14px)] rounded-[20px] px-[clamp(14px,1.1vw,20px)] text-[clamp(14px,1vw,18px)] leading-normal whitespace-nowrap max-md:h-auto max-md:gap-1.5 max-md:rounded-[32px] max-md:px-3 max-md:py-[7px] max-md:text-sm max-md:leading-5 max-md:shadow-none ${
         on
-          ? 'bg-brand-gradient border border-white/35 text-white shadow-brand-chip backdrop-blur-[20px] backdrop-saturate-[180%]'
-          : 'glass-chip text-stone-900'
+          ? 'bg-brand font-bold text-white shadow-[0_8px_30px_rgba(159,126,103,0.06)] [&_img]:brightness-0 [&_img]:invert [&_.cat-fallback]:!text-white'
+          : 'bg-white font-medium text-[#201e1c] shadow-soft max-md:bg-[rgba(124,124,124,.1)] max-md:font-semibold max-md:text-[#626262] dark:bg-[rgba(63,63,63,.3)] dark:text-white max-md:dark:bg-white/10 max-md:dark:text-[#e8e8e8]'
       }`}
     >
-      <PathIcon
-        d={d}
-        size={22}
-        fill={on ? '#fff' : color}
-        stroke={on ? '#fff' : color}
-        strokeWidth={1.6}
-        className="block flex-none"
-      />
+      {icon}
       {label}
     </button>
   );
 }
 
-export function CategoryTabs({ categories, active, onChange }: Props) {
+export function CategoryTabs({ categories, active, onChange, onToggleFilters, filtersOpen }: Props) {
   const { t } = useTranslation('course');
+  const catName = useCategoryName();
   const scroller = useRef<HTMLDivElement>(null);
 
   // Cuộn ngang bằng bánh xe chuột khi danh sách tràn
@@ -76,31 +104,48 @@ export function CategoryTabs({ categories, active, onChange }: Props) {
   }, [active]);
 
   return (
-    <div className="mx-auto flex max-w-[1400px] items-start gap-3 px-4 pt-2.5 md:px-10">
-      <div className="flex flex-none items-center gap-3 pt-1.5 pb-3">
+    <div className="relative flex h-[clamp(76px,5.56vw,100px)] items-center gap-[15px] max-md:h-14 max-md:gap-1.5">
+      <div className="flex flex-none items-center gap-[15px]">
         <TabButton
           label={t('list.all')}
-          {...ALL_CATEGORY_ICON}
+          icon={
+            active === undefined ? (
+              <ThemedImg name="cat0" className="size-6 max-md:size-4" />
+            ) : (
+              <PathIcon d={ALL_CATEGORY_ICON.d} size={24} fill={ALL_CATEGORY_ICON.color} stroke={ALL_CATEGORY_ICON.color} strokeWidth={1.6} className="block flex-none" />
+            )
+          }
           on={active === undefined}
           onClick={() => onChange(undefined)}
         />
-        <div className="h-7 w-px bg-[rgba(120,60,20,.15)]" />
+        <div className="h-[34px] w-px bg-[#eee5de] dark:bg-white/15" />
       </div>
       <div
         ref={scroller}
-        className="no-scrollbar flex min-w-0 flex-1 gap-3 overflow-x-auto scroll-smooth px-0.5 pt-1.5 pb-3 [mask-image:linear-gradient(90deg,#000_calc(100%-48px),transparent)]"
+        className="no-scrollbar flex min-w-0 flex-1 gap-[15px] overflow-x-auto scroll-smooth py-5 [mask-image:linear-gradient(90deg,#000_calc(100%-70px),transparent)] max-md:gap-1.5 max-md:py-2 max-md:pr-12"
       >
         {categories.map((c) => (
           <TabButton
             key={c.id}
-            label={c.name}
-            {...CATEGORY_UI[c.id]}
+            label={catName(c)}
+            icon={<CategoryIcon id={c.id} />}
             on={active === c.id}
             data-on={active === c.id ? '1' : '0'}
             onClick={() => onChange(c.id)}
           />
         ))}
       </div>
+      {onToggleFilters && (
+        <button
+          type="button"
+          onClick={onToggleFilters}
+          aria-pressed={filtersOpen}
+          aria-label="Bộ lọc"
+          className={`absolute top-1/2 right-0 grid -translate-y-1/2 place-items-center rounded-[32px] p-[7px] shadow-soft md:hidden ${filtersOpen ? 'bg-brand text-white' : 'bg-[#cfcfcf] text-[#201e1c] dark:bg-white/20 dark:text-white'}`}
+        >
+          <MaterialIcon name="tune" size={20} color="currentColor" />
+        </button>
+      )}
     </div>
   );
 }

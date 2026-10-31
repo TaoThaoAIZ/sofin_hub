@@ -1,5 +1,10 @@
 {
-  "nav": { "discover": "Khám phá", "courses": "Khóa học", "myCommunities": "Cộng đồng của tôi", "tools": "Tải Tool" },
+  "nav": {
+    "discover": "Khám phá",
+    "courses": "Khóa học",
+    "myCommunities": "Cộng đồng của tôi",
+    "tools": "Tải Tool"
+  },
   "header": {
     "profileSettings": "Cài đặt hồ sơ",
     "admin": "Quản trị",
@@ -8,12 +13,48 @@
     "messages": "Tin nhắn",
     "notifications": "Thông báo",
     "createCommunity": "Tạo cộng đồng",
-    "language": "Ngôn ngữ"
+    "language": "Ngôn ngữ",
+    "themeToDark": "Chuyển sang giao diện tối",
+    "themeToLight": "Chuyển sang giao diện sáng",
+    "account": "Tài khoản của {{name}}"
   },
   "time": {
     "justNow": "vừa xong",
     "minutesAgo": "{{count}} phút trước",
     "hoursAgo": "{{count}} giờ trước",
     "daysAgo": "{{count}} ngày trước"
+  },
+  "categories": {
+    "business": "Kinh doanh",
+    "content": "Sáng tạo nội dung",
+    "tech": "Công nghệ",
+    "finance": "Tài chính",
+    "health": "Sức khỏe",
+    "self": "Phát triển bản thân",
+    "hobby": "Sở thích",
+    "relationships": "Mối quan hệ",
+    "music": "Âm nhạc",
+    "sports": "Thể thao",
+    "spirituality": "Tâm linh"
+  },
+  "pageTitle": {
+    "home": "SofinHub – Học kỹ năng mới, phát triển cùng cộng đồng",
+    "login": "Đăng nhập",
+    "register": "Đăng ký",
+    "verifyOtp": "Xác thực email",
+    "forgotPassword": "Quên mật khẩu",
+    "resetPassword": "Đặt lại mật khẩu",
+    "search": "Tìm kiếm",
+    "messages": "Tin nhắn",
+    "notifications": "Thông báo",
+    "settings": "Cài đặt",
+    "myCommunities": "Cộng đồng của tôi",
+    "tools": "Công cụ",
+    "faq": "Câu hỏi thường gặp",
+    "terms": "Điều khoản sử dụng",
+    "privacy": "Chính sách bảo mật",
+    "contact": "Liên hệ",
+    "createCommunity": "Tạo cộng đồng",
+    "admin": "Quản trị"
   }
 }

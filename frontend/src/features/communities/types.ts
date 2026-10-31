@@ -95,6 +95,7 @@ export interface Review {
   id: string;
   userId: string;
   name: string;
+  avatarUrl?: string | null;
   rating: number;
   text: string;
   createdAt: string;

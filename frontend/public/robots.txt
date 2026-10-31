@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin
+Disallow: /settings
+Disallow: /messages
+Disallow: /notifications
+
+Sitemap: https://hub.taothaoai.com/sitemap.xml

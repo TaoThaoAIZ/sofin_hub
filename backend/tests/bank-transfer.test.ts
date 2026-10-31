@@ -124,7 +124,8 @@ describe('thanh toán chuyển khoản VietQR + SePay', () => {
       assert.equal(await enrollmentService.isEnrolled(u.id, 'ai'), true);
       const outgoing = await c.bankWebhook({ ...c.sepayTx({ id: txId('OUT'), refCode: 'SFHAAAAAAAA', amount: 5 }), transferType: 'out' });
       assert.equal(outgoing.status, 200);
-      assert.equal(outgoing.body.message, 'bỏ qua (không phải tiền vào)');
+      // Tiền RA không bao giờ cấp quyền; nó chỉ được đối soát với yêu cầu RÚT HOA HỒNG (mã lạ => unmatched, không thay đổi gì).
+      assert.equal(outgoing.body.message, 'tiền ra: unmatched');
     });
 
     it('thiếu tiền: không cấp, ghi unmatched kèm lý do; chuyển bù đủ thì cấp', async () => {

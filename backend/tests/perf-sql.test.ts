@@ -259,7 +259,10 @@ describe('hiệu năng SQL (§6.4)', () => {
       const prog = await c.call('GET', `/courses/${course}/progress`, { token: u.token });
       assert.deepEqual(prog.body.data.nextLesson, { id: lessons[0]!.id, title: 'L1.1', moduleId: mods[0] });
       assert.equal(prog.body.data.totalLessons, 4);
-      for (const l of lessons.slice(0, 2)) assert.equal((await c.call('POST', `/courses/${course}/lessons/${l.id}/complete`, { token: u.token })).status, 200);
+      for (const l of lessons.slice(0, 2)) {
+        await c.call('POST', `/courses/${course}/lessons/${l.id}/watched`, { token: u.token }); // hoàn thành bài đòi xem hết video (nếu có)
+        assert.equal((await c.call('POST', `/courses/${course}/lessons/${l.id}/complete`, { token: u.token })).status, 200);
+      }
       const l21 = await get(lessons[2]!.id);
       assert.equal(l21.status, 200);
       assert.equal(l21.body.data.prevLessonId, lessons[1]!.id);

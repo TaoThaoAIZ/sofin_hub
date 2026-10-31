@@ -43,6 +43,14 @@ export async function resolveFileUrl(url: string): Promise<string> {
   return key ? (await signed(key)).url : url;
 }
 
+/** Xin lại URL mới (bỏ cache): dùng khi URL ký của video hết hạn giữa chừng (tạm dừng lâu rồi tua/phát tiếp). */
+export async function refreshFileUrl(url: string): Promise<string> {
+  const key = fileKeyOf(url);
+  if (!key) return url;
+  cache.delete(key);
+  return (await fetchSigned(key)).url;
+}
+
 /** Mở file (tab mới) qua URL ký. Dùng cho nút "xem trước"/"tải xuống". */
 export async function openFile(url: string): Promise<void> {
   window.open(await resolveFileUrl(url), '_blank', 'noopener');

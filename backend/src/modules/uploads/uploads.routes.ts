@@ -6,6 +6,8 @@ import { FILE_URL_TTL_SEC, canReadPrivateFile, signFileUrl, verifyFileUrl } from
 
 /** URL ký cho video bài học sống lâu hơn (video dài: tua/đệm tiếp sau vài phút vẫn phải còn hiệu lực). */
 const VIDEO_URL_TTL_SEC = 4 * 3600;
+/** URL presigned S3 của video: ngắn hơn (không thu hồi được; còn bị giới hạn bởi thời hạn credential của IAM role). FE tự xin lại khi hết hạn. */
+const VIDEO_DIRECT_URL_TTL_SEC = 2 * 3600;
 
 /** `Range: bytes=a-b | a- | -n` (một đoạn) → khoảng byte hợp lệ trong file `size`; null = không có/không hỗ trợ Range; 'invalid' = không thỏa. */
 export function parseRange(header: string | undefined, size: number): { start: number; end: number } | null | 'invalid' {
@@ -27,7 +29,7 @@ export function parseRange(header: string | undefined, size: number): { start: n
   return { start, end };
 }
 import { FILE_URL_PREFIX, isPublicPurpose, isStreamedPurpose } from './uploads.types.js';
-import { presignSchema } from './uploads.schema.js';
+import { abortSchema, completeSchema, presignSchema } from './uploads.schema.js';
 import { uploadService } from './uploads.service.js';
 
 export const uploadsRouter = Router();
@@ -46,6 +48,16 @@ function readRawBody(req: Request, res: Response, limit: number): Promise<Buffer
 uploadsRouter.post('/uploads/presign', requireAuth, async (req, res) => {
   const input = presignSchema.parse(req.body);
   res.status(201).json({ data: await uploadService.presign(req.userId!, input) });
+});
+
+// Upload thẳng lên S3 xong -> backend ghép multipart, kiểm dung lượng + magic bytes rồi mới coi file là hợp lệ.
+uploadsRouter.post('/uploads/:key/complete', requireAuth, async (req, res) => {
+  res.json({ data: await uploadService.completeDirect(req.userId!, req.params.key as string, completeSchema.parse(req.body ?? {})) });
+});
+
+uploadsRouter.post('/uploads/:key/abort', requireAuth, async (req, res) => {
+  await uploadService.abortDirect(req.userId!, req.params.key as string, abortSchema.parse(req.body ?? {}).uploadId);
+  res.json({ data: { aborted: true } });
 });
 
 // Upload trực tiếp qua vé ký HMAC (không cần Bearer). Sau này với S3, FE PUT thẳng lên S3 và route này không còn dùng.
@@ -112,6 +124,11 @@ uploadsRouter.get('/files/:key', async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename="download"; filename*=UTF-8''${encodeURIComponent(f.filename)}`);
   }
   f.stream.on('error', () => res.destroy());
+  // Trình duyệt ngắt giữa chừng (tua video, đổi trang, hủy): pipe KHÔNG tự đóng nguồn. Không destroy thì socket tới S3 bị giữ mãi,
+  // đủ 50 socket (maxSockets mặc định của SDK) là mọi thao tác S3 khác (presign, complete...) xếp hàng chờ vô hạn.
+  res.on('close', () => {
+    if (!f.stream.destroyed) f.stream.destroy();
+  });
   f.stream.pipe(res);
 });
 
@@ -126,5 +143,10 @@ uploadsRouter.post('/files/:key/url', requireAuth, async (req, res) => {
   }
   if (!(await canReadPrivateFile(req.userId!, rec))) throw HttpError.forbidden('Bạn không có quyền xem file này');
   res.setHeader('Cache-Control', 'private, no-store');
+  const direct = rec.purpose === 'lesson_video' ? await uploadService.directReadUrl(rec, VIDEO_DIRECT_URL_TTL_SEC) : null;
+  if (direct) {
+    res.json({ data: direct });
+    return;
+  }
   res.json({ data: signFileUrl(key, req.userId!, rec.purpose === 'lesson_video' ? VIDEO_URL_TTL_SEC : FILE_URL_TTL_SEC) });
 });

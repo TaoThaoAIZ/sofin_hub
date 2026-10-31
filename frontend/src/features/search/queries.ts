@@ -8,7 +8,7 @@ export const useSearch = (params: { q: string; type: SearchType; courseId?: stri
   return useQuery({
     queryKey: ['search', params],
     queryFn: ({ signal }) => api.search({ ...params, limit: 10 }, signal),
-    enabled: status === 'authenticated' && params.q.trim().length >= 2,
+    enabled: status !== 'loading' && params.q.trim().length >= 2,
     retry: false,
   });
 };

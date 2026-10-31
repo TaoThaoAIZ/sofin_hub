@@ -130,7 +130,7 @@
       "q2": "Tôi quên mật khẩu thì làm sao?",
       "a2": "Ở trang Đăng nhập, bấm \"Quên mật khẩu\" và nhập email. Chúng tôi gửi liên kết đặt lại mật khẩu qua email; liên kết có thời hạn và chỉ dùng được một lần. Bạn cũng có thể đổi mật khẩu bất kỳ lúc nào trong Cài đặt tài khoản.",
       "q3": "Tôi có thể đăng nhập bằng Google/Facebook không?",
-      "a3": "Chưa hỗ trợ. Hiện bạn đăng nhập bằng email và mật khẩu.",
+      "a3": "Có. Ngoài email và mật khẩu, bạn có thể đăng nhập bằng Google. Đăng nhập bằng Facebook hiện chưa hỗ trợ.",
       "q4": "Làm sao để đăng xuất, hoặc quản lý thông tin cá nhân?",
       "a4": "Bấm vào tên của bạn ở góc phải Header: tại đây có Hồ sơ, Cài đặt tài khoản (đổi thông tin, mật khẩu, thiết bị đang đăng nhập), Thông báo, Tin nhắn, Gói & thanh toán và nút \"Đăng xuất\"."
     },
@@ -156,7 +156,7 @@
       "q2": "Tôi có thể hủy gói bất kỳ lúc nào không?",
       "a2": "Có. Bạn hủy trong \"Gói & thanh toán\"; quyền truy cập vẫn còn tới hết chu kỳ đã trả và sẽ không bị trừ phí thêm.",
       "q3": "Có hoàn tiền không?",
-      "a3": "Có, trong thời hạn hoàn tiền của nền tảng. Hãy liên hệ hỗ trợ kèm thông tin giao dịch; yêu cầu được xem xét và hóa đơn sẽ hiển thị trạng thái \"Đã hoàn tiền\" khi hoàn tất."
+      "a3": "Hiện nền tảng không hỗ trợ hoàn tiền. Bạn có thể hủy gói bất kỳ lúc nào để không bị tính phí kỳ sau; trường hợp giao dịch lỗi (ví dụ trừ tiền hai lần), hãy liên hệ hỗ trợ kèm thông tin giao dịch."
     },
     "support": {
       "title": "Hỗ trợ",

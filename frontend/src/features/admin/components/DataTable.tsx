@@ -297,7 +297,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
                 <input
                   type="checkbox"
                   aria-label={t('table.selectAll')}
-                  className="size-4 accent-[#f26a1b]"
+                  className="size-4 accent-[#ff570a]"
                   checked={rows.length > 0 && rows.every((r) => sel.selected.includes(rowKey(r)))}
                   onChange={(e) => sel.onChange(e.target.checked ? rows.map(rowKey) : [])}
                 />
@@ -329,13 +329,13 @@ export function DataTable<T>(props: DataTableProps<T>) {
                   onKeyDown={onRow ? (e) => e.key === 'Enter' && e.target === e.currentTarget && onRow(r) : undefined}
                   tabIndex={onRow ? 0 : undefined}
                   className={`group grid items-center gap-4 border-b border-[#f6f1ed] px-[18px] py-3 hover:bg-[#fdf9f6] ${onRow ? 'cursor-pointer' : ''}`}
-                  style={{ gridTemplateColumns: grid, background: bg, boxShadow: active ? 'inset 3px 0 0 #f26a1b' : undefined }}
+                  style={{ gridTemplateColumns: grid, background: bg, boxShadow: active ? 'inset 3px 0 0 #ff570a' : undefined }}
                 >
                   {sel && (
                     <input
                       type="checkbox"
                       aria-label={t('table.selectRow')}
-                      className="size-4 accent-[#f26a1b]"
+                      className="size-4 accent-[#ff570a]"
                       checked={sel.selected.includes(rowKey(r))}
                       onClick={(e) => e.stopPropagation()}
                       onChange={(e) => sel.onChange(e.target.checked ? [...sel.selected, rowKey(r)] : sel.selected.filter((x) => x !== rowKey(r)))}

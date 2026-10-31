@@ -186,7 +186,7 @@ export function CourseManager({ communityId, isAdmin }: { communityId: string; i
               <img src={su(c.thumbnailUrl)!} alt="" className="size-full object-cover" />
             ) : (
               <span className="grid size-full place-items-center">
-                <MaterialIcon name="school" size={22} color="#f26a1b" />
+                <MaterialIcon name="school" size={22} color="#ff570a" />
               </span>
             )}
           </div>

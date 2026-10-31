@@ -29,6 +29,7 @@
     },
     "moderation": "Kiểm duyệt",
     "revenue": "Doanh thu & rút tiền",
+    "surveys": "Khảo sát",
     "settings": "Cài đặt"
   },
   "rightSidebar": {
@@ -42,7 +43,7 @@
     "premium1": "Truy cập khóa học độc quyền",
     "premium2": "Tài liệu chuyên sâu",
     "premium3": "Hỗ trợ 1:1 từ chuyên gia",
-    "comingSoonTitle": "Sắp ra mắt — Giai đoạn 8 trong PLAN.md (chưa chốt cổng thanh toán gói Premium)",
+    "comingSoonTitle": "Sắp ra mắt",
     "upgrade": "Nâng cấp (sắp ra mắt)",
     "leave": "Rời cộng đồng",
     "leaving": "Đang rời…",
@@ -169,7 +170,7 @@
     "sortJoined": "Mới tham gia",
     "filterAll": "Tất cả",
     "filterOnline": "Đang trực tuyến",
-    "filterAdmin": "Quản trị viên",
+    "filterAdmin": "Quản trị & điều hành",
     "closeNotice": "Đóng thông báo",
     "title": "Thành viên",
     "subtitle": "Kết nối, học hỏi và phát triển cùng cộng đồng.",
@@ -284,6 +285,11 @@
     "filterBtn": "Lọc sự kiện",
     "icsToast": "Đã tải lịch cộng đồng (.ics)",
     "icsTitle": "Tải file .ics chứa mọi sự kiện của cộng đồng để nhập vào Google/Apple/Outlook Calendar",
+    "docxToast": "Đã tải lịch cộng đồng (.docx)",
+    "docxTitle": "Tải file Word (.docx) liệt kê mọi sự kiện, mở được bằng Word/Google Docs",
+    "docxAll": "Tải lịch dạng Word",
+    "docxEvent": "Tải file Word (.docx)",
+    "docxEventToast": "Đã tải sự kiện (.docx)",
     "subscribeAll": "Tải lịch cả cộng đồng",
     "close": "Đóng",
     "create": "Tạo sự kiện",
@@ -318,6 +324,7 @@
     "processing": "Đang xử lý…",
     "rsvpCancel": "Đã đăng ký — bấm để hủy",
     "rsvp": "Đăng ký tham gia",
+    "pastDateError": "Không thể đặt lịch ở thời điểm đã qua",
     "pastEvent": "Sự kiện đã diễn ra",
     "icsEventToast": "Đã tải file lịch (.ics)",
     "addToCal": "Tải lịch xuống (.ics)",
@@ -328,7 +335,12 @@
     "deleteConfirm": "Xóa sự kiện",
     "deleted": "Đã xóa sự kiện",
     "cancelled": "Đã hủy",
-    "cancelledEvent": "Sự kiện này đã bị hủy"
+    "cancelledEvent": "Sự kiện này đã bị hủy",
+    "subtitle": "Quản lý và tham gia các sự kiện trong cộng đồng",
+    "inviteAll": "Chọn tất cả thành viên",
+    "inviteClear": "Bỏ chọn tất cả ({{n}})",
+    "inviteCapped": "Đã đạt tối đa {{max}} người được mời",
+    "linkError": "Link họp phải là đường dẫn http(s) hợp lệ, ví dụ https://meet.google.com/abc"
   },
   "ui": {
     "close": "Đóng",
@@ -441,8 +453,17 @@
       "videoUploaded": "Đã tải video lên",
       "bodyMin": "Nội dung bài viết cần tối thiểu {{min}} ký tự (hiện có {{n}}).",
       "quizAfterSave": "Lưu bài học trước, rồi mở lại để thêm trắc nghiệm (không bắt buộc).",
+      "extraVideos": "Video bổ sung",
+      "extraVideosHint": "({{n}}/{{max}}) – thêm nhiều video cho bài học",
+      "extraVideoName": "Tên video {{n}}",
+      "extraVideoDefault": "Video {{n}}",
+      "extraVideoLink": "Link video YouTube/Vimeo bổ sung",
+      "addVideoFile": "Tải thêm video (chọn được nhiều)",
+      "addVideoLink": "Thêm link",
+      "listMore": "Xem thêm {{n}} tệp",
+      "listLess": "Thu gọn",
       "slideDrop": "Tải slide bài giảng",
-      "slideHint": "PDF, PPT, PPTX, PPSX · tối đa 200MB",
+      "slideHint": "PDF, PPT, PPTX, PPSX",
       "cancelUpload": "Hủy",
       "tooManyFiles": "Tối đa {{max}} tệp (gồm cả slide)"
     },
@@ -459,6 +480,7 @@
       "loadingLessons": "Đang tải bài học…",
       "noLessons": "Module chưa có bài học.",
       "lessonMinutes": "{{n}} phút",
+      "dragLesson": "Kéo để đổi vị trí bài học",
       "lessonUp": "Đưa bài học lên",
       "lessonDown": "Đưa bài học xuống",
       "editLesson": "Sửa bài học",
@@ -508,7 +530,7 @@
     "statModules": "Module",
     "statLessons": "Bài học",
     "statStudents": "Học viên",
-    "addLesson": "Thêm bài học",
+    "addLesson": "Thêm module",
     "pickCourse": "Chọn khóa học",
     "courseMeta": "{{modules}} module · {{lessons}} bài",
     "progressNamed": "Tiến độ: {{title}}",
@@ -616,6 +638,13 @@
     "fileNote": "Tệp sẽ được chèn dưới dạng liên kết vào cuối nội dung bài viết.",
     "removeTag": "Bỏ thẻ {{tag}}",
     "tagsFull": "Đã đủ thẻ",
+    "mentionPrefix": "Gắn thẻ",
+    "mentionSearching": "Đang tìm...",
+    "mentionAria": "Tìm thành viên để gắn thẻ",
+    "mentionsFull": "Đã đạt tối đa thành viên được gắn thẻ",
+    "mentionEmpty": "Không tìm thấy thành viên phù hợp",
+    "maxMentions": "Chỉ gắn thẻ tối đa {{max}} thành viên",
+    "removeMention": "Bỏ gắn thẻ {{name}}",
     "tagPh": "Nhập thẻ rồi nhấn Enter",
     "tagAria": "Nhập thẻ",
     "suggest": "Gợi ý:",
@@ -637,7 +666,7 @@
     "submit": "Đăng bài",
     "tooLong": "Nội dung quá dài",
     "video": "Video",
-    "videoHint": "Tải video mp4 từ máy (tối đa 25 MB)"
+    "videoHint": "Tải video mp4 từ máy (tối đa 2GB)"
   },
   "page": {
     "loading": "Đang tải cộng đồng…"
@@ -748,7 +777,7 @@
       "videoDrop": "Dán link YouTube/Vimeo hoặc tải video từ máy",
       "videoHint": "Hỗ trợ youtube.com, youtu.be, vimeo.com hoặc tải video từ máy (mp4, webm, mov · tối đa 2GB)",
       "fileDrop": "Tải tài liệu cho bài học",
-      "fileHint": "PDF, DOCX, XLSX, PPT/PPTX, CSV, ZIP… · tối đa 25MB",
+      "fileHint": "PDF, DOCX, XLSX, PPT/PPTX, CSV, ZIP…",
       "chooseFile": "Chọn tệp",
       "note": "Ghi chú cho học viên",
       "notePh": "Tóm tắt, link tham khảo, bài tập về nhà...",
@@ -820,6 +849,103 @@
     "turnOff": "Tắt chương trình",
     "saved": "Đã lưu",
     "rateErr": "Nhập phần trăm từ 0 đến {{max}}",
+    "ol": {
+      "title": "Người giới thiệu trong cộng đồng",
+      "sub": "Bạn là người trả hoa hồng nên xem được tất cả người giới thiệu, những người họ đã mời và số tiền hoa hồng tương ứng. Bấm vào một dòng để xem chi tiết.",
+      "totReferrers": "Người giới thiệu",
+      "totReferred": "Người được mời",
+      "totPaying": "Đang trả phí",
+      "totCommission": "Hoa hồng phải trả",
+      "totPending": "Chờ chi trả",
+      "colReferrer": "Người giới thiệu",
+      "colReferred": "Đã mời",
+      "colPaying": "Trả phí",
+      "colCommission": "Hoa hồng",
+      "colPending": "Chờ chi trả",
+      "empty": "Chưa có ai giới thiệu thành viên mới. Khi có người tham gia qua link giới thiệu, họ sẽ hiện ở đây.",
+      "more": "Xem thêm {{n}} người",
+      "less": "Thu gọn",
+      "status": {
+        "paid": "Đang trả phí",
+        "joined": "Đã tham gia",
+        "none": "Chưa tham gia"
+      }
+    },
+    "po": {
+      "title": "Chi trả hoa hồng cho cộng tác viên",
+      "sub": "Quản lý và thực hiện thanh toán hoa hồng cho các thành viên giới thiệu người dùng mới.",
+      "rangeFrom": "Từ ngày",
+      "rangeTo": "Đến ngày",
+      "rangeErr": "Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.",
+      "kpiCollab": "Tổng số cộng tác viên",
+      "kpiReferred": "Tổng số người được giới thiệu",
+      "kpiDue": "Tổng hoa hồng cần chi trả",
+      "kpiPaid": "Đã chi trả",
+      "vsPrev": "so với kỳ trước",
+      "newInRange": "mới trong kỳ",
+      "listTitle": "Danh sách cộng tác viên cần chi trả",
+      "listSub": "Chọn những người để tiến hành chi trả sau khi bạn đã chuyển khoản.",
+      "search": "Tìm theo tên hoặc email",
+      "filter": "Lọc theo trạng thái",
+      "filterAll": "Tất cả",
+      "filterDue": "Chờ chi trả",
+      "filterPaid": "Đã chi trả",
+      "colCollab": "Cộng tác viên",
+      "colReferred": "Người được giới thiệu",
+      "colRate": "Tỷ lệ",
+      "colTotal": "Tổng hoa hồng",
+      "colDue": "Cần chi trả",
+      "colStatus": "Trạng thái",
+      "colAction": "Thao tác",
+      "joined": "Tham gia: {{date}}",
+      "status": {
+        "due": "Chờ chi trả",
+        "paid": "Đã chi trả",
+        "none": "Chưa phát sinh"
+      },
+      "pay": "Chi trả",
+      "menuReferred": "Xem người được mời",
+      "selectAll": "Chọn tất cả cộng tác viên cần chi trả ở trang này",
+      "selectRow": "Chọn {{name}}",
+      "rowOptions": "Tùy chọn cho {{name}}",
+      "empty": "Chưa có cộng tác viên nào. Khi có người tham gia qua link giới thiệu, họ sẽ hiện ở đây.",
+      "emptyFilter": "Không có cộng tác viên phù hợp với bộ lọc.",
+      "showing": "Hiển thị {{from}}-{{to}} trong tổng {{total}} cộng tác viên",
+      "pagination": "Phân trang",
+      "prev": "Trang trước",
+      "next": "Trang sau",
+      "payTitle": "Thanh toán hoa hồng",
+      "payHint": "Chọn những người cần chi trả ở bảng bên cạnh, chuyển khoản cho họ rồi bấm chi trả để ghi nhận.",
+      "payBulk": "Chi trả hàng loạt",
+      "payBulkN": "Chi trả hàng loạt ({{n}})",
+      "export": "Xuất danh sách thanh toán",
+      "exportFail": "Không xuất được danh sách. Vui lòng thử lại.",
+      "histTitle": "Lịch sử chi trả gần đây",
+      "histAll": "Xem tất cả",
+      "histLess": "Thu gọn",
+      "histEmpty": "Chưa có đợt chi trả nào.",
+      "transferred": "Đã chuyển",
+      "note": "Khoản đã chi trả được đánh dấu đã chuyển: người nhận không còn rút khoản này qua nền tảng và doanh thu của bạn không bị trừ khoản đó.",
+      "confirmTitle": "Xác nhận đã chuyển khoản",
+      "confirmOne": "Bạn đã chuyển khoản {{amount}} cho {{name}} chưa? Khoản hoa hồng sẽ được đánh dấu là đã chi trả.",
+      "confirmMany": "Bạn đã chuyển khoản tổng cộng {{amount}} cho {{n}} cộng tác viên chưa? Các khoản hoa hồng sẽ được đánh dấu là đã chi trả.",
+      "confirmBtn": "Đã chuyển, xác nhận",
+      "paidToast": "Đã ghi nhận chi trả {{amount}} cho {{n}} cộng tác viên.",
+      "leftToast": "{{n}} cộng tác viên đã rút một phần hoa hồng qua nền tảng nên chỉ ghi nhận phần còn lại.",
+      "nothingToast": "Không có khoản nào cần ghi nhận chi trả.",
+      "referredTitle": "Người được {{name}} mời",
+      "referredBody": "Những người đã tham gia cộng đồng qua link giới thiệu của cộng tác viên này.",
+      "referredEmpty": "Chưa có người được mời.",
+      "close": "Đóng",
+      "payeeBank": "Ngân hàng",
+      "payeeNumber": "Số tài khoản",
+      "payeeHolder": "Chủ tài khoản",
+      "payeeNone": "{{name}} chưa cập nhật tài khoản nhận hoa hồng. Hãy liên hệ để lấy thông tin chuyển khoản trước khi ghi nhận đã chi trả.",
+      "copyNumber": "Sao chép số tài khoản",
+      "copied": "Đã sao chép số tài khoản",
+      "exportNone": "Chưa có khoản hoa hồng nào cần thanh toán trong khoảng ngày này"
+    },
+    "pageTitle": "Giới thiệu & Hoa hồng",
     "ownerReferrers": "Người đang giới thiệu",
     "ownerReferred": "Người được mời",
     "ownerCommission": "Hoa hồng đã phát sinh",
@@ -863,6 +989,77 @@
         "title": "Tải ứng dụng SofinHub",
         "cta": "Tải ngay",
         "again": "Tải lại"
+      }
+    }
+  },
+  "mobile": {
+    "back": "Quay lại",
+    "menu": "Mở menu",
+    "close": "Đóng",
+    "search": "Tìm kiếm",
+    "notifications": "Thông báo",
+    "login": "Đăng nhập",
+    "tabs": {
+      "aria": "Điều hướng chính",
+      "home": "Trang chủ",
+      "community": "Cộng đồng",
+      "chat": "Chat",
+      "me": "Cá nhân"
+    },
+    "promo": {
+      "badge": "Cộng đồng học tập & phát triển",
+      "title": "Tạo cộng đồng của riêng bạn",
+      "desc": "Kết nối những người cùng đam mê, chia sẻ kiến thức và lan tỏa giá trị tích cực.",
+      "cta": "Tạo cộng đồng ngay",
+      "note": "Có thể tạo miễn phí · Chỉ mất 1 phút"
+    }
+  },
+  "tour": {
+    "replay": "Hướng dẫn sử dụng",
+    "later": "Để sau",
+    "start": "Xem nhanh",
+    "skip": "Bỏ qua",
+    "back": "Quay lại",
+    "next": "Tiếp theo",
+    "finish": "Bắt đầu thôi",
+    "stepOf": "BƯỚC {{n}}/{{total}}",
+    "introTitle": "Chào mừng thành viên mới!",
+    "introBody": "Xem nhanh cách đăng bài, lọc chủ đề và tương tác: {{count}} bước, khoảng 40 giây.",
+    "checklistNote": "Mục “để lại bình luận” sẽ được hướng dẫn ở bước tiếp theo.",
+    "postNote": "Bình luận bài đầu tiên để hoàn thành bước khởi đầu!",
+    "post": {
+      "like": "Thích bài viết hay",
+      "comment": "Bình luận để hỏi thêm hoặc góp ý",
+      "share": "Chia sẻ cho người cần đọc"
+    },
+    "steps": {
+      "composer": {
+        "title": "Chia sẻ với cộng đồng",
+        "body": "Viết câu hỏi hay điều bạn muốn chia sẻ rồi nhấn gửi. Đính kèm Ảnh, Video, File, gắn thẻ, hoặc tạo Poll để hỏi ý kiến mọi người."
+      },
+      "checklist": {
+        "title": "Hoàn thành bước khởi đầu",
+        "body": "Làm lần lượt các mục trong thẻ này để sẵn sàng khám phá mọi tính năng. Mục đã xong có dấu tích cam."
+      },
+      "topics": {
+        "title": "Lọc bài theo chủ đề",
+        "body": "Chọn Đang thịnh hành để xem bài nổi bật, hoặc một chủ đề như Thảo luận chung. Vuốt ngang để xem thêm chủ đề."
+      },
+      "post": {
+        "title": "Tương tác với bài viết",
+        "body": ""
+      },
+      "menu": {
+        "title": "Mở Menu để đi tới mọi nơi",
+        "body": "Bấm vào đây để xem các mục của cộng đồng như Lớp học, Lịch sự kiện, Thành viên, Bảng xếp hạng, Công cụ hỗ trợ, cùng các mục chung như Cộng đồng của tôi, Chat, Cài đặt hồ sơ."
+      },
+      "search": {
+        "title": "Tìm nhanh điều bạn cần",
+        "body": "Chạm kính lúp để tìm khóa học, công cụ hoặc chủ đề bạn quan tâm, không cần lướt hết bảng tin."
+      },
+      "bell": {
+        "title": "Không bỏ lỡ hoạt động mới",
+        "body": "Con số trên chuông là thông báo chưa đọc. Chạm vào để xem hoạt động mới trong cộng đồng."
       }
     }
   }

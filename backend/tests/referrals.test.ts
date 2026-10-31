@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
-import { makeClient, startTestServer, useTestDb, type TestDb, type TestServer } from './helpers.js';
+import { makeClient, startTestServer, useTestDb, type TestDb, type TestServer , refundViaService } from './helpers.js';
 
 const DAY = 86_400_000;
 
@@ -235,7 +235,7 @@ describe('chương trình giới thiệu: mã, ghi nhận, hoa hồng, KPI', () 
       const ref = await signup('void');
       const friend = await signup('void-f', await codeOf(ref));
       const p = await pay(friend, id);
-      const r = await c.call('POST', `/payments/${p.id}/refund-request`, { token: friend.token, body: { reason: 'đổi ý rồi' } });
+      const r = await refundViaService(p.id, friend.id, 'đổi ý rồi');
       assert.equal(r.status, 201, JSON.stringify(r.body));
       assert.equal(r.body.data.status, 'approved'); // trong cửa sổ hoàn tiền → tự duyệt
       const row = await db.prisma.referralCommission.findFirst({ where: { referrerId: ref.id } });
@@ -358,6 +358,55 @@ describe('chương trình giới thiệu: mã, ghi nhận, hoa hồng, KPI', () 
       // Người không do mình giới thiệu → 404
       const stranger = await signup('stranger');
       assert.equal((await c.call('POST', `/me/referral/users/${trialer.id}/remind?kind=member`, { token: stranger.token })).status, 404);
+    });
+
+    it('người được giới thiệu vào cộng đồng miễn phí: trạng thái "joined" kèm tên cộng đồng (không còn "none"); trả phí thì lên "paid"; tab creator không bị ảnh hưởng', async () => {
+      const ref = await signup('jref');
+      const friend = await signup('jfriend', await codeOf(ref));
+      const row = async (kind = 'member') => (await c.call('GET', `/me/referral/users?kind=${kind}`, { token: ref.token })).body.data[0] as { status: string; communityId: string | null; communityName: string | null; earnedCents: number };
+      assert.equal((await row()).status, 'none'); // chưa vào cộng đồng nào
+
+      const owner = await signup('jown');
+      const free = await c.call('POST', '/communities', { token: owner.token, body: { title: `Free ${Date.now().toString(36)}${n++}`, description: 'd', category: 'tech', priceUsd: 0, visibility: 'public' } });
+      assert.equal(free.status, 201, JSON.stringify(free.body));
+      const freeId = free.body.data.id as string;
+      assert.equal((await c.call('POST', `/communities/${freeId}/enroll`, { token: friend.token, body: {} })).status, 200);
+      const joined = await row();
+      assert.equal(joined.status, 'joined');
+      assert.equal(joined.communityId, freeId);
+      assert.equal(joined.earnedCents, 0); // vào cộng đồng miễn phí thì chưa có giao dịch nên chưa có hoa hồng
+      assert.equal((await overview(ref)).kpis.paying.value, 0);
+      assert.equal((await row('creator')).status, 'none'); // vào cộng đồng không làm người này thành người tạo
+
+      const { id: paidId } = await paidCommunity();
+      await pay(friend, paidId);
+      const paid = await row();
+      assert.equal(paid.status, 'paid'); // gói trả phí ưu tiên hơn "đã tham gia"
+      assert.equal(paid.communityId, paidId);
+      assert.equal(paid.earnedCents, 25_000);
+    });
+
+    it('gói cũ đã hủy nhưng vẫn là thành viên → "joined" (không "cancel"); đã rời cộng đồng → "cancel"; xin vào cộng đồng riêng tư chờ duyệt → "pending"', async () => {
+      const { id: communityId } = await paidCommunity();
+      const ref = await signup('cnl');
+      const code = await codeOf(ref);
+      const stayer = await signup('cnl-s', code);
+      const leaver = await signup('cnl-l', code);
+      const asker = await signup('cnl-a', code);
+      const past = new Date(Date.now() - 86_400_000);
+      for (const u of [stayer, leaver]) {
+        await db.prisma.subscription.create({ data: { userId: u.id, communityId, status: 'canceled', priceCents: 175_000, currentPeriodStart: new Date(past.getTime() - 30 * 86_400_000), currentPeriodEnd: past, canceledAt: past } });
+      }
+      await db.prisma.enrollment.create({ data: { userId: stayer.id, communityId } }); // vẫn trong cộng đồng
+      await db.prisma.joinRequest.create({ data: { userId: asker.id, communityId, status: 'pending' } });
+
+      const rows = (await c.call('GET', '/me/referral/users?kind=member&all=true', { token: ref.token })).body.data as { userId: string; status: string; communityId: string | null }[];
+      const of = (id: string) => rows.find((r) => r.userId === id)!;
+      assert.equal(of(stayer.id).status, 'joined');
+      assert.equal(of(stayer.id).communityId, communityId);
+      assert.equal(of(leaver.id).status, 'cancel');
+      assert.equal(of(asker.id).status, 'pending');
+      assert.equal(of(asker.id).communityId, communityId);
     });
 
     it('chi tiết hoa hồng của 1 người: tổng + từng khoản; người lạ → 404', async () => {

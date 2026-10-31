@@ -1,6 +1,7 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Field } from '../account/components/Field';
+import { useAuth } from '../auth/AuthContext';
 import { validateEmail, validateRequired } from '../auth/validation';
 import { Button } from '../../components/ui/Button';
 import { ApiError } from '../../lib/api';
@@ -12,7 +13,13 @@ const PHONE_RE = /^(\+?84|0)\d{9}$/;
 /** Popup để lại thông tin mua tool — gửi qua endpoint /contact (vào hộp thư hỗ trợ của admin). */
 export function ToolLeadForm({ tool, onClose }: { tool: DownloadTool; onClose: () => void }) {
   const { t } = useTranslation('tools');
-  const [form, setForm] = useState({ name: '', phone: '', email: '' });
+  const { user } = useAuth();
+  // Đã đăng nhập: điền sẵn tên + email của tài khoản.
+  const [form, setForm] = useState({ name: user ? `${user.firstName} ${user.lastName}`.trim() : '', phone: '', email: user?.email ?? '' });
+  // Phiên đăng nhập có thể về sau khi form đã vẽ (tải lại trang): điền khi ô còn trống.
+  useEffect(() => {
+    if (user) setForm((f) => ({ ...f, name: f.name || `${user.firstName} ${user.lastName}`.trim(), email: f.email || user.email }));
+  }, [user]);
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);

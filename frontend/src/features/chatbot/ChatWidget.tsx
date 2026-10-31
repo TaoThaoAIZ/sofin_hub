@@ -5,6 +5,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { ApiError } from '../../lib/api';
 import { useAuth } from '../auth/AuthContext';
 import { requestHandoff, sendChatMessage, sendFeedback, startConversation } from './api';
+import { ChatLauncher } from './ChatLauncher';
 import { useMessageQueue } from './useMessageQueue';
 import { useCommunityBotStatus } from '../community-bot/queries';
 import { chatbotKeys, useChatbotStatus, useCurrentConversation } from './queries';
@@ -28,16 +29,7 @@ export function ChatWidget() {
 
 function Launcher({ onOpen }: { onOpen: () => void }) {
   const { t } = useTranslation('chatbot');
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      aria-label={t('open')}
-      className="bg-brand-gradient shadow-brand fixed right-4 bottom-4 z-[60] grid size-14 place-items-center rounded-full text-white hover:brightness-[1.06] md:right-6 md:bottom-6"
-    >
-      <ChatIcon />
-    </button>
-  );
+  return <ChatLauncher onOpen={onOpen} label={t('open')} hint={t('hint')} />;
 }
 
 export interface Bubble extends ChatMessage {

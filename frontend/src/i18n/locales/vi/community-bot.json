@@ -1,4 +1,5 @@
 {
+  "hint": "Có thắc mắc gì hãy hỏi {{name}} nhé",
   "open": "Mở trợ lý {{name}}",
   "loading": "Đang tải…",
   "error": "Có lỗi xảy ra, bạn thử lại nhé",

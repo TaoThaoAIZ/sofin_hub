@@ -54,7 +54,7 @@
       "overview": "Tổng quan",
       "content": "Nội dung",
       "reviews": "Đánh giá",
-      "faq": "Câu hỏi thường gặp"
+      "faq": "Câu hỏi"
     },
     "perkLessons": "{{n}} bài học trong lớp học",
     "perkDiscuss": "Thảo luận và kết nối cùng thành viên cộng đồng",
@@ -103,9 +103,88 @@
     "leave": "Rời khỏi cộng đồng",
     "leaving": "Đang rời…",
     "leftToast": "Bạn đã rời khỏi cộng đồng",
-    "approvedPay": "Đã được duyệt – thanh toán để tham gia"
+    "approvedPay": "Đã được duyệt – thanh toán để tham gia",
+    "perks": {
+      "instant": {
+        "title": "Truy cập ngay lập tức",
+        "desc": "Sau khi thanh toán"
+      },
+      "anywhere": {
+        "title": "Học mọi lúc, mọi nơi",
+        "desc": "Trên web, mobile, tablet"
+      },
+      "updates": {
+        "title": "Cập nhật nội dung liên tục",
+        "desc": "Luôn được nâng cấp"
+      },
+      "support": {
+        "title": "Hỗ trợ từ cộng đồng",
+        "desc": "Hỏi đáp, chia sẻ kinh nghiệm"
+      }
+    },
+    "facts": {
+      "label": {
+        "members": "Thành viên",
+        "lessons": "Bài học",
+        "admins": "Quản trị viên",
+        "cost": "Chi phí tham gia",
+        "community": "Cộng đồng"
+      },
+      "value": {
+        "free": "Miễn phí",
+        "private": "Riêng tư",
+        "public": "Công khai",
+        "perMonth": "{{price}}đ/tháng"
+      },
+      "note": {
+        "cancelAnytime": "Hủy bất kỳ lúc nào",
+        "trial": "Miễn phí dùng thử {{n}} ngày"
+      }
+    },
+    "cancelRequestConfirm": "Hủy yêu cầu tham gia cộng đồng này?",
+    "toolsTitle": "Công cụ hỗ trợ trong cộng đồng",
+    "toolsSub": "Bộ công cụ SofinHub dành cho thành viên, giúp bạn làm video, tự động hóa và tăng tốc công việc."
   },
   "lesson": {
+    "reqTitle": "Để hoàn thành bài học, bạn cần:",
+    "req": {
+      "video": "Xem hết video bài học",
+      "quiz": "Đạt bài trắc nghiệm (từ {{pct}}% trở lên)",
+      "survey": "Trả lời các câu khảo sát bắt buộc"
+    },
+    "videoSkipped": "Bạn đã tua qua video nên chưa tính là xem hết. Hãy xem lại video liên tục từ đầu đến cuối.",
+    "videoWatched": "Bạn đã xem hết tất cả video của bài học.",
+    "videosProgress": "Hãy xem hết tất cả video của bài học để hoàn thành bài và mở bài trắc nghiệm. Đã xem {{done}}/{{total}} video.",
+    "videoMustWatch": "Hãy xem hết tất cả video của bài học để hoàn thành bài và mở bài trắc nghiệm.",
+    "test": {
+      "quizTitle": "Bài trắc nghiệm",
+      "quizDone": "Đã hoàn thành trắc nghiệm",
+      "quizDoneSub": "Bạn đã đạt bài trắc nghiệm này · bấm để xem lại",
+      "quizSub": "{{n}} câu · cần đạt tối thiểu {{pct}}%",
+      "quizReview": "Đã hoàn thành · Xem lại",
+      "surveyTitle": "Khảo sát nhanh",
+      "surveySub": "Chia sẻ mong muốn của bạn với chủ cộng đồng",
+      "surveyDone": "Đã khảo sát",
+      "surveyDoneSub": "Cảm ơn bạn! Bấm để xem lại hoặc khảo sát lại",
+      "surveyStart": "Làm khảo sát",
+      "surveyAgain": "Đã khảo sát · Khảo sát lại",
+      "surveyPageTitle": "Khảo sát: {{title}}",
+      "title": "Bài trắc nghiệm & khảo sát",
+      "quizPassed": "Bạn đã đạt bài trắc nghiệm",
+      "surveyOnly": "Khảo sát nhanh của bài học",
+      "withSurvey": "kèm khảo sát",
+      "start": "Làm trắc nghiệm",
+      "review": "Xem lại",
+      "locked": "Xem hết video để mở khóa",
+      "pageTitle": "Trắc nghiệm: {{title}}",
+      "loadingTitle": "Đang tải bài trắc nghiệm...",
+      "loadingSub": "Đợi chút nhé, chúng tôi đang chuẩn bị nội dung cho bạn.",
+      "backToLesson": "Về bài học",
+      "backToComplete": "Về bài học để hoàn thành",
+      "lockedTitle": "Chưa mở khóa",
+      "watchVideo": "Quay lại xem video",
+      "none": "Bài học này không có trắc nghiệm hay khảo sát."
+    },
     "loadingAttachment": "{{name}} (đang tải…)",
     "invalidLink": "{{name}} (liên kết không hợp lệ)",
     "loading": "Đang tải bài học…",
@@ -133,10 +212,147 @@
     "prev": "Bài trước",
     "next": "Bài sau",
     "toClassroom": "Về lớp học",
+    "celebrate": {
+      "title": "Chúc mừng bạn đã hoàn thành bài {{n}}!",
+      "desc": "Bạn đã hoàn thành toàn bộ bài học của phần này trong hành trình của mình. Thật tuyệt vời! Hãy tiếp tục phát huy nhé!",
+      "review": "Xem lại bài học",
+      "continue": "Tiếp tục học bài {{n}}"
+    },
     "loadingShort": "Đang tải…",
-    "slides": "Slide bài giảng"
+    "videoN": "Video {{n}}",
+    "videoList": "Danh sách video của bài",
+    "filesMore": "Xem thêm {{n}} tệp",
+    "previewBanner": "Đây là bài học thử miễn phí của module chưa mở khóa. Hãy mở khóa module để học các bài tiếp theo.",
+    "previewBannerCta": "Xem lớp học",
+    "slides": "Slide bài giảng",
+    "bodyMore": "Xem thêm",
+    "bodyLess": "Thu gọn"
+  },
+  "surveyResults": {
+    "staffOnly": "Chỉ chủ cộng đồng và quản trị viên xem được kết quả khảo sát",
+    "pageTitle": "Khảo sát",
+    "pageSubtitle": "Xem học viên mong muốn gì qua các khảo sát trong bài học.",
+    "empty": "Chưa có khảo sát nào. Thêm khảo sát khi sửa một bài học (Lớp học > Sửa bài học).",
+    "questionCount": "{{count}} câu hỏi",
+    "responses": "câu trả lời",
+    "rate": "{{pct}}% / {{total}} thành viên",
+    "lastAnswered": "Trả lời gần nhất: {{time}}",
+    "noAnswerYet": "Chưa có ai trả lời",
+    "back": "Về danh sách khảo sát",
+    "notFound": "Bài học này chưa có khảo sát.",
+    "summary": "{{n}} / {{total}} thành viên đã trả lời",
+    "csv": "Tải CSV",
+    "csvDone": "Đã tải kết quả khảo sát (.csv)",
+    "tabs": {
+      "overview": "Tổng quan",
+      "texts": "Câu trả lời tự nhập",
+      "people": "Từng học viên"
+    },
+    "sortByVotes": "Sắp theo lựa chọn nhiều người chọn nhất",
+    "textQuestionHint": "Câu hỏi tự nhập: xem nội dung ở tab \"Câu trả lời tự nhập\".",
+    "otherHint": "Học viên có thể nhập thêm ý kiến khác: xem ở tab \"Câu trả lời tự nhập\".",
+    "noTextQuestions": "Khảo sát này không có câu hỏi tự nhập.",
+    "pickQuestion": "Chọn câu hỏi",
+    "searchText": "Tìm trong câu trả lời…",
+    "searchName": "Tìm theo tên học viên…",
+    "totalFound": "{{count}} kết quả",
+    "filterQuestion": "Lọc theo câu hỏi",
+    "filterNone": "Không lọc theo đáp án",
+    "filterChoice": "Chọn đáp án",
+    "filterChoicePh": "Chọn đáp án cần lọc",
+    "stats": {
+      "total": "Tổng khảo sát",
+      "responses": "Tổng lượt trả lời",
+      "avgRate": "Tỷ lệ hoàn thành TB",
+      "active": "Khảo sát đang hoạt động"
+    },
+    "cols": {
+      "survey": "Khảo sát",
+      "lesson": "Bài học",
+      "questions": "Số câu hỏi",
+      "responses": "Lượt trả lời",
+      "rate": "Tỷ lệ hoàn thành",
+      "status": "Trạng thái",
+      "updated": "Cập nhật gần nhất"
+    },
+    "status": {
+      "active": "Đang hoạt động",
+      "inactive": "Tạm ẩn"
+    },
+    "questionsShort": "{{count}} câu",
+    "viewResults": "Kết quả",
+    "noAnswerShort": "—"
+  },
+  "survey": {
+    "needRequired": "Hãy trả lời các câu bắt buộc (*) trong khảo sát ở trên để hoàn thành bài học.",
+    "loading": "Đang tải khảo sát…",
+    "title": "Khảo sát nhanh",
+    "intro": "Chia sẻ mong muốn của bạn để chủ cộng đồng hiểu bạn cần gì. Không bắt buộc và không ảnh hưởng việc hoàn thành bài.",
+    "required": "bắt buộc",
+    "multipleHint": "(chọn được nhiều đáp án)",
+    "otherPh": "Ý kiến khác của bạn (không bắt buộc)…",
+    "textPh": "Nhập câu trả lời của bạn…",
+    "send": "Gửi khảo sát",
+    "update": "Cập nhật câu trả lời",
+    "sending": "Đang gửi…",
+    "thanks": "Đã lưu câu trả lời của bạn. Cảm ơn bạn!",
+    "alreadyAnswered": "Bạn đã trả lời khảo sát này, có thể chỉnh sửa và gửi lại.",
+    "fillRequired": "Hãy trả lời các câu bắt buộc (*)"
+  },
+  "surveyEditor": {
+    "errNoOptions": "Câu {{n}}: cần ít nhất 1 lựa chọn hoặc tick \"Cho phép học viên nhập thêm ý kiến khác\"",
+    "noOptionsHint": "Không có lựa chọn nào: học viên sẽ chỉ nhập ý kiến vào ô bên dưới câu hỏi.",
+    "saveWithLesson": "Thay đổi sẽ được lưu khi bạn bấm \"Lưu bài học\"",
+    "autoHint": "Tự động lưu khi bạn nhập hoặc xóa",
+    "autoIncomplete": "Hoàn thiện nội dung câu hỏi và các lựa chọn để tự động lưu",
+    "title": "Khảo sát cho bài học",
+    "optional": "(không bắt buộc)",
+    "rule": "Học viên chọn bất kỳ đáp án nào hoặc tự nhập; khảo sát không chặn hoàn thành bài. Lưu lại không xóa câu trả lời đã có.",
+    "question": "Câu hỏi {{n}}",
+    "typeLabel": "Kiểu câu hỏi",
+    "types": {
+      "single": "Chọn một đáp án",
+      "multiple": "Chọn nhiều đáp án",
+      "text": "Học viên tự nhập"
+    },
+    "required": "Bắt buộc trả lời",
+    "optionPh": "Lựa chọn {{n}}",
+    "addOption": "Thêm lựa chọn",
+    "removeOption": "Xóa lựa chọn {{n}}",
+    "removeQuestion": "Xóa câu hỏi {{n}}",
+    "addQuestion": "Thêm câu hỏi khảo sát",
+    "allowText": "Cho phép học viên nhập thêm ý kiến khác (hiện ô nhập ngay dưới các lựa chọn)",
+    "textHint": "Học viên sẽ tự gõ câu trả lời; bạn xem được nội dung ở phần kết quả.",
+    "save": "Lưu khảo sát",
+    "saving": "Đang lưu…",
+    "saved": "Đã lưu khảo sát",
+    "removed": "Đã xóa khảo sát của bài",
+    "errText": "Câu {{n}}: nhập nội dung câu hỏi",
+    "errOption": "Câu {{n}}: lựa chọn không được để trống",
+    "errDup": "Câu {{n}}: các lựa chọn không được trùng nhau",
+    "viewResults": "Xem kết quả khảo sát",
+    "responseCount": "{{count}} học viên đã trả lời",
+    "answeredCount": "{{n}}/{{total}} người trả lời",
+    "viewByPerson": "Xem theo từng học viên",
+    "viewByQuestion": "Xem theo từng câu hỏi",
+    "noResponses": "Chưa có học viên nào trả lời.",
+    "noText": "Chưa có câu trả lời.",
+    "truncated": "Chỉ hiển thị 500 câu trả lời mới nhất"
   },
   "quiz": {
+    "mascot": {
+      "intro": "Sẵn sàng chưa? Cùng làm bài trắc nghiệm nào!",
+      "next": "Câu tiếp theo nè, cố lên nhé!",
+      "right": "Chính xác! Bạn giỏi quá!",
+      "wrong": "Chưa đúng rồi, thử chọn lại nhé!"
+    },
+    "stepOf": "Câu {{n}}/{{total}}",
+    "progress": "{{pct}}% hoàn thành",
+    "questionN": "Câu {{n}}",
+    "rightNow": "Chính xác! 🎉",
+    "wrongNow": "Chưa đúng, hãy chọn lại nhé.",
+    "back": "Quay lại",
+    "next": "Tiếp theo",
     "loading": "Đang tải trắc nghiệm…",
     "title": "Bài trắc nghiệm",
     "passRule": "{{n}} câu · cần đạt tối thiểu {{pct}}%",
@@ -150,10 +366,13 @@
     "score": "Điểm: {{pct}}% ({{ok}}/{{total}} câu đúng)",
     "passed": "Đạt",
     "failed": "Chưa đạt (cần tối thiểu {{need}}%)",
-    "passedHint": "Bạn đã đạt! Bấm \"Hoàn thành\" ở phía trên để đánh dấu bài học.",
+    "passedHint": "Bạn đã đạt! Quay lại trang bài học và bấm \"Hoàn thành\" để đánh dấu bài học.",
     "needPass": "Cần đạt tối thiểu {{pct}}% bài trắc nghiệm mới hoàn thành được bài học này."
   },
   "quizEditor": {
+    "saveWithLesson": "Thay đổi sẽ được lưu khi bạn bấm \"Lưu bài học\"",
+    "autoHint": "Tự động lưu khi bạn nhập hoặc xóa",
+    "autoIncomplete": "Hoàn thiện nội dung câu hỏi và các lựa chọn để tự động lưu",
     "title": "Trắc nghiệm cho bài học",
     "optional": "(không bắt buộc)",
     "rule": "Có câu hỏi thì học viên phải đạt điểm tối thiểu mới hoàn thành được bài. Lưu lại sẽ xóa các lượt làm cũ; bài đã hoàn thành vẫn giữ nguyên. Để trống toàn bộ rồi lưu = bỏ trắc nghiệm.",
@@ -174,5 +393,107 @@
     "errText": "Câu {{n}}: nhập nội dung câu hỏi",
     "errOption": "Câu {{n}}: các lựa chọn không được để trống",
     "errDup": "Câu {{n}}: các lựa chọn không được trùng nhau"
+  },
+  "game": {
+    "title": "Trò chơi cuối bài",
+    "loading": "Đang tải trò chơi…",
+    "none": "Bài học này chưa có trò chơi.",
+    "moves": "{{n}} lượt",
+    "cardBack": "Thẻ úp, bấm để lật",
+    "skip": "Bỏ qua trò chơi",
+    "back": "Chọn trò chơi khác",
+    "another": "Trò chơi khác",
+    "continue": "Tiếp tục",
+    "replay": "Chơi lại",
+    "playNow": "Chơi trò chơi",
+    "playAgain": "Chơi lại trò chơi",
+    "pickTitle": "Chọn trò chơi",
+    "pickHint": "Mỗi trò chơi hoàn thành càng ít lượt càng nhiều sao, mỗi sao được {{n}} điểm (thưởng một lần cho mỗi trò chơi).",
+    "pairCount": "{{n}} cặp",
+    "notPlayed": "Chưa chơi",
+    "starsAria": "{{n}} trên 3 sao",
+    "rating": {
+      "1": "Hoàn thành!",
+      "2": "Làm tốt lắm!",
+      "3": "Xuất sắc!"
+    },
+    "stats": "{{moves}} lượt · {{time}}",
+    "pointsEarned": "+{{n}} điểm",
+    "pointsNeedComplete": "Hãy bấm Hoàn thành bài học để nhận điểm thưởng.",
+    "pointsOnce": "Điểm thưởng chỉ được cộng một lần cho mỗi trò chơi.",
+    "match": {
+      "terms": "Thuật ngữ",
+      "defs": "Định nghĩa"
+    },
+    "swipe": {
+      "term": "Thuật ngữ",
+      "def": "Định nghĩa",
+      "true": "Đúng",
+      "false": "Sai",
+      "right": "Chính xác!",
+      "wasTrue": "Chưa đúng — định nghĩa này khớp với thuật ngữ.",
+      "wasFalse": "Chưa đúng — định nghĩa đúng là: {{answer}}",
+      "keys": "Dùng phím ← (Sai) và → (Đúng), hoặc vuốt thẻ."
+    },
+    "scramble": {
+      "hintLabel": "Gợi ý",
+      "answer": "Đáp án của bạn",
+      "pool": "Các mảnh cần sắp xếp",
+      "clear": "Xóa và xếp lại"
+    },
+    "kinds": {
+      "memory": {
+        "name": "Lật thẻ",
+        "title": "Lật thẻ ghi nhớ",
+        "hint": "Lật từng đôi thẻ để ghép thuật ngữ với định nghĩa đúng. Càng ít lượt lật càng nhiều sao, mỗi sao được {{n}} điểm.",
+        "editorHint": "Học viên lật thẻ để ghép thuật ngữ với định nghĩa. Các định nghĩa không được trùng nhau.",
+        "termPh": "Thuật ngữ",
+        "defPh": "Định nghĩa / ý nghĩa"
+      },
+      "match": {
+        "name": "Nối cặp",
+        "title": "Nối cặp",
+        "hint": "Chọn một thuật ngữ rồi chọn định nghĩa tương ứng. Càng ít lần nối sai càng nhiều sao, mỗi sao được {{n}} điểm.",
+        "editorHint": "Học viên nối thuật ngữ ở cột trái với định nghĩa ở cột phải. Các định nghĩa không được trùng nhau.",
+        "termPh": "Thuật ngữ",
+        "defPh": "Định nghĩa / ý nghĩa"
+      },
+      "swipe": {
+        "name": "Đúng / Sai",
+        "title": "Đúng hay Sai?",
+        "hint": "Thuật ngữ và định nghĩa bên dưới có khớp nhau không? Trả lời càng ít sai càng nhiều sao, mỗi sao được {{n}} điểm.",
+        "editorHint": "Mỗi cặp được hiển thị lúc đúng lúc bị ghép nhầm với định nghĩa khác để học viên chọn Đúng/Sai. Nên có ít nhất 3 cặp để có nhiều câu hỏi đa dạng.",
+        "termPh": "Khái niệm",
+        "defPh": "Định nghĩa đúng"
+      },
+      "scramble": {
+        "name": "Xếp từ",
+        "title": "Xếp từ",
+        "hint": "Đọc gợi ý rồi sắp xếp các mảnh thành thuật ngữ đúng. Càng ít lần xếp sai càng nhiều sao, mỗi sao được {{n}} điểm.",
+        "editorHint": "Học viên đọc gợi ý rồi xếp lại thuật ngữ bị xáo trộn (một từ: xếp các chữ cái; nhiều từ: xếp các từ).",
+        "termPh": "Từ cần xếp (vd: Marketing)",
+        "defPh": "Gợi ý (mô tả từ này)"
+      }
+    },
+    "finished": "Hoàn thành! Đang tổng kết điểm…"
+  },
+  "gameEditor": {
+    "title": "Trò chơi cuối bài",
+    "optional": "(không bắt buộc)",
+    "rule": "Mỗi bài gắn được tối đa {{maxGames}} trò chơi, mỗi trò chơi {{min}}–{{max}} cặp. Sau khi hoàn thành bài, học viên chơi để nhận điểm thưởng. Để trống = bài không có trò chơi.",
+    "gameN": "Trò chơi {{n}}",
+    "kindLabel": "Loại của trò chơi {{n}}",
+    "removeGame": "Xóa trò chơi {{n}}",
+    "addGame": "Thêm trò chơi ({{n}}/{{max}}):",
+    "term": "Cột trái của cặp {{n}}",
+    "def": "Cột phải của cặp {{n}}",
+    "remove": "Xóa cặp {{n}}",
+    "add": "Thêm cặp ({{n}}/{{max}})",
+    "errGame": "Trò chơi {{n}} ({{kind}}): {{msg}}",
+    "errBlank": "mỗi cặp cần nhập đủ hai ô.",
+    "errMin": "cần ít nhất {{min}} cặp (hoặc xóa trò chơi này).",
+    "errDupTerm": "các thuật ngữ không được trùng nhau.",
+    "errDupDef": "các định nghĩa không được trùng nhau.",
+    "errScramble": "từ cần xếp phải có ít nhất 2 chữ cái (hoặc 2 từ) khác nhau."
   }
 }

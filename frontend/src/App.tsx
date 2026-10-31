@@ -3,6 +3,7 @@ import { lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 import { LegacyCourseRedirect } from './components/LegacyCourseRedirect';
+import { PageTitle } from './components/PageTitle';
 import { ScrollToTop } from './components/ScrollToTop';
 import { ReferralCapture } from './features/referral/ReferralCapture';
 import { ChatWidget } from './features/chatbot/ChatWidget';
@@ -41,9 +42,12 @@ import { TermsPage } from './pages/TermsPage';
 import { ToolsContent, ToolsPage } from './pages/ToolsPage';
 import { CertificateVerifyPage } from './pages/CertificateVerifyPage';
 import { LessonPage } from './pages/LessonPage';
+import { LessonQuizPage } from './pages/LessonQuizPage';
+import { LessonSurveyPage } from './pages/LessonSurveyPage';
 import { VerifyOtpPage } from './pages/VerifyOtpPage';
 import { OAuthCallbackPage } from './pages/OAuthCallbackPage';
 import { ModerationPage } from './features/community/components/ModerationPanel';
+import { SurveyDetailPage, SurveysPage } from './features/community/components/SurveyResultsPages';
 import { AboutTab } from './features/community/components/AboutTab';
 import { CalendarTab } from './features/community/components/CalendarTab';
 import { ClassroomTab } from './features/community/components/ClassroomTab';
@@ -60,6 +64,7 @@ export default function App() {
     <NotificationsProvider>
       <MessagesProvider>
       <ScrollToTop />
+      <PageTitle />
       <ReferralCapture />
       <ChatWidget />
       <Routes>
@@ -79,7 +84,11 @@ export default function App() {
           <Route index element={<FeedTab />} />
           <Route path="lop-hoc" element={<ClassroomTab />} />
           <Route path="lop-hoc/:lessonId" element={<LessonPage />} />
+          <Route path="lop-hoc/:lessonId/trac-nghiem" element={<LessonQuizPage />} />
+          <Route path="lop-hoc/:lessonId/khao-sat" element={<LessonSurveyPage />} />
           <Route path="kiem-duyet" element={<ModerationPage />} />
+          <Route path="khao-sat" element={<SurveysPage />} />
+          <Route path="khao-sat/:lessonId" element={<SurveyDetailPage />} />
           <Route path="cai-dat" element={<CommunitySettingsPage />} />
           <Route path="lich" element={<CalendarTab />} />
           <Route path="thanh-vien" element={<MembersTab />} />
@@ -114,6 +123,7 @@ export default function App() {
         <Route path="/billing" element={<Navigate to="/settings/thanh-toan" replace />} />
         <Route path="/gioi-thieu/:code" element={<ReferralLandingPage />} />
         <Route path="/communities/:id/revenue-dashboard" element={<LegacyRevenueRedirect />} />
+        <Route path="/communities/:id/revenue" element={<LegacyRevenueRedirect />} />
         <Route path="/admin/reports" element={<Navigate to="/admin/moderation" replace />} />
         <Route
           path="/admin/*"

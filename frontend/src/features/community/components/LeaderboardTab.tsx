@@ -6,11 +6,11 @@ import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { useAuth } from '../../auth/AuthContext';
 import { useLeaderboard, useLevels } from '../queries';
 import type { LeaderboardWindow, LevelInfo } from '../types';
-import { AVATAR_PALETTE, initials } from './shared';
+import { initials } from './shared';
 
 const BOARDS: { window: LeaderboardWindow; icon: string; color: string; titleKey: string; prefix: string }[] = [
   { window: '7d', icon: 'local_fire_department', color: '#ef4444', titleKey: 'leaderboard.top7', prefix: '+' },
-  { window: '30d', icon: 'bar_chart', color: '#f26a1b', titleKey: 'leaderboard.top30', prefix: '+' },
+  { window: '30d', icon: 'bar_chart', color: '#ff570a', titleKey: 'leaderboard.top30', prefix: '+' },
   { window: 'all', icon: 'emoji_events', color: '#f59e0b', titleKey: 'leaderboard.topAll', prefix: '' },
 ];
 
@@ -79,7 +79,7 @@ function Board({ cfg, courseId, meId }: { cfg: (typeof BOARDS)[number]; courseId
           ) : (
             <span className="w-[26px] flex-none text-center text-[13px] text-stone-600">{r.rank}</span>
           )}
-          <Avatar url={r.avatarUrl} name={r.name} size={34} text={initials(r.name)} className="text-stone-700" style={{ background: AVATAR_PALETTE[(i + BOARDS.indexOf(cfg) * 3) % AVATAR_PALETTE.length] }} />
+          <Avatar url={r.avatarUrl} name={r.name} size={34} text={initials(r.name)} />
           <span className="flex min-w-0 flex-1 items-center gap-1.5 truncate text-sm font-medium">
             <span className="truncate">{r.name}</span>
             {r.userId === meId && <span className="text-xs text-brand">{t('leaderboard.you')}</span>}
@@ -108,22 +108,23 @@ export function LeaderboardTab() {
   return (
     <main className="flex min-w-0 flex-col gap-4">
       <section className="relative flex flex-wrap items-stretch gap-[18px] overflow-hidden rounded-[28px] border border-brand/15 bg-gradient-to-r from-[#fff7f0] via-[#ffe9d9] to-[#ffdcc4] p-[18px]">
-        <img src="/images/community/lb-hero-bg.webp" alt="" className="pointer-events-none absolute inset-0 size-full object-cover" />
+        <img src="/images/community/lb-hero-bg.webp" alt="" className="pointer-events-none absolute inset-0 size-full object-cover dark:hidden" />
+        <img src="/images/community/lb-hero-bg-darkmode.jpg" alt="" className="pointer-events-none absolute inset-0 hidden size-full object-cover dark:block" />
 
         <div className="relative z-10 flex flex-[1_1_300px] flex-col items-center justify-center gap-2 py-2.5">
           <div className="relative size-[200px]">
-            <div className="size-full rounded-full bg-gradient-to-b from-[#ffd29e] to-brand p-1.5 shadow-[0_14px_34px_rgba(242,106,27,.3)]">
+            <div className="size-full rounded-full bg-gradient-to-b from-[#ffd29e] to-brand p-1.5 shadow-[0_14px_34px_rgba(255,87,10,.3)]">
               <Avatar url={user?.avatarUrl} name={myName || '?'} size={188} text={initials(myName || '?')} className="border-4 border-white bg-[#f3ddd0] text-brand" style={{ fontSize: 64, fontWeight: 800 }} />
             </div>
             {me?.rank === 1 && (
               <MaterialIcon name="crown" size={44} filled color="#f59e0b" className="pointer-events-none absolute -top-[30px] left-1/2 -translate-x-1/2" />
             )}
-            <div className="pointer-events-none absolute right-0 bottom-3.5 grid size-[50px] place-items-center rounded-[14px] border-[3px] border-white bg-gradient-to-b from-[#ff8f45] to-brand text-[22px] font-extrabold text-white shadow-[0_8px_18px_rgba(242,106,27,.4)]">
+            <div className="pointer-events-none absolute right-0 bottom-3.5 grid size-[50px] place-items-center rounded-[14px] border-[3px] border-white bg-gradient-to-b from-[#ff8f45] to-brand text-[22px] font-extrabold text-white shadow-[0_8px_18px_rgba(255,87,10,.4)]">
               {me?.rank ?? '–'}
             </div>
           </div>
           <div className="mt-1 text-[26px] font-extrabold tracking-tight">{myName}</div>
-          <div className="flex h-[34px] items-center gap-2 rounded-full bg-white/85 pr-3.5 pl-2 text-[14.5px] font-bold text-brand shadow-[0_4px_14px_rgba(242,106,27,.14)]">
+          <div className="flex h-[34px] items-center gap-2 rounded-full bg-white/85 pr-3.5 pl-2 text-[14.5px] font-bold text-brand shadow-[0_4px_14px_rgba(255,87,10,.14)]">
             <span className="grid size-6 place-items-center rounded-full bg-gradient-to-b from-[#ff8f45] to-brand">
               <MaterialIcon name="crown" size={15} filled color="#fff" />
             </span>
@@ -137,7 +138,7 @@ export function LeaderboardTab() {
 
         <div className="relative z-10 min-w-0 flex-[2_1_520px] rounded-[20px] border border-white/85 bg-white/70 px-5 py-[18px] shadow-[inset_0_1px_0_#fff,0_10px_30px_rgba(120,60,20,.08)] backdrop-blur-lg">
           <div className="flex flex-wrap items-center gap-3 border-b border-[rgba(120,60,20,.08)] pb-3">
-            <MaterialIcon name="bar_chart" size={24} filled color="#f26a1b" />
+            <MaterialIcon name="bar_chart" size={24} filled color="#ff570a" />
             <span className="text-lg font-extrabold">{t('leaderboard.journey')}</span>
             <div className="ml-auto flex h-[34px] min-w-[200px] flex-[0_1_330px] items-center gap-2.5 rounded-full bg-white px-3.5 shadow-[0_2px_10px_rgba(120,60,20,.08)]">
               <MaterialIcon name="emoji_events" size={18} filled color="#f59e0b" />
@@ -164,7 +165,7 @@ export function LeaderboardTab() {
       </section>
 
       <div className="mt-1 flex flex-wrap items-center gap-4">
-        <MaterialIcon name="bar_chart" size={38} filled color="#f26a1b" />
+        <MaterialIcon name="bar_chart" size={38} filled color="#ff570a" />
         <div className="min-w-0 flex-[1_1_300px]">
           <div className="text-[22px] font-extrabold tracking-tight">{t('leaderboard.title')}</div>
           <div className="mt-0.5 text-sm text-stone-600">{t('leaderboard.subtitle')}</div>

@@ -89,6 +89,21 @@ describe('lớp học: trắc nghiệm theo bài học', () => {
     assert.equal((await call('POST', `/lessons/${l}/complete`, a.token)).body.data.completed, true);
   });
 
+  it('chấm từng câu: chỉ trả đúng/sai (không lộ đáp án), không ghi lượt làm; câu lạ = 404; người ngoài = 403', async () => {
+    const l = await newLesson(await newModule());
+    await put(l, { passPercent: 100, questions: [q('1+1?', 1, ['1', '2', '3'])] });
+    const qid = (await call('GET', `/lessons/${l}/quiz`, a.token)).body.data.quiz.questions[0].id as string;
+    const right = await call('POST', `/lessons/${l}/quiz/check`, a.token, { questionId: qid, answer: 1 });
+    assert.equal(right.status, 200, JSON.stringify(right.body));
+    assert.deepEqual(right.body.data, { questionId: qid, correct: true });
+    const wrong = await call('POST', `/lessons/${l}/quiz/check`, a.token, { questionId: qid, answer: 0 });
+    assert.deepEqual(wrong.body.data, { questionId: qid, correct: false });
+    assert.equal(JSON.stringify(wrong.body).includes('correctIndex'), false);
+    assert.equal((await call('GET', `/lessons/${l}/quiz`, a.token)).body.data.quiz.attempts, 0);
+    assert.equal((await call('POST', `/lessons/${l}/quiz/check`, a.token, { questionId: 'khong-co', answer: 0 })).status, 404);
+    assert.equal((await call('POST', `/lessons/${l}/quiz/check`, stranger.token, { questionId: qid, answer: 1 })).status, 403);
+  });
+
   it('nộp sai số câu trả lời = 400; bài chưa có trắc nghiệm = 404; người ngoài cộng đồng = 403', async () => {
     const l = await newLesson(await newModule());
     assert.equal((await call('POST', `/lessons/${l}/quiz/attempt`, a.token, { answers: [] })).status, 404);
@@ -98,13 +113,15 @@ describe('lớp học: trắc nghiệm theo bài học', () => {
     assert.equal((await call('POST', `/lessons/${l}/quiz/attempt`, stranger.token, { answers: [0, 0] })).status, 403);
   });
 
-  it('mod+ thấy đáp án để sửa và không bị bắt buộc đạt điểm; sửa bộ câu hỏi xóa lượt làm cũ nhưng không hủy bài đã hoàn thành', async () => {
+  it('mod+ thấy đáp án để sửa và cũng phải đạt điểm mới hoàn thành; sửa bộ câu hỏi xóa lượt làm cũ nhưng không hủy bài đã hoàn thành', async () => {
     const l = await newLesson(await newModule());
     await put(l, { passPercent: 100, questions: [q('x', 1)] });
     const staffView = (await call('GET', `/lessons/${l}/quiz`, mod.token)).body.data;
     assert.equal(staffView.canEdit, true);
     assert.equal(staffView.quiz.questions[0].correctIndex, 1);
-    assert.equal((await call('GET', `/lessons/${l}`, mod.token)).body.data.quiz.required, false);
+    assert.equal((await call('GET', `/lessons/${l}`, mod.token)).body.data.quiz.required, true);
+    assert.equal((await call('POST', `/lessons/${l}/complete`, mod.token)).status, 409);
+    await call('POST', `/lessons/${l}/quiz/attempt`, mod.token, { answers: [1] });
     assert.equal((await call('POST', `/lessons/${l}/complete`, mod.token)).status, 200);
 
     await call('POST', `/lessons/${l}/quiz/attempt`, a.token, { answers: [1] });

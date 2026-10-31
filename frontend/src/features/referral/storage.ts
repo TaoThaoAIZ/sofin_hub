@@ -29,9 +29,41 @@ export function readReferralCode(): string | undefined {
   }
 }
 
+/** Id cộng đồng hợp lệ trên link giới thiệu (`?c=`): chỉ chữ, số, gạch; tránh nhét đường dẫn lạ vào điều hướng. */
+export const isCommunityId = (v: unknown): v is string => typeof v === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(v);
+
+const COMMUNITY_KEY = 'sofin:referral-community';
+
+/** Nhớ cộng đồng của link giới thiệu cho tới khi người mới đăng ký xong, để đưa họ vào đúng cộng đồng đó. */
+export function saveReferralCommunity(communityId: string) {
+  if (!isCommunityId(communityId)) return;
+  try {
+    localStorage.setItem(COMMUNITY_KEY, JSON.stringify({ id: communityId, at: Date.now() }));
+  } catch {
+    /* trình duyệt chặn lưu trữ: bỏ qua */
+  }
+}
+
+/** Trang đích sau khi đăng ký: cộng đồng của link giới thiệu (nếu có và còn hạn). */
+export function readReferralDestination(): string | undefined {
+  try {
+    const raw = localStorage.getItem(COMMUNITY_KEY);
+    if (!raw) return undefined;
+    const v = JSON.parse(raw) as { id?: unknown; at?: unknown };
+    if (!isCommunityId(v.id) || typeof v.at !== 'number' || Date.now() - v.at > MAX_AGE_MS) {
+      localStorage.removeItem(COMMUNITY_KEY);
+      return undefined;
+    }
+    return `/communities/${v.id}`;
+  } catch {
+    return undefined;
+  }
+}
+
 export function clearReferralCode() {
   try {
     localStorage.removeItem(KEY);
+    localStorage.removeItem(COMMUNITY_KEY);
   } catch {
     /* bỏ qua */
   }

@@ -4,18 +4,12 @@ import { currentLocale } from '../../../i18n';
 import { Button } from '../../../components/ui/Button';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { SectionTitle } from '../../../components/ui/SectionTitle';
+import { Avatar } from '../../account/components/Avatar';
 import { useAuth } from '../../auth/AuthContext';
 import { useDeleteMyReview, useDeleteReview, useReviews, useSaveReview } from '../queries';
 import { isAtLeast, type Review, type ViewerRole } from '../types';
 import { errorText } from './Modal';
 import { usePopup } from '../../../components/ui/usePopup';
-
-const AVATAR_COLORS = ['#fdba74', '#93c5fd', '#86efac', '#c4b5fd', '#fde68a', '#fca5a5', '#a5f3fc'];
-const colorFor = (id: string) => {
-  let h = 0;
-  for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  return AVATAR_COLORS[h % AVATAR_COLORS.length]!;
-};
 
 function Stars({ value, size = 16 }: { value: number; size?: number }) {
   const { t } = useTranslation('communities');
@@ -81,17 +75,17 @@ export function ReviewsSection({
   const totalPages = reviews.data?.meta.totalPages ?? 1;
 
   return (
-    <div className="glass flex flex-col gap-[22px] rounded-[26px] p-[26px]">
+    <div className="flex flex-col gap-5 rounded-[26px] bg-white p-6 shadow-[1px_6px_15px_rgba(121,81,54,0.1)] dark:bg-[rgba(63,63,63,.3)] dark:shadow-none">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <SectionTitle>{t('reviews.title')}</SectionTitle>
       </div>
       <div className="flex flex-wrap items-center gap-4">
-        <span className="text-[48px] leading-none font-extrabold tracking-[-1px]">{summary?.rating ?? fallbackRating}</span>
+        <span className="text-[46px] leading-[46px] font-extrabold">{summary?.rating ?? fallbackRating}</span>
         <Stars value={Math.round(summary?.rating ?? fallbackRating)} size={24} />
         <span className="text-[15px] text-stone-600">{t('reviews.count', { count: summary?.ratingCount ?? fallbackCount })}</span>
       </div>
 
-      {viewerEnrolled ? (
+      {viewerRole === 'owner' ? null : viewerEnrolled ? (
         // key theo id đánh giá của tôi: khi dữ liệu tải xong/đổi, form nạp lại giá trị mới
         <ReviewForm
           key={mine?.id ?? 'new'}
@@ -116,7 +110,7 @@ export function ReviewsSection({
         {rows.map((r) => (
           <div key={r.id} className="rounded-[18px] border border-white/95 bg-white/75 p-[18px] shadow-[0_6px_18px_rgba(120,60,20,.06)]">
             <div className="flex items-center gap-2.5">
-              <span className="size-[38px] flex-none rounded-full" style={{ background: colorFor(r.userId) }} />
+              <Avatar url={r.avatarUrl} name={r.name} size={38} />
               <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
                 <b className="text-sm">{r.name}</b>
                 <Stars value={r.rating} size={15} />
@@ -205,7 +199,7 @@ function ReviewForm({
   };
 
   return (
-    <div className="rounded-[18px] border border-brand/15 bg-white/70 p-[18px]">
+    <div className="rounded-[17px] border border-[#e4e4e4] p-4 dark:border-white/10">
       <div className="text-[15px] font-bold">{mine ? t('reviews.yours') : t('reviews.write')}</div>
       <div className="mt-2">
         <StarPicker value={rating} onChange={setRating} />
@@ -216,10 +210,10 @@ function ReviewForm({
         maxLength={1000}
         rows={3}
         placeholder={t('reviews.placeholder')}
-        className="mt-2 w-full resize-none rounded-xl border border-[rgba(120,60,20,.15)] bg-white/90 px-3.5 py-2.5 text-sm outline-0 focus:border-brand"
+        className="mt-2 w-full resize-none rounded-[11px] border border-[#e4e4e4] bg-transparent px-[13px] py-2 text-[13px] outline-0 placeholder:text-[#999] focus:border-brand dark:border-white/10"
       />
       <div className="mt-2 flex flex-wrap items-center gap-3">
-        <Button onClick={submit} disabled={pending} className="h-10 rounded-xl px-5 text-sm font-bold">
+        <Button onClick={submit} disabled={pending} className="h-9 rounded-[11px] bg-[#ff6815] px-4 text-[13px] font-bold shadow-[0_5px_12px_rgba(244,119,35,0.15)]">
           {pending ? t('reviews.sending') : mine ? t('reviews.update') : t('reviews.submit')}
         </Button>
         {onDelete && (
@@ -229,7 +223,7 @@ function ReviewForm({
             onClick={async () => {
               if (await confirm({ title: t('reviews.deleteMineTitle'), tone: 'danger', confirmText: t('reviews.delete') })) onDelete();
             }}
-            className="h-10 rounded-xl border border-red-200 px-4 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
+            className="h-9 rounded-[11px] border border-[#ffbcbc] px-4 text-[13px] font-bold text-red-600 hover:bg-red-50 disabled:opacity-50"
           >
             {deleting ? t('reviews.deleting') : t('reviews.deleteMine')}
           </button>

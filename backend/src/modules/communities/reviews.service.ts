@@ -28,15 +28,19 @@ function relativeTime(iso: string): string {
  * trong cùng transaction với ghi/xóa Review (xem recalcCourseRating).
  */
 export function createReviewsService(repo: CommunitiesRepository = communitiesRepository) {
-  const view = async (r: Review) => ({
+  const view = async (r: Review) => {
+    const author = await userBriefView(r.userId);
+    return {
     id: r.id,
     userId: r.userId,
-    name: (await userBriefView(r.userId)).name,
+    name: author.name,
+    avatarUrl: author.avatarUrl ?? null,
     rating: r.rating,
     text: r.text,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,
-  });
+    };
+  };
 
   return {
     async list(communityId: string, page: number, limit: number) {
@@ -70,6 +74,7 @@ export function createReviewsService(repo: CommunitiesRepository = communitiesRe
     async upsert(userId: string, communityId: string, input: { rating: number; text: string }) {
       await catalogService.getById(communityId);
       await enrollmentService.requireMembership(userId, communityId);
+      if ((await enrollmentService.getActiveRole(userId, communityId)) === 'owner') throw HttpError.forbidden('Chủ cộng đồng không thể tự đánh giá cộng đồng của mình');
       const { review, created } = await repo.upsertReview(communityId, userId, input.rating, input.text);
       return { review: await view(review), created };
     },

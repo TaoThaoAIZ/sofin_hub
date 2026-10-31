@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import i18n from '../../../i18n';
@@ -21,8 +21,14 @@ export function Modal({
   children: ReactNode;
   footer?: ReactNode;
 }) {
+  // Không đóng khi bấm ra ngoài; chỉ đóng bằng nút hoặc phím Esc.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div
         role="dialog"
         aria-modal="true"
@@ -31,7 +37,7 @@ export function Modal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="grid size-12 place-items-center rounded-2xl bg-brand/10">
-          <MaterialIcon name={icon} size={24} color="#f26a1b" />
+          <MaterialIcon name={icon} size={24} color="#ff570a" />
         </div>
         <h2 className="mt-3.5 text-lg font-extrabold">{title}</h2>
         <div className="mt-2 text-sm leading-relaxed text-stone-600">{children}</div>

@@ -1,3 +1,4 @@
+import { useDragReorder } from '../useDragReorder';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
@@ -78,11 +79,12 @@ function ModuleRow({
   const lessons = useLessons(communityId, courseId, open ? module.id : null);
   const reorder = useReorderLessons(communityId, courseId);
   const removeLesson = useDeleteLesson(communityId);
+  const dnd = useDragReorder(lessons.data, (ids, revert) => reorder.mutate({ moduleId: module.id, ids }, { onError: (e) => { revert(); toast(errText(e), 'error'); } }));
   const [editingLesson, setEditingLesson] = useState<ClassroomLesson | 'new' | null>(null);
   const [deleting, setDeleting] = useState<ClassroomLesson | null>(null);
 
   const moveLesson = (i: number, dir: -1 | 1) => {
-    const ids = (lessons.data ?? []).map((l) => l.id);
+    const ids = (dnd.items ?? []).map((l) => l.id);
     const j = i + dir;
     if (j < 0 || j >= ids.length) return;
     [ids[i], ids[j]] = [ids[j]!, ids[i]!];
@@ -122,8 +124,11 @@ function ModuleRow({
           {lessons.isPending && <p className="m-0 text-sm text-stone-400">{t('editor.row.loadingLessons')}</p>}
           {lessons.isError && <ErrorNote message={errText(lessons.error)} />}
           {lessons.data?.length === 0 && <p className="m-0 mb-2 text-sm text-stone-400">{t('editor.row.noLessons')}</p>}
-          {lessons.data?.map((l, i) => (
-            <div key={l.id} className="flex items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-white">
+          {dnd.items?.map((l, i) => (
+            <div key={l.id} {...dnd.rowProps(l.id)} className={`flex items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-white ${dnd.rowClass(l.id)}`}>
+              <span {...dnd.handleProps(l.id)} role="img" aria-label={t('editor.row.dragLesson')} title={t('editor.row.dragLesson')} className="grid size-6 flex-none place-items-center text-stone-400 hover:text-stone-700">
+                <MaterialIcon name="drag_indicator" size={18} />
+              </span>
               <MaterialIcon name={l.type === 'video' ? 'play_circle' : l.type === 'file' ? 'attach_file' : 'article'} size={19} color="#78716c" />
               <div className="min-w-0 flex-1">
                 <div className="truncate text-[13.5px] font-medium">{l.title}</div>
@@ -144,7 +149,7 @@ function ModuleRow({
             </div>
           ))}
           <button type="button" onClick={() => setEditingLesson('new')} className="mt-2 flex items-center gap-1.5 text-[13px] font-bold text-brand">
-            <MaterialIcon name="add" size={18} color="#f26a1b" /> {t('editor.row.addLesson')}
+            <MaterialIcon name="add" size={18} color="#ff570a" /> {t('editor.row.addLesson')}
           </button>
         </div>
       )}

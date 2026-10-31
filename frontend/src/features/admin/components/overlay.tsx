@@ -34,7 +34,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         <div
           key={toast.id}
           role={toast.kind === 'error' ? 'alert' : 'status'}
-          className="fixed right-6 bottom-6 z-[90] flex max-w-[calc(100vw-48px)] items-center gap-2.5 rounded-[14px] bg-[#1c1917] px-[18px] py-[13px] text-sm font-medium text-white shadow-[0_16px_40px_rgba(28,25,23,.3)]"
+          className="fixed right-6 bottom-6 z-[90] flex max-w-[calc(100vw-48px)] items-center gap-2.5 rounded-[14px] bg-[#1c1917] px-[18px] py-[13px] text-sm dark:border dark:border-white/10 dark:bg-[#2a3036] font-medium text-white shadow-[0_16px_40px_rgba(28,25,23,.3)]"
         >
           <MaterialIcon name={toast.kind === 'error' ? 'error' : 'check_circle'} size={20} filled color={toast.kind === 'error' ? '#f87171' : '#4ade80'} />
           <span className="min-w-0 break-words">{toast.message}</span>
@@ -113,7 +113,7 @@ function PopMenu({ state, onClose }: { state: MenuState; onClose: () => void }) 
               <span className="block truncate">{it.label}</span>
               {it.sub && <span className="mt-px block text-[11.5px] font-medium text-stone-400">{it.sub}</span>}
             </span>
-            {it.on && <MaterialIcon name="check" size={17} color="#f26a1b" />}
+            {it.on && <MaterialIcon name="check" size={17} color="#ff570a" />}
           </button>
         ))}
       </div>
@@ -190,7 +190,6 @@ export function ModalShell({
   return createPortal(
     <div
       className="fixed inset-0 z-[80] grid place-items-center overflow-y-auto bg-[rgba(28,25,23,.4)] p-5 backdrop-blur-[3px]"
-      onClick={() => !pending && onClose()}
     >
       <div
         role="dialog"
@@ -227,7 +226,7 @@ export function ModalShell({
             type="button"
             onClick={confirm}
             disabled={blocked}
-            className={`h-[46px] flex-1 rounded-[13px] border-0 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-45 ${danger ? 'bg-[#dc2626]' : 'bg-gradient-to-b from-[#ff8f45] to-[#f26a1b]'}`}
+            className={`h-[46px] flex-1 rounded-[13px] border-0 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-45 ${danger ? 'bg-[#dc2626]' : 'bg-gradient-to-b from-[#ff8f45] to-[#ff570a]'}`}
           >
             {pending ? t('overlay.processing') : cta}
           </button>
@@ -286,7 +285,7 @@ export function OptionChips<T extends string>({
 export function CheckField({ text, checked, onChange }: { text: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <button type="button" role="checkbox" aria-checked={checked} onClick={() => onChange(!checked)} className="flex items-center gap-2 border-0 bg-transparent p-0 text-left text-[13.5px] text-stone-800">
-      <MaterialIcon name={checked ? 'check_box' : 'check_box_outline_blank'} size={21} filled={checked} color={checked ? '#f26a1b' : '#a8a29e'} />
+      <MaterialIcon name={checked ? 'check_box' : 'check_box_outline_blank'} size={21} filled={checked} color={checked ? '#ff570a' : '#a8a29e'} />
       {text}
     </button>
   );

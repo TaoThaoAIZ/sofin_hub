@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Avatar } from '../../account/components/Avatar';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
@@ -123,7 +123,7 @@ function PollBlock({ courseId, post }: { courseId: string; post: Post }) {
             >
               <span className="absolute inset-y-0 left-0 bg-brand/15" style={{ width: `${pct}%` }} />
               <span className="relative flex min-w-0 items-center gap-2">
-                <MaterialIcon name={mine ? (poll.multiple ? 'check_box' : 'radio_button_checked') : poll.multiple ? 'check_box_outline_blank' : 'radio_button_unchecked'} size={18} color={mine ? '#f26a1b' : '#a8a29e'} />
+                <MaterialIcon name={mine ? (poll.multiple ? 'check_box' : 'radio_button_checked') : poll.multiple ? 'check_box_outline_blank' : 'radio_button_unchecked'} size={18} color={mine ? '#ff570a' : '#a8a29e'} />
                 <span className="truncate">{o.text}</span>
               </span>
               <span className="relative flex-none pl-2 text-[12.5px] font-semibold text-stone-600">
@@ -245,17 +245,59 @@ function CommentRow({ courseId, postId, c, viewerId, canModerate }: { courseId: 
 
 // Tệp đính kèm bài viết được chèn vào cuối nội dung dạng "Tệp đính kèm: <tên> — <url>" (xem PostComposer). Tách ra để hiển thị video/tệp đúng dạng.
 const ATTACH_RE = /^(?:Tệp đính kèm|Attachment): (.+?) — (\S+)$/;
+// Thành viên được gắn tên: dòng "Gắn thẻ: [[user:<id>|<tên>]] ..." ở cuối nội dung (xem PostComposer).
+const MENTION_LINE_RE = /^(?:Gắn thẻ|Tagged): (.+)$/;
+const MENTION_RE = /\[\[user:([A-Za-z0-9_-]+)\|([^\]]+)\]\]/g;
 const isVideoName = (n: string, url: string) => /\.mp4$/i.test(n) || /\.mp4(?:[?#]|$)/i.test(url);
+
+/** Link trong nội dung bài: URL đầy đủ hoặc đường dẫn nội bộ dạng /communities/... (bài thông báo cũ chỉ lưu đường dẫn). */
+const LINK_RE = /(https?:\/\/[^\s<]+|\/communities\/[^\s<]+)/g;
+const TRAILING_PUNCT = /[.,;:!?)\]}'"»]+$/;
+
+/** Hiển thị văn bản và biến link thành bấm được: link cùng trang web mở bằng router (không tải lại), link ngoài mở tab mới (chỉ http/https). */
+function LinkifiedText({ text }: { text: string }) {
+  const nodes: ReactNode[] = [];
+  let last = 0;
+  for (const m of text.matchAll(LINK_RE)) {
+    const raw = m[0].replace(TRAILING_PUNCT, '');
+    const start = m.index!;
+    if (start > last) nodes.push(text.slice(last, start));
+    last = start + raw.length;
+    let internal: string | null = raw.startsWith('/') ? raw : null;
+    if (!internal) {
+      try {
+        const u = new URL(raw);
+        if (u.origin === window.location.origin) internal = `${u.pathname}${u.search}${u.hash}`;
+      } catch {
+        /* URL hỏng: coi như chữ thường bên dưới */
+      }
+    }
+    const cls = 'text-brand underline decoration-brand/40 underline-offset-2 hover:decoration-brand break-all';
+    if (internal) {
+      nodes.push(<Link key={start} to={internal} className={cls}>{raw}</Link>);
+    } else if (safeUrl(raw)) {
+      nodes.push(<a key={start} href={safeUrl(raw)!} target="_blank" rel="noopener noreferrer" className={cls}>{raw}</a>);
+    } else {
+      nodes.push(raw);
+    }
+  }
+  if (last < text.length) nodes.push(text.slice(last));
+  return <>{nodes}</>;
+}
 
 function splitContent(content: string) {
   const text: string[] = [];
   const files: { name: string; url: string }[] = [];
+  const mentions: { id: string; name: string }[] = [];
   for (const line of content.split('\n')) {
     const m = ATTACH_RE.exec(line.trim());
+    const tg = MENTION_LINE_RE.exec(line.trim());
+    const found = tg ? [...tg[1]!.matchAll(MENTION_RE)] : [];
     if (m) files.push({ name: m[1]!, url: m[2]! });
+    else if (found.length) mentions.push(...found.map((x) => ({ id: x[1]!, name: x[2]! })));
     else text.push(line);
   }
-  return { text: text.join('\n').trim(), files };
+  return { text: text.join('\n').trim(), files, mentions };
 }
 
 function PostFile({ name, url }: { name: string; url: string }) {
@@ -273,7 +315,7 @@ function PostFile({ name, url }: { name: string; url: string }) {
   }
   return (
     <a href={href} target="_blank" rel="noreferrer noopener" download className="flex items-center gap-2.5 rounded-xl border border-[rgba(120,60,20,.1)] bg-white px-3 py-2 text-[13.5px] hover:border-brand">
-      <MaterialIcon name="attach_file" size={18} color="#f26a1b" />
+      <MaterialIcon name="attach_file" size={18} color="#ff570a" />
       <span className="min-w-0 flex-1 truncate font-medium">{name}</span>
     </a>
   );
@@ -391,7 +433,7 @@ export function PostCard({
   return (
     <article
       id={`post-${post.id}`}
-      className={`relative flex gap-4 rounded-[20px] border bg-white p-4 shadow-[0_8px_24px_rgba(120,60,20,.06)] ${
+      className={`relative flex gap-4 rounded-[20px] border bg-white p-4 max-md:gap-3 max-md:p-3 shadow-[0_8px_24px_rgba(120,60,20,.06)] ${
         highlighted ? 'border-brand ring-2 ring-brand/30' : 'border-[rgba(120,60,20,.08)]'
       } ${post.hidden ? 'opacity-70' : ''}`}
     >
@@ -411,7 +453,7 @@ export function PostCard({
             </span>
             {post.pinned && (
               <span className="flex items-center gap-1 rounded-lg bg-brand/10 px-2 py-0.5 text-xs font-semibold text-brand">
-                <MaterialIcon name="push_pin" size={13} filled color="#f26a1b" /> {t('post.pinned')}
+                <MaterialIcon name="push_pin" size={13} filled color="#ff570a" /> {t('post.pinned')}
               </span>
             )}
             {post.hidden && (
@@ -421,6 +463,9 @@ export function PostCard({
             )}
           </div>
 
+          {/* Mobile (Figma): chữ bên trái, ảnh thu nhỏ bên phải; desktop giữ nguyên (ảnh dưới chữ). */}
+          <div className="max-md:flex max-md:items-start max-md:gap-3">
+          <div className="min-w-0 flex-1">
           {editing ? (
             <div className="mt-2 flex flex-col gap-2">
               <textarea value={editText} onChange={(e) => setEditText(e.target.value)} rows={5} maxLength={4000} aria-label={t('post.editAria')} className={areaCls} />
@@ -444,7 +489,17 @@ export function PostCard({
             </div>
           ) : (
             <>
-              {parts.text && <p className="mt-2 text-[14.5px] leading-[1.6] break-words whitespace-pre-wrap text-stone-800">{parts.text}</p>}
+              {parts.text && <p className="mt-2 text-[14.5px] leading-[1.6] break-words whitespace-pre-wrap text-stone-800"><LinkifiedText text={parts.text} /></p>}
+              {parts.mentions.length > 0 && (
+                <p className="mt-2 flex flex-wrap items-center gap-1.5 text-[13px] text-stone-500">
+                  <MaterialIcon name="sell" size={15} color="currentColor" />
+                  {parts.mentions.map((m) => (
+                    <span key={m.id} className="rounded-lg bg-brand/10 px-2 py-0.5 font-semibold text-brand">
+                      @{m.name}
+                    </span>
+                  ))}
+                </p>
+              )}
               {parts.files.length > 0 && (
                 <div className="mt-3 flex flex-col gap-2">
                   {parts.files.map((f, i) => (
@@ -455,7 +510,9 @@ export function PostCard({
             </>
           )}
 
-          {img && !editing && <img src={img} alt={t('post.imageAlt')} loading="lazy" className="mt-3 max-h-[560px] w-full rounded-2xl border border-[rgba(120,60,20,.08)] bg-stone-50 object-contain" />}
+          </div>
+          {img && !editing && <img src={img} alt={t('post.imageAlt')} loading="lazy" className="mt-3 max-h-[560px] w-full max-md:mt-2 max-md:h-20 max-md:w-[125px] max-md:flex-none max-md:object-cover rounded-2xl border border-[rgba(120,60,20,.08)] bg-stone-50 object-contain" />}
+          </div>
           {post.poll && !editing && <PollBlock courseId={courseId} post={post} />}
 
           {post.tags.length > 0 && (
@@ -474,7 +531,7 @@ export function PostCard({
               onClick={() => like.mutate(post.id)}
               disabled={like.isPending}
               aria-pressed={!!post.viewerLiked}
-              className={`flex h-9 items-center gap-2 rounded-xl px-3.5 text-[13px] font-bold transition-colors ${post.viewerLiked ? 'bg-brand text-white shadow-[0_4px_12px_rgba(242,106,27,.35)]' : 'bg-stone-100 text-stone-700 hover:bg-brand/10'}`}
+              className={`flex h-9 items-center gap-2 rounded-xl px-3.5 text-[13px] font-bold transition-colors ${post.viewerLiked ? 'bg-brand text-white shadow-[0_4px_12px_rgba(255,87,10,.35)]' : 'bg-stone-100 text-stone-700 hover:bg-brand/10'}`}
             >
               <MaterialIcon name="thumb_up" size={16} filled={post.viewerLiked} color={post.viewerLiked ? '#ffffff' : '#57534e'} />
               {post.likesCount}
@@ -494,7 +551,7 @@ export function PostCard({
               </button>
               {menuOpen && (
                 <div role="menu" className="absolute right-0 bottom-full z-20 mb-1 w-52 rounded-xl border border-[rgba(120,60,20,.12)] bg-white p-1.5 shadow-lg">
-                  {(isAuthor || mod) && (
+                  {isAuthor && (
                     <button role="menuitem" type="button" className={menuItem} onClick={startEdit}>
                       <MaterialIcon name="edit" size={18} /> {t('post.editPost')}
                     </button>

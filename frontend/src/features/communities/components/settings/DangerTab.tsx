@@ -11,15 +11,15 @@ import { CancelButton, ErrorLine, errorText, INPUT_CLASS, Modal, PrimaryButton }
 
 function Zone({ title, desc, children }: { title: string; desc: string; children: ReactNode }) {
   return (
-    <div className="rounded-2xl border border-red-200 bg-red-50/40 p-4">
-      <div className="text-[15px] font-bold text-red-700">{title}</div>
+    <div className="rounded-2xl border border-red-200 bg-red-50/40 p-4 dark:border-red-400/30 dark:bg-red-500/10">
+      <div className="text-[15px] font-bold text-red-700 dark:text-red-300">{title}</div>
       <p className="mt-1 text-sm text-stone-600">{desc}</p>
       <div className="mt-3">{children}</div>
     </div>
   );
 }
 
-const dangerBtn = 'h-10 rounded-xl border border-red-300 bg-white px-5 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50';
+const dangerBtn = 'h-10 rounded-xl border border-red-300 bg-white px-5 text-sm font-semibold text-red-600 hover:bg-red-50 dark:border-red-400/40 dark:bg-transparent dark:text-red-300 dark:hover:bg-red-500/15 disabled:opacity-50';
 
 export function DangerTab({ course, viewerRole }: { course: CommunityDetail; viewerRole: ViewerRole }) {
   const { t } = useTranslation('communities');
@@ -27,7 +27,7 @@ export function DangerTab({ course, viewerRole }: { course: CommunityDetail; vie
   const isPlatformAdmin = viewerRole === 'platform_admin';
   return (
     <section className="glass flex flex-col gap-4 rounded-[26px] p-6">
-      <h2 className="m-0 text-lg font-extrabold text-red-700">{t('danger.title')}</h2>
+      <h2 className="m-0 text-lg font-extrabold text-red-700 dark:text-red-300">{t('danger.title')}</h2>
       {isOwner && <TransferZone course={course} />}
       {isOwner && <DeleteZone course={course} />}
       {isPlatformAdmin && <LockZone course={course} />}

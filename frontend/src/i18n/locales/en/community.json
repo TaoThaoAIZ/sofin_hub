@@ -29,6 +29,7 @@
     },
     "moderation": "Moderation",
     "revenue": "Revenue & payouts",
+    "surveys": "Surveys",
     "settings": "Settings"
   },
   "rightSidebar": {
@@ -42,7 +43,7 @@
     "premium1": "Access exclusive courses",
     "premium2": "In-depth resources",
     "premium3": "1:1 support from experts",
-    "comingSoonTitle": "Coming soon — Phase 8 in PLAN.md (Premium payment gateway not finalized)",
+    "comingSoonTitle": "Coming soon",
     "upgrade": "Upgrade (coming soon)",
     "leave": "Leave community",
     "leaving": "Leaving…",
@@ -169,7 +170,7 @@
     "sortJoined": "Newest members",
     "filterAll": "All",
     "filterOnline": "Online now",
-    "filterAdmin": "Admins",
+    "filterAdmin": "Admins & mods",
     "closeNotice": "Dismiss notice",
     "title": "Members",
     "subtitle": "Connect, learn and grow with the community.",
@@ -284,6 +285,11 @@
     "filterBtn": "Filter events",
     "icsToast": "Community calendar downloaded (.ics)",
     "icsTitle": "Download an .ics file with all community events to import into Google/Apple/Outlook Calendar",
+    "docxToast": "Community calendar downloaded (.docx)",
+    "docxTitle": "Download a Word (.docx) file listing all events, opens in Word/Google Docs",
+    "docxAll": "Download calendar as Word",
+    "docxEvent": "Download Word file (.docx)",
+    "docxEventToast": "Event downloaded (.docx)",
     "subscribeAll": "Download community calendar",
     "close": "Close",
     "create": "Create event",
@@ -318,6 +324,7 @@
     "processing": "Processing…",
     "rsvpCancel": "Registered — click to cancel",
     "rsvp": "Register to attend",
+    "pastDateError": "You cannot schedule an event in the past",
     "pastEvent": "This event has passed",
     "icsEventToast": "Calendar file downloaded (.ics)",
     "addToCal": "Download calendar (.ics)",
@@ -328,7 +335,12 @@
     "deleteConfirm": "Delete event",
     "deleted": "Event deleted",
     "cancelled": "Cancelled",
-    "cancelledEvent": "This event has been cancelled"
+    "cancelledEvent": "This event has been cancelled",
+    "subtitle": "Manage and join events in your community",
+    "inviteAll": "Select all members",
+    "inviteClear": "Clear all ({{n}})",
+    "inviteCapped": "Limit of {{max}} invitees reached",
+    "linkError": "The meeting link must be a valid http(s) URL, e.g. https://meet.google.com/abc"
   },
   "ui": {
     "close": "Close",
@@ -441,8 +453,17 @@
       "videoUploaded": "Video uploaded",
       "bodyMin": "Article content needs at least {{min}} characters (currently {{n}}).",
       "quizAfterSave": "Save the lesson first, then reopen it to add a quiz (optional).",
+      "extraVideos": "Extra videos",
+      "extraVideosHint": "({{n}}/{{max}}) – add more videos to this lesson",
+      "extraVideoName": "Name of video {{n}}",
+      "extraVideoDefault": "Video {{n}}",
+      "extraVideoLink": "Extra YouTube/Vimeo video link",
+      "addVideoFile": "Upload more videos (multi-select)",
+      "addVideoLink": "Add link",
+      "listMore": "Show {{n}} more",
+      "listLess": "Show less",
       "slideDrop": "Upload lecture slides",
-      "slideHint": "PDF, PPT, PPTX, PPSX · up to 200MB",
+      "slideHint": "PDF, PPT, PPTX, PPSX",
       "cancelUpload": "Cancel",
       "tooManyFiles": "Up to {{max}} files (slides included)"
     },
@@ -459,6 +480,7 @@
       "loadingLessons": "Loading lessons…",
       "noLessons": "This module has no lessons yet.",
       "lessonMinutes": "{{n}} min",
+      "dragLesson": "Drag to reorder lesson",
       "lessonUp": "Move lesson up",
       "lessonDown": "Move lesson down",
       "editLesson": "Edit lesson",
@@ -508,7 +530,7 @@
     "statModules": "Modules",
     "statLessons": "Lessons",
     "statStudents": "Students",
-    "addLesson": "Add lesson",
+    "addLesson": "Add module",
     "pickCourse": "Choose a course",
     "courseMeta": "{{modules}} modules · {{lessons}} lessons",
     "progressNamed": "Progress: {{title}}",
@@ -616,6 +638,13 @@
     "fileNote": "Files will be inserted as links at the end of the post.",
     "removeTag": "Remove tag {{tag}}",
     "tagsFull": "Tag limit reached",
+    "mentionPrefix": "Tagged",
+    "mentionSearching": "Searching...",
+    "mentionAria": "Search members to tag",
+    "mentionsFull": "Maximum tagged members reached",
+    "mentionEmpty": "No matching members",
+    "maxMentions": "You can tag up to {{max}} members",
+    "removeMention": "Remove tag {{name}}",
     "tagPh": "Type a tag and press Enter",
     "tagAria": "Enter a tag",
     "suggest": "Suggestions:",
@@ -637,7 +666,7 @@
     "submit": "Post",
     "tooLong": "Content is too long",
     "video": "Video",
-    "videoHint": "Upload an mp4 video from your device (max 25 MB)"
+    "videoHint": "Upload an mp4 video from your device (max 2GB)"
   },
   "page": {
     "loading": "Loading community…"
@@ -748,7 +777,7 @@
       "videoDrop": "Paste a YouTube/Vimeo link or upload a video",
       "videoHint": "Supports youtube.com, youtu.be, vimeo.com or upload a video (mp4, webm, mov · up to 2GB)",
       "fileDrop": "Upload lesson documents",
-      "fileHint": "PDF, DOCX, XLSX, PPT/PPTX, CSV, ZIP… · up to 25MB",
+      "fileHint": "PDF, DOCX, XLSX, PPT/PPTX, CSV, ZIP…",
       "chooseFile": "Choose file",
       "note": "Notes for learners",
       "notePh": "Summary, reference links, homework...",
@@ -820,6 +849,103 @@
     "turnOff": "Turn off",
     "saved": "Saved",
     "rateErr": "Enter a percentage from 0 to {{max}}",
+    "ol": {
+      "title": "Referrers in this community",
+      "sub": "You pay the commission, so you can see every referrer, the people they invited and the commission amounts. Click a row for details.",
+      "totReferrers": "Referrers",
+      "totReferred": "People invited",
+      "totPaying": "Paying",
+      "totCommission": "Commission owed",
+      "totPending": "Pending payout",
+      "colReferrer": "Referrer",
+      "colReferred": "Invited",
+      "colPaying": "Paying",
+      "colCommission": "Commission",
+      "colPending": "Pending",
+      "empty": "Nobody has referred new members yet. People who join through a referral link will show up here.",
+      "more": "Show {{n}} more",
+      "less": "Show less",
+      "status": {
+        "paid": "Paying",
+        "joined": "Joined",
+        "none": "Not joined"
+      }
+    },
+    "po": {
+      "title": "Pay commissions to collaborators",
+      "sub": "Manage and record commission payments to members who refer new users.",
+      "rangeFrom": "From",
+      "rangeTo": "To",
+      "rangeErr": "The start date must be on or before the end date.",
+      "kpiCollab": "Total collaborators",
+      "kpiReferred": "Total people referred",
+      "kpiDue": "Commission to pay",
+      "kpiPaid": "Paid out",
+      "vsPrev": "vs previous period",
+      "newInRange": "new in period",
+      "listTitle": "Collaborators to pay",
+      "listSub": "Select people to mark as paid after you have transferred the money.",
+      "search": "Search by name or email",
+      "filter": "Filter by status",
+      "filterAll": "All",
+      "filterDue": "To pay",
+      "filterPaid": "Paid",
+      "colCollab": "Collaborator",
+      "colReferred": "Referred",
+      "colRate": "Rate",
+      "colTotal": "Total commission",
+      "colDue": "To pay",
+      "colStatus": "Status",
+      "colAction": "Actions",
+      "joined": "Joined: {{date}}",
+      "status": {
+        "due": "To pay",
+        "paid": "Paid",
+        "none": "No commission"
+      },
+      "pay": "Pay",
+      "menuReferred": "View referred people",
+      "selectAll": "Select every collaborator to pay on this page",
+      "selectRow": "Select {{name}}",
+      "rowOptions": "Options for {{name}}",
+      "empty": "No collaborators yet. People who join through a referral link will show up here.",
+      "emptyFilter": "No collaborators match the filter.",
+      "showing": "Showing {{from}}-{{to}} of {{total}} collaborators",
+      "pagination": "Pagination",
+      "prev": "Previous page",
+      "next": "Next page",
+      "payTitle": "Pay commissions",
+      "payHint": "Select people in the table, transfer them the money, then press Pay to record it.",
+      "payBulk": "Pay in bulk",
+      "payBulkN": "Pay in bulk ({{n}})",
+      "export": "Export payment list",
+      "exportFail": "Could not export the list. Please try again.",
+      "histTitle": "Recent payouts",
+      "histAll": "View all",
+      "histLess": "Show less",
+      "histEmpty": "No payouts yet.",
+      "transferred": "Transferred",
+      "note": "Paid commissions are marked as transferred: the recipient can no longer withdraw them through the platform and your revenue is no longer reduced by them.",
+      "confirmTitle": "Confirm the transfer",
+      "confirmOne": "Have you transferred {{amount}} to {{name}}? The commission will be marked as paid.",
+      "confirmMany": "Have you transferred a total of {{amount}} to {{n}} collaborators? Their commissions will be marked as paid.",
+      "confirmBtn": "Yes, I transferred",
+      "paidToast": "Recorded a payout of {{amount}} to {{n}} collaborators.",
+      "leftToast": "{{n}} collaborators already withdrew part of their commission through the platform, so only the remainder was recorded.",
+      "nothingToast": "Nothing to record as paid.",
+      "referredTitle": "People invited by {{name}}",
+      "referredBody": "People who joined the community through this collaborator's referral link.",
+      "referredEmpty": "Nobody invited yet.",
+      "close": "Close",
+      "payeeBank": "Bank",
+      "payeeNumber": "Account number",
+      "payeeHolder": "Account holder",
+      "payeeNone": "{{name}} has not added a payout account yet. Contact them for transfer details before marking this as paid.",
+      "copyNumber": "Copy account number",
+      "copied": "Account number copied",
+      "exportNone": "No commission is due for payment in this date range"
+    },
+    "pageTitle": "Referrals & Commission",
     "ownerReferrers": "Active referrers",
     "ownerReferred": "People invited",
     "ownerCommission": "Commission generated",
@@ -863,6 +989,77 @@
         "title": "Get the SofinHub app",
         "cta": "Get it",
         "again": "Get again"
+      }
+    }
+  },
+  "mobile": {
+    "back": "Back",
+    "menu": "Open menu",
+    "close": "Close",
+    "search": "Search",
+    "notifications": "Notifications",
+    "login": "Log in",
+    "tabs": {
+      "aria": "Main navigation",
+      "home": "Home",
+      "community": "Communities",
+      "chat": "Chat",
+      "me": "Profile"
+    },
+    "promo": {
+      "badge": "Learning & growth community",
+      "title": "Create your own community",
+      "desc": "Connect people who share your passion, share knowledge and spread positive value.",
+      "cta": "Create a community now",
+      "note": "Free to create · Takes only 1 minute"
+    }
+  },
+  "tour": {
+    "replay": "How to use",
+    "later": "Later",
+    "start": "Quick tour",
+    "skip": "Skip",
+    "back": "Back",
+    "next": "Next",
+    "finish": "Let's go",
+    "stepOf": "STEP {{n}}/{{total}}",
+    "introTitle": "Welcome, new member!",
+    "introBody": "A quick look at posting, filtering topics and interacting: {{count}} steps, about 40 seconds.",
+    "checklistNote": "The “leave a comment” item is covered in a later step.",
+    "postNote": "Comment on your first post to finish the getting-started card!",
+    "post": {
+      "like": "Like posts you enjoy",
+      "comment": "Comment to ask more or give feedback",
+      "share": "Share with people who need it"
+    },
+    "steps": {
+      "composer": {
+        "title": "Share with the community",
+        "body": "Write a question or anything you want to share, then send. Attach a photo, video or file, tag people, or create a poll to ask for opinions."
+      },
+      "checklist": {
+        "title": "Finish the getting-started steps",
+        "body": "Complete the items in this card to be ready to explore every feature. Finished items get an orange tick."
+      },
+      "topics": {
+        "title": "Filter posts by topic",
+        "body": "Pick Trending to see top posts, or a topic such as General discussion. Swipe sideways for more topics."
+      },
+      "post": {
+        "title": "Interact with posts",
+        "body": ""
+      },
+      "menu": {
+        "title": "Open the menu to go anywhere",
+        "body": "Tap here for the community's sections such as Classroom, Events, Members, Leaderboard and Tools, plus general items like My communities, Chat and Profile settings."
+      },
+      "search": {
+        "title": "Find what you need fast",
+        "body": "Tap the magnifier to search courses, tools or topics you care about without scrolling the whole feed."
+      },
+      "bell": {
+        "title": "Never miss new activity",
+        "body": "The number on the bell is your unread notifications. Tap to see what's new in the community."
       }
     }
   }

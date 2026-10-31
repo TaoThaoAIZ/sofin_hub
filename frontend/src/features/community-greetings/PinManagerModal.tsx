@@ -53,11 +53,11 @@ export function PinManagerModal({ communityId, onClose, onRetry, retryLabel }: {
   const fmt = (iso: string) => new Date(iso).toLocaleDateString(i18n.language === 'en' ? 'en-US' : 'vi-VN', { day: 'numeric', month: 'short', year: 'numeric' });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div role="dialog" aria-modal="true" aria-label={t('pins.title')} className="flex max-h-[85vh] w-full max-w-[520px] flex-col overflow-hidden rounded-3xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <header className="flex items-center gap-3 border-b border-stone-100 px-5 py-4">
           <div className="grid size-10 place-items-center rounded-xl bg-brand/10">
-            <MaterialIcon name="push_pin" size={20} color="#f26a1b" />
+            <MaterialIcon name="push_pin" size={20} color="#ff570a" />
           </div>
           <div className="min-w-0 flex-1">
             <h2 className="m-0 text-[17px] font-extrabold">{t('pins.title')}</h2>

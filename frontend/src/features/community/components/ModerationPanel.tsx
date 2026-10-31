@@ -82,9 +82,9 @@ function ReportCard({ report, courseId }: { report: Report; courseId: string | n
                 <MaterialIcon name="visibility_off" size={18} /> {t('moderation.hideBtn')}
               </button>
             )}
-            <button type="button" disabled={resolve.isPending} onClick={() => setConfirmBan(true)} className={`${ghostBtn} !text-red-600`}>
+            {report.targetRole !== 'owner' && <button type="button" disabled={resolve.isPending} onClick={() => setConfirmBan(true)} className={`${ghostBtn} !text-red-600`}>
               <MaterialIcon name="gavel" size={18} color="#dc2626" /> {t('moderation.banBtn')}
-            </button>
+            </button>}
           </div>
           <ErrorNote message={resolve.isError && !confirmBan ? errText(resolve.error) : null} />
         </div>
@@ -163,7 +163,7 @@ export function ModerationPage() {
   if (!isModPlus(course.viewerRole)) {
     return (
       <div className="glass mx-auto max-w-lg rounded-3xl p-8 text-center">
-        <MaterialIcon name="lock" size={36} filled color="#f26a1b" />
+        <MaterialIcon name="lock" size={36} filled color="#ff570a" />
         <h1 className="mt-2 mb-1 text-xl font-extrabold">{t('moderation.staffOnlyTitle')}</h1>
         <p className="m-0 text-sm text-stone-600">{t('moderation.staffOnlyDesc')}</p>
       </div>

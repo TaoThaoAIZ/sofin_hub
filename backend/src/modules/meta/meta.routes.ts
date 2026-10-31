@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { env } from '../../config/env.js';
 import { prisma } from '../../db/prisma.js';
 import { inMemoryCatalogRepository } from '../catalog/catalog.repository.js';
 import { categories } from '../catalog/catalog.seed.js';
@@ -32,4 +33,19 @@ metaRouter.get('/stats', async (_req, res) => {
   const votes = agg.reduce((n, c) => n + c.ratingCount, 0);
   const rating = votes > 0 ? Math.round((agg.reduce((n, c) => n + c.rating * c.ratingCount, 0) / votes) * 10) / 10 : null;
   res.json({ data: { learners, courses, instructors, rating } });
+});
+
+/**
+ * Cổng phiên bản cho app mobile: app so `version` của mình với `minVersion` để biết có bắt buộc cập nhật không.
+ * Cấu hình bằng env MOBILE_MIN_VERSION / MOBILE_LATEST_VERSION / MOBILE_*_STORE_URL; chưa đặt thì `minVersion` = null (không ép).
+ */
+metaRouter.get('/meta/app-version', (req, res) => {
+  const platform = req.query.platform === 'ios' ? 'ios' : req.query.platform === 'android' ? 'android' : null;
+  res.json({
+    data: {
+      minVersion: env.MOBILE_MIN_VERSION ?? null,
+      latestVersion: env.MOBILE_LATEST_VERSION ?? null,
+      storeUrl: platform === 'ios' ? (env.MOBILE_IOS_STORE_URL ?? null) : platform === 'android' ? (env.MOBILE_ANDROID_STORE_URL ?? null) : null,
+    },
+  });
 });

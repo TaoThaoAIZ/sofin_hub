@@ -81,6 +81,17 @@ export async function refundStatuses(paymentIds: string[]) {
   return new Map(rows.map((r) => [r.paymentId, r.status])); // bản ghi sau (mới hơn) ghi đè bản trước
 }
 
+/** Giao dịch "đầu tiên" nhưng người dùng từng trả tiền cộng đồng đó trước đó (vd. gia hạn gói đã hết hạn) → hiển thị là gia hạn. */
+export async function returningPaymentIds(userId: string, items: { id: string; kind: string; communityId: string; createdAt: string | Date }[]) {
+  const initials = items.filter((p) => p.kind === 'initial');
+  if (initials.length === 0) return new Set<string>();
+  const earlier = await prisma.payment.findMany({
+    where: { userId, status: { in: ['succeeded', 'refunded'] }, kind: { in: ['initial', 'renewal'] }, communityId: { in: [...new Set(initials.map((p) => p.communityId))] } },
+    select: { id: true, communityId: true, createdAt: true },
+  });
+  return new Set(initials.filter((p) => earlier.some((e) => e.communityId === p.communityId && e.id !== p.id && e.createdAt < new Date(p.createdAt))).map((p) => p.id));
+}
+
 export const cardsService = {
   async list(userId: string): Promise<SavedCardView[]> {
     const cards = await cardsOf(userId);

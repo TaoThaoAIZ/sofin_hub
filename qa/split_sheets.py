@@ -38,6 +38,8 @@ SHORT_NAMES = {
     "BANK": "Thanh toán chuyển khoản",
     "TOOLS": "Tải Tool",
     "BOT": "Chatbot hỗ trợ",
+    "THEME": "Giao diện sáng/tối & Trang chủ mới",
+    "UPD16": "Cập nhật 16/10/2026",
     "HOST": "Phí hosting & GD giới thiệu",
     "CXT": "Bổ sung: đăng nhập, trắc nghiệm, giới thiệu CĐ",
     "ADMIN": "Quản trị & Kiểm duyệt",

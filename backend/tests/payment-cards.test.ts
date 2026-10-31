@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
-import { makeClient, startTestServer, useTestDb, type TestDb, type TestServer } from './helpers.js';
+import { makeClient, startTestServer, useTestDb, type TestDb, type TestServer , refundViaService } from './helpers.js';
 
 const thisYear = new Date().getUTCFullYear();
 /** VND: 7 USD ≈ 175.000đ/tháng, 48 USD ≈ 1.200.000đ/năm (seedVnd). */
@@ -216,7 +216,7 @@ describe('quản lý thẻ (Cài đặt > Thanh toán) + tổng quan thanh toán
       const p = await pay(u, communityId);
       let row = (await c.call('GET', '/me/payments', { token: u.token })).body.data[0];
       assert.equal(row.refundStatus, null);
-      const rr = await c.call('POST', `/payments/${p.id}/refund-request`, { token: u.token, body: { reason: 'không cần nữa' } });
+      const rr = await refundViaService(p.id, u.id, 'không cần nữa');
       assert.equal(rr.status, 201, JSON.stringify(rr.body));
       row = (await c.call('GET', '/me/payments', { token: u.token })).body.data[0];
       assert.equal(row.refundStatus, 'approved');

@@ -1,16 +1,22 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Footer } from '../components/layout/Footer';
 import { Header } from '../components/layout/Header';
 import { Button } from '../components/ui/Button';
 import { ApiError } from '../lib/api';
+import { useAuth } from '../features/auth/AuthContext';
 import { validateEmail, validateRequired } from '../features/auth/validation';
 import { Alert, Field } from '../features/account/components/Field';
 import { sendContact } from '../features/support/api';
 
 export function ContactPage() {
   const { t } = useTranslation('misc');
-  const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' });
+  const { user } = useAuth();
+  const [form, setForm] = useState({ name: user ? `${user.firstName} ${user.lastName}`.trim() : '', email: user?.email ?? '', subject: '', message: '' });
+  // Phiên đăng nhập có thể về sau khi form đã vẽ (tải lại trang): điền khi ô còn trống.
+  useEffect(() => {
+    if (user) setForm((f) => ({ ...f, name: f.name || `${user.firstName} ${user.lastName}`.trim(), email: f.email || user.email }));
+  }, [user]);
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -46,7 +52,7 @@ export function ContactPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen">
       <Header />
       <main className="mx-auto w-full max-w-[680px] px-4 py-8 md:py-12">
         <h1 className="m-0 text-[clamp(26px,3vw,36px)] font-extrabold tracking-[-1px]">{t('contact.title')}</h1>

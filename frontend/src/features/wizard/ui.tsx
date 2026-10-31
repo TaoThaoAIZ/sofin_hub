@@ -10,7 +10,7 @@ export const inputCls = (error?: string) =>
 export function IconBadge({ name, size = 40 }: { name: string; size?: number }) {
   return (
     <span className="grid flex-none place-items-center rounded-full bg-[#fff1e6]" style={{ width: size, height: size }}>
-      <MaterialIcon name={name} size={size / 2} color="#f26a1b" filled />
+      <MaterialIcon name={name} size={size / 2} color="#ff570a" filled />
     </span>
   );
 }
@@ -83,7 +83,7 @@ export function CheckRow({ checked, onChange, children, error }: { checked: bool
         onClick={() => onChange(!checked)}
         className="flex items-center gap-3 border-0 bg-transparent p-0 py-2 text-left text-[14.5px] text-stone-800"
       >
-        <MaterialIcon name={checked ? 'check_box' : 'check_box_outline_blank'} size={24} filled={checked} color={checked ? '#f26a1b' : error ? '#f87171' : '#a8a29e'} />
+        <MaterialIcon name={checked ? 'check_box' : 'check_box_outline_blank'} size={24} filled={checked} color={checked ? '#ff570a' : error ? '#f87171' : '#a8a29e'} />
         {children}
       </button>
       {error && <FieldError indent>{error}</FieldError>}
@@ -112,7 +112,7 @@ export function SegTabs<T extends string>({
           aria-selected={value === o.id}
           onClick={() => onChange(o.id)}
           className={`relative flex h-[42px] items-center justify-center rounded-[11px] border-[1.5px] px-3 text-[14.5px] font-semibold ${
-            value === o.id ? 'border-[#fdba74] bg-white text-brand shadow-[0_2px_8px_rgba(242,106,27,.12)]' : 'border-transparent bg-transparent text-stone-600'
+            value === o.id ? 'border-[#fdba74] bg-white text-brand shadow-[0_2px_8px_rgba(255,87,10,.12)]' : 'border-transparent bg-transparent text-stone-600'
           }`}
         >
           {o.label}

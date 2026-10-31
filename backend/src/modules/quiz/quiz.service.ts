@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../../db/prisma.js';
 import { HttpError } from '../../utils/http-error.js';
 import { classroomService } from '../classroom/classroom.service.js';
+import { lessonWatchStore } from '../classroom/lesson-watch.store.js';
 import { quizStore, type StoredQuestion } from './quiz.store.js';
 
 export const MAX_QUESTIONS = 50;
@@ -26,6 +27,9 @@ export const attemptBody = z.strictObject({
   /** Vị trí lựa chọn cho từng câu theo đúng thứ tự câu hỏi; null = bỏ trống (tính sai). */
   answers: z.array(z.number().int().min(0).nullable()).max(MAX_QUESTIONS),
 });
+
+/** Kiểm 1 câu ngay khi học viên chọn (wizard từng câu). */
+export const checkBody = z.strictObject({ questionId: z.string().min(1).max(64), answer: z.number().int().min(0) });
 
 const publicQuestion = (q: StoredQuestion) => ({ id: q.id, text: q.text, options: q.options });
 
@@ -78,11 +82,30 @@ export const quizService = {
   },
 
   /**
+   * Chấm 1 câu để FE báo đúng/sai ngay lúc chọn. Chỉ trả `correct`, KHÔNG lộ đáp án đúng (đáp án chỉ lộ sau khi đạt, ở `attempt`).
+   * Không ghi lượt làm: điểm đạt vẫn chỉ tính qua `attempt` (nộp cả bài).
+   */
+  async check(communityId: string, lessonId: string, userId: string, body: z.infer<typeof checkBody>) {
+    const { lesson } = await classroomService.assertLessonAccessible(communityId, lessonId, userId);
+    if (!(await lessonWatchStore.hasWatchedAll(userId, lesson))) {
+      throw HttpError.coded(409, 'VIDEO_REQUIRED', 'Bạn cần xem hết tất cả video của bài học trước khi làm trắc nghiệm');
+    }
+    const quiz = await quizStore.findByLesson(lessonId);
+    const q = quiz?.questions.find((x) => x.id === body.questionId);
+    if (!q) throw HttpError.notFound('Không tìm thấy câu hỏi');
+    return { questionId: q.id, correct: body.answer === q.correctIndex };
+  },
+
+  /**
    * Chấm bài ở SERVER. Trả điểm + đúng/sai từng câu; đáp án đúng chỉ lộ ra khi học viên đã ĐẠT
    * (để thử lại không thể đọc thẳng đáp án từ phản hồi).
    */
   async attempt(communityId: string, lessonId: string, userId: string, body: z.infer<typeof attemptBody>) {
-    await classroomService.assertLessonAccessible(communityId, lessonId, userId);
+    const { lesson } = await classroomService.assertLessonAccessible(communityId, lessonId, userId);
+    // Bài có video: ai cũng phải xem hết video trước khi làm trắc nghiệm.
+    if (!(await lessonWatchStore.hasWatchedAll(userId, lesson))) {
+      throw HttpError.coded(409, 'VIDEO_REQUIRED', 'Bạn cần xem hết tất cả video của bài học trước khi làm trắc nghiệm');
+    }
     const quiz = await quizStore.findByLesson(lessonId);
     if (!quiz || quiz.questions.length === 0) throw HttpError.notFound('Bài học này chưa có trắc nghiệm');
     if (body.answers.length !== quiz.questions.length) throw HttpError.badRequest('Số câu trả lời không khớp số câu hỏi');

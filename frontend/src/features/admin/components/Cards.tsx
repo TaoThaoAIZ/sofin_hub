@@ -28,7 +28,7 @@ export function KpiGrid({ items, min = 170 }: { items: Kpi[]; min?: number }) {
             <div className="flex items-center justify-between gap-2">
               <span className="text-[13px] font-medium text-stone-500">{k.label}</span>
               <span className="grid size-[34px] flex-none place-items-center rounded-[10px] bg-[#fff1e6]">
-                <MaterialIcon name={k.icon} size={19} color="#f26a1b" />
+                <MaterialIcon name={k.icon} size={19} color="#ff570a" />
               </span>
             </div>
             <div className="mt-1 text-[26px] font-extrabold tracking-[-.02em] tabular-nums">{k.value}</div>
@@ -66,7 +66,7 @@ export interface ChartSeries {
   color?: string;
 }
 
-const SERIES_COLORS = ['#f26a1b', '#2563eb', '#16a34a', '#a855f7', '#dc2626'];
+const SERIES_COLORS = ['#ff570a', '#2563eb', '#16a34a', '#a855f7', '#dc2626'];
 
 const compact = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(1).replace(/\.0$/, '')}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1).replace(/\.0$/, '')}K` : String(Math.round(n)));
 
@@ -207,7 +207,7 @@ export function ChartCard({
 
 /* ============================ Cơ cấu / kv ============================ */
 
-const BAR_COLORS = ['#f26a1b', '#fb923c', '#fdba74', '#fed7aa', '#ffedd5'];
+const BAR_COLORS = ['#ff570a', '#fb923c', '#fdba74', '#fed7aa', '#ffedd5'];
 
 export function BreakdownCard({ title, sub, items }: { title: string; sub?: string; items: { label: string; value: string; pct: number }[] }) {
   const { t } = useTranslation('admin-parts');
@@ -337,7 +337,7 @@ export function QuickCard({ title, items }: { title: string; items: { icon: stri
       <div className="grid grid-cols-2 gap-2.5">
         {items.map((i) => (
           <button key={i.label} type="button" onClick={i.onClick} className="flex flex-col gap-2.5 rounded-[14px] border-[1.5px] border-[#f1ebe6] bg-transparent p-3.5 text-left hover:border-[#fdba74] hover:bg-[#fffaf6]">
-            <MaterialIcon name={i.icon} size={22} color="#f26a1b" />
+            <MaterialIcon name={i.icon} size={22} color="#ff570a" />
             <span className="text-[13.5px] font-semibold">{i.label}</span>
           </button>
         ))}
@@ -396,7 +396,7 @@ export function ChecklistCard({ title, items, onToggle }: { title: string; items
     <Card title={title}>
       <div className="flex items-center gap-2.5">
         <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#f5f1ed]">
-          <div className="h-full rounded-full" style={{ width: `${pct}%`, background: done === items.length ? '#16a34a' : '#f26a1b' }} />
+          <div className="h-full rounded-full" style={{ width: `${pct}%`, background: done === items.length ? '#16a34a' : '#ff570a' }} />
         </div>
         <span className="text-[12.5px] font-bold">
           {done}/{items.length}
@@ -413,7 +413,7 @@ export function ChecklistCard({ title, items, onToggle }: { title: string; items
             onClick={() => onToggle(i.key)}
             className="flex items-center gap-3 border-0 border-t border-[#f4efeb] bg-transparent py-2.5 text-left disabled:cursor-default"
           >
-            <MaterialIcon name={i.checked ? 'check_box' : 'check_box_outline_blank'} size={21} filled={i.checked} color={i.checked ? '#f26a1b' : '#a8a29e'} />
+            <MaterialIcon name={i.checked ? 'check_box' : 'check_box_outline_blank'} size={21} filled={i.checked} color={i.checked ? '#ff570a' : '#a8a29e'} />
             <span className="min-w-0 flex-1">
               <span className="block text-[13.5px] font-semibold">{i.label}</span>
               {i.sub && <span className="mt-px block text-[12.5px] text-stone-500">{i.sub}</span>}

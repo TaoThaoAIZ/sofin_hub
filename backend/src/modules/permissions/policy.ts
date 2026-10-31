@@ -58,6 +58,14 @@ export async function canManageContent(userId: string, communityId: string, auth
   return atLeast(await getRole(userId, communityId), min);
 }
 
+/** Tác giả, hoặc mod+ có vai trò CAO HƠN tác giả (mod không xóa được nội dung của admin/chủ cộng đồng). */
+export async function canModerateContent(userId: string, communityId: string, authorId: string): Promise<boolean> {
+  if (userId === authorId) return true;
+  const actor = await getRole(userId, communityId);
+  if (!atLeast(actor, 'mod')) return false;
+  return roleRank(actor) > roleRank(await getRole(authorId, communityId));
+}
+
 /** Bậc số của vai trò (member=0 ... platform_admin=4) — dùng so sánh thứ bậc khi kick/ban/đổi vai trò. */
 export const roleRank = (role: Role | null): number => (role === null ? -1 : RANK[role]);
 

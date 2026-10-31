@@ -67,11 +67,11 @@ export function StepHostPlan({
             const on = (p.free && form.hostPlan === 'start') || (!p.free && form.hostPlan === 'pro');
             const price = p.free ? 0 : cycle === 'annual' ? p.annualPrice : p.monthlyPrice;
             return (
-              <div key={p.id} className={`relative flex flex-col overflow-hidden rounded-[18px] p-6 ${on ? 'border-2 border-brand bg-[linear-gradient(180deg,#fff,#fff7f1)] shadow-[0_14px_34px_rgba(242,106,27,.12)]' : 'border border-[#f0ebe6] bg-white'}`}>
+              <div key={p.id} className={`relative flex flex-col overflow-hidden rounded-[18px] p-6 ${on ? 'border-2 border-brand bg-[linear-gradient(180deg,#fff,#fff7f1)] shadow-[0_14px_34px_rgba(255,87,10,.12)]' : 'border border-[#f0ebe6] bg-white'}`}>
                 {p.popular && <span className="absolute -top-px -right-px rounded-[0_18px_0_12px] bg-[#ffe4d1] px-3 py-1 text-xs font-bold text-[#c2410c]">{t('hostPlan.popular')}</span>}
                 <div className="flex items-center gap-3.5">
                   <span className="grid size-[52px] flex-none place-items-center rounded-[14px] bg-[#fff1e6]">
-                    <MaterialIcon name={p.free ? 'send' : 'workspace_premium'} size={28} filled color={p.free ? '#f26a1b' : '#f59e0b'} />
+                    <MaterialIcon name={p.free ? 'send' : 'workspace_premium'} size={28} filled color={p.free ? '#ff570a' : '#f59e0b'} />
                   </span>
                   <div>
                     <div className="text-lg font-extrabold">{p.name}</div>
@@ -93,7 +93,7 @@ export function StepHostPlan({
                 <button
                   type="button"
                   onClick={() => set({ hostPlan: p.free ? 'start' : 'pro' }, ['hostCard'])}
-                  className={`mt-6 h-[50px] rounded-xl text-[15px] font-bold ${on ? 'bg-brand-gradient border-0 text-white shadow-[0_8px_20px_rgba(242,106,27,.3)]' : 'border-[1.5px] border-[#fdba74] bg-white text-stone-900'}`}
+                  className={`mt-6 h-[50px] rounded-xl text-[15px] font-bold ${on ? 'bg-brand-gradient border-0 text-white shadow-[0_8px_20px_rgba(255,87,10,.3)]' : 'border-[1.5px] border-[#fdba74] bg-white text-stone-900'}`}
                 >
                   {on ? t('hostPlan.selected') : t('hostPlan.choose')}
                 </button>
@@ -103,7 +103,7 @@ export function StepHostPlan({
           {fees && pro && (
             <div className="flex flex-col gap-3.5 rounded-[18px] border border-[#f0ebe6] bg-white p-6">
               <div className="flex items-center gap-3">
-                <MaterialIcon name="bar_chart" size={28} color="#f26a1b" />
+                <MaterialIcon name="bar_chart" size={28} color="#ff570a" />
                 <span className="text-lg font-extrabold">{t('hostPlan.compareTitle')}</span>
               </div>
               <label htmlFor="wz-revenue" className="text-sm text-stone-600">
@@ -118,12 +118,12 @@ export function StepHostPlan({
                   onChange={(e) => set({ revenueEstimate: parseInt(e.target.value.replace(/\D/g, ''), 10) || 0 })}
                   className="min-w-0 flex-1 border-0 bg-transparent text-[28px] font-extrabold tracking-[-0.5px] text-brand outline-0"
                 />
-                <MaterialIcon name="trending_up" size={26} color="#f26a1b" />
+                <MaterialIcon name="trending_up" size={26} color="#ff570a" />
               </div>
               <CalcRow name={free?.name ?? t('hostPlan.freeFallback')} rule={t('hostPlan.freeRule', { pct: Math.round(fees.freeFeeRate * 1000) / 10 })} value={formatMoney(feeFree, currency)} good={feeFree <= feePro} />
               <CalcRow name={pro.name} rule={t('hostPlan.proRule', { pct: Math.round(fees.proFeeRate * 1000) / 10 })} value={formatMoney(feePro, currency)} good={feePro < feeFree} />
               <div className="flex-1" />
-              <div className="flex gap-3 rounded-[14px] bg-[#fff4e8] p-4 text-sm leading-normal font-bold">
+              <div className="flex gap-3 rounded-[14px] bg-[#fff4e8] p-4 text-sm leading-normal font-bold text-stone-900 dark:bg-[#3a2a1c] dark:text-amber-100">
                 <MaterialIcon name="lightbulb" size={24} color="#f59e0b" filled />
                 <span>
                   {t('hostPlan.tip', { name: pro.name, amount: formatMoney(breakEven, currency) })}

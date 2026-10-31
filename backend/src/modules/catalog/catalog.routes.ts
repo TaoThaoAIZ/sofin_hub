@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { communityReferralService } from '../referrals/community-referral.service.js';
 import { optionalAuth, requireAuth } from '../../middlewares/auth.js';
 import { enrollmentService } from '../enrollments/enrollments.service.js';
 import { reviewsService } from '../communities/reviews.service.js';
@@ -45,5 +46,8 @@ catalogRouter.get('/:id', optionalAuth, async (req, res) => {
 });
 
 catalogRouter.post('/:id/enroll', requireAuth, async (req, res) => {
+  // Vào cộng đồng qua link giới thiệu (?cref=): ghi nhận TRƯỚC khi thành thành viên (bỏ qua êm nếu đã là thành viên/mã lạ/chương trình tắt).
+  const ref = typeof req.body?.referralCode === 'string' ? req.body.referralCode : undefined;
+  await communityReferralService.attribute(req.userId!, req.params.id as string, ref);
   res.json({ data: await enrollmentService.toggle(req.userId!, req.params.id as string) });
 });

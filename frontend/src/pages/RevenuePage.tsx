@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 import i18n from '../i18n';
+import { MaterialIcon } from '../components/ui/MaterialIcon';
 import { Pager } from '../components/ui/Pager';
 import { ApiError } from '../lib/api';
 import { formatCents, formatDate, formatDateTime } from '../lib/datetime';
@@ -34,7 +35,9 @@ function Stat({ label, value, hint, accent }: { label: string; value: string; hi
   );
 }
 
-function PayoutForm({ courseId, available, blocked }: { courseId: string; available: number; blocked: boolean }) {
+const BANKS = ['Vietcombank', 'VietinBank', 'BIDV', 'Agribank', 'Techcombank', 'MB Bank', 'ACB', 'VPBank', 'TPBank', 'Sacombank', 'HDBank', 'VIB', 'SHB', 'MSB', 'OCB', 'SeABank', 'Eximbank', 'LPBank', 'SCB', 'Nam A Bank', 'Bac A Bank', 'ABBANK', 'VietBank', 'PVcomBank', 'NCB', 'BaoViet Bank', 'Kienlongbank', 'Cake', 'Timo'];
+
+function PayoutForm({ courseId, available, blocked, held = 0, holdDays, reservePct, nextEligibleAt, minPayout }: { courseId: string; available: number; blocked: boolean; held?: number; holdDays?: number; reservePct?: number; nextEligibleAt?: string | null; minPayout?: number }) {
   const { t } = useTranslation('revenue');
   const request = useRequestPayout(courseId);
   const [amount, setAmount] = useState('');
@@ -55,7 +58,7 @@ function PayoutForm({ courseId, available, blocked }: { courseId: string; availa
     if (cents > available) return setError(t('err.overBalance', { amount: formatCents(available) }));
     if (!/^\d{6,20}$/.test(accountNumber.trim())) return setError(t('err.invalidAccount'));
     request.mutate(
-      { amountCents: cents, method: { type: 'bank', bankName: bankName.trim(), accountNumber: accountNumber.trim(), accountHolder: accountHolder.trim() } },
+      { amountCents: cents, method: { type: 'bank', bankName: bankName.trim(), accountNumber: accountNumber.trim(), accountHolder: accountHolder.trim().toUpperCase() } },
       {
         onSuccess: () => {
           setOk(true);
@@ -73,11 +76,14 @@ function PayoutForm({ courseId, available, blocked }: { courseId: string; availa
       <h2 className="text-lg font-extrabold sm:col-span-2">{t('form.title')}</h2>
       <label className="text-[12.5px] font-semibold sm:col-span-2">
         {t('form.amount', { amount: formatCents(available) })}
-        <input type="number" min="0" step="1" max={available} disabled={blocked} value={amount} onChange={(e) => setAmount(e.target.value)} className={`${input} mt-1`} required />
+        <input type="text" inputMode="numeric" autoComplete="off" disabled={blocked} value={amount} onChange={(e) => setAmount(e.target.value.replace(/\D/g, ''))} className={`${input} mt-1`} required />
       </label>
       <label className="text-[12.5px] font-semibold">
         {t('form.bank')}
-        <input value={bankName} onChange={(e) => setBankName(e.target.value)} maxLength={100} className={`${input} mt-1`} required />
+        <select value={bankName} onChange={(e) => setBankName(e.target.value)} className={`${input} mt-1`} required>
+          <option value="" disabled>{t('form.bankPlaceholder')}</option>
+          {BANKS.map((b) => <option key={b} value={b}>{b}</option>)}
+        </select>
       </label>
       <label className="text-[12.5px] font-semibold">
         {t('form.account')}
@@ -85,8 +91,21 @@ function PayoutForm({ courseId, available, blocked }: { courseId: string; availa
       </label>
       <label className="text-[12.5px] font-semibold sm:col-span-2">
         {t('form.holder')}
-        <input value={accountHolder} onChange={(e) => setAccountHolder(e.target.value)} maxLength={100} className={`${input} mt-1`} required />
+        <input value={accountHolder} onChange={(e) => setAccountHolder(e.target.value.toUpperCase())} maxLength={100} autoComplete="off" className={`${input} mt-1 uppercase`} required />
       </label>
+      {/* Hết số dư rút được thì nút Gửi bị vô hiệu: nói rõ vì sao (tiền mới còn trong thời gian giữ hoàn tiền/tranh chấp) và khi nào rút được. */}
+      {!blocked && available <= 0 && (
+        <div role="status" className="flex items-start gap-2.5 rounded-xl bg-amber-50 px-4 py-3 text-[13px] leading-relaxed text-amber-900 sm:col-span-2 dark:bg-amber-500/15 dark:text-amber-200">
+          <MaterialIcon name="schedule" size={18} filled color="currentColor" />
+          <span>
+            {held > 0 && holdDays !== undefined
+              ? t('form.heldNotice', { held: formatCents(held), days: holdDays, date: nextEligibleAt ? formatDate(nextEligibleAt) : '—' })
+              : t('form.noBalanceNotice', { days: holdDays ?? 0 })}
+            {reservePct ? ` ${t('form.reserveNotice', { pct: reservePct })}` : ''}
+            {minPayout ? ` ${t('form.minNotice', { amount: formatCents(minPayout) })}` : ''}
+          </span>
+        </div>
+      )}
       {error && <div role="alert" className="rounded-xl bg-red-50 px-4 py-2 text-sm font-medium text-red-600 sm:col-span-2">{error}</div>}
       {ok && <div className="rounded-xl bg-green-50 px-4 py-2 text-sm font-medium text-green-700 sm:col-span-2">{t('form.sent')}</div>}
       <div className="sm:col-span-2">
@@ -149,7 +168,7 @@ function RevenueInner() {
               <Stat label={t('stats.net')} value={formatCents(d.netCents)} accent />
               <Stat label={t('stats.available')} value={formatCents(d.availableBalanceCents)} hint={t('stats.allTime')} accent />
               {d.heldCents !== undefined && <Stat label={t('stats.held')} value={formatCents(d.heldCents)} hint={pol ? t('stats.heldHint', { days: pol.holdDays }) : undefined} />}
-              {d.reserveCents !== undefined && <Stat label={t('stats.reserve')} value={formatCents(d.reserveCents)} hint={pol ? t('stats.reserveHint', { pct: pol.reservePct }) : undefined} />}
+              {d.reserveCents !== undefined && <Stat label={t('stats.reserve')} value={formatCents(d.reserveTotalCents ?? d.reserveCents)} hint={pol ? t('stats.reserveHint', { pct: pol.reservePct }) : undefined} />}
               <Stat label="MRR" value={formatCents(d.mrrCents)} hint={t('stats.mrrHint', { paid: d.activePaidMembers })} />
               <Stat label={t('stats.pending')} value={formatCents(d.payoutRequestedCents)} />
             </div>
@@ -161,11 +180,10 @@ function RevenueInner() {
             {pol && (
               <p className="mt-3 rounded-xl bg-stone-50 px-4 py-2.5 text-[12.5px] text-stone-600">
                 {t('policy', { hold: pol.holdDays, refund: pol.refundWindowDays, dispute: pol.disputeWindowDays, reserve: pol.reservePct })}
-                {pol.note ? ` ${pol.note}.` : ''}
               </p>
             )}
             <p className="mt-3 rounded-xl bg-amber-50 px-4 py-2.5 text-[12.5px] text-amber-800">
-              * {d.assumptions.note}. {t('estimateNote')}
+              {t('estimateNote')}
             </p>
 
             <h2 className="mt-8 mb-3 text-lg font-extrabold">{t('recent.title')}</h2>
@@ -203,7 +221,7 @@ function RevenueInner() {
             </div>
 
             <div className="mt-8">
-              <PayoutForm courseId={id} available={d.availableBalanceCents} blocked={debt > 0} />
+              <PayoutForm courseId={id} available={d.availableBalanceCents} blocked={debt > 0} held={d.heldCents ?? 0} {...(pol ? { holdDays: pol.holdDays, reservePct: pol.reservePct, nextEligibleAt: pol.nextEligibleAt ?? null, ...(pol.minPayoutCents ? { minPayout: pol.minPayoutCents } : {}) } : {})} />
             </div>
 
             <h2 className="mt-8 mb-3 text-lg font-extrabold">{t('payouts.title')}</h2>

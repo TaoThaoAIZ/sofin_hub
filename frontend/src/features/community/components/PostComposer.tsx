@@ -4,20 +4,18 @@ import { useTranslation } from 'react-i18next';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { useAuth } from '../../auth/AuthContext';
 import { useUpload } from '../../uploads/useUpload';
-import { useCreatePost, useTags } from '../queries';
+import { useCreatePost, useMembers } from '../queries';
 import type { PostCategory } from '../types';
 import { absoluteUrl, areaCls, errText, ErrorNote, inputCls, toast } from './contentUi';
 
 const MAX_CONTENT = 4000;
-const MAX_TAGS = 5;
+const MAX_MENTIONS = 10;
 
-const normTag = (raw: string) => raw.trim().replace(/^#+/, '').replace(/\s+/g, '').slice(0, 30);
 
 export function PostComposer({ courseId }: { courseId: string }) {
   const { t } = useTranslation('community');
   const { user } = useAuth();
   const createPost = useCreatePost(courseId);
-  const tagsQuery = useTags(courseId);
   const { upload, uploading, error: uploadError } = useUpload();
   const imageInput = useRef<HTMLInputElement>(null);
   const videoInput = useRef<HTMLInputElement>(null);
@@ -25,9 +23,11 @@ export function PostComposer({ courseId }: { courseId: string }) {
 
   const [content, setContent] = useState('');
   const category: PostCategory = 'Thảo luận chung';
-  const [tags, setTags] = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState('');
-  const [showTags, setShowTags] = useState(false);
+  const [mentions, setMentions] = useState<{ id: string; name: string }[]>([]);
+  // Gõ @ trong ô nội dung => gợi ý thành viên, lọc theo ký tự gõ sau @.
+  const [caret, setCaret] = useState(0);
+  const [pickerOpen, setPickerOpen] = useState(true);
+  const textRef = useRef<HTMLTextAreaElement>(null);
   const [image, setImage] = useState<{ url: string; name: string } | null>(null);
   const [files, setFiles] = useState<{ url: string; name: string }[]>([]);
   const [showPoll, setShowPoll] = useState(false);
@@ -37,17 +37,50 @@ export function PostComposer({ courseId }: { courseId: string }) {
   const [pollCloses, setPollCloses] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  const addTag = (raw: string) => {
-    const nt = normTag(raw);
-    if (!nt) return;
-    if (tags.some((x) => x.toLowerCase() === nt.toLowerCase())) return;
-    if (tags.length >= MAX_TAGS) {
-      setError(t('composer.maxTags', { max: MAX_TAGS }));
+  const mentionMatch = /(^|\s)@([^\s@]{0,30})$/.exec(content.slice(0, caret));
+  const mentionQuery = mentionMatch ? mentionMatch[2]! : null;
+  const showPicker = pickerOpen && mentionQuery !== null;
+  const membersQuery = useMembers(courseId, { q: mentionQuery || undefined, sort: 'active' }, showPicker);
+  const candidates = (membersQuery.data?.data ?? []).filter((m) => m.id !== user?.id && !mentions.some((x) => x.id === m.id)).slice(0, 6);
+  const addMention = (m: { id: string; name: string }) => {
+    if (!mentionMatch) return;
+    if (mentions.length >= MAX_MENTIONS) {
+      setError(t('composer.maxMentions', { max: MAX_MENTIONS }));
       return;
     }
-    setTags([...tags, nt]);
-    setTagInput('');
+    const start = caret - mentionMatch[2]!.length - 1; // vị trí dấu @
+    const label = `@${m.name} `;
+    setContent(content.slice(0, start) + label + content.slice(caret));
+    setMentions([...mentions, { id: m.id, name: m.name }]);
     setError(null);
+    const pos = start + label.length;
+    setCaret(pos);
+    requestAnimationFrame(() => {
+      textRef.current?.focus();
+      textRef.current?.setSelectionRange(pos, pos);
+    });
+  };
+  const startMention = () => {
+    const el = textRef.current;
+    const pos = el?.selectionStart ?? content.length;
+    const before = content.slice(0, pos);
+    // Đang có "@" chờ gắn thẻ ngay trước con trỏ: bấm lại = hủy (xóa "@" thừa) thay vì chèn thêm một "@" nữa.
+    if (showPicker && before.endsWith('@')) {
+      setContent(before.slice(0, -1).replace(/ $/, '') + content.slice(pos));
+      setCaret(Math.max(0, before.slice(0, -1).replace(/ $/, '').length));
+      setPickerOpen(false);
+      requestAnimationFrame(() => el?.focus());
+      return;
+    }
+    const lead = before && !/\s$/.test(before) ? ' ' : '';
+    setContent(before + lead + '@' + content.slice(pos));
+    const np = pos + lead.length + 1;
+    setCaret(np);
+    setPickerOpen(true);
+    requestAnimationFrame(() => {
+      el?.focus();
+      el?.setSelectionRange(np, np);
+    });
   };
 
   const pickImage = async (file?: File) => {
@@ -75,7 +108,11 @@ export function PostComposer({ courseId }: { courseId: string }) {
   const filledOptions = pollOptions.map((o) => o.trim()).filter(Boolean);
   // Tệp đính kèm: API bài viết chưa có trường riêng nên chèn liên kết vào cuối nội dung.
   const fileBlock = files.length ? `\n\n${files.map((f) => t('composer.attachmentLine', { name: f.name, url: f.url })).join('\n')}` : '';
-  const fullContent = content.trim() + fileBlock;
+  // Thành viên được gắn tên: dòng cuối "Gắn thẻ: [[user:<id>|<tên>]] ..." (backend gửi thông báo, PostCard hiển thị thành liên kết).
+  const cleanName = (n: string) => n.replace(/[[\]|\r\n]/g, ' ').trim();
+  const liveMentions = mentions.filter((m) => content.includes(`@${m.name}`));
+  const mentionBlock = liveMentions.length ? '\n\n' + t('composer.mentionPrefix') + ': ' + liveMentions.map((m) => `[[user:${m.id}|${cleanName(m.name)}]]`).join(' ') : '';
+  const fullContent = content.trim() + fileBlock + mentionBlock;
   const tooLong = fullContent.length > MAX_CONTENT;
   const pollInvalid = showPoll && filledOptions.length < 2;
   const canSubmit = !!content.trim() && !tooLong && !pollInvalid && !createPost.isPending && !uploading;
@@ -90,7 +127,6 @@ export function PostComposer({ courseId }: { courseId: string }) {
       {
         content: fullContent,
         category,
-        tags: tags.length ? tags : undefined,
         imageUrl: image?.url,
         poll: showPoll
           ? {
@@ -104,8 +140,7 @@ export function PostComposer({ courseId }: { courseId: string }) {
       {
         onSuccess: () => {
           setContent('');
-          setTags([]);
-          setTagInput('');
+          setMentions([]);
           setImage(null);
           setFiles([]);
           setShowPoll(false);
@@ -113,7 +148,6 @@ export function PostComposer({ courseId }: { courseId: string }) {
           setPollOptions(['', '']);
           setPollMultiple(false);
           setPollCloses('');
-          setShowTags(false);
           toast(t('composer.posted'));
         },
         onError: (e) => setError(errText(e)),
@@ -121,22 +155,44 @@ export function PostComposer({ courseId }: { courseId: string }) {
     );
   };
 
-  const suggestions = (tagsQuery.data ?? []).filter((s) => !tags.some((x) => x.toLowerCase() === normTag(s.tag).toLowerCase())).slice(0, 8);
   const toolBtn = (active: boolean) =>
-    `flex h-9 items-center gap-2 rounded-lg px-3 text-[13px] font-medium hover:bg-stone-100 disabled:opacity-50 ${active ? 'bg-brand/10 text-brand' : 'text-stone-700'}`;
+    `flex h-9 flex-none items-center gap-2 rounded-lg px-3 text-[13px] font-medium whitespace-nowrap max-md:gap-1 max-md:px-2 max-md:text-xs hover:bg-stone-100 disabled:opacity-50 ${active ? 'bg-brand/10 text-brand' : 'text-stone-700'}`;
 
   return (
-    <div className="glass flex flex-col gap-3 rounded-2xl p-4">
+    <div data-tour="composer" className="glass flex flex-col gap-3 rounded-2xl p-4">
       <div className="flex items-start gap-3">
         <Avatar url={user?.avatarUrl} name={user?.firstName ?? '?'} size={48} className="bg-brand/10 text-brand" />
+        <div className="relative flex-1">
         <textarea
+          ref={textRef}
           value={content}
-          onChange={(e) => setContent(e.target.value)}
+          onChange={(e) => {
+            setContent(e.target.value);
+            setCaret(e.target.selectionStart);
+            setPickerOpen(true);
+          }}
+          onSelect={(e) => setCaret(e.currentTarget.selectionStart)}
+          onKeyDown={(e) => e.key === 'Escape' && setPickerOpen(false)}
           rows={content.includes('\n') || content.length > 80 ? 4 : 2}
           placeholder={t('composer.placeholder')}
           aria-label={t('composer.contentAria')}
-          className={`${areaCls} min-h-12 flex-1 resize-y bg-[#fbf9f7]`}
+          className={`${areaCls} min-h-12 w-full resize-y bg-[#fbf9f7]`}
         />
+        {showPicker && (
+          <ul role="listbox" aria-label={t('composer.mentionAria')} className="absolute top-full left-0 z-20 m-0 mt-1 flex max-h-64 w-full max-w-sm list-none flex-col gap-0.5 overflow-y-auto rounded-xl border border-[rgba(120,60,20,.12)] bg-white p-1.5 shadow-lg">
+            {candidates.map((m) => (
+              <li key={m.id} role="option" aria-selected={false}>
+                <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => addMention(m)} className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left hover:bg-brand/10">
+                  <Avatar url={m.avatarUrl} name={m.name} size={28} className="bg-brand/10 text-brand" />
+                  <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium">{m.name}</span>
+                  <span className="text-[12px] text-stone-400">@{m.handle}</span>
+                </button>
+              </li>
+            ))}
+            {candidates.length === 0 && <li className="px-2 py-1.5 text-[12.5px] text-stone-400">{membersQuery.isFetching ? t('composer.mentionSearching') : t('composer.mentionEmpty')}</li>}
+          </ul>
+        )}
+        </div>
       </div>
 
       {image && (
@@ -146,7 +202,7 @@ export function PostComposer({ courseId }: { courseId: string }) {
             type="button"
             onClick={() => setImage(null)}
             aria-label={t('composer.removeImage')}
-            className="absolute -top-2 -right-2 grid size-6 place-items-center rounded-full bg-stone-900 text-white"
+            className="absolute -top-2 -right-2 grid size-6 place-items-center rounded-full bg-[#1c1917] text-white dark:bg-[#2a3036]"
           >
             <MaterialIcon name="close" size={14} color="#fff" />
           </button>
@@ -166,46 +222,6 @@ export function PostComposer({ courseId }: { courseId: string }) {
           ))}
           <li className="text-[11.5px] text-stone-400">{t('composer.fileNote')}</li>
         </ul>
-      )}
-
-      {showTags && (
-        <div className="rounded-xl border border-[rgba(120,60,20,.1)] bg-white p-3">
-          <div className="flex flex-wrap items-center gap-1.5">
-            {tags.map((tg) => (
-              <span key={tg} className="flex items-center gap-1 rounded-lg bg-brand/10 px-2.5 py-1 text-[12.5px] font-semibold text-brand">
-                #{tg}
-                <button type="button" aria-label={t('composer.removeTag', { tag: tg })} onClick={() => setTags(tags.filter((x) => x !== tg))}>
-                  <MaterialIcon name="close" size={14} color="#f26a1b" />
-                </button>
-              </span>
-            ))}
-            <input
-              value={tagInput}
-              onChange={(e) => setTagInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ',') {
-                  e.preventDefault();
-                  addTag(tagInput);
-                }
-              }}
-              placeholder={tags.length >= MAX_TAGS ? t('composer.tagsFull') : t('composer.tagPh')}
-              disabled={tags.length >= MAX_TAGS}
-              maxLength={30}
-              aria-label={t('composer.tagAria')}
-              className="h-8 min-w-[160px] flex-1 border-0 bg-transparent px-1 text-sm outline-0"
-            />
-          </div>
-          {suggestions.length > 0 && (
-            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[12px] text-stone-500">
-              {t('composer.suggest')}
-              {suggestions.map((s) => (
-                <button key={s.tag} type="button" onClick={() => addTag(s.tag)} className="rounded-lg bg-stone-100 px-2 py-0.5 hover:bg-brand/10 hover:text-brand">
-                  #{normTag(s.tag)} <span className="text-stone-400">{s.count}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
       )}
 
       {showPoll && (
@@ -231,7 +247,7 @@ export function PostComposer({ courseId }: { courseId: string }) {
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px]">
             {pollOptions.length < 6 && (
               <button type="button" onClick={() => setPollOptions([...pollOptions, ''])} className="flex items-center gap-1 font-semibold text-brand">
-                <MaterialIcon name="add" size={17} color="#f26a1b" /> {t('composer.addOption')}
+                <MaterialIcon name="add" size={17} color="#ff570a" /> {t('composer.addOption')}
               </button>
             )}
             <label className="flex items-center gap-2">
@@ -259,8 +275,8 @@ export function PostComposer({ courseId }: { courseId: string }) {
         <button type="button" onClick={() => fileInput.current?.click()} disabled={uploading} className={toolBtn(files.length > 0)}>
           <MaterialIcon name="attach_file" size={19} color="currentColor" /> {t('composer.attachFile')}
         </button>
-        <button type="button" onClick={() => setShowTags((s) => !s)} className={toolBtn(showTags || tags.length > 0)}>
-          <MaterialIcon name="sell" size={19} color="currentColor" /> {t('composer.tagBtn')}{tags.length ? ` (${tags.length})` : ''}
+        <button type="button" onClick={startMention} className={toolBtn(mentions.length > 0)}>
+          <MaterialIcon name="sell" size={19} color="currentColor" /> {t('composer.tagBtn')}{liveMentions.length ? ` (${liveMentions.length})` : ''}
         </button>
         <button type="button" onClick={() => setShowPoll((s) => !s)} className={toolBtn(showPoll)}>
           <MaterialIcon name="bar_chart" size={19} color="currentColor" /> {t('composer.poll')}
@@ -269,10 +285,10 @@ export function PostComposer({ courseId }: { courseId: string }) {
           type="button"
           onClick={submit}
           disabled={!canSubmit}
-          className="ml-auto flex h-10 items-center gap-2 rounded-xl bg-brand px-4 text-sm font-bold text-white disabled:opacity-50"
+          className="relative ml-auto flex h-10 flex-none items-center gap-2 rounded-xl bg-brand px-4 text-sm font-bold text-white max-md:size-9 max-md:justify-center max-md:p-0 disabled:opacity-50"
         >
           <MaterialIcon name="send" size={17} color="#fff" />
-          {createPost.isPending ? t('composer.posting') : uploading ? t('composer.uploading') : t('composer.submit')}
+          <span className="max-md:sr-only">{createPost.isPending ? t('composer.posting') : uploading ? t('composer.uploading') : t('composer.submit')}</span>
         </button>
       </div>
       <div className="flex justify-between text-[11.5px] text-stone-400">

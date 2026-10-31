@@ -29,7 +29,7 @@ export type BtnKind = 'primary' | 'default' | 'danger' | 'solidDanger' | 'dark';
 const BTN_BASE = 'inline-flex items-center justify-center gap-1.5 whitespace-nowrap font-semibold disabled:cursor-not-allowed disabled:opacity-50';
 const BTN_KIND: Record<BtnKind, string> = {
   primary:
-    'h-10 rounded-[11px] border-0 bg-gradient-to-b from-[#ff8f45] to-[#f26a1b] px-[15px] text-[13.5px] text-white shadow-[0_6px_16px_rgba(242,106,27,.28)] hover:brightness-[1.05]',
+    'h-10 rounded-[11px] border-0 bg-gradient-to-b from-[#ff8f45] to-[#ff570a] px-[15px] text-[13.5px] text-white shadow-[0_6px_16px_rgba(255,87,10,.28)] hover:brightness-[1.05]',
   default: 'h-10 rounded-[11px] border-[1.5px] border-[#e7e0da] bg-white px-[15px] text-[13.5px] text-stone-800 hover:bg-[#fff4ec]',
   danger: 'h-10 rounded-[11px] border-[1.5px] border-[#fecaca] bg-[#fff5f5] px-[15px] text-[13.5px] text-[#b91c1c] hover:bg-[#fee2e2]',
   solidDanger: 'h-10 rounded-[11px] border-0 bg-[#dc2626] px-[15px] text-[13.5px] text-white hover:brightness-95',
@@ -71,7 +71,7 @@ const SOFT = [
   ['#fef3c7', '#92400e'],
   ['#e0e7ff', '#3730a3'],
 ] as const;
-const SQUARE = ['#0b1220', '#2563eb', '#16a34a', '#f26a1b', '#7c3aed', '#db2777', '#0891b2', '#ca8a04', '#0f766e', '#9333ea'];
+const SQUARE = ['#0b1220', '#2563eb', '#16a34a', '#ff570a', '#7c3aed', '#db2777', '#0891b2', '#ca8a04', '#0f766e', '#9333ea'];
 
 /** Băm chuỗi -> số ổn định để chọn màu avatar (cùng một đối tượng luôn cùng màu). */
 export const hashSeed = (s: string) => {

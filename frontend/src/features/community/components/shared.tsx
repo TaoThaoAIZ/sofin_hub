@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { stripMarkdown } from '../../../lib/markdown';
 import { Avatar } from '../../account/components/Avatar';
 import { formatCompact } from '../../../lib/format';
 import type { CommunityDetail } from '../../courses/types';
@@ -6,7 +7,6 @@ import { useTranslation } from 'react-i18next';
 import { useMembers } from '../queries';
 
 // Bảng màu avatar lấy đúng từ pal[] trong file thiết kế gốc SofinHub Community.html.
-export const AVATAR_PALETTE = ['#d6d3f5', '#cfe3f7', '#e5e7c9', '#cfe6d6', '#f3d4e6', '#dcd6cf', '#f5dcc8', '#d4dbe8'];
 
 export const initials = (name: string) =>
   name
@@ -30,9 +30,10 @@ export function PageBanner({
   className?: string;
 }) {
   return (
-    <section className={`px-1 py-2 ${className}`}>
-      <h1 className="m-0 text-[28px] leading-tight font-extrabold tracking-tight">{title}</h1>
-      {subtitle && <p className="mt-1 text-[15px] text-stone-700">{subtitle}</p>}
+    <section className={`px-1 py-2 max-md:py-0 ${className}`}>
+      {/* Mobile: tiêu đề đã nằm ở thanh trên (MobileChrome) nên chỉ giữ dòng mô tả căn giữa. */}
+      <h1 className="m-0 text-[28px] leading-tight font-extrabold tracking-tight max-md:hidden">{title}</h1>
+      {subtitle && <p className="mt-1 text-[15px] text-stone-700 max-md:mt-0 max-md:text-center max-md:text-sm max-md:text-stone-600">{subtitle}</p>}
     </section>
   );
 }
@@ -42,7 +43,8 @@ export function CommunityInfoCard({ course, coverHeight = 150 }: { course: Commu
   const { t } = useTranslation('community');
   const members = useMembers(course.id, {});
   const shown = members.data?.data.slice(0, 8) ?? [];
-  const remaining = Math.max(0, course.stats.members - shown.length);
+  const totalMembers = members.data?.counts.all ?? course.stats.members;
+  const remaining = Math.max(0, totalMembers - shown.length);
 
   return (
     <aside className="sticky top-[76px] max-lg:static">
@@ -55,10 +57,10 @@ export function CommunityInfoCard({ course, coverHeight = 150 }: { course: Commu
           <Link to={`/communities/${course.id}`} className="mt-1 block truncate text-[13px] text-stone-600 hover:text-brand">
             sofinhub.com/communities/{course.id}
           </Link>
-          <p className="mt-2.5 line-clamp-3 whitespace-pre-line text-[13.5px] leading-[1.55] text-stone-800">{course.description}</p>
+          <p className="mt-2.5 line-clamp-3 whitespace-pre-line text-[13.5px] leading-[1.55] text-stone-800">{stripMarkdown(course.description)}</p>
           <div className="mt-3.5 grid grid-cols-3 border-t border-[rgba(120,60,20,.08)] pt-3 text-center">
             {[
-              { v: formatCompact(course.stats.members), l: t('info.members') },
+              { v: formatCompact(totalMembers), l: t('info.members') },
               { v: course.stats.online, l: t('info.online') },
               { v: course.stats.admins, l: t('info.admins') },
             ].map((s, i) => (
@@ -72,7 +74,7 @@ export function CommunityInfoCard({ course, coverHeight = 150 }: { course: Commu
             <div className="mt-3.5 flex items-center">
               {shown.map((m, i) => (
                 <span key={m.id} className="flex-none rounded-full border-2 border-white" style={{ marginLeft: i ? -6 : 0 }}>
-                  <Avatar url={m.avatarUrl} name={m.name} size={22} text={initials(m.name)} className="text-stone-700" style={{ background: AVATAR_PALETTE[i % AVATAR_PALETTE.length], fontSize: 9.5 }} />
+                  <Avatar url={m.avatarUrl} name={m.name} size={22} text={initials(m.name)} style={{ fontSize: 9.5 }} />
                 </span>
               ))}
               {remaining > 0 && (

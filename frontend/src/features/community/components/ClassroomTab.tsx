@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { stripMarkdown } from '../../../lib/markdown';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../../i18n';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -71,13 +72,13 @@ export function LessonList({ communityId, courseId, moduleId, unlock, canManage 
           </Link>
           {l.locked ? (
             unlock ? (
-              <UnlockControl unlock={unlock} label={t('classroom.unlockBuy')} className="grid size-8 flex-none place-items-center rounded-full bg-brand/10 hover:bg-brand/20"><MaterialIcon name="lock" size={16} filled color="#f26a1b" /></UnlockControl>
+              <UnlockControl unlock={unlock} label={t('classroom.unlockBuy')} className="grid size-8 flex-none place-items-center rounded-full bg-brand/10 hover:bg-brand/20"><MaterialIcon name="lock" size={16} filled color="#ff570a" /></UnlockControl>
             ) : (
               <span className="grid size-8 flex-none place-items-center rounded-full bg-stone-100"><MaterialIcon name="lock" size={16} filled color="#a8a29e" /></span>
             )
           ) : (
             <Link to={lessonPath(communityId, l.id)} aria-label={t('classroom.lessonList.learn', { title: l.title })} className="grid size-8 flex-none place-items-center rounded-full bg-brand/10 hover:bg-brand/20">
-              <MaterialIcon name="play_arrow" size={18} filled color="#f26a1b" />
+              <MaterialIcon name="play_arrow" size={18} filled color="#ff570a" />
             </Link>
           )}
           {canManage && (
@@ -102,19 +103,22 @@ export function LessonList({ communityId, courseId, moduleId, unlock, canManage 
   );
 }
 
+/** "Mua riêng 299.000 ₫" — dùng cho lớp phủ giá của module bán riêng. */
+const paidText = (m: ClassroomModule) => i18n.t('modWizard.lock.paid', { ns: 'community', price: formatCents(m.priceCents ?? 0) });
+
 export function lockText(m: ClassroomModule) {
   if (m.lockReason === 'level')
     return m.requiredLevel
       ? i18n.t('classroom.lock.levelReq', { ns: 'community', level: m.requiredLevel })
       : i18n.t('classroom.lock.levelHigher', { ns: 'community' });
-  if (m.lockReason === 'paid') return i18n.t('modWizard.lock.paid', { ns: 'community', price: formatCents(m.priceCents ?? 0) });
+  if (m.lockReason === 'paid') return paidText(m);
   if (m.lockReason === 'selected') return i18n.t('modWizard.lock.selected', { ns: 'community' });
   return i18n.t('classroom.lock.prevModule', { ns: 'community' });
 }
 
 // Ảnh bìa module lấy từ file thiết kế gốc (slot module-img-0..8), ảnh đã có sẵn tiêu đề trong hình.
 const MODULE_IMAGE_COUNT = 9;
-const PAGE_SIZE = 9; // 3 hàng × 3 cột
+const PAGE_SIZE = 12; // 4 hàng × 3 cột
 export function ClassroomTab() {
   const { t } = useTranslation('community');
   const { id: communityId = '' } = useParams();
@@ -174,7 +178,7 @@ export function ClassroomTab() {
         <ToastHost />
         <div className="glass flex flex-col items-center gap-2 rounded-3xl px-6 py-12 text-center">
           <span className="grid size-14 place-items-center rounded-full bg-brand/10">
-            <MaterialIcon name="school" size={30} filled color="#f26a1b" />
+            <MaterialIcon name="school" size={30} filled color="#ff570a" />
           </span>
           <h1 className="m-0 text-[22px] font-extrabold">{t('classroom.noCourses')}</h1>
           <p className="m-0 max-w-md text-sm text-stone-600">
@@ -197,7 +201,9 @@ export function ClassroomTab() {
   const totalPages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
   const start = (page - 1) * PAGE_SIZE;
   const shown = list.slice(start, start + PAGE_SIZE);
-  const totalLessons = list.reduce((n, m) => n + m.lessonsCount, 0);
+  // Thống kê chỉ tính module đã xuất bản (module nháp chỉ mod+ thấy trong danh sách).
+  const live = list.filter((m) => m.publishStatus !== 'draft');
+  const totalLessons = live.reduce((n, m) => n + m.lessonsCount, 0);
   // Module đang khóa trong cộng đồng có phí (hoặc module bán riêng) → đưa người học sang trang thanh toán để mở khóa.
   const unlockOf = (m: ClassroomModule) => unlockFor(m, { staff: canEdit, communityId, communityPriceUsd: community?.priceUsd, onBuy: setBuying });
   const prog = progress.data;
@@ -209,17 +215,17 @@ export function ClassroomTab() {
       <ToastHost />
       <div className="flex flex-wrap items-center gap-x-6 gap-y-4 px-1 py-1.5">
         <div className="min-w-0 flex-1 basis-[300px]">
-          <h1 className="m-0 text-[32px] leading-tight font-extrabold tracking-tight">{t('classroom.title')}</h1>
-          <p className="mt-1 mb-0 text-sm text-stone-700 [text-wrap:pretty]">{t('classroom.subtitle')}</p>
+          <h1 className="m-0 text-[32px] leading-tight font-extrabold tracking-tight max-md:hidden">{t('classroom.title')}</h1>
+          <p className="mt-1 mb-0 text-sm text-stone-700 [text-wrap:pretty] max-md:mt-0 max-md:text-center max-md:text-stone-600">{t('classroom.subtitle')}</p>
         </div>
-        <div className="ml-auto flex items-center divide-x divide-stone-200/80 py-2">
+        <div className="ml-auto flex items-center divide-x divide-stone-200/80 py-2 max-md:hidden">
           {[
-            { icon: 'school', value: list.length, label: t('classroom.statModules') },
+            { icon: 'school', value: live.length, label: t('classroom.statModules') },
             { icon: 'article', value: totalLessons, label: t('classroom.statLessons') },
             { icon: 'group', value: formatCompact(community?.stats.members ?? 0), label: t('classroom.statStudents') },
           ].map((s) => (
             <div key={s.label} className="flex items-center gap-2.5 px-5 first:pl-0 last:pr-0">
-              <MaterialIcon name={s.icon} size={24} color="#f26a1b" />
+              <MaterialIcon name={s.icon} size={24} color="#ff570a" />
               <div>
                 <div className="text-[17px] leading-tight font-extrabold">{s.value}</div>
                 <div className="mt-0.5 text-xs text-stone-600">{s.label}</div>
@@ -228,7 +234,7 @@ export function ClassroomTab() {
           ))}
         </div>
         {canEdit && (
-          <button type="button" onClick={() => setWizard('new')} className={`${primaryBtn} h-14 flex-none rounded-2xl px-6 text-[15px] whitespace-nowrap`}>
+          <button type="button" onClick={() => setWizard('new')} className={`${primaryBtn} h-14 flex-none rounded-2xl px-6 text-[15px] whitespace-nowrap max-md:h-12 max-md:w-full`}>
             <MaterialIcon name="add" size={22} color="#fff" />
             {t('classroom.addLesson')}
           </button>
@@ -250,7 +256,7 @@ export function ClassroomTab() {
                 className={`glass flex w-[250px] flex-none items-center gap-3 rounded-2xl p-2.5 text-left transition-transform hover:-translate-y-0.5 ${active ? 'ring-2 ring-brand' : ''}`}
               >
                 <span className="grid size-[52px] flex-none place-items-center overflow-hidden rounded-xl bg-brand/10">
-                  {thumb ? <img src={thumb} alt="" className="size-full object-cover" /> : <MaterialIcon name="school" size={26} filled color="#f26a1b" />}
+                  {thumb ? <img src={thumb} alt="" loading="lazy" decoding="async" className="size-full object-cover" /> : <MaterialIcon name="school" size={26} filled color="#ff570a" />}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[13.5px] font-bold">{c.title}</span>
@@ -302,7 +308,7 @@ export function ClassroomTab() {
             onClick={() => claim.mutate(undefined, { onSuccess: setCert, onError: (e) => toast(errText(e), 'error') })}
             className={ghostBtn}
           >
-            <MaterialIcon name="workspace_premium" size={19} filled color="#f26a1b" />
+            <MaterialIcon name="workspace_premium" size={19} filled color="#ff570a" />
             {claim.isPending ? t('classroom.issuing') : t('classroom.claim')}
           </button>
         )}
@@ -327,7 +333,7 @@ export function ClassroomTab() {
               className={`glass flex flex-col overflow-hidden rounded-[20px] transition-transform hover:-translate-y-0.5`}
             >
               <div className="relative aspect-video w-full overflow-hidden bg-[#110d0b]">
-                <img src={thumb} alt={m.title} className="size-full object-cover" />
+                <img src={thumb} alt={m.title} loading="lazy" decoding="async" className="size-full object-cover" />
                 {canEdit && (
                   <div className="absolute top-3 right-3 z-[3] flex items-center gap-2">
                     <button
@@ -337,7 +343,7 @@ export function ClassroomTab() {
                       className="flex h-[34px] items-center gap-1.5 rounded-[10px] bg-white/95 px-3 text-[13px] font-bold shadow-[0_6px_16px_rgba(0,0,0,.18)] hover:bg-white hover:text-brand"
                     >
                       <MaterialIcon name="edit" size={17} />
-                      {t('classroom.editBtn')}
+                      <span className="max-md:hidden">{t('classroom.editBtn')}</span>
                     </button>
                     <button
                       type="button"
@@ -353,12 +359,13 @@ export function ClassroomTab() {
                 {m.publishStatus === 'draft' && (
                   <span className="absolute top-3 left-3 z-[3] rounded-lg bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800">{t('modWizard.lock.draft')}</span>
                 )}
-                {m.locked && m.lockReason === 'paid' && (
+                {/* Module bán riêng chưa mua: lớp phủ giữa thẻ có khóa + giá (cả khi đang khóa vì chưa xong module trước — lúc đó chưa có nút Mua, lý do khóa hiện ở nhãn dưới). */}
+                {m.locked && (m.lockReason === 'paid' || (m.needsPurchase && !!m.priceCents)) && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[rgba(12,8,6,.62)] px-5 text-center text-sm font-bold text-white backdrop-blur-[2px]">
                     <span className="grid size-11 place-items-center rounded-full border border-white/25 bg-white/15">
                       <MaterialIcon name="lock" size={24} filled color="#fff" />
                     </span>
-                    {lockText(m)}
+                    {m.lockReason === 'paid' ? lockText(m) : paidText(m)}
                     {unlockOf(m) && (
                       <UnlockControl unlock={unlockOf(m)!} className="mt-1 rounded-xl bg-brand px-4 py-1.5 text-[13px] font-bold text-white hover:opacity-90">
                         {t('classroom.unlockBuy')}
@@ -371,8 +378,8 @@ export function ClassroomTab() {
                 )}
               </div>
               <div className="flex flex-1 flex-col gap-1 px-[18px] pt-3.5 pb-4">
-                <div className="truncate text-[15.5px] font-bold">#{m.index - 1}: {m.title}</div>
-                <div className="truncate text-[12.5px] text-stone-500">{t('classroom.lessonsDesc', { n: m.lessonsCount, desc: m.description })}</div>
+                <div className="truncate text-[15.5px] font-bold">#{m.index}: {m.title}</div>
+                <div className="truncate text-[12.5px] text-stone-500">{t('classroom.lessonsDesc', { n: m.lessonsCount, desc: stripMarkdown(m.description) })}</div>
                 <div className="mt-auto flex items-center gap-2.5 pt-2.5">
                   <span className="rounded-lg bg-brand/10 px-2 py-1 text-[11.5px] font-bold">{m.pct}%</span>
                   <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-[rgba(120,60,20,.08)]">
@@ -380,16 +387,16 @@ export function ClassroomTab() {
                   </div>
                   {unlockOf(m) ? (
                     <UnlockControl unlock={unlockOf(m)!} label={t('classroom.unlockBuy')} className="grid size-[42px] flex-none place-items-center rounded-[14px] bg-brand/10 hover:bg-brand/20">
-                      <MaterialIcon name="lock_open" size={22} color="#f26a1b" />
+                      <MaterialIcon name="lock_open" size={22} color="#ff570a" />
                     </UnlockControl>
                   ) : (
                   m.locked ? (
-                    <span title={lockText(m)} className="grid size-[42px] flex-none cursor-not-allowed place-items-center rounded-[14px] bg-brand/10 opacity-50">
-                      <MaterialIcon name="arrow_forward" size={22} color="#f26a1b" />
+                    <span title={m.needsPurchase && m.priceCents ? `${lockText(m)} · ${paidText(m)}` : lockText(m)} className="grid size-[42px] flex-none cursor-not-allowed place-items-center rounded-[14px] bg-brand/10 opacity-50">
+                      <MaterialIcon name="arrow_forward" size={22} color="#ff570a" />
                     </span>
                   ) : (
                     <button type="button" disabled={opening === m.id} onClick={() => void openModule(m)} aria-label={t('classroom.openAria', { title: m.title })} className="grid size-[42px] flex-none place-items-center rounded-[14px] bg-brand/10 hover:bg-brand/20">
-                      <MaterialIcon name="arrow_forward" size={22} color="#f26a1b" />
+                      <MaterialIcon name="arrow_forward" size={22} color="#ff570a" />
                     </button>
                   )
                   )}

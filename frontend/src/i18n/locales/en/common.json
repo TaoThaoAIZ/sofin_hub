@@ -1,5 +1,10 @@
 {
-  "nav": { "discover": "Discover", "courses": "Courses", "myCommunities": "My communities", "tools": "Download Tools" },
+  "nav": {
+    "discover": "Discover",
+    "courses": "Courses",
+    "myCommunities": "My communities",
+    "tools": "Download Tools"
+  },
   "header": {
     "profileSettings": "Profile settings",
     "admin": "Admin",
@@ -8,12 +13,48 @@
     "messages": "Messages",
     "notifications": "Notifications",
     "createCommunity": "Create community",
-    "language": "Language"
+    "language": "Language",
+    "themeToDark": "Switch to dark mode",
+    "themeToLight": "Switch to light mode",
+    "account": "{{name}}'s account"
   },
   "time": {
     "justNow": "just now",
     "minutesAgo": "{{count}} min ago",
     "hoursAgo": "{{count}} h ago",
     "daysAgo": "{{count}} d ago"
+  },
+  "categories": {
+    "business": "Business",
+    "content": "Content creation",
+    "tech": "Technology",
+    "finance": "Finance",
+    "health": "Health",
+    "self": "Self-development",
+    "hobby": "Hobbies",
+    "relationships": "Relationships",
+    "music": "Music",
+    "sports": "Sports",
+    "spirituality": "Spirituality"
+  },
+  "pageTitle": {
+    "home": "SofinHub – Learn new skills, grow with the community",
+    "login": "Log in",
+    "register": "Sign up",
+    "verifyOtp": "Verify email",
+    "forgotPassword": "Forgot password",
+    "resetPassword": "Reset password",
+    "search": "Search",
+    "messages": "Messages",
+    "notifications": "Notifications",
+    "settings": "Settings",
+    "myCommunities": "My communities",
+    "tools": "Tools",
+    "faq": "FAQ",
+    "terms": "Terms of Use",
+    "privacy": "Privacy Policy",
+    "contact": "Contact",
+    "createCommunity": "Create community",
+    "admin": "Admin"
   }
 }

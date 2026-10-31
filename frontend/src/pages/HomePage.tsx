@@ -1,3 +1,4 @@
+import { PAGE_X } from '../lib/layout';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
@@ -11,12 +12,17 @@ import { PAGE_SIZE } from '../features/courses/constants';
 import { useCategories, useCourses } from '../features/courses/queries';
 import { useCourseFilters } from '../features/courses/useCourseFilters';
 import { CommunityCta } from '../features/home/CommunityCta';
+import { WhyChoose } from '../features/home/WhyChoose';
+import { ThemedImg } from '../components/ui/ThemedImg';
 import { Hero } from '../features/home/Hero';
+import { CreateCommunityPromo } from '../features/home/CreateCommunityPromo';
 
 export function HomePage() {
   const { t } = useTranslation('home');
   const { filters, page, setFilter, setPage, reset } = useCourseFilters();
   const [view, setView] = useState<ViewMode>('grid');
+  // Mobile: hàng bộ lọc (Giá/Loại/...) ẩn mặc định, bật bằng nút bộ lọc cạnh danh mục.
+  const [showFilters, setShowFilters] = useState(false);
 
   const { data: categories = [] } = useCategories();
   const courses = useCourses({ ...filters, page, limit: PAGE_SIZE });
@@ -41,54 +47,57 @@ export function HomePage() {
   }, [location.hash]);
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="relative overflow-hidden">
-        <div className="absolute inset-0">
-          <img src="/images/hero-bg.webp" alt="" className="absolute inset-0 size-full object-cover" />
+    <div className="flow-root min-h-screen bg-white dark:bg-[#0c1013]">
+      <CreateCommunityPromo />
+      {/* Header nằm TRỰC TIẾP trong trang (không trong khối hero) để sticky bám theo cả trang, không mất sau khi cuộn hết banner. */}
+      <Header />
+      {/* Hero (Figma 1800x800): ảnh nền có mặt nạ mờ dần, kéo lên sau Header (-mt = chiều cao Header 72 + lề 18). Không dùng overflow-hidden để khỏi cắt dropdown của Header. */}
+      <div className="relative -mt-[90px] pt-[90px] max-md:mt-0 max-md:pt-0">
+        <div
+          className="pointer-events-none absolute inset-0 max-md:hidden [mask-image:url(/images/home/light/hero_mask.svg)] [mask-mode:alpha] [mask-repeat:no-repeat] [mask-size:100%_100%] dark:[mask-image:url(/images/home/dark/hero_mask.svg)]"
+          aria-hidden="true"
+        >
+          <ThemedImg name="hero_bg" className="absolute inset-0 size-full object-cover object-[50%_76%] dark:object-center" />
         </div>
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(900px_520px_at_22%_55%,rgba(255,255,255,.75)_0%,rgba(255,255,255,.5)_45%,rgba(255,255,255,0)_75%)]" />
-        <Header />
         <Hero onSearch={(q) => setFilter('q', q || undefined)} />
       </div>
 
-      <div
-        id="courses"
-        ref={listTop}
-        className="mx-auto flex max-w-[1400px] scroll-mt-24 items-end justify-between gap-4 px-4 pt-8 md:px-10"
-      >
-        <h2 className="m-0 flex items-center gap-2.5 text-[26px] font-bold">{t('featured')}</h2>
-      </div>
+      <section id="courses" ref={listTop} className={`${PAGE_X} scroll-mt-24 pt-[clamp(32px,3.33vw,60px)]`}>
+        <h2 className="m-0 text-[clamp(26px,2vw,36px)] leading-[1.33] font-bold text-[#1c2433] max-md:hidden dark:text-white">{t('featured')}</h2>
 
-      <CategoryTabs
-        categories={categories}
-        active={filters.category}
-        onChange={(id) => setFilter('category', id)}
-      />
+        <CategoryTabs categories={categories} active={filters.category} onChange={(id) => setFilter('category', id)} onToggleFilters={() => setShowFilters((v) => !v)} filtersOpen={showFilters} />
 
-      <FilterBar
-        filters={filters}
-        onFilterChange={setFilter}
-        view={view}
-        onViewChange={setView}
-        total={courses.data?.meta.total}
-      />
-
-      <section className="mx-auto max-w-[1400px] px-4 pt-5 md:px-10">
-        <CourseGrid
-          courses={courses.data?.data}
+        <div className={showFilters ? '' : 'max-md:hidden'}>
+        <FilterBar
+          filters={filters}
+          onFilterChange={setFilter}
           view={view}
-          loading={courses.isPending}
-          error={courses.error}
-          fetching={courses.isFetching}
-          onRetry={() => courses.refetch()}
-          onReset={reset}
+          onViewChange={setView}
+          total={courses.data?.meta.total}
         />
+        </div>
+
+        <div className="pt-[clamp(20px,1.33vw,24px)]">
+          <CourseGrid
+            courses={courses.data?.data}
+            view={view}
+            loading={courses.isPending}
+            error={courses.error}
+            fetching={courses.isFetching}
+            onRetry={() => courses.refetch()}
+            onReset={reset}
+          />
+        </div>
+
+        <Pagination page={page} totalPages={courses.data?.meta.totalPages ?? 1} onChange={setPage} />
       </section>
 
-      <Pagination page={page} totalPages={courses.data?.meta.totalPages ?? 1} onChange={setPage} />
-
-      <CommunityCta />
-      <Footer />
+      {/* Bản mobile (Figma) kết thúc ở danh sách khóa học: ẩn các khối giới thiệu + Footer (liên kết pháp lý nằm trong ngăn kéo menu). */}
+      <div className="max-md:hidden">
+        <WhyChoose />
+        <CommunityCta />
+        <Footer />
+      </div>
     </div>
   );
 }

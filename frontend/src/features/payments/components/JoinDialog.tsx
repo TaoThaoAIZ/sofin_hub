@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useCategoryName } from '../../courses/useCategoryName';
 import { Button } from '../../../components/ui/Button';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { ApiError } from '../../../lib/api';
@@ -28,6 +29,7 @@ export function JoinCheckout({
   onNeedRequest?: () => void;
 }) {
   const { t } = useTranslation('payments');
+  const catName = useCategoryName();
   const courseId = course.id;
   const [interval, setIntervalState] = useState<BillingInterval | null>(null);
   // Mặc định chọn gói năm nếu cộng đồng có bán (như thiết kế), ngược lại gói tháng; người dùng bấm thì theo lựa chọn.
@@ -71,7 +73,7 @@ export function JoinCheckout({
   };
 
   const { data: categories = [] } = useCategories();
-  const categoryName = (categories.find((c) => c.id === course.category)?.name ?? course.category).toLowerCase();
+  const categoryName = (() => { const c = categories.find((x) => x.id === course.category); return (c ? catName(c) : course.category).toLowerCase(); })();
   const ownerName = course.instructor.name;
   const lessons = Number(course.facts.find((f) => f.label === 'Bài học')?.value ?? 0);
   const chips = [
@@ -113,7 +115,7 @@ export function JoinCheckout({
           {chips.map((c) => (
             <div key={c.l} className="flex items-center gap-2 text-left">
               <span className="grid size-9 place-items-center rounded-full bg-[#fff1e6]">
-                <MaterialIcon name={c.icon} size={19} filled color="#f26a1b" />
+                <MaterialIcon name={c.icon} size={19} filled color="#ff570a" />
               </span>
               <span className="text-xs leading-tight text-stone-600">
                 <b className="block text-[13.5px] text-stone-900">{c.v}</b>
@@ -167,7 +169,7 @@ export function JoinCheckout({
             </div>
             <div className="mt-3 flex items-start gap-3 rounded-2xl border border-[#f0ebe6] bg-[#fdfbf9] p-3.5">
               <span className="grid size-10 flex-none place-items-center rounded-xl bg-[#fff1e6]">
-                <MaterialIcon name="qr_code_2" size={24} filled color="#f26a1b" />
+                <MaterialIcon name="qr_code_2" size={24} filled color="#ff570a" />
               </span>
               <div className="text-[13px] leading-relaxed text-stone-600">
                 <div className="text-sm font-bold text-stone-900">{t('join.bankMethod')}</div>
@@ -205,7 +207,7 @@ export function JoinCheckout({
 
             <div className="mt-4 flex gap-3 rounded-2xl bg-[linear-gradient(135deg,#fff4ea,#fff9f4)] p-4">
               <span className="grid size-10 flex-none place-items-center rounded-full bg-[#ffe7d4]">
-                <MaterialIcon name="redeem" size={20} filled color="#f26a1b" />
+                <MaterialIcon name="redeem" size={20} filled color="#ff570a" />
               </span>
               <div className="text-[13px] leading-relaxed text-stone-600">
                 <div className="text-sm font-bold text-stone-900">{t('join.dueToday', { amount: formatMoney(quote.dueTodayUsd, quote.currency) })}</div>
@@ -236,7 +238,7 @@ function PlanCard({ plan, on, onSelect, currency }: { plan: QuotePlan; on: boole
         <span className="absolute top-2.5 right-2.5 rounded-lg bg-green-100 px-2 py-0.5 text-[11.5px] font-bold text-green-700">{t('join.savePct', { pct: plan.savingsPct })}</span>
       )}
       <div className="mt-2 flex items-center gap-2.5">
-        <MaterialIcon name={on ? 'radio_button_checked' : 'radio_button_unchecked'} size={24} color={on ? '#f26a1b' : '#a8a29e'} />
+        <MaterialIcon name={on ? 'radio_button_checked' : 'radio_button_unchecked'} size={24} color={on ? '#ff570a' : '#a8a29e'} />
         <span className="text-[16px] font-extrabold">{plan.label}</span>
       </div>
       <div className={`mt-3 text-[34px] leading-none font-extrabold tracking-[-1px] ${on ? 'text-brand' : 'text-stone-900'}`}>
@@ -269,7 +271,7 @@ export function JoinDialog({
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
   return (
-    <div className="fixed inset-0 z-50 flex overflow-y-auto bg-stone-900/45 p-3 backdrop-blur-[2px] sm:p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex overflow-y-auto bg-stone-900/45 p-3 backdrop-blur-[2px] sm:p-4">
       <div role="dialog" aria-modal="true" aria-label={t('join.choosePlan')} className="m-auto w-full max-w-[560px]" onClick={(e) => e.stopPropagation()}>
         <JoinCheckout course={course} onClose={onClose} onDone={onDone} onNeedRequest={onNeedRequest} />
       </div>

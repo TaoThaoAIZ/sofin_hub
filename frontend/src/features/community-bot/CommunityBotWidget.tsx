@@ -3,6 +3,7 @@ import { Fragment, useEffect, useRef, useState, type FormEvent, type KeyboardEve
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { ApiError } from '../../lib/api';
+import { ChatLauncher } from '../chatbot/ChatLauncher';
 import { ChatIcon, CloseIcon, MessageBubble, PANEL_CLASS, SendIcon, type Bubble } from '../chatbot/ChatWidget';
 import { useMessageQueue } from '../chatbot/useMessageQueue';
 import { handoffToOwner, sendBotFeedback, sendBotMessage, setMyPersona, startBotConversation } from './api';
@@ -23,14 +24,7 @@ export function CommunityBotWidget({ communityId }: { communityId: string }) {
   if (!status.data?.available) return null;
   if (!open) {
     return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-label={t('open', { name: status.data.botName })}
-        className="bg-brand-gradient shadow-brand fixed right-4 bottom-4 z-[60] grid size-14 place-items-center rounded-full text-white hover:brightness-[1.06] md:right-6 md:bottom-6"
-      >
-        <ChatIcon />
-      </button>
+      <ChatLauncher onOpen={() => setOpen(true)} label={t('open', { name: status.data.botName })} hint={t('hint', { name: status.data.botName })} />
     );
   }
   return <BotPanel communityId={communityId} status={status.data} onClose={() => setOpen(false)} />;

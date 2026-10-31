@@ -11,6 +11,9 @@ import type {
   Post,
   PostQuery,
   QuizInput,
+  GamesInput,
+  SurveyAnswer,
+  SurveyInput,
   ReportAction,
   ReportReason,
   ReportStatus,
@@ -133,13 +136,13 @@ export const useToggleRsvp = (courseId: string) => {
 };
 
 // ---- Thành viên ----
-export const useMembers = (courseId: string, query: { q?: string; page?: number; filter?: MemberFilter; sort?: 'active' | 'joined' }) => {
+export const useMembers = (courseId: string, query: { q?: string; page?: number; filter?: MemberFilter; sort?: 'active' | 'joined' }, enabled = true) => {
   const { accessToken, status } = useAuth();
   return useQuery({
     placeholderData: keepPreviousData,
     queryKey: keys.members(courseId, query),
     queryFn: ({ signal }) => api.fetchMembers(courseId, query, accessToken!, signal),
-    enabled: status === 'authenticated',
+    enabled: enabled && status === 'authenticated',
   });
 };
 
@@ -328,6 +331,14 @@ export const useDownloadIcs = () => {
   });
 };
 
+export const useDownloadDocx = () => {
+  const token = useToken();
+  return useMutation({
+    mutationFn: (vars: { eventId?: string; courseId?: string }) =>
+      vars.eventId ? api.downloadEventDocx(vars.eventId, token) : api.downloadCommunityDocx(vars.courseId!, token),
+  });
+};
+
 /** Xác minh chứng nhận công khai — không cần đăng nhập. */
 export const useVerifyCertificate = (code: string) =>
   useQuery({
@@ -443,6 +454,12 @@ export const useAttemptQuiz = (cid: string, lessonId: string) => {
   });
 };
 
+/** Chấm 1 câu ngay khi chọn (không ghi lượt làm, nên không làm mới cache). */
+export const useCheckQuizQuestion = (cid: string, lessonId: string) => {
+  const token = useToken();
+  return useMutation({ mutationFn: (input: { questionId: string; answer: number }) => api.checkQuizQuestion(cid, lessonId, input, token) });
+};
+
 export const usePutQuiz = (cid: string, lessonId: string) => {
   const token = useToken();
   const qc = useQueryClient();
@@ -455,12 +472,133 @@ export const usePutQuiz = (cid: string, lessonId: string) => {
   });
 };
 
+const surveyKey = (cid: string, lessonId: string) => ['community', cid, 'survey', lessonId] as const;
+
+export const useSurvey = (cid: string, lessonId: string) => {
+  const { accessToken } = useAuth();
+  return useQuery({
+    queryKey: surveyKey(cid, lessonId),
+    queryFn: ({ signal }) => api.fetchSurvey(cid, lessonId, accessToken!, signal),
+    enabled: !!accessToken && !!lessonId,
+    retry: false,
+  });
+};
+
+const gameKey = (cid: string, lessonId: string) => ['community', cid, 'lesson', lessonId, 'games'] as const;
+
+export const useGames = (cid: string, lessonId: string, enabled = true) => {
+  const { accessToken } = useAuth();
+  return useQuery({
+    queryKey: gameKey(cid, lessonId),
+    queryFn: ({ signal }) => api.fetchGames(cid, lessonId, accessToken!, signal),
+    enabled: enabled && !!accessToken && !!lessonId,
+    retry: false,
+  });
+};
+
+export const usePutGames = (cid: string, lessonId: string) => {
+  const token = useToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: GamesInput) => api.putGames(cid, lessonId, body, token),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: gameKey(cid, lessonId) });
+      void qc.invalidateQueries({ queryKey: ['community', cid, 'lesson'] });
+    },
+  });
+};
+
+export const useSubmitGameResult = (cid: string, lessonId: string) => {
+  const token = useToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ gameId, ...body }: { gameId: string; moves: number; seconds: number }) => api.submitGameResult(cid, lessonId, gameId, body, token),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: gameKey(cid, lessonId) });
+      void qc.invalidateQueries({ queryKey: ['community', cid, 'lesson'] });
+      // Điểm mới: làm mới bảng xếp hạng đang hiển thị.
+      void qc.invalidateQueries({ queryKey: ['community', cid, 'leaderboard'] });
+    },
+  });
+};
+
+export const useSubmitSurvey = (cid: string, lessonId: string) => {
+  const token = useToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (answers: SurveyAnswer[]) => api.submitSurvey(cid, lessonId, answers, token),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: surveyKey(cid, lessonId) });
+      qc.invalidateQueries({ queryKey: staffSurveyKey(cid) });
+      qc.invalidateQueries({ queryKey: ['community', cid, 'lesson'] });
+    },
+  });
+};
+
+export const usePutSurvey = (cid: string, lessonId: string) => {
+  const token = useToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: SurveyInput) => api.putSurvey(cid, lessonId, body, token),
+    onSuccess: () => qc.invalidateQueries({ queryKey: surveyKey(cid, lessonId) }),
+  });
+};
+
+const staffSurveyKey = (cid: string) => ['community', cid, 'survey-results'] as const;
+
+export const useSurveyList = (cid: string) => {
+  const { accessToken } = useAuth();
+  return useQuery({ queryKey: [...staffSurveyKey(cid), 'list'], queryFn: ({ signal }) => api.fetchSurveyList(cid, accessToken!, signal), enabled: !!accessToken, retry: false });
+};
+
+export const useSurveyOverview = (cid: string, lessonId: string) => {
+  const { accessToken } = useAuth();
+  return useQuery({ queryKey: [...staffSurveyKey(cid), lessonId, 'overview'], queryFn: ({ signal }) => api.fetchSurveyOverview(cid, lessonId, accessToken!, signal), enabled: !!accessToken && !!lessonId, retry: false });
+};
+
+export const useSurveyTexts = (cid: string, lessonId: string, query: { questionId: string; q?: string; page?: number }) => {
+  const { accessToken } = useAuth();
+  return useQuery({
+    queryKey: [...staffSurveyKey(cid), lessonId, 'texts', query],
+    queryFn: ({ signal }) => api.fetchSurveyTexts(cid, lessonId, query, accessToken!, signal),
+    enabled: !!accessToken && !!query.questionId,
+    placeholderData: keepPreviousData,
+    retry: false,
+  });
+};
+
+export const useSurveyResponses = (cid: string, lessonId: string, query: { q?: string; questionId?: string; choice?: string; page?: number }) => {
+  const { accessToken } = useAuth();
+  return useQuery({
+    queryKey: [...staffSurveyKey(cid), lessonId, 'responses', query],
+    queryFn: ({ signal }) => api.fetchSurveyResponses(cid, lessonId, query, accessToken!, signal),
+    enabled: !!accessToken && !!lessonId,
+    placeholderData: keepPreviousData,
+    retry: false,
+  });
+};
+
+export const useDownloadSurveyCsv = (cid: string, lessonId: string) => {
+  const token = useToken();
+  return useMutation({ mutationFn: () => api.downloadSurveyCsv(cid, lessonId, token) });
+};
+
 export const useProgress = (cid: string, courseId: string | null) => {
   const { accessToken } = useAuth();
   return useQuery({
     queryKey: ck.progress(cid, courseId ?? ''),
     queryFn: ({ signal }) => api.fetchProgress(cid, courseId!, accessToken!, signal),
     enabled: !!courseId && !!accessToken,
+  });
+};
+
+/** Video bài học đã chạy hết: báo server để mở khóa trắc nghiệm, rồi làm mới chi tiết bài. */
+export const useMarkVideoWatched = (cid: string, lessonId: string) => {
+  const token = useToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (videoKey?: string) => api.markVideoWatched(cid, lessonId, token, videoKey),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['community', cid, 'lesson'] }),
   });
 };
 

@@ -712,3 +712,114 @@ def load(add):
       ["Owner mở quản lý chứng nhận (dự kiến)", "Thu hồi chứng nhận FIN-DEMO-CERT-001", "Xác minh công khai lại"],
       "FIN-DEMO-CERT-001",
       "Dự kiến: trang xác minh báo chứng nhận đã bị thu hồi (ví dụ valid:false + lý do) thay vì 'hợp lệ'; cần chốt chính sách thu hồi khi mod thêm bài mới.", pw="Không", st=PLAN)
+
+    # =====================================================================================
+    # COURSE — Màn chúc mừng khi hoàn thành TOÀN BỘ bài của một module (Figma node 153:3758, thêm 2026-10-22)
+    # =====================================================================================
+    F = "Lớp học - Màn chúc mừng hoàn thành module"
+    CPRE = BASE + "Đăng nhập member có quyền học; chọn module có nhiều bài (vd 6 bài), đã hoàn thành n-1 bài, còn đúng 1 bài chưa xong và không bị chặn điều kiện (video/trắc nghiệm/khảo sát). "
+    C(CO, F, "Hoàn thành bài cuối còn thiếu của module hiện màn chúc mừng", "Chức năng", "Cao", CPRE,
+      ["Mở bài cuối còn thiếu của module (/communities/:id/lessons/:lessonId)", "Bấm nút 'Hoàn thành'"],
+      "Module n bài, n-1 bài đã xong",
+      "Toggle thành công, toast 'đã hoàn thành'; khu vực nội dung đổi sang màn chúc mừng: ảnh cúp, tiêu đề 'Chúc mừng bạn đã hoàn thành bài N!' (N = số '#N' của module ở breadcrumb), mô tả, 2 nút 'Xem lại bài học' và 'Tiếp tục học bài N+1'. Thanh tiến độ cập nhật (vd 9/15 bài).")
+    C(CO, F, "Hoàn thành bài khi module còn bài chưa xong: KHÔNG hiện chúc mừng", "Chức năng", "Cao", BASE + "Module có từ 2 bài chưa hoàn thành.",
+      ["Mở một bài chưa xong của module (còn >= 1 bài khác chưa xong)", "Bấm 'Hoàn thành'"], "Module còn bài dở",
+      "Chỉ hiện toast 'đã hoàn thành', vẫn ở lại nội dung bài (nút đổi 'Bỏ hoàn thành'); không có màn chúc mừng.")
+    C(CO, F, "Hoàn thành không theo thứ tự: bài cuối còn thiếu là bài giữa vẫn hiện chúc mừng", "Chức năng", "Trung bình", BASE + "Module 6 bài, đã xong bài 1,2,4,5,6; còn bài 3.",
+      ["Mở bài 3", "Bấm 'Hoàn thành'"], "Bài còn thiếu không phải bài cuối danh sách",
+      "Hiện màn chúc mừng (điều kiện là cả module đã xong, không phụ thuộc vị trí bài).")
+    C(CO, F, "Nút 'Tiếp tục học bài N+1' chuyển sang bài đầu của module kế", "Chức năng", "Cao", CPRE + "Có module kế tiếp, không bị khóa.",
+      ["Hoàn thành bài cuối còn thiếu", "Bấm 'Tiếp tục học bài N+1'"], "Module có nextLessonId",
+      "Chuyển tới URL của bài kế tiếp (bài đầu module sau); màn chúc mừng biến mất, hiện nội dung bài mới.")
+    C(CO, F, "Module cuối khóa hoặc module kế bị khóa: nút chính đổi thành 'Về lớp học'", "Chức năng", "Trung bình", CPRE + "Chọn module cuối của khóa hoặc module sau đang bị khóa.",
+      ["Hoàn thành bài cuối còn thiếu", "Quan sát nút chính", "Bấm nút đó"], "Không có bài kế mở được",
+      "Nút chính hiện 'Về lớp học' (không còn 'Tiếp tục học bài N+1'); bấm vào chuyển về trang Lớp học của khóa.")
+    C(CO, F, "Nút 'Xem lại bài học' quay lại nội dung bài", "Chức năng", "Trung bình", CPRE,
+      ["Hoàn thành bài cuối để hiện màn chúc mừng", "Bấm 'Xem lại bài học'"], "-",
+      "Màn chúc mừng đóng, hiện lại nội dung bài, nút hiển thị 'Bỏ hoàn thành' và dòng 'Bạn đã hoàn thành bài này'; không gọi API thêm.")
+    C(CO, F, "Bỏ hoàn thành / tải lại trang / đổi bài không hiện lại màn chúc mừng", "Chức năng", "Trung bình", BASE + "Module đã hoàn thành đủ.",
+      ["Mở bài đã xong, bấm 'Bỏ hoàn thành'", "Hoàn thành lại để hiện chúc mừng rồi bấm F5", "Hiện chúc mừng rồi chuyển sang bài khác trong sidebar"], "-",
+      "Bỏ hoàn thành chỉ hiện toast, không có màn chúc mừng; F5 và đổi bài đều không hiện màn chúc mừng (chỉ hiện ngay sau khi bấm Hoàn thành bài cuối).")
+    C(CO, F, "Bài còn điều kiện bắt buộc: không hoàn thành được nên không hiện chúc mừng", "Chức năng", "Trung bình",
+      BASE + "Bài cuối còn thiếu có video bắt buộc xem hết / trắc nghiệm / khảo sát chưa đạt.",
+      ["Mở bài bị chặn điều kiện", "Quan sát nút 'Hoàn thành'"], "Bài có requirements chưa đạt",
+      "Nút 'Hoàn thành' bị vô hiệu kèm danh sách điều kiện; không có màn chúc mừng cho tới khi đạt đủ và hoàn thành thành công.")
+    C(CO, F, "Giao diện màn chúc mừng khớp Figma, responsive và dark mode", "Giao diện", "Thấp", CPRE,
+      ["Hoàn thành bài cuối ở màn hình 1440px, so với Figma node 153:3758", "Thu nhỏ còn 390px", "Bật dark mode"], "-",
+      "Nền gradient cam nhạt, ảnh cúp 409x249, tiêu đề đậm 38px, nút 200x48 bo 15px (trắng viền #eee1d9 / cam #ff6717). Ở 390px: tiêu đề co lại, các nút xuống dòng, không tràn ngang. Dark mode: chữ vẫn đọc được.",
+      pw="Không")
+
+    # =====================================================================================
+    # COURSE — Nhiều video / tài liệu / slide cho một bài học (thêm 2026-10-22)
+    # =====================================================================================
+    F = "Lớp học - Nhiều video, tài liệu, slide trong một bài"
+    MPRE = BASE + "Đăng nhập tài khoản mod/owner; mở popup Thêm/Sửa bài học (tab Lớp học). Có sẵn vài file mp4/webm, pdf, pptx nhỏ. "
+    C(CO, F, "Thêm nhiều video bổ sung bằng tệp tải lên (chọn nhiều tệp một lần)", "Chức năng", "Cao", MPRE,
+      ["Trong mục 'Video bổ sung' bấm 'Tải thêm video'", "Chọn cùng lúc 3 tệp mp4/webm", "Chờ tải xong, bấm 'Lưu bài học'", "Mở lại bài để sửa"], "3 tệp video",
+      "3 video lần lượt tải (có thanh tiến độ), hiện thành 3 dòng với tên tệp sửa được; lưu thành công; mở lại vẫn đủ 3 video bổ sung đúng thứ tự.")
+    C(CO, F, "Thêm video bổ sung bằng link YouTube/Vimeo; link lạ bị từ chối", "Chức năng", "Cao", MPRE,
+      ["Dán link YouTube hợp lệ vào ô link bổ sung, bấm 'Thêm link' (hoặc Enter)", "Dán link https://example.com/a.mp4, thêm rồi lưu"], "Link YouTube/Vimeo, link lạ",
+      "Link hợp lệ thêm thành dòng 'Video N' (đổi tên được). Link lạ: lưu bị từ chối 400 'Video bổ sung chỉ chấp nhận link YouTube/Vimeo hợp lệ hoặc video tải lên'.")
+    C(CO, F, "Giới hạn 10 video bổ sung và tổng 30 tệp", "Chức năng", "Trung bình", MPRE,
+      ["Thêm đủ 10 video bổ sung", "Thử thêm video thứ 11", "Gọi API với 11 video bổ sung"], "-",
+      "Nút tải/thêm link bị vô hiệu khi đủ 10; API trả 400 'Tối đa 10 video bổ sung'; tổng video+slide+tài liệu > 30 bị 400.")
+    C(CO, F, "Chọn nhiều tệp một lần cho tài liệu và slide", "Chức năng", "Trung bình", MPRE,
+      ["Mục tài liệu đính kèm: chọn 3 tệp cùng lúc", "Mục slide: chọn 2 tệp pdf/pptx cùng lúc", "Lưu bài"], "3 tài liệu, 2 slide",
+      "Tất cả được tải lần lượt và hiện đủ trong danh sách tương ứng; lưu xong học viên thấy đủ 5 tệp. Hủy giữa chừng: tệp đã tải xong vẫn giữ, các tệp sau dừng.")
+    C(CO, F, "Chưa có video chính: video bổ sung đầu tiên được nâng thành video chính", "Chức năng", "Trung bình", MPRE,
+      ["Để trống video chính, chỉ thêm 2 video bổ sung", "Lưu bài, mở trang bài học bằng học viên"], "2 video bổ sung",
+      "Bài lưu được, type = video; video đầu là video chính (phát đầu tiên, có theo dõi 'xem hết'), video còn lại là video bổ sung.")
+    C(CO, F, "Trang bài học: thanh chuyển video khi bài có từ 2 video", "Chức năng", "Cao", BASE + "Bài học có video chính + 2 video bổ sung (1 YouTube, 1 tải lên). Đăng nhập học viên.",
+      ["Mở trang bài học", "Bấm lần lượt các nút 'Video 1', tên video 2, tên video 3 dưới khung phát", "Đổi sang bài khác rồi quay lại"], "-",
+      "Có thanh chip dưới khung phát, chip đang chọn nổi màu cam; bấm chip thì khung phát đổi đúng video (YouTube nhúng iframe, tải lên dùng thẻ video); quay lại bài thì về Video 1. Bài chỉ có 1 video: không hiện thanh chip, giao diện như cũ.")
+    C(CO, F, "Phải xem hết TẤT CẢ video (chính + bổ sung) mới hoàn thành được bài", "Chức năng", "Cao", BASE + "Bài có 3 video (1 chính + 2 bổ sung), học viên chưa xem video nào.",
+      ["Xem hết Video 1 (không tua), bấm 'Hoàn thành'", "Chuyển sang video 2, xem hết, bấm 'Hoàn thành'", "Xem hết video 3, bấm 'Hoàn thành'", "Quan sát dòng thông báo và dấu tích trên các nút video"], "-",
+      "Sau video 1 và 2: nút Hoàn thành vẫn báo 409 VIDEO_REQUIRED 'xem hết tất cả video', thông báo 'Đã xem 1/3, 2/3 video', nút video đã xem hiện dấu tích. Chỉ sau khi xem hết cả 3 mới hoàn thành được; bài trắc nghiệm cũng chỉ mở khi xem đủ 3.")
+    C(CO, F, "Tua qua video bổ sung không tính là đã xem; API báo xem với khóa video lạ bị từ chối", "Chức năng", "Trung bình", BASE + "Bài có video bổ sung chưa xem.",
+      ["Chuyển sang video bổ sung, tua thẳng tới cuối", "Gọi POST /lessons/:id/watched với videoKey không thuộc bài"], "-",
+      "Tua qua: hiện 'Bạn đã tua qua video…', không ghi nhận. API khóa lạ: 400 'Video không thuộc bài học này'.")
+    C(CO, F, "Sửa bài đã có video/tài liệu/slide rồi bấm Lưu: không lỗi 400", "Chức năng", "Cao", MPRE + "Bài đã lưu có video bổ sung tải lên + link YouTube + slide + tài liệu.",
+      ["Bấm nút Sửa bài", "Không đổi gì (hoặc thêm 1 video/tài liệu/slide), bấm 'Lưu bài học'", "Mở lại bài để sửa"], "Bài có đủ 3 loại tệp",
+      "Lưu thành công (200), không còn 400; đủ video/tài liệu/slide cũ và mới; video tải lên vẫn phát được (BE lưu dạng /api/files/<key> và nhận lại đúng dạng này khi sửa).")
+    C(CO, F, "Danh sách tài liệu/slide nhiều tệp: 2 cột, thu gọn 4 tệp đầu + 'Xem thêm'", "Giao diện", "Trung bình", BASE + "Bài có 7 tài liệu và 6 slide.",
+      ["Mở trang bài học ở 1440px", "Bấm 'Xem thêm n tệp', rồi 'Thu gọn'", "Thu nhỏ còn 390px"], "-",
+      "Mỗi mục hiện số tệp trong ngoặc, 2 cột (mobile 1 cột), chỉ 4 tệp đầu; 'Xem thêm' mở hết, 'Thu gọn' đóng lại; tên dài bị cắt bằng '...'. Form soạn bài cũng chỉ hiện 4 dòng đầu cho mỗi danh sách video/tài liệu/slide kèm 'Xem thêm n tệp'.", pw="Không")
+    C(CO, F, "Bài khóa không lộ video bổ sung; học viên ngoài quyền không tải được", "Bảo mật", "Cao", BASE + "Module khóa với học viên chưa mở khóa.",
+      ["Học viên chưa mở khóa gọi GET /api/courses/photo/lessons/:id", "Thử mở URL video bổ sung trực tiếp"], "-",
+      "Phản hồi bài khóa có attachments = [] (không có link video bổ sung); URL /api/files/... cần quyền cộng đồng, người ngoài bị chặn.")
+
+    # =====================================================================================
+    # COURSE — Trò chơi lật thẻ ghi nhớ cuối bài học (thêm 2026-10-22)
+    # =====================================================================================
+    F = "Lớp học - Trò chơi lật thẻ cuối bài"
+    GPRE = BASE + "Đăng nhập mod/owner để soạn; học viên (member1) để chơi. Mở popup Sửa bài học của một bài đã lưu. "
+    C(CO, F, "Chủ cộng đồng nhập các cặp thẻ (thuật ngữ ↔ định nghĩa) và lưu", "Chức năng", "Cao", GPRE,
+      ["Cuộn xuống mục 'Trò chơi lật thẻ cuối bài'", "Bấm 'Thêm cặp thẻ' 3 lần, nhập đủ thuật ngữ + định nghĩa", "Bấm 'Lưu bài học'", "Mở lại popup Sửa bài"], "3 cặp thẻ",
+      "Lưu thành công, mở lại thấy đủ 3 cặp; chỉ lưu khi bấm 'Lưu bài học' (bấm X thì bỏ thay đổi). Dòng trống hoàn toàn bị bỏ qua khi lưu. Tối đa 8 cặp (nút Thêm bị vô hiệu ở 8/8).")
+    C(CO, F, "Validate cặp thẻ: <2 cặp, thiếu chữ, trùng thuật ngữ/định nghĩa", "Chức năng", "Cao", GPRE,
+      ["Nhập đúng 1 cặp rồi lưu", "Nhập cặp thiếu định nghĩa rồi lưu", "Nhập 2 cặp trùng thuật ngữ (khác hoa/thường) rồi lưu", "Gọi API PUT /lessons/:id/game với 9 cặp"], "-",
+      "FE chặn kèm thông báo rõ từng lỗi (cần ít nhất 2 cặp / thiếu thuật ngữ hoặc định nghĩa / trùng); API trả 400 cho <2, >8 cặp, trùng, rỗng chữ. Xóa hết các cặp rồi lưu = tắt trò chơi của bài.")
+    C(CO, F, "Chỉ mod+ sửa được trò chơi; học viên/người ngoài bị chặn", "Bảo mật", "Cao", BASE + "Có tài khoản member, người ngoài cộng đồng.",
+      ["Học viên gọi PUT /lessons/:id/game", "Người ngoài cộng đồng gọi GET và POST /game/result"], "-",
+      "Học viên PUT: 403; người ngoài: bị từ chối (4xx) cho GET/POST; học viên GET xem được các cặp thẻ của bài.")
+    C(CO, F, "Bấm Hoàn thành bài có trò chơi: hiện màn chơi lật thẻ trước", "Chức năng", "Cao", BASE + "Bài có trò chơi (3 cặp), học viên chưa hoàn thành bài.",
+      ["Mở bài, bấm 'Hoàn thành'"], "Bài có hasGame",
+      "Toast 'đã hoàn thành' rồi hiện màn 'Trò chơi lật thẻ ghi nhớ' (nền gradient, đồng hồ, số lượt, tiến độ n/N cặp) thay cho nội dung bài. Bài không có trò chơi: giữ hành vi cũ.")
+    C(CO, F, "Chơi: lật 2 thẻ, ghép đúng thì giữ lại, sai thì úp lại", "Chức năng", "Cao", BASE + "Đang ở màn chơi.",
+      ["Lật 1 thuật ngữ + định nghĩa đúng của nó", "Lật 2 thẻ không khớp", "Bấm nhanh thẻ thứ 3 trong lúc 2 thẻ sai còn đang ngửa"], "-",
+      "Cặp đúng: 2 thẻ sáng xanh và khóa; cặp sai: úp lại sau khoảng 1 giây; trong lúc chờ không lật thêm được thẻ khác. Số lượt tăng 1 mỗi lần lật xong 2 thẻ; đồng hồ chạy từ lần lật đầu. Thẻ thuật ngữ và định nghĩa khác màu viền để phân biệt.")
+    C(CO, F, "Kết quả: số sao theo số lượt lật, điểm thưởng đúng một lần", "Chức năng", "Cao", BASE + "Bài 4 cặp, học viên đã hoàn thành bài, chưa chơi lần nào. Điểm khởi đầu ghi lại.",
+      ["Ghép hết 4 cặp với 4 lượt (hoàn hảo)", "Bấm 'Chơi lại', lần này chơi chậm hơn (>= 7 lượt)", "Xem tổng điểm ở hồ sơ / bảng xếp hạng"], "Bài 4 cặp",
+      "Lần 1: 3 sao, '+6 điểm' (mỗi sao 2 điểm); bảng điểm tăng đúng 6 (chưa tính 3 điểm hoàn thành bài). Lần 2: sao thấp hơn nhưng không cộng thêm điểm, kết quả tốt nhất giữ 3 sao. Ngưỡng sao: dư <= n/2 lượt = 3 sao; dư <= 2n lượt = 2 sao; còn lại 1 sao.")
+    C(CO, F, "Chơi game nhưng chưa hoàn thành bài: có sao, chưa có điểm", "Chức năng", "Trung bình", BASE + "Bài có trò chơi, học viên CHƯA hoàn thành bài.",
+      ["Mở bài đã có trò chơi, gọi POST /game/result hợp lệ (qua API) hoặc chơi qua nút nếu có", "Xem điểm"], "-",
+      "API trả stars và points = 0, điểm tổng không đổi; sau khi hoàn thành bài và chơi lại thì mới được cộng (một lần).")
+    C(CO, F, "Bỏ qua trò chơi và nút 'Tiếp tục' dẫn tới màn chúc mừng module (nếu đủ module)", "Chức năng", "Trung bình", BASE + "Bài cuối còn thiếu của module, có trò chơi.",
+      ["Bấm Hoàn thành bài cuối", "Bấm 'Bỏ qua trò chơi'", "Làm lại: chơi hết rồi bấm 'Tiếp tục'"], "-",
+      "Cả bỏ qua và Tiếp tục đều dẫn tới màn 'Chúc mừng bạn đã hoàn thành bài N!' khi đã xong cả module; nếu module chưa xong thì quay về nội dung bài.")
+    C(CO, F, "Chơi lại trò chơi từ bài đã hoàn thành", "Chức năng", "Trung bình", BASE + "Bài đã hoàn thành có trò chơi.",
+      ["Mở bài đã xong, tìm nút 'Chơi trò chơi ghi nhớ'", "Chơi xong, bấm 'Tiếp tục'", "Mở lại bài, nút đổi thành 'Chơi lại trò chơi ghi nhớ'"], "-",
+      "Nút hiện dưới dòng 'Bạn đã hoàn thành bài này' chỉ khi bài có trò chơi; 'Chơi lại' xáo thẻ mới; 'Tiếp tục' về nội dung bài (không hiện màn chúc mừng module).")
+    C(CO, F, "Giao diện trò chơi khớp phong cách, responsive, dark mode", "Giao diện", "Thấp", GPRE,
+      ["Mở trò chơi ở 1440px", "Thu nhỏ còn 390px", "Bật dark mode", "Dùng bàn phím Tab + Enter lật thẻ"], "-",
+      "Thẻ úp màu cam có dấu '?', lật 3D mượt; lưới 4 cột (<=6 thẻ: 3 cột; mobile 2 cột), chữ dài bị cắt 4 dòng; dark mode vẫn đọc được; thẻ là button có aria-label.", pw="Không")

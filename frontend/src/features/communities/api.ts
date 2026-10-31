@@ -1,3 +1,4 @@
+import { readCommunityRef } from '../referral/communityRef';
 import { apiDelete, apiGet, apiPatch, apiPost } from '../../lib/api';
 import type { CommunityDetail } from '../courses/types';
 import type {
@@ -43,7 +44,7 @@ export interface JoinRequestInput {
 }
 
 export const createJoinRequest = (courseId: string, input: JoinRequestInput) =>
-  apiPost<{ data: JoinRequest }>(`/communities/${courseId}/join-requests`, input).then((r) => r.data);
+  apiPost<{ data: JoinRequest }>(`/communities/${courseId}/join-requests`, { ...input, referralCode: readCommunityRef(courseId) }).then((r) => r.data);
 
 export const cancelJoinRequest = (requestId: string) => apiDelete<{ data: { cancelled: boolean } }>(`/join-requests/${requestId}`);
 

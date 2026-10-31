@@ -313,7 +313,7 @@ function ReportDialog({ courseId, member, onClose, onNotify }: DialogProps) {
       <div className="mt-3 flex flex-col gap-1.5" role="radiogroup" aria-label={t('report.reasonGroup')}>
         {REPORT_REASONS.map((r) => (
           <label key={r.key} className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 text-[13.5px] text-stone-800 hover:bg-stone-50">
-            <input type="radio" name="report-reason" checked={reason === r.key} onChange={() => setReason(r.key)} className="accent-[#f26a1b]" />
+            <input type="radio" name="report-reason" checked={reason === r.key} onChange={() => setReason(r.key)} className="accent-[#ff570a]" />
             {r.label}
           </label>
         ))}

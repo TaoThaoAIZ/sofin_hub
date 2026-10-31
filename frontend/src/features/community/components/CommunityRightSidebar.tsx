@@ -1,17 +1,14 @@
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { usePopup } from '../../../components/ui/usePopup';
 import { Avatar } from '../../account/components/Avatar';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { formatCompact } from '../../../lib/format';
-import { useCommunities, useToggleEnrollment } from '../../courses/queries';
+import { useToggleEnrollment } from '../../courses/queries';
+import { SuggestedCommunities } from './SuggestedCommunities';
 import { errText, toast, ToastHost } from './contentUi';
 import type { CommunityDetail } from '../../courses/types';
 import { useMembers } from '../queries';
-
-// Màu lấy đúng từ bảng pal[]/logoStyle trong file thiết kế gốc SofinHub Community.html.
-const AVATAR_PALETTE = ['#d6d3f5', '#cfe3f7', '#e5e7c9', '#cfe6d6', '#f3d4e6', '#dcd6cf', '#f5dcc8', '#d4dbe8'];
-const LOGO_PALETTE = ['#1e3a8a', '#65a30d', '#1d4ed8', '#7c3aed', '#0f766e'];
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/);
@@ -42,11 +39,10 @@ export function CommunityRightSidebar({ course }: { course: CommunityDetail }) {
       onError: (e) => toast(errText(e), 'error'),
     });
   };
-  const suggested = useCommunities({ page: 1, limit: 4, sort: 'trending' });
   const shownMembers = members.data?.data.slice(0, 6) ?? [];
-  const remaining = Math.max(0, course.stats.members - shownMembers.length);
-  const suggestedCourses = (suggested.data?.data ?? []).filter((c) => c.id !== course.id).slice(0, 3);
-
+  // Tổng thành viên lấy từ chính danh sách thật (cùng nguồn với dãy avatar) để số và avatar luôn khớp.
+  const totalMembers = members.data?.counts.all ?? course.stats.members;
+  const remaining = Math.max(0, totalMembers - shownMembers.length);
   return (
     <aside className="sticky top-[72px] flex flex-col gap-4 max-lg:static">
       <div className="glass overflow-hidden rounded-[22px]">
@@ -61,7 +57,7 @@ export function CommunityRightSidebar({ course }: { course: CommunityDetail }) {
           <div className="mt-1 truncate text-[12.5px] text-stone-500">{t('rightSidebar.by', { name: course.instructor.name })}</div>
           <div className="mt-2.5 grid grid-cols-3 border-t border-[rgba(120,60,20,.08)] pt-3 text-center">
             <div>
-              <div className="text-[15px] font-bold">{formatCompact(course.stats.members)}</div>
+              <div className="text-[15px] font-bold">{formatCompact(totalMembers)}</div>
               <div className="mt-0.5 text-[11px] text-stone-500">{t('info.members')}</div>
             </div>
             <div className="border-x border-[rgba(120,60,20,.08)]">
@@ -78,7 +74,7 @@ export function CommunityRightSidebar({ course }: { course: CommunityDetail }) {
             <div className="mt-3.5 flex items-center">
               {shownMembers.map((m, i) => (
                 <span key={m.id} className="flex-none rounded-full border-2 border-white" style={{ marginLeft: i ? -6 : 0 }}>
-                  <Avatar url={m.avatarUrl} name={m.name} size={22} text={initials(m.name)} className="text-stone-700" style={{ background: AVATAR_PALETTE[i % AVATAR_PALETTE.length], fontSize: 9.5 }} />
+                  <Avatar url={m.avatarUrl} name={m.name} size={22} text={initials(m.name)} style={{ fontSize: 9.5 }} />
                 </span>
               ))}
               {remaining > 0 && <span className="ml-2 text-[12.5px] text-stone-600">+{formatCompact(remaining)}</span>}
@@ -91,7 +87,7 @@ export function CommunityRightSidebar({ course }: { course: CommunityDetail }) {
               disabled
               className="flex h-[42px] flex-1 items-center justify-center gap-2 rounded-2xl bg-brand/10 text-[13.5px] font-bold text-brand disabled:cursor-default"
             >
-              <MaterialIcon name="check_circle" size={20} filled color="#f26a1b" />
+              <MaterialIcon name="check_circle" size={20} filled color="#ff570a" />
               {t('rightSidebar.joined')}
             </button>
           </div>
@@ -110,33 +106,7 @@ export function CommunityRightSidebar({ course }: { course: CommunityDetail }) {
         </div>
       </div>
 
-      {suggestedCourses.length > 0 && (
-        <div className="glass rounded-[22px] p-4 pb-2.5">
-          <div className="mb-1.5 flex items-center justify-between">
-            <span className="text-[14.5px] font-bold">{t('rightSidebar.suggested')}</span>
-            <Link to="/#courses" className="text-[12.5px] text-brand">
-              {t('rightSidebar.viewAll')}
-            </Link>
-          </div>
-          {suggestedCourses.map((c, i) => (
-            <Link key={c.id} to={`/communities/${c.id}`} className="flex items-center gap-3 py-[7px] hover:opacity-90">
-              <span
-                className="grid size-[38px] flex-none place-items-center rounded-[10px] text-[11.5px] font-extrabold text-white"
-                style={{ background: LOGO_PALETTE[i % LOGO_PALETTE.length] }}
-              >
-                {c.title.charAt(0).toUpperCase()}
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-[13.5px] font-medium">{c.title}</div>
-                <div className="text-xs text-stone-500">{t('rightSidebar.membersCount', { n: formatCompact(c.students) })}</div>
-              </div>
-              <span className="flex-none rounded-full border border-brand/20 bg-brand-soft px-3 py-1.5 text-[12.5px] font-semibold text-brand">
-                {t('rightSidebar.join')}
-              </span>
-            </Link>
-          ))}
-        </div>
-      )}
+      <SuggestedCommunities course={course} />
 
       <div className="glass flex flex-col gap-3.5 rounded-[22px] p-[18px] text-center">
         <span className="mx-auto grid size-12 place-items-center rounded-full bg-amber-100">
@@ -146,13 +116,13 @@ export function CommunityRightSidebar({ course }: { course: CommunityDetail }) {
           <div className="text-[14.5px] font-extrabold">{t('rightSidebar.premiumTitle')}</div>
           <div className="mt-2.5 flex flex-col gap-1.5 text-left text-[12.5px] text-stone-600">
             <span className="flex items-center gap-2">
-              <MaterialIcon name="check" size={16} color="#f26a1b" /> {t('rightSidebar.premium1')}
+              <MaterialIcon name="check" size={16} color="#ff570a" /> {t('rightSidebar.premium1')}
             </span>
             <span className="flex items-center gap-2">
-              <MaterialIcon name="check" size={16} color="#f26a1b" /> {t('rightSidebar.premium2')}
+              <MaterialIcon name="check" size={16} color="#ff570a" /> {t('rightSidebar.premium2')}
             </span>
             <span className="flex items-center gap-2">
-              <MaterialIcon name="check" size={16} color="#f26a1b" /> {t('rightSidebar.premium3')}
+              <MaterialIcon name="check" size={16} color="#ff570a" /> {t('rightSidebar.premium3')}
             </span>
           </div>
         </div>

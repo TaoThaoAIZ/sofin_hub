@@ -2,34 +2,28 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
-import { useAuth } from '../../auth/AuthContext';
 import { useCommunityDetail } from '../../courses/queries';
 import { useOnboarding, usePost, usePostsFeed } from '../queries';
 import { categoryLabel, POST_CATEGORIES, type PostCategory } from '../types';
 import { CommunityRightSidebar } from './CommunityRightSidebar';
+import { SuggestedCommunities } from './SuggestedCommunities';
 import { OnboardingCard } from './OnboardingCard';
 import { errText, ErrorNote, ghostBtn, isModPlus, ToastHost } from './contentUi';
 import { CATEGORY_META, PostCard } from './PostCard';
 import { PinManagerModal } from '../../community-greetings/PinManagerModal';
 import { PostComposer } from './PostComposer';
+import { FeedTour } from './FeedTour';
 
 // Tên icon + màu chuyên mục: xem CATEGORY_META trong PostCard.tsx (lấy từ file thiết kế gốc).
 const FILTERS: { key: 'all' | 'trending' | PostCategory; icon?: string; color?: string }[] = [
   { key: 'all' },
-  { key: 'trending', icon: 'local_fire_department', color: '#f26a1b' },
+  { key: 'trending', icon: 'local_fire_department', color: '#ff570a' },
   ...POST_CATEGORIES.map((c) => ({ key: c, icon: CATEGORY_META[c].icon, color: CATEGORY_META[c].color })),
 ];
-
-const WELCOME_ACTIONS = [
-  { key: 'video', icon: 'play_arrow', comingSoon: true },
-  { key: 'popular', icon: 'description', comingSoon: false },
-  { key: 'app', icon: 'groups', comingSoon: true },
-] as const;
 
 export function FeedTab() {
   const { t } = useTranslation('community');
   const { id: courseId = '' } = useParams();
-  const { user } = useAuth();
   const { data: course } = useCommunityDetail(courseId);
   const [params, setParams] = useSearchParams();
   const tag = params.get('tag') ?? undefined;
@@ -69,6 +63,8 @@ export function FeedTab() {
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_320px] items-start gap-6 max-[1180px]:grid-cols-1">
       <ToastHost />
+      {/* Tour lần đầu (chỉ mobile): chờ bảng tin + thẻ khởi đầu tải xong để biết bước nào có phần tử để tô sáng. */}
+      <FeedTour ready={posts.isSuccess && !onboarding.isPending} hasPendingComment={!!onboarding.data?.steps.some((s) => s.key === 'comment' && !s.done)} />
       <div className="flex flex-col gap-4">
         <PostComposer courseId={courseId} />
 
@@ -83,48 +79,14 @@ export function FeedTab() {
           />
         )}
 
-        {!showOnboarding && (
-        <div className="relative min-h-[210px] overflow-hidden rounded-[24px] border border-brand/15 bg-gradient-to-br from-[#fff6ef] to-[#ffe6d4] p-6">
-          <img
-            src="/images/community-welcome-art.webp"
-            alt=""
-            className="pointer-events-none absolute inset-0 size-full object-cover"
-          />
-          <div className="relative z-10">
-            <h2 className="m-0 text-[26px] font-extrabold tracking-tight">{t('feed.welcome', { name: user?.firstName ?? t('feed.welcomeFallbackName') })}</h2>
-            <p className="mt-2 max-w-[520px] text-[14.5px] text-stone-700">
-              {t('feed.welcomeSub', { title: course?.title ?? '' })}
-            </p>
-            <div className="mt-[22px] flex max-w-[800px] flex-wrap gap-3.5">
-              {WELCOME_ACTIONS.map((a) => (
-                <button
-                  key={a.key}
-                  type="button"
-                  disabled={a.comingSoon}
-                  title={a.comingSoon ? t('feed.comingSoon') : undefined}
-                  onClick={a.key === 'popular' ? () => setSort('popular') : undefined}
-                  className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl bg-white/90 px-4 py-3.5 text-left shadow-[0_6px_18px_rgba(120,60,20,.08)] hover:bg-white disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                  <MaterialIcon name={a.icon} size={28} filled color="#f26a1b" className="flex-none" />
-                  <div className="min-w-0">
-                    <div className="truncate text-[14.5px] font-bold">{t(`feed.actions.${a.key}.title`)}</div>
-                    <div className="mt-[3px] truncate text-xs text-stone-500">{t(`feed.actions.${a.key}.desc`)}</div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-        )}
-
-        <div className="flex flex-wrap gap-2">
+        <div data-tour="topics" className="no-scrollbar flex flex-wrap gap-2 max-md:flex-nowrap max-md:overflow-x-auto">
           {isModPlus(viewerRole) && (
             <button
               type="button"
               onClick={() => setManagePins(true)}
               className="glass-chip order-last ml-auto flex h-10 items-center gap-1.5 rounded-xl px-4 text-[13.5px] font-semibold whitespace-nowrap text-stone-900"
             >
-              <MaterialIcon name="push_pin" size={17} color="#f26a1b" />
+              <MaterialIcon name="push_pin" size={17} color="#ff570a" />
               {t('feed.managePins')}
             </button>
           )}
@@ -143,7 +105,7 @@ export function FeedTab() {
                     setCategory(f.key === 'all' ? undefined : f.key);
                   }
                 }}
-                className={`flex h-10 items-center gap-2 rounded-xl px-4 text-[13.5px] font-semibold whitespace-nowrap ${
+                className={`flex h-10 flex-none items-center gap-2 rounded-xl px-4 text-[13.5px] font-semibold whitespace-nowrap max-md:h-9 max-md:rounded-[32px] max-md:px-3.5 ${
                   active ? 'bg-brand text-white' : 'glass-chip text-stone-900'
                 }`}
               >
@@ -160,7 +122,7 @@ export function FeedTab() {
             <span className="flex items-center gap-1 rounded-lg bg-brand/10 px-2.5 py-1 font-semibold text-brand">
               #{tag}
               <button type="button" aria-label={t('feed.clearTag')} onClick={() => setParam('tag')}>
-                <MaterialIcon name="close" size={15} color="#f26a1b" />
+                <MaterialIcon name="close" size={15} color="#ff570a" />
               </button>
             </span>
           </div>
@@ -196,9 +158,16 @@ export function FeedTab() {
           </button>
         )}
         {posts.isFetchNextPageError && <ErrorNote message={errText(posts.error, t('feed.loadMoreFailed'))} />}
+        {/* Mobile không có cột phải: đề xuất cộng đồng tương tự nằm cuối bảng tin. */}
+        {course && <SuggestedCommunities course={course} className="md:hidden" />}
       </div>
 
-      {course && <CommunityRightSidebar course={course} />}
+      {/* Mobile (Figma) không có cột phải; thông tin/đề xuất/Premium chỉ hiện từ md. */}
+      {course && (
+        <div className="max-md:hidden">
+          <CommunityRightSidebar course={course} />
+        </div>
+      )}
     </div>
   );
 }

@@ -9,7 +9,8 @@
     "post": "Posted",
     "like_received": "Post liked",
     "lesson_complete": "Completed a lesson",
-    "event_rsvp": "RSVP’d to an event"
+    "event_rsvp": "RSVP’d to an event",
+    "game_play": "Played the end-of-lesson game"
   },
   "profile": {
     "loading": "Loading profile…",
@@ -22,6 +23,7 @@
     "edit": "Edit profile",
     "communities": "Joined communities",
     "noCommunities": "Hasn’t joined any public communities yet.",
-    "roleSince": "{{role}} · since {{date}}"
+    "roleSince": "{{role}} · since {{date}}",
+    "message": "Message"
   }
 }

@@ -27,6 +27,9 @@ export interface UploadRecord {
   status: 'pending' | 'uploaded';
   /** true khi Platform Admin đã gỡ file: không còn phục vụ công khai. */
   removed?: boolean;
+  /** Bản web của video bài học (MediaConvert); undefined = chưa chuyển mã. */
+  webStatus?: 'processing' | 'ready' | 'failed';
+  webJobId?: string;
   createdAt: string;
 }
 
@@ -64,13 +67,19 @@ export const SLIDE_TYPES: Record<string, string> = {
 };
 
 /** Đuôi → Content-Type khi phục vụ file (không tin gì từ tên file người dùng). */
+/** Loại file bất kỳ (exe, rar, json...): lưu với đuôi 'bin', luôn phục vụ dạng tải về (attachment + nosniff + CSP sandbox), tên gốc nằm ở bản ghi. */
+export const GENERIC_TYPE = 'application/octet-stream';
+export const GENERIC_EXT = 'bin';
+
 export const EXT_TO_TYPE: Record<string, string> = Object.fromEntries(
-  Object.entries({ ...IMAGE_TYPES, ...DOC_TYPES, ...LESSON_VIDEO_TYPES }).map(([type, ext]) => [ext, type]),
+  Object.entries({ ...IMAGE_TYPES, ...DOC_TYPES, ...LESSON_VIDEO_TYPES, [GENERIC_TYPE]: GENERIC_EXT }).map(([type, ext]) => [ext, type]),
 );
 
 export interface PurposeRule {
   types: Record<string, string>;
   maxBytes: number;
+  /** true = nhận mọi loại file; loại không có trong `types` được lưu dạng GENERIC_TYPE. */
+  anyType?: boolean;
 }
 
 /** Đọc env lúc gọi (không cache) để chỉnh cấu hình được mà không cần khởi động lại khi test. */
@@ -89,16 +98,17 @@ export function purposeRule(purpose: UploadPurpose): PurposeRule {
       return { types: LESSON_VIDEO_TYPES, maxBytes: env.UPLOAD_MAX_VIDEO_MB * MB };
     case 'lesson_slide':
       return { types: SLIDE_TYPES, maxBytes: env.UPLOAD_MAX_SLIDE_MB * MB };
-    case 'post_file':
     case 'lesson_attachment':
-      return { types: { ...DOC_TYPES, ...VIDEO_TYPES }, maxBytes: file };
+      return { types: { ...DOC_TYPES, ...VIDEO_TYPES }, maxBytes: env.UPLOAD_MAX_VIDEO_MB * MB };
+    case 'post_file':
+      return { types: { ...DOC_TYPES, ...IMAGE_TYPES, ...LESSON_VIDEO_TYPES }, maxBytes: file };
     case 'message_attachment':
-      return { types: { ...IMAGE_TYPES, ...DOC_TYPES }, maxBytes: file };
+      return { types: { ...IMAGE_TYPES, ...DOC_TYPES, ...LESSON_VIDEO_TYPES }, maxBytes: file, anyType: true };
   }
 }
 
 /** Mục đích upload dạng STREAM (không nạp cả file vào RAM): video dài, slide lớn. Bắt buộc có Content-Length. */
-export const STREAMED_PURPOSES: readonly UploadPurpose[] = ['lesson_video', 'lesson_slide'];
+export const STREAMED_PURPOSES: readonly UploadPurpose[] = ['lesson_video', 'lesson_slide', 'lesson_attachment', 'post_file', 'community_media', 'message_attachment'];
 export const isStreamedPurpose = (p: UploadPurpose) => STREAMED_PURPOSES.includes(p);
 /** Mục đích gắn với một cộng đồng (mod+ mới được upload; thành viên cộng đồng mới được xem). */
 export const COMMUNITY_PURPOSES: readonly UploadPurpose[] = ['lesson_attachment', 'lesson_video', 'lesson_slide'];

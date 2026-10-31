@@ -67,6 +67,8 @@ export interface ClassroomModule {
   thumbnail?: string;
   requiredLevel?: number;
   lockReason?: 'previous_module' | 'level' | 'paid' | 'selected' | null;
+  /** Module bán riêng mà người xem chưa mua (kể cả khi đang khóa vì chưa xong module trước). */
+  needsPurchase?: boolean;
   learningCourseId?: string;
   accessMode?: ModuleAccessMode;
   /** Chỉ có khi accessMode = 'paid'. */
@@ -238,6 +240,7 @@ export interface Report {
   targetId: string;
   targetExcerpt?: string;
   targetUserName?: string;
+  targetRole?: 'member' | 'mod' | 'admin' | 'owner' | null;
   reporterName?: string;
   reason: ReportReason;
   detail?: string;
@@ -263,11 +266,15 @@ export interface LessonAttachment {
   name: string;
   url: string;
   size?: number;
-  /** 'slide' = slide bài giảng (hiện ở mục riêng); bỏ trống = tệp đính kèm thường. */
-  kind?: 'slide';
+  /** 'slide' = slide bài giảng; 'video' = video bổ sung (ngoài video chính); bỏ trống = tệp đính kèm thường. */
+  kind?: 'slide' | 'video';
+  /** Chỉ video bổ sung dạng link YouTube/Vimeo: URL nhúng do BE dựng. */
+  embedUrl?: string;
 }
 
 export interface LessonDetail extends ClassroomLesson {
+  /** Module chứa bài còn khóa với người xem: bài đang mở được là bài học thử miễn phí. */
+  moduleLocked?: boolean;
   moduleId: string;
   moduleTitle: string;
   moduleIndex: number;
@@ -278,6 +285,49 @@ export interface LessonDetail extends ClassroomLesson {
   nextLessonLocked: boolean;
   /** Trắc nghiệm của bài (null = không có). required = phải đạt điểm mới hoàn thành bài (mod+ không bị bắt buộc). */
   quiz: { questionCount: number; passPercent: number; passed: boolean; required: boolean } | null;
+  surveyBlocks?: boolean;
+  hasSurvey?: boolean;
+  surveyAnswered?: boolean;
+  surveyRequired?: boolean;
+  /** Bài có trò chơi cuối bài (một hoặc nhiều); gamePlayed = người xem đã chơi ít nhất một ván. */
+  hasGame?: boolean;
+  gamePlayed?: boolean;
+  /** required = phải xem hết video mới làm được trắc nghiệm (mod+ không bị bắt buộc); watched = đã xem hết. */
+  video?: { required: boolean; watched: boolean; /** Từng video theo thứ tự hiển thị (video chính trước); `watched` ở trên = đã xem hết mọi video. */ items?: { key: string; watched: boolean }[] };
+}
+
+/** Trò chơi cuối bài: lật thẻ / nối cặp / đúng-sai / xếp từ (xếp từ: term = từ cần xếp, definition = gợi ý). */
+export type GameKind = 'memory' | 'match' | 'swipe' | 'scramble';
+export interface GamePair {
+  id: string;
+  term: string;
+  definition: string;
+}
+export interface GameBest {
+  stars: number;
+  moves: number;
+  seconds: number;
+  plays: number;
+}
+export interface GameItem {
+  id: string;
+  kind: GameKind;
+  pairs: GamePair[];
+  pointsPerStar: number;
+  best: GameBest | null;
+}
+export interface GamesView {
+  canEdit: boolean;
+  games: GameItem[];
+}
+export interface GamesInput {
+  games: { id?: string; kind: GameKind; pairs: { id?: string; term: string; definition: string }[] }[];
+}
+export interface GameResult {
+  stars: number;
+  points: number;
+  best: GameBest;
+  firstPlay: boolean;
 }
 
 export type OnboardingStepKey = 'video' | 'comment' | 'app';
@@ -317,9 +367,76 @@ export interface QuizAttemptResult {
   /** correctIndex chỉ có khi học viên đã đạt. */
   results: Array<{ questionId: string; correct: boolean; correctIndex?: number }>;
 }
+export interface QuizCheckResult {
+  questionId: string;
+  correct: boolean;
+}
 export interface QuizInput {
   passPercent: number;
   questions: Array<{ text: string; options: string[]; correctIndex: number }>;
+}
+
+export type SurveyQuestionType = 'single' | 'multiple' | 'text';
+export interface SurveyQuestion {
+  id: string;
+  text: string;
+  type: SurveyQuestionType;
+  options: string[];
+  required: boolean;
+  allowText?: boolean;
+}
+export interface SurveyAnswer {
+  questionId: string;
+  choices: string[];
+  text?: string;
+}
+export interface SurveyView {
+  canEdit: boolean;
+  survey: null | { id: string; questions: SurveyQuestion[]; myAnswers: SurveyAnswer[] | null; answeredAt: string | null };
+}
+export interface SurveyInput {
+  questions: Array<{ id?: string; text: string; type: SurveyQuestionType; options: string[]; required: boolean; allowText: boolean }>;
+}
+export interface SurveyUser {
+  id: string;
+  name: string;
+  avatarUrl?: string;
+}
+export interface SurveyListItem {
+  lessonId: string;
+  lessonTitle: string;
+  moduleTitle: string;
+  questionCount: number;
+  responseCount: number;
+  lastAnsweredAt: string | null;
+  /** Học viên đang thấy được khảo sát (bài không ẩn/gỡ, module đã xuất bản). */
+  active: boolean;
+}
+export interface SurveyList {
+  memberCount: number;
+  surveys: SurveyListItem[];
+}
+export interface SurveyOverview {
+  lessonId: string;
+  lessonTitle: string;
+  moduleTitle: string;
+  responseCount: number;
+  memberCount: number;
+  questions: Array<{ id: string; text: string; type: SurveyQuestionType; required: boolean; allowText: boolean; answered: number; options: Array<{ text: string; count: number }> }>;
+}
+export interface SurveyPageMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+export interface SurveyTexts {
+  data: Array<{ user: SurveyUser; text: string; answeredAt: string }>;
+  meta: SurveyPageMeta;
+}
+export interface SurveyResponses {
+  data: Array<{ user: SurveyUser; answeredAt: string; answers: SurveyAnswer[] }>;
+  meta: SurveyPageMeta;
 }
 
 export interface CourseProgress {

@@ -13,7 +13,11 @@ describe('lớp học: truy cập module', () => {
   let b: { token: string; id: string };
   let flush: () => Promise<void>;
 
-  const call = (method: string, path: string, token: string, body?: unknown) => c.call(method, base + path, { token, body });
+  const call = async (method: string, path: string, token: string, body?: unknown) => {
+    // Hoàn thành bài đòi xem hết video (nếu có): các test không bàn về video thì báo "đã xem" trước.
+    if (method === 'POST' && /\/lessons\/[^/]+\/complete$/.test(path)) await c.call('POST', base + path.replace(/\/complete$/, '/watched'), { token });
+    return c.call(method, base + path, { token, body });
+  };
   const newModule = async (body: Record<string, unknown>) => (await call('POST', '/modules', mod.token, { title: 'M', description: 'd', ...body })).body.data.id as string;
   const newLesson = async (moduleId: string, body: Record<string, unknown> = {}) =>
     (await call('POST', `/modules/${moduleId}/lessons`, mod.token, { title: 'L', type: 'text', durationMin: 1, body: 'noi dung', ...body })).body.data.id as string;
@@ -182,6 +186,11 @@ describe('lớp học: truy cập module', () => {
     const mine = (await list(a.token)).body.data as any[];
     assert.ok(mine.some((n) => n.body?.includes('Module thông báo') && n.link === '/communities/photo/community/lop-hoc'));
     assert.ok(!((await list(mod.token)).body.data as any[]).some((n) => n.body?.includes('Module thông báo')));
+    // Bài thông báo trên bảng tin có link ĐẦY ĐỦ (origin + đường dẫn) tới khóa học chứa module, không chỉ là đường dẫn trần.
+    const feed = (await c.call('GET', '/courses/photo/posts', { token: a.token })).body;
+    const announcement = ((feed.data ?? feed) as any[]).find((p) => String(p.content ?? '').includes('Module mới: Module thông báo'));
+    assert.ok(announcement, 'không thấy bài thông báo module mới');
+    assert.match(announcement.content, /Xem tại Lớp học: https?:\/\/[^\s]+\/communities\/photo\/community\/lop-hoc\?khoa=/);
     // đã published rồi: PATCH lại không gửi nữa
     const before = ((await list(b.token)).body.data as any[]).length;
     await call('PATCH', `/modules/${id}`, mod.token, { title: 'Đổi tên', notifyMembers: true });
@@ -201,6 +210,18 @@ describe('lớp học: truy cập module', () => {
     const d2 = await call('GET', `/lessons/${l2}`, a.token);
     assert.ok(d2.status === 403 || d2.status === 402 || d2.status === 423, `status ${d2.status}`);
     assert.notEqual((await call('POST', `/lessons/${l2}/complete`, a.token)).status, 200);
+    // Khóa vì chưa xong module trước nhưng module còn bán riêng: lý do khóa vẫn là previous_module và kèm giá + cờ needsPurchase để FE hiện cả hai.
+    const free2 = await newModule({});
+    const paid2 = await newModule({ accessMode: 'paid', priceCents: 99_000 });
+    await newLesson(free2);
+    await newLesson(paid2);
+    const mods = (await call('GET', '/modules', a.token)).body.data as any[];
+    const m2 = mods.find((m) => m.id === paid2);
+    assert.equal(m2.lockReason, 'previous_module');
+    assert.equal(m2.needsPurchase, true);
+    assert.equal(m2.priceCents, 99_000);
+    assert.equal(mods.find((m) => m.id === free2).needsPurchase, undefined);
+    assert.equal(((await call('GET', '/modules', mod.token)).body.data as any[]).find((m) => m.id === paid2).needsPurchase, undefined); // mod+ không cần mua
     const list = (await call('GET', `/modules/${paid}/lessons`, a.token)).body.data;
     assert.equal(list[0].locked, true);
     assert.equal(list[0].body, '');
@@ -210,5 +231,38 @@ describe('lớp học: truy cập module', () => {
     await prisma.moduleAccess.create({ data: { moduleId: paid, userId: a.id, source: 'purchase' } });
     assert.equal((await call('GET', `/lessons/${l2}`, a.token)).status, 200);
     assert.equal((await call('GET', `/lessons/${l1}`, a.token)).body.data.nextLessonLocked, false);
+  });
+  it('module trả phí chưa mua mà chỉ có bài học thử: học xong bài thử KHÔNG mở module sau (phải trả phí rồi mới tới); bài thử báo module còn khóa', async () => {
+    for (const m of (await call('GET', '/modules', mod.token)).body.data) await call('DELETE', `/modules/${m.id}`, mod.token);
+    const free1 = await newModule({});
+    const paid = await newModule({ accessMode: 'paid', priceCents: 99_000 });
+    const free2 = await newModule({});
+    const a1 = await newLesson(free1);
+    const b1 = await newLesson(paid, { isPreview: true });
+    const c1 = await newLesson(free2);
+
+    assert.equal((await call('POST', `/lessons/${a1}/complete`, a.token)).status, 200);
+    // Bài học thử của module trả phí mở được (đúng thiết kế) và báo module còn khóa để FE nhắc mua.
+    const d = await call('GET', `/lessons/${b1}`, a.token);
+    assert.equal(d.status, 200);
+    assert.equal(d.body.data.moduleLocked, true);
+    assert.equal(d.body.data.isPreview, true);
+    assert.equal((await call('POST', `/lessons/${b1}/complete`, a.token)).status, 200);
+
+    // Xong bài thử nhưng CHƯA mua: module kế tiếp vẫn khóa theo thứ tự, không học được bài sau.
+    const after = await view(a.token, free2);
+    assert.equal(after.locked, true);
+    assert.equal(after.lockReason, 'previous_module');
+    assert.ok([403, 402, 423].includes((await call('GET', `/lessons/${c1}`, a.token)).status));
+    assert.equal((await call('GET', `/lessons/${b1}`, a.token)).body.data.nextLessonLocked, true);
+
+    // Mua module (cấp quyền) → module trả phí mở và tính là đã xong → module kế tiếp mở.
+    const { prisma } = await import('../src/db/prisma.js');
+    await prisma.moduleAccess.create({ data: { moduleId: paid, userId: a.id, source: 'purchase' } });
+    assert.equal((await view(a.token, free2)).locked, false);
+    assert.equal((await call('GET', `/lessons/${c1}`, a.token)).status, 200);
+    assert.equal((await call('GET', `/lessons/${b1}`, a.token)).body.data.moduleLocked, false);
+    // mod+ không bị ảnh hưởng.
+    assert.equal((await view(mod.token, free2)).locked, false);
   });
 });

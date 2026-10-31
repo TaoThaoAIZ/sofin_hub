@@ -211,7 +211,7 @@ export function FactorsCard({ title, sub, items, onChange, max = 60 }: { title: 
           <div key={f.key} className="flex items-center gap-3">
             <span className="flex-none basis-[130px] text-[13.5px] font-semibold">{f.label}</span>
             <div className="h-2 min-w-10 flex-1 overflow-hidden rounded-full bg-[#f5f1ed]">
-              <div className="h-full rounded-full" style={{ width: `${Math.min(100, f.value * 2.5)}%`, background: f.penalty ? '#dc2626' : '#f26a1b' }} />
+              <div className="h-full rounded-full" style={{ width: `${Math.min(100, f.value * 2.5)}%`, background: f.penalty ? '#dc2626' : '#ff570a' }} />
             </div>
             <button type="button" className={sq} aria-label={t('factors.decrease', { label: f.label })} disabled={f.value <= 0} onClick={() => onChange(f.key, Math.max(0, f.value - 5))}>
               <MaterialIcon name="remove" size={17} />
@@ -305,7 +305,7 @@ export { AdminButton };
 /** Ô thanh tiến độ nhỏ (Hoàn thành, Tương tác, Điểm chất lượng...). */
 export function BarCell({ pct, tone }: { pct: number; tone?: 'auto' | 'brand' }) {
   const v = Math.max(0, Math.min(100, Math.round(pct)));
-  const color = tone === 'brand' ? '#f26a1b' : v >= 70 ? '#16a34a' : v >= 45 ? '#f26a1b' : '#dc2626';
+  const color = tone === 'brand' ? '#ff570a' : v >= 70 ? '#16a34a' : v >= 45 ? '#ff570a' : '#dc2626';
   return (
     <div className="flex w-full min-w-0 items-center gap-2">
       <div className="h-1.5 min-w-8 flex-1 overflow-hidden rounded-full bg-[#f5f1ed]">
@@ -325,7 +325,7 @@ export function PreviewDialog({ title, sub, onClose, children, wide }: { title: 
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
   return createPortal(
-    <div className="fixed inset-0 z-[80] grid place-items-center overflow-y-auto bg-[rgba(28,25,23,.4)] p-5 backdrop-blur-[3px]" onClick={onClose}>
+    <div className="fixed inset-0 z-[80] grid place-items-center overflow-y-auto bg-[rgba(28,25,23,.4)] p-5 backdrop-blur-[3px]">
       <div
         role="dialog"
         aria-modal="true"

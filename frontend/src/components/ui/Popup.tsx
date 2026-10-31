@@ -6,7 +6,7 @@ import { Button } from './Button';
 export type PopupTone = 'info' | 'success' | 'warning' | 'danger';
 
 const TONE: Record<PopupTone, { icon: string; box: string; color: string }> = {
-  info: { icon: 'info', box: 'bg-brand/10', color: '#f26a1b' },
+  info: { icon: 'info', box: 'bg-brand/10', color: '#ff570a' },
   success: { icon: 'check_circle', box: 'bg-green-100', color: '#16a34a' },
   warning: { icon: 'warning', box: 'bg-amber-100', color: '#d97706' },
   danger: { icon: 'delete', box: 'bg-red-100', color: '#dc2626' },
@@ -98,7 +98,6 @@ export function Popup({
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
-      onClick={dismissible ? onClose : undefined}
     >
       <div
         role="dialog"

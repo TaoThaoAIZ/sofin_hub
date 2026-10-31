@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { ApiError } from '../../../lib/api';
+import { shortEmail } from '../../../lib/email';
 import { deleteAccount } from '../../account/api';
 import { useChangePassword } from '../../account/queries';
 import { useAuth } from '../../auth/AuthContext';
@@ -63,12 +64,13 @@ export function EmailModal({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState<string | null>(null);
 
   const submit = async () => {
+    if (!email.trim() && !pw) return setError(t('modals.enterEmailAndPw'));
     const invalid = validateEmail(email);
     if (invalid) return setError(invalid === t('validation.emailRequired', { ns: 'auth' }) ? t('modals.invalidEmail') : invalid);
     if (!pw) return setError(t('modals.enterCurrentPw'));
     try {
       const r = await change.mutateAsync({ newEmail: email.trim(), password: pw });
-      toast.success(t('modals.emailSentToast', { email: r.pendingEmail }));
+      toast.success(t('modals.emailSentToast', { email: shortEmail(r.pendingEmail) }));
       onClose();
     } catch (e) {
       setError(errMsg(e, t('modals.emailSendFail')));

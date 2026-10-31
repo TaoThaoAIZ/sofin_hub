@@ -208,3 +208,15 @@ docker run --rm -p 4000:4000 -e DATABASE_URL=postgresql://sofinhub:sofinhub@host
 ## Nếu tester cần dữ liệu bền vững qua nhiều ngày
 
 Dữ liệu nghiệp vụ đã nằm ở Postgres nên bền miễn là DB còn sống (lưu ý DB free của Render hết hạn ~30 ngày → dùng gói trả phí/Neon/Supabase). Riêng **file upload** cần Persistent Disk (gói Render trả phí) hoặc chuyển sang S3 (`StorageProvider` đã tách sẵn, xem `backend/docs/api/uploads.md`).
+
+## Gắn subdomain (vd. `hub.taothaoai.com`) vào web trên EC2
+
+DNS của `taothaoai.com` nằm ở **GoDaddy** (không phải Cloudflare/Vietnix). Thứ tự:
+
+1. Elastic IP: đảm bảo IP của EC2 là Elastic IP gắn đúng instance (EC2 > Elastic IPs), và Security Group mở 80/443.
+2. GoDaddy > DNS: thêm bản ghi `A` — Name `hub`, Value = Elastic IP, TTL 600. Kiểm: `nslookup hub.taothaoai.com 8.8.8.8` phải ra đúng IP.
+3. Trên server (Session Manager, `sudo -i`): chép `deploy/aws/add-domain.sh` lên, chạy `bash add-domain.sh hub.taothaoai.com <email>`. Script xin cert Let's Encrypt, thêm block 443 cho domain mới vào `/opt/app/nginx/default.conf` (giữ domain cũ), build lại `web` và tự health check. Có backup `default.conf.bak-*` để khôi phục.
+4. `/opt/app/.env`: đặt `FRONTEND_URL`, `CORS_ORIGIN`, `OAUTH_REDIRECT_BASE` = `https://hub.taothaoai.com` rồi `docker compose up -d backend` (link email/giới thiệu/OAuth dùng đúng một giá trị `FRONTEND_URL`, nên cuối cùng phải chuyển hẳn sang domain mới).
+5. S3: thêm origin `https://hub.taothaoai.com` vào CORS của bucket (mẫu: `deploy/aws/s3-cors.json`; `aws s3api put-bucket-cors --bucket <bucket> --cors-configuration file://s3-cors.json`).
+6. Sửa `SITE_URL` trong `.github/workflows/deploy.yml` thành domain mới (chỉ sau khi domain đã chạy, vì deploy health-check theo URL này), cập nhật webhook thanh toán / redirect URI OAuth nếu trỏ tới domain cũ.
+7. Kiểm: `/health` = 200, đăng nhập, tải thử video, Uptime Kuma monitor, backup.

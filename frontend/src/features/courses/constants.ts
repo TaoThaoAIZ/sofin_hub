@@ -26,13 +26,13 @@ export const CATEGORY_UI: Record<CategoryId, { d: string; color: string }> = {
 
 export const ALL_CATEGORY_ICON = {
   d: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z',
-  color: '#f26a1b',
+  color: '#ff570a',
 };
 
 export const TAG_UI: Record<CourseTag, { labelKey: string; bg: string; fg: string }> = {
   hot: { labelKey: 'tag.hot', bg: '#ef4444', fg: '#fff' },
   bestseller: { labelKey: 'tag.bestseller', bg: '#8b5cf6', fg: '#fff' },
-  new: { labelKey: 'tag.new', bg: '#dcfce7', fg: '#166534' },
+  new: { labelKey: 'tag.new', bg: '#cdffd3', fg: '#009b40' },
 };
 
 type DropdownKey = 'pricing' | 'visibility' | 'status' | 'language' | 'sort';

@@ -24,7 +24,7 @@ import type { Invite, JoinRequestStatus } from './communities.types.js';
 const ONLINE_WINDOW_MS = 5 * 60 * 1000;
 const DEFAULT_THUMBNAIL = '/images/courses/biz.webp';
 
-const linkOf = (communityId: string) => `/courses/${communityId}/community`;
+const linkOf = (communityId: string) => `/communities/${communityId}/community`;
 
 const normalize = (s: string) =>
   s
@@ -293,7 +293,7 @@ export function createCommunitiesService(repo: CommunitiesRepository = communiti
           : approve
             ? `Yêu cầu tham gia "${course.title}" đã được duyệt. Hãy thanh toán hoặc dùng thử để hoàn tất tham gia.`
             : `Yêu cầu tham gia "${course.title}" chưa được chấp nhận`,
-        link: approve ? (joined ? linkOf(course.id) : `/courses/${course.id}`) : undefined,
+        link: approve ? (joined ? linkOf(course.id) : `/communities/${course.id}`) : undefined,
         communityId: course.id,
         category: 'admin',
       });

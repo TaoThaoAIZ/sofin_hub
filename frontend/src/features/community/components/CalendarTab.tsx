@@ -5,9 +5,9 @@ import i18n, { currentLocale } from '../../../i18n';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
 import { useClickOutside } from '../../../lib/useClickOutside';
 import { useCommunityDetail } from '../../courses/queries';
-import { useCancelRsvp, useCreateEvent, useDeleteEvent, useDownloadIcs, useEvents, useToggleRsvp, useUpdateEvent } from '../queries';
+import { useCancelRsvp, useCreateEvent, useDeleteEvent, useDownloadDocx, useDownloadIcs, useEvents, useToggleRsvp, useUpdateEvent } from '../queries';
 import type { CommunityEvent } from '../types';
-import { areaCls, ConfirmDialog, Dialog, errText, ErrorNote, ghostBtn, inputCls, isModPlus, primaryBtn, safeUrl, toast, ToastHost, toLocalInput } from './contentUi';
+import { areaCls, ConfirmDialog, Dialog, errText, ErrorNote, ghostBtn, inputCls, isModPlus, primaryBtn, safeUrl, toast, ToastHost, toLocalInput, useEscapeKey } from './contentUi';
 import { InviteePicker } from './InviteePicker';
 import { PageBanner } from './shared';
 import { useAuth } from '../../auth/AuthContext';
@@ -30,7 +30,7 @@ const mondayOf = (d: Date) => {
 const timeOf = (iso: string) => new Date(iso).toLocaleTimeString(currentLocale(), { hour: '2-digit', minute: '2-digit' });
 
 const toolBtn =
-  'flex h-11 items-center gap-2 rounded-xl border border-[rgba(120,60,20,.12)] bg-white px-[18px] text-sm font-medium shadow-[0_1px_2px_rgba(120,60,20,.05)] hover:bg-[#fff7f0]';
+  'flex h-11 items-center gap-2 rounded-xl border border-[rgba(120,60,20,.12)] bg-white px-[18px] text-sm font-medium shadow-[0_1px_2px_rgba(120,60,20,.05)] hover:bg-[#fff7f0] max-md:h-10 max-md:px-3 max-md:text-[13px]';
 
 function buildDays(view: View, cur: Date): Date[] {
   if (view === 'day') return [cur];
@@ -55,9 +55,9 @@ export function CalendarTab() {
   const rsvp = useToggleRsvp(courseId);
   const cancelRsvp = useCancelRsvp(courseId);
   const createEvent = useCreateEvent(courseId);
-  const downloadIcs = useDownloadIcs();
 
   const today = useMemo(() => new Date(), []);
+  const minStart = toLocalInput(new Date().toISOString());
   const [view, setView] = useState<View>('month');
   const [cur, setCur] = useState(today);
   const [filter, setFilter] = useState<EventFilter>('all');
@@ -91,14 +91,14 @@ export function CalendarTab() {
   const visible = (events.data ?? []).filter((e) => (filter === 'upcoming' ? !e.isPast : filter === 'rsvped' ? e.viewerRsvped : true));
   const eventsOn = (d: Date) => visible.filter((e) => sameDay(new Date(e.startAt), d)).sort((a, b) => a.startAt.localeCompare(b.startAt));
   const selected = events.data?.find((e) => e.id === selectedId) ?? null;
-  const rowH = view === 'month' ? 'min-h-[118px]' : 'min-h-[420px]';
+  const rowH = view === 'month' ? 'min-h-[118px] max-md:min-h-[78px]' : 'min-h-[420px] max-md:min-h-[260px]';
 
   return (
     <main className="flex min-w-0 flex-col gap-4">
-      <PageBanner image="cal-hero-bg.webp" icon="calendar_month" title={t('calendar.title')} />
+      <PageBanner image="cal-hero-bg.webp" icon="calendar_month" title={t('calendar.title')} subtitle={t('calendar.subtitle')} />
 
       <section className="glass rounded-3xl p-4">
-        <div className="mb-4 flex flex-wrap items-center gap-4">
+        <div className="mb-4 flex flex-wrap items-center gap-4 max-md:gap-2.5">
           <button onClick={() => setCur(today)} className={toolBtn}>
             {t('calendar.today')}
           </button>
@@ -116,14 +116,14 @@ export function CalendarTab() {
             <div className="mt-0.5 text-[12.5px] text-stone-600">{t('calendar.timezone')}</div>
           </div>
 
-          <div className="ml-auto flex gap-1 rounded-[14px] border border-[rgba(120,60,20,.12)] bg-white p-1">
+          <div className="ml-auto flex gap-1 rounded-[14px] border border-[rgba(120,60,20,.12)] bg-white p-1 max-md:order-last max-md:ml-0 max-md:w-full">
             {VIEWS.map((v) => (
               <button
                 key={v}
                 onClick={() => setView(v)}
-                className={`h-9 rounded-[10px] px-[22px] text-[14.5px] ${
+                className={`h-9 rounded-[10px] px-[22px] text-[14.5px] max-md:flex-1 max-md:px-2 ${
                   view === v
-                    ? 'bg-gradient-to-b from-[#fff1e6] to-[#ffe4d1] font-semibold text-brand shadow-[inset_0_0_0_1px_rgba(242,106,27,.2)]'
+                    ? 'bg-gradient-to-b from-[#fff1e6] to-[#ffe4d1] font-semibold text-brand shadow-[inset_0_0_0_1px_rgba(255,87,10,.2)]'
                     : 'font-medium text-stone-600'
                 }`}
               >
@@ -138,7 +138,7 @@ export function CalendarTab() {
               {t('calendar.filterBtn')}
             </button>
             {filterOpen && (
-              <div className="absolute right-0 z-20 mt-2 w-52 rounded-xl border border-[rgba(120,60,20,.12)] bg-white p-1.5 shadow-lg">
+              <div className="absolute right-0 z-20 mt-2 w-52 rounded-xl max-md:right-auto max-md:left-0 border border-[rgba(120,60,20,.12)] bg-white p-1.5 shadow-lg">
                 {FILTERS.map((f) => (
                   <button
                     key={f}
@@ -149,25 +149,14 @@ export function CalendarTab() {
                     className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[13.5px] hover:bg-stone-50 ${filter === f ? 'font-semibold text-brand' : ''}`}
                   >
                     {t(`calendar.filters.${f}`)}
-                    {filter === f && <MaterialIcon name="check" size={17} color="#f26a1b" />}
+                    {filter === f && <MaterialIcon name="check" size={17} color="#ff570a" />}
                   </button>
                 ))}
               </div>
             )}
           </div>
 
-          <button
-            type="button"
-            onClick={() => downloadIcs.mutate({ courseId }, { onSuccess: () => toast(t('calendar.icsToast')), onError: (e) => toast(errText(e), 'error') })}
-            disabled={downloadIcs.isPending}
-            className={toolBtn}
-            title={t('calendar.icsTitle')}
-          >
-            <MaterialIcon name="event_repeat" size={19} />
-            {t('calendar.subscribeAll')}
-          </button>
-
-          {canManage && <button onClick={() => setShowForm((s) => !s)} className="flex h-11 items-center gap-2 rounded-xl bg-brand px-[18px] text-sm font-bold text-white">
+          {canManage && <button onClick={() => setShowForm((s) => !s)} className="flex h-11 items-center gap-2 rounded-xl bg-brand px-[18px] text-sm font-bold text-white max-md:order-first max-md:w-full max-md:justify-center">
             <MaterialIcon name={showForm ? 'close' : 'add'} size={19} color="#fff" />
             {showForm ? t('calendar.close') : t('calendar.create')}
           </button>}
@@ -178,6 +167,14 @@ export function CalendarTab() {
             onSubmit={(e) => {
               e.preventDefault();
               if (!title.trim() || !date) return;
+              if (new Date(date).getTime() < Date.now()) {
+                toast(t('calendar.pastDateError'), 'error');
+                return;
+              }
+              if (meetingLink.trim() && !safeUrl(meetingLink.trim())) {
+                toast(t('calendar.linkError'), 'error');
+                return;
+              }
               createEvent.mutate(
                 {
                   title,
@@ -205,7 +202,7 @@ export function CalendarTab() {
             className="mb-4 grid gap-3 rounded-2xl border border-[rgba(120,60,20,.1)] bg-white p-3 sm:grid-cols-2"
           >
             <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('calendar.eventName')} aria-label={t('calendar.eventName')} required maxLength={160} className={inputCls} />
-            <input type="datetime-local" value={date} onChange={(e) => setDate(e.target.value)} aria-label={t('calendar.startTime')} required className={inputCls} />
+            <input type="datetime-local" value={date} min={minStart} onChange={(e) => setDate(e.target.value)} aria-label={t('calendar.startTime')} required className={inputCls} />
             <input value={meetingLink} onChange={(e) => setMeetingLink(e.target.value)} placeholder={t('calendar.meetingLinkOpt')} aria-label={t('calendar.meetingLink')} className={inputCls} />
             <input type="number" min={1} value={capacity} onChange={(e) => setCapacity(e.target.value)} placeholder={t('calendar.capacityPh')} aria-label={t('calendar.capacity')} className={inputCls} />
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} maxLength={2000} placeholder={t('calendar.descPh')} aria-label={t('calendar.desc')} className={`${areaCls} sm:col-span-2`} />
@@ -220,7 +217,7 @@ export function CalendarTab() {
         )}
 
         <div className="overflow-hidden rounded-[14px] border border-[rgba(120,60,20,.1)] bg-white">
-          <div className="grid border-b border-[rgba(120,60,20,.1)]" style={{ gridTemplateColumns: `repeat(${cols},minmax(0,1fr))` }}>
+          <div className="grid border-b border-[rgba(120,60,20,.1)] max-md:[&>div]:h-9" style={{ gridTemplateColumns: `repeat(${cols},minmax(0,1fr))` }}>
             {heads.map((h, i) => (
               <div key={h} className={`grid h-11 place-items-center text-[13px] font-semibold ${i ? 'border-l border-[rgba(120,60,20,.08)]' : ''}`}>
                 {t(`calendar.dayShort.${h}`)}
@@ -235,15 +232,15 @@ export function CalendarTab() {
               return (
                 <div
                   key={d.toISOString()}
-                  className={`${rowH} min-w-0 p-3 ${i % cols ? 'border-l border-[rgba(120,60,20,.08)]' : ''} ${i >= cols ? 'border-t border-[rgba(120,60,20,.08)]' : ''} ${
+                  className={`${rowH} min-w-0 p-3 max-md:p-1 ${i % cols ? 'border-l border-[rgba(120,60,20,.08)]' : ''} ${i >= cols ? 'border-t border-[rgba(120,60,20,.08)]' : ''} ${
                     isToday ? 'bg-gradient-to-b from-[#fff1e6] to-[#fff7f0]' : ''
                   }`}
                 >
                   <span
                     className={
                       isToday
-                        ? '-mt-1.5 -ml-1 grid size-[34px] place-items-center rounded-full bg-gradient-to-b from-[#ff8f45] to-brand text-[13.5px] font-bold text-white shadow-[0_6px_14px_rgba(242,106,27,.35)]'
-                        : `text-[13.5px] font-medium ${out ? 'text-stone-400' : 'text-stone-900'}`
+                        ? '-mt-1.5 -ml-1 grid size-[34px] max-md:mx-auto max-md:mt-0 max-md:ml-0 max-md:size-8 place-items-center rounded-full bg-gradient-to-b from-[#ff8f45] to-brand text-[13.5px] font-bold text-white shadow-[0_6px_14px_rgba(255,87,10,.35)]'
+                        : `text-[13.5px] font-medium max-md:block max-md:text-center ${out ? 'text-stone-400' : 'text-stone-900'}`
                     }
                   >
                     {d.getDate()}
@@ -253,7 +250,7 @@ export function CalendarTab() {
                       <button
                         key={ev.id}
                         onClick={() => setSelectedId(ev.id)}
-                        className={`truncate rounded-md px-1.5 py-1 text-left text-[11.5px] font-semibold ${
+                        className={`truncate rounded-md px-1.5 py-1 text-left text-[11.5px] font-semibold max-md:px-1 max-md:py-0.5 max-md:text-[10px] ${
                           ev.cancelledAt ? 'bg-stone-100 text-stone-500 line-through opacity-60' : ev.isPast ? 'bg-stone-100 text-stone-500 opacity-60' : 'bg-brand/15 text-brand-dark hover:bg-brand/25'
                         }`}
                       >
@@ -309,6 +306,8 @@ function EventDialog({
   const update = useUpdateEvent(courseId);
   const remove = useDeleteEvent(courseId);
   const downloadIcs = useDownloadIcs();
+  const downloadDocx = useDownloadDocx();
+  useEscapeKey(onClose);
   const [editing, setEditing] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false);
   const [title, setTitle] = useState(ev.title);
@@ -335,7 +334,11 @@ function EventDialog({
               disabled={update.isPending || !title.trim() || !startAt}
               className={primaryBtn}
               onClick={() =>
-                update.mutate(
+                startAt !== toLocalInput(ev.startAt) && new Date(startAt).getTime() < Date.now()
+                  ? toast(t('calendar.pastDateError'), 'error')
+                  : meetingLink.trim() && !safeUrl(meetingLink.trim())
+                  ? toast(t('calendar.linkError'), 'error')
+                  : update.mutate(
                   {
                     eventId: ev.id,
                     body: {
@@ -362,7 +365,7 @@ function EventDialog({
       >
         <div className="flex flex-col gap-2.5">
           <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={160} aria-label={t('calendar.eventName')} placeholder={t('calendar.eventName')} className={inputCls} />
-          <input type="datetime-local" value={startAt} onChange={(e) => setStartAt(e.target.value)} aria-label={t('calendar.startTime')} className={inputCls} />
+          <input type="datetime-local" value={startAt} min={toLocalInput(new Date().toISOString())} onChange={(e) => setStartAt(e.target.value)} aria-label={t('calendar.startTime')} className={inputCls} />
           <input value={meetingLink} onChange={(e) => setMeetingLink(e.target.value)} aria-label={t('calendar.meetingLink')} placeholder={t('calendar.meetingLinkClear')} className={inputCls} />
           <input
             type="number"
@@ -381,14 +384,14 @@ function EventDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4" onClick={onClose}>
-      <div role="dialog" aria-label={ev.title} onClick={(e) => e.stopPropagation()} className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl">
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4">
+      <div role="dialog" aria-modal="true" aria-label={ev.title} onClick={(e) => e.stopPropagation()} className="max-h-[92vh] w-full max-w-md overflow-x-hidden overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl">
         <div className="flex items-start gap-3">
           <span className="grid size-12 flex-none place-items-center rounded-xl bg-brand/10">
-            <MaterialIcon name="event" size={26} filled color="#f26a1b" />
+            <MaterialIcon name="event" size={26} filled color="#ff570a" />
           </span>
           <div className="min-w-0 flex-1">
-            <div className="text-lg font-extrabold">{ev.title}</div>
+            <div className="line-clamp-2 text-lg font-extrabold break-words" title={ev.title}>{ev.title}</div>
             <div className="mt-0.5 text-[13px] text-stone-500">
               {new Date(ev.startAt).toLocaleString(currentLocale(), { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
             </div>
@@ -397,7 +400,7 @@ function EventDialog({
             <MaterialIcon name="close" size={22} />
           </button>
         </div>
-        {ev.description && <p className="mt-3 text-sm whitespace-pre-wrap text-stone-700">{ev.description}</p>}
+        {ev.description && <p className="mt-3 line-clamp-4 text-sm break-words whitespace-pre-wrap text-stone-700" title={ev.description}>{ev.description}</p>}
         <div className="mt-3 flex flex-wrap items-center gap-2 text-[13px] text-stone-600">
           <span>
             {t('calendar.registered', { n: ev.rsvpCount, capacity: ev.capacity ? `/${ev.capacity}` : '' })}
@@ -414,13 +417,12 @@ function EventDialog({
 
         {ev.cancelledAt ? (
           <p className="mt-5 text-center text-sm text-stone-500">{t('calendar.cancelledEvent')}</p>
-        ) : !ev.isPast ? (
-          <button
+        ) : !ev.isPast ? (canManage ? null : <button
             onClick={onRsvp}
             disabled={rsvpPending || full}
             className={`mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-xl text-sm font-bold disabled:opacity-60 ${ev.viewerRsvped ? 'bg-brand/10 text-brand' : 'bg-brand text-white'}`}
           >
-            {ev.viewerRsvped && <MaterialIcon name="check" size={18} color="#f26a1b" />}
+            {ev.viewerRsvped && <MaterialIcon name="check" size={18} color="#ff570a" />}
             {rsvpPending ? t('calendar.processing') : full ? t('calendar.full') : ev.viewerRsvped ? t('calendar.rsvpCancel') : t('calendar.rsvp')}
           </button>
         ) : (
@@ -438,6 +440,16 @@ function EventDialog({
         >
           <MaterialIcon name="calendar_add_on" size={19} />
           {t('calendar.addToCal')}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => downloadDocx.mutate({ eventId: ev.id }, { onSuccess: () => toast(t('calendar.docxEventToast')), onError: (e) => toast(errText(e), 'error') })}
+          disabled={downloadDocx.isPending}
+          className={`${ghostBtn} mt-2 w-full`}
+        >
+          <MaterialIcon name="description" size={19} />
+          {t('calendar.docxEvent')}
         </button>
 
         {canManage && (

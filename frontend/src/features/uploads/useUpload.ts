@@ -49,16 +49,16 @@ const SLIDES = [
 type Label = 'images' | 'files' | 'message' | 'media' | 'video' | 'slides';
 
 // Khớp bảng whitelist ở backend (uploads.types.ts) — chỉ để báo lỗi sớm; BE vẫn kiểm tra lại. Giới hạn video/slide khớp UPLOAD_MAX_VIDEO_MB / UPLOAD_MAX_SLIDE_MB.
-const RULES: Record<UploadPurpose, { types: string[]; maxMb: number; label: Label }> = {
+const RULES: Record<UploadPurpose, { types: string[]; maxMb: number; label: Label; anyType?: boolean }> = {
   post_image: { types: IMAGES, maxMb: 5, label: 'images' },
   avatar: { types: IMAGES, maxMb: 3, label: 'images' },
   cover: { types: IMAGES, maxMb: 8, label: 'images' },
-  post_file: { types: [...DOCS, 'video/mp4'], maxMb: 25, label: 'files' },
-  lesson_attachment: { types: [...DOCS, 'video/mp4'], maxMb: 25, label: 'files' },
-  message_attachment: { types: [...IMAGES, ...DOCS], maxMb: 25, label: 'message' },
-  community_media: { types: [...IMAGES, 'video/mp4'], maxMb: 25, label: 'media' },
+  post_file: { types: [...DOCS, ...IMAGES, ...LESSON_VIDEOS], maxMb: 2048, label: 'files' },
+  lesson_attachment: { types: [...DOCS, 'video/mp4'], maxMb: 2048, label: 'files' },
+  message_attachment: { types: [...IMAGES, ...DOCS, ...LESSON_VIDEOS], maxMb: 2048, label: 'message', anyType: true },
+  community_media: { types: [...IMAGES, 'video/mp4'], maxMb: 2048, label: 'media' },
   lesson_video: { types: LESSON_VIDEOS, maxMb: 2048, label: 'video' },
-  lesson_slide: { types: SLIDES, maxMb: 200, label: 'slides' },
+  lesson_slide: { types: SLIDES, maxMb: 2048, label: 'slides' },
 };
 
 /** Trình duyệt hay trả type rỗng/octet-stream cho Office cũ, ppsx, csv, mov...: suy từ đuôi tệp. */
@@ -86,7 +86,14 @@ const EXT_TYPE: Record<string, string> = {
 };
 
 /** Loại nội dung dùng để upload: ưu tiên type của trình duyệt khi hợp lệ, không thì suy từ đuôi tệp. */
-export function resolveContentType(file: File): string {
+export function resolveContentType(file: File, purpose?: UploadPurpose): string {
+  const t = resolveKnownType(file);
+  // Mục đích nhận file bất kỳ: loại lạ (exe, rar, json...) gửi dạng octet-stream (khớp cách backend lưu).
+  if (purpose && RULES[purpose].anyType && !RULES[purpose].types.includes(t)) return 'application/octet-stream';
+  return t;
+}
+
+function resolveKnownType(file: File): string {
   const known = file.type && file.type !== 'application/octet-stream' ? file.type : '';
   if (known === 'application/x-zip-compressed') return 'application/zip';
   if (known) return known;
@@ -107,33 +114,80 @@ export function validateUpload(file: File, purpose: UploadPurpose): string | nul
   const rule = RULES[purpose];
   if (file.size === 0) return i18n.t('upload.empty', { ns: 'misc' });
   if (file.size > rule.maxMb * MB) return i18n.t('upload.tooLarge', { ns: 'misc', max: rule.maxMb });
-  if (!rule.types.includes(resolveContentType(file))) return i18n.t('upload.unsupported', { ns: 'misc', types: i18n.t(`upload.labels.${rule.label}`, { ns: 'misc' }) });
+  if (!rule.anyType && !rule.types.includes(resolveContentType(file))) return i18n.t('upload.unsupported', { ns: 'misc', types: i18n.t(`upload.labels.${rule.label}`, { ns: 'misc' }) });
   return null;
 }
 
 interface PresignResponse {
-  data: { uploadUrl: string; method: 'PUT'; headers: Record<string, string>; fileUrl: string; key: string; expiresAt: string };
+  data: {
+    /** `direct` = PUT thẳng lên S3 (presigned); `proxy` (hoặc thiếu) = PUT qua backend bằng vé HMAC. */
+    mode?: 'direct' | 'proxy';
+    uploadUrl: string;
+    method: 'PUT';
+    headers: Record<string, string>;
+    fileUrl: string;
+    key: string;
+    expiresAt: string;
+    multipart?: { uploadId: string; partSize: number; partUrls: string[] };
+  };
 }
 
-/** PUT file bằng XMLHttpRequest để có tiến độ (fetch không báo tiến độ upload) và hủy được. Trả về `{status, body}`. */
-function putWithProgress(url: string, headers: Record<string, string>, file: File, onProgress: (pct: number) => void, signal?: AbortSignal) {
-  return new Promise<{ status: number; body: string }>((resolve, reject) => {
+/** PUT file bằng XMLHttpRequest để có tiến độ (fetch không báo tiến độ upload) và hủy được. Trả về `{status, body, etag}`. */
+function putWithProgress(url: string, headers: Record<string, string>, body: Blob, onProgress: (loaded: number, total: number) => void, signal?: AbortSignal) {
+  return new Promise<{ status: number; body: string; etag: string | null }>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('PUT', url);
     for (const [k, v] of Object.entries(headers)) xhr.setRequestHeader(k, v);
     xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) onProgress(Math.min(99, Math.floor((e.loaded / e.total) * 100)));
+      if (e.lengthComputable) onProgress(e.loaded, e.total);
     };
     xhr.onload = () => {
-      onProgress(100);
-      resolve({ status: xhr.status, body: xhr.responseText });
+      onProgress(body.size, body.size);
+      resolve({ status: xhr.status, body: xhr.responseText, etag: xhr.getResponseHeader('ETag') });
     };
     xhr.onerror = () => reject(new Error('network'));
     xhr.onabort = () => reject(new DOMException('Aborted', 'AbortError'));
     xhr.ontimeout = () => reject(new Error('timeout'));
     signal?.addEventListener('abort', () => xhr.abort(), { once: true });
-    xhr.send(file);
+    xhr.send(body);
   });
+}
+
+const PART_CONCURRENCY = 4;
+const PART_RETRIES = 3;
+
+/** Upload multipart: chia file thành phần, PUT song song (PART_CONCURRENCY), mỗi phần thử lại tối đa PART_RETRIES lần. Trả ETag từng phần. */
+async function uploadParts(file: File, mp: { partSize: number; partUrls: string[] }, onProgress: (pct: number) => void, signal?: AbortSignal) {
+  const loaded = new Array<number>(mp.partUrls.length).fill(0);
+  const etags = new Array<string>(mp.partUrls.length);
+  const report = () => onProgress(Math.min(99, Math.floor((loaded.reduce((a, b) => a + b, 0) / file.size) * 100)));
+  let next = 0;
+  const worker = async () => {
+    while (next < mp.partUrls.length) {
+      const i = next++;
+      const blob = file.slice(i * mp.partSize, Math.min(file.size, (i + 1) * mp.partSize));
+      for (let attempt = 1; ; attempt++) {
+        try {
+          const res = await putWithProgress(mp.partUrls[i]!, {}, blob, (l) => {
+            loaded[i] = l;
+            report();
+          }, signal);
+          if (res.status < 200 || res.status >= 300) throw new ApiError(res.status, i18n.t('upload.failedStatus', { ns: 'misc', status: res.status }));
+          if (!res.etag) throw new Error('missing-etag'); // bucket thiếu CORS ExposeHeaders: ETag
+          etags[i] = res.etag;
+          loaded[i] = blob.size;
+          report();
+          break;
+        } catch (err) {
+          if ((err instanceof DOMException && err.name === 'AbortError') || attempt >= PART_RETRIES) throw err;
+          loaded[i] = 0;
+          await new Promise((r) => setTimeout(r, 500 * attempt));
+        }
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(PART_CONCURRENCY, mp.partUrls.length) }, worker));
+  return etags.map((etag, i) => ({ partNumber: i + 1, etag }));
 }
 
 /**
@@ -154,7 +208,7 @@ export function useUpload() {
         setError(early);
         throw new Error(early);
       }
-      const contentType = resolveContentType(file);
+      const contentType = resolveContentType(file, opts.purpose);
       setUploading(true);
       try {
         const presign = await apiPost<PresignResponse>('/uploads/presign', {
@@ -165,7 +219,30 @@ export function useUpload() {
           ...(opts.courseId ? { courseId: opts.courseId } : {}),
         }).then((r) => r.data);
 
-        const res = await putWithProgress(resolveApiPath(presign.uploadUrl), { ...presign.headers, 'Content-Type': contentType }, file, setProgress, opts.signal);
+        const pct = (p: number) => setProgress(Math.min(99, p));
+        if (presign.mode === 'direct') {
+          // Upload thẳng lên S3 rồi báo backend xác nhận (ghép phần, kiểm dung lượng + magic bytes).
+          const uploadId = presign.multipart?.uploadId;
+          try {
+            let parts: { partNumber: number; etag: string }[] | undefined;
+            if (presign.multipart) {
+              parts = await uploadParts(file, presign.multipart, pct, opts.signal);
+            } else {
+              const res = await putWithProgress(presign.uploadUrl, { ...presign.headers, 'Content-Type': contentType }, file, (l, t) => pct(Math.floor((l / t) * 100)), opts.signal);
+              if (res.status < 200 || res.status >= 300) throw new ApiError(res.status, i18n.t('upload.failedStatus', { ns: 'misc', status: res.status }));
+            }
+            // Backend ghép phần + kiểm file có thể mất vài phút với video lớn; quá 10 phút coi là treo để người dùng thấy lỗi thay vì đứng mãi.
+            await apiPost(`/uploads/${presign.key}/complete`, { ...(uploadId ? { uploadId, parts } : {}) }, { signal: AbortSignal.timeout(10 * 60_000) });
+          } catch (err) {
+            void apiPost(`/uploads/${presign.key}/abort`, { ...(uploadId ? { uploadId } : {}) }).catch(() => undefined);
+            throw err;
+          }
+          setProgress(100);
+          return { url: presign.fileUrl, key: presign.key, name: file.name, contentType, size: file.size };
+        }
+
+        const res = await putWithProgress(resolveApiPath(presign.uploadUrl), { ...presign.headers, 'Content-Type': contentType }, file, (l, t) => pct(Math.floor((l / t) * 100)), opts.signal);
+        setProgress(100);
         if (res.status < 200 || res.status >= 300) {
           const body = (() => {
             try {

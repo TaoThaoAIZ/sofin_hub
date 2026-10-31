@@ -308,7 +308,10 @@ describe('đăng ký + OTP email, đăng nhập mạng xã hội', () => {
       assert.equal(verifyOAuthState('rac', nonce, 'google'), null);
     });
 
-    it('chưa cấu hình nhà cung cấp: start/callback chuyển về FE với error=not_configured (không 500)', async () => {
+    // Máy dev có thể đã điền khóa Google/Facebook trong .env — khi đó đây không còn là kịch bản "chưa cấu hình" (CI không có .env).
+    it('chưa cấu hình nhà cung cấp: start/callback chuyển về FE với error=not_configured (không 500)', async (t) => {
+      const { env } = await import('../src/config/env.js');
+      if (env.GOOGLE_CLIENT_ID || env.FACEBOOK_APP_ID) return t.skip('đã cấu hình OAuth trong .env');
       for (const path of ['/auth/oauth/google/start', '/auth/oauth/facebook/callback?code=x&state=y', '/auth/oauth/khong-co/start']) {
         const res = await fetch(server.baseUrl + path, { redirect: 'manual' });
         assert.equal(res.status, 302, path);

@@ -28,7 +28,9 @@ export interface CourseFact {
   fg: string;
 }
 
-export interface CommunityDetail extends Community {
+export interface CommunityDetail extends Omit<Community, 'instructor'> {
+  /** avatarUrl = ảnh của chủ cộng đồng (User thật); thiếu thì FE hiện chữ cái đầu. */
+  instructor: Community['instructor'] & { avatarUrl?: string };
   /** = id (tách Community/Course; `id` vẫn là slug cộng đồng). */
   communityId: string;
   /** Khóa học mặc định (published đầu tiên) — route cũ `/courses/:id/modules|progress|certificate` thao tác trên khóa này. */

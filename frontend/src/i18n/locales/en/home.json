@@ -16,10 +16,33 @@
     "title1": "Learn new skills.",
     "title2": "Grow with the community.",
     "desc": "Thousands of practical courses from experts across many fields. Learn faster, apply right away and create value for yourself.",
-    "searchPlaceholder": "Search courses, topics, skills...",
+    "searchPlaceholder": "Search courses, tools, topics you care about...",
     "searchAria": "Search courses",
     "searchButton": "Search"
   },
   "featured": "Featured courses",
-  "viewAll": "View all →"
+  "viewAll": "View all →",
+  "why": {
+    "title1": "Why choose",
+    "title2": "?",
+    "subtitle": "Everything you need to learn, work and grow — in one platform.",
+    "items": {
+      "experts": {
+        "title": "Learn from hands-on experts",
+        "desc": "Thousands of up-to-date, easy-to-follow courses you can apply to your work right away."
+      },
+      "ai": {
+        "title": "Powerful AI tools",
+        "desc": "Save time and boost productivity with leading AI tools."
+      },
+      "community": {
+        "title": "A supportive community",
+        "desc": "Connect, share experience and grow together with thousands of members."
+      },
+      "career": {
+        "title": "Build a lasting career",
+        "desc": "Gain practical skills, widen your opportunities and create new income."
+      }
+    }
+  }
 }

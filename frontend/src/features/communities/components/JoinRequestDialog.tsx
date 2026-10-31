@@ -95,7 +95,7 @@ export function JoinRequestDialog({
             ))}
           </div>
           <label className="mt-2 flex cursor-pointer items-center gap-2 text-[13px] font-semibold text-stone-700">
-            <input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} className="size-4 accent-[#f26a1b]" />
+            <input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} className="size-4 accent-[#ff570a]" />
             {t('joinRequest.agreeRules')}
           </label>
         </div>

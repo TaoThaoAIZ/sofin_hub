@@ -17,6 +17,8 @@ cp -r "$TMP/backend" "$TMP/frontend" "$TMP/deploy" "$APP/src/"
 cp "$APP/src/deploy/aws/docker-compose.yml" "$APP/docker-compose.yml"
 cp "$APP/src/deploy/aws/web.Dockerfile" "$APP/web.Dockerfile"
 cp "$APP/src/deploy/aws/nginx/https.conf.example" "$APP/nginx/https.conf.example"
+# web.Dockerfile COPY file này vào image; default.conf của server phải `include /etc/nginx/snippets/security-headers.conf;` trong các location có add_header (xem nginx/https.conf.example).
+cp "$APP/src/deploy/aws/nginx/security-headers.conf" "$APP/nginx/security-headers.conf"
 chown -R ubuntu:ubuntu "$APP/src"
 
 cd "$APP"

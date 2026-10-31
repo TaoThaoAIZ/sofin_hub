@@ -5,9 +5,10 @@ import { assertUserCan } from '../auth/user-status.js';
 import { catalogService } from '../catalog/catalog.service.js';
 import { notify } from '../notifications/notifications.service.js';
 import { releaseLikeNotice } from './posts.like-notice.js';
-import { atLeast, canManageContent, getRole } from '../permissions/policy.js';
+import { atLeast, canModerateContent, getRole } from '../permissions/policy.js';
 import { pointsService } from '../points/points.service.js';
 import { userRepository } from '../auth/auth.repository.js';
+import { enrollmentService } from '../enrollments/enrollments.service.js';
 import { postsRepository, type CommentCursor, type PollTally, type PostCursor, type PostsRepository } from './posts.repository.js';
 import type { Comment, CommentView, PollDef, PollView, Post, PostAuthorView, PostCategory, PostView } from './posts.types.js';
 import type { CreatePollBody, ListCommentsQuery, ListPostsQuery, UpdatePostBody } from './posts.schema.js';
@@ -17,7 +18,7 @@ import { syncPinnedAnnouncement } from '../community-greetings/announcement-sync
 export const MAX_PINNED_POSTS = 5;
 
 /** Đường dẫn FE để mở thẳng 1 bài viết. */
-export const postPath = (post: Pick<Post, 'communityId' | 'id'>) => `/courses/${post.communityId}/community?post=${post.id}`;
+export const postPath = (post: Pick<Post, 'communityId' | 'id'>) => `/communities/${post.communityId}/community?post=${post.id}`;
 
 /** Tên tác giả lấy từ User (thành viên minh họa cũng là User thật; tài khoản đã xóa hiện "Thành viên đã xóa"). */
 async function authorViews(ids: string[]): Promise<Map<string, PostAuthorView>> {
@@ -51,6 +52,33 @@ function decodeCommentCursor(raw: string): CommentCursor {
     throw HttpError.badRequest('Mốc phân trang không hợp lệ');
   }
   return { createdAt: v[0], id: v[1] };
+}
+
+/** Thành viên được gắn tên nằm ở dòng cuối nội dung: "Gắn thẻ: [[user:<id>|<tên>]] ..." (FE tách ra để hiển thị). */
+const MENTION_RE = /\[\[user:([A-Za-z0-9_-]{1,64})\|[^\]\n]{1,100}\]\]/g;
+const MAX_MENTIONS = 10;
+const mentionedIds = (content: string) => [...new Set([...content.matchAll(MENTION_RE)].map((m) => m[1]!))].slice(0, MAX_MENTIONS);
+
+/** Báo cho từng thành viên (còn trong cộng đồng, khác tác giả) được gắn tên trong bài. Lỗi từng người không làm hỏng việc đăng bài. */
+async function notifyMentions(post: Post, authorId: string, content: string): Promise<void> {
+  const ids = mentionedIds(content).filter((id) => id !== authorId);
+  if (!ids.length) return;
+  const who = await userBriefView(authorId);
+  for (const userId of ids) {
+    try {
+      await enrollmentService.requireMembership(userId, post.communityId);
+      notify({
+        userId,
+        type: 'system',
+        title: 'Bạn được gắn thẻ trong một bài viết',
+        body: `${who.name} đã gắn thẻ bạn trong một bài viết`,
+        link: postPath(post),
+        communityId: post.communityId,
+      });
+    } catch {
+      /* không phải thành viên / không tồn tại: bỏ qua */
+    }
+  }
 }
 
 const normTag = (t: string) => t.trim().replace(/^#/, '').toLowerCase();
@@ -159,6 +187,7 @@ export function createPostsService(repo: PostsRepository = postsRepository) {
       }
       const post = await repo.create(communityId, authorId, content, category, tags, imageUrl, poll);
       await pointsService.award(authorId, communityId, 'post', { type: 'post', id: post.id });
+      void notifyMentions(post, authorId, content).catch(() => undefined);
       return toView(post, authorId);
     },
 
@@ -187,7 +216,7 @@ export function createPostsService(repo: PostsRepository = postsRepository) {
 
     async update(postId: string, actorId: string, patch: UpdatePostBody): Promise<PostView> {
       const post = await this.getOrThrow(postId);
-      if (!(await canManageContent(actorId, post.communityId, post.authorId))) throw HttpError.forbidden('Bạn chỉ được sửa bài viết của mình');
+      if (actorId !== post.authorId) throw HttpError.forbidden('Bạn chỉ được sửa bài viết của mình'); // mod/admin chỉ ẩn/xóa, không sửa lời người khác
       const updated = await repo.update(postId, patch);
       // Bài đang ghim: cập nhật nội dung popup (đổi khỏi mục "Thông báo" => thôi hiện).
       if (post.pinned) await syncPinnedAnnouncement(postId, true);
@@ -196,7 +225,7 @@ export function createPostsService(repo: PostsRepository = postsRepository) {
 
     async remove(postId: string, actorId: string): Promise<void> {
       const post = await this.getOrThrow(postId);
-      if (!(await canManageContent(actorId, post.communityId, post.authorId))) throw HttpError.forbidden('Bạn chỉ được xóa bài viết của mình');
+      if (!(await canModerateContent(actorId, post.communityId, post.authorId))) throw HttpError.forbidden('Bạn chỉ được xóa bài viết của mình');
       await repo.delete(postId);
     },
 
@@ -284,14 +313,14 @@ export function createPostsService(repo: PostsRepository = postsRepository) {
 
     async updateComment(commentId: string, actorId: string, content: string): Promise<CommentView> {
       const { comment, post } = await this.getCommentOrThrow(commentId);
-      if (!(await canManageContent(actorId, post.communityId, comment.authorId))) throw HttpError.forbidden('Bạn chỉ được sửa bình luận của mình');
+      if (actorId !== comment.authorId) throw HttpError.forbidden('Bạn chỉ được sửa bình luận của mình');
       const updated = await repo.updateComment(commentId, content);
       return { ...updated!, author: await authorView(updated!) };
     },
 
     async removeComment(commentId: string, actorId: string): Promise<void> {
       const { comment, post } = await this.getCommentOrThrow(commentId);
-      if (!(await canManageContent(actorId, post.communityId, comment.authorId))) throw HttpError.forbidden('Bạn chỉ được xóa bình luận của mình');
+      if (!(await canModerateContent(actorId, post.communityId, comment.authorId))) throw HttpError.forbidden('Bạn chỉ được xóa bình luận của mình');
       await repo.deleteComment(commentId);
     },
 

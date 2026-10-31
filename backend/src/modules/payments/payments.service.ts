@@ -9,6 +9,7 @@ import { annualSavingsPct, type Community } from '../catalog/community.types.js'
 import { getRole, atLeast, isCommunityOwner, requireRole, requireStaff } from '../permissions/policy.js';
 import { paymentGateway, type PaymentGateway } from './payments.gateway.js';
 import { announcePaid, alertMoneyIssue } from './payments.alerts.js';
+import { referralWithdrawalsService } from '../referrals/referral-withdrawals.service.js';
 import { bankConfigured, createBankReconciler, makeRefCode, SESSION_TTL_MS, transferInfoFor } from './payments.bank.js';
 import {
   isUniqueViolation,
@@ -23,7 +24,7 @@ import {
 import { cfg } from '../settings/settings.service.js';
 import { communityReferralService } from '../referrals/community-referral.service.js';
 import { referralsService } from '../referrals/referrals.service.js';
-import { refundStatuses } from './payments.cards.js';
+import { refundStatuses, returningPaymentIds } from './payments.cards.js';
 import type { PaymentMethodInput } from './payments.schema.js';
 import type { BillingInterval, PaymentCardView, PaymentIntent, PaymentMethod, Payout, RefundRequest, Subscription } from './payments.types.js';
 
@@ -96,6 +97,8 @@ export function balanceView(b: BalanceFigures, reservePct: number) {
     total,
     held: Math.max(0, b.net - b.eligible),
     reserve,
+    /** Quỹ dự phòng theo TOÀN BỘ thực nhận (kể cả phần còn trong holding period) — để hiển thị; `reserve` chỉ tính phần đã đủ điều kiện và dùng cho số dư rút được. */
+    reserveTotal: Math.floor((Math.max(0, b.net) * bp(reservePct)) / 10_000),
     withdrawable: Math.max(0, Math.min(b.eligible - reserve - b.requested, total)),
     debt: Math.max(0, -total),
   };
@@ -230,7 +233,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
         type: 'payment_succeeded',
         title: 'Thanh toán thành công',
         body: `Bạn đã thanh toán ${vnd(intent.amountCents)}. Hóa đơn ${invoiceNumber}.`,
-        link: `/courses/${intent.communityId}/community`,
+        link: `/communities/${intent.communityId}/community`,
         communityId: intent.communityId,
       });
       return { payment: final!, voided: false };
@@ -349,7 +352,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
       type: 'payment_succeeded',
       title: 'Gia hạn gói thành công',
       body: `Gói của bạn được gia hạn đến ${end.toISOString().slice(0, 10)}. Hóa đơn ${invoiceNumber}.`,
-      link: `/courses/${intent.communityId}/community`,
+      link: `/communities/${intent.communityId}/community`,
       communityId: intent.communityId,
     });
     return { payment: final!, voided: false };
@@ -370,7 +373,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
         : payment.moduleId
         ? `Bạn đã sở hữu module này nên khoản thanh toán ${vnd(payment.amountCents)} bị trùng đã được hoàn lại.`
         : `Bạn đã có gói thành viên nên khoản thanh toán ${vnd(payment.amountCents)} bị trùng đã được hoàn lại.`,
-      link: `/courses/${payment.communityId}`,
+      link: `/communities/${payment.communityId}`,
       communityId: payment.communityId,
     });
   }
@@ -389,7 +392,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
   }
 
   /** Đối soát chuyển khoản: webhook / quét / duyệt tay đều cấp quyền qua CÙNG `settleAndVoid`. */
-  const bank = createBankReconciler({ repo, settle: (intent, ref) => settleAndVoid(intent, ref, false), alert: (m) => void alertMoneyIssue(m), http: deps.http, apiToken: deps.sepayToken });
+  const bank = createBankReconciler({ repo, settleOutgoing: (t) => referralWithdrawalsService.settleByBank(t.ref, t.amount, t.externalId), settle: (intent, ref) => settleAndVoid(intent, ref, false), alert: (m) => void alertMoneyIssue(m), http: deps.http, apiToken: deps.sepayToken });
 
   async function failPayment(intent: PaymentIntent, reason: string) {
     const failed = await repo.transition(intent.id, ['pending'], { status: 'failed', failureReason: reason });
@@ -399,7 +402,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
         type: 'payment_failed',
         title: 'Thanh toán thất bại',
         body: `Giao dịch không thành công (${reason}). Vui lòng thử lại hoặc dùng phương thức khác.`,
-        link: `/courses/${intent.communityId}`,
+        link: `/communities/${intent.communityId}`,
         communityId: intent.communityId,
       });
     }
@@ -416,7 +419,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
         type: 'system',
         title: 'Gói thành viên đã kết thúc',
         body: why,
-        link: `/courses/${sub.communityId}`,
+        link: `/communities/${sub.communityId}`,
         communityId: sub.communityId,
       });
     }
@@ -498,7 +501,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
       type: 'system',
       title: 'Hoàn tiền thành công',
       body: `Đã hoàn ${vnd(refund.amountCents)} cho giao dịch của bạn.`,
-      link: `/courses/${refund.communityId}`,
+      link: `/communities/${refund.communityId}`,
       communityId: refund.communityId,
     });
     return updated;
@@ -542,7 +545,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
   }
 
   function notifyPayout(p: Payout, title: string, body: string) {
-    notify({ userId: p.ownerId, type: 'system', title, body, link: `/courses/${p.communityId}/revenue`, communityId: p.communityId });
+    notify({ userId: p.ownerId, type: 'system', title, body, link: `/communities/${p.communityId}/community/doanh-thu`, communityId: p.communityId });
   }
 
   async function idempotentReplay(userId: string, communityId: string, key: string) {
@@ -563,7 +566,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
         await endSubscription(ops, after, sub, 'canceled', at, why);
       } else if (!sub.cancelAtPeriodEnd) {
         await ops.updateSubscription(sub.id, { cancelAtPeriodEnd: true, canceledAt: at.toISOString() });
-        later(after, { userId, type: 'system', title: 'Gói thành viên sẽ không gia hạn', body: why, link: `/courses/${communityId}`, communityId });
+        later(after, { userId, type: 'system', title: 'Gói thành viên sẽ không gia hạn', body: why, link: `/communities/${communityId}`, communityId });
       }
       return true;
     });
@@ -671,6 +674,14 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
         }
         throw e;
       }
+    },
+
+    /** Người dùng tự hủy hóa đơn đang chờ thanh toán (chưa chuyển khoản): chuyển sang failed/cancelled, không thông báo "thất bại". */
+    async cancelPending(paymentId: string, userId: string) {
+      const p = await service.getOrThrow(paymentId);
+      if (p.userId !== userId) throw HttpError.forbidden();
+      if (p.status !== 'pending') throw HttpError.conflict('Chỉ hóa đơn đang chờ thanh toán mới hủy được');
+      return (await repo.transition(p.id, ['pending'], { status: 'failed', failureReason: 'cancelled' })) ?? (await service.getOrThrow(paymentId));
     },
 
     async getOrThrow(paymentIntentId: string) {
@@ -857,7 +868,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
           const when = sub.currentPeriodEnd.slice(0, 10);
           const text = `Dùng thử "${title}" của bạn kết thúc vào ngày ${when}. Để tiếp tục tham gia, hãy thanh toán ${vnd(sub.priceCents)} bằng chuyển khoản QR trước ngày đó (vào trang cộng đồng và chọn "Tham gia"). Nếu không thanh toán, quyền truy cập sẽ kết thúc.`;
           if (user?.email) await mailService.send({ to: user.email, subject: `Dùng thử "${title}" sắp kết thúc`, text });
-          notify({ userId: sub.userId, type: 'system', title: 'Dùng thử sắp kết thúc', body: text, link: `/courses/${sub.communityId}`, communityId: sub.communityId });
+          notify({ userId: sub.userId, type: 'system', title: 'Dùng thử sắp kết thúc', body: text, link: `/communities/${sub.communityId}`, communityId: sub.communityId });
           sent++;
         } catch (err) {
           console.error('sendTrialReminders: bỏ qua 1 gói do lỗi:', err);
@@ -981,7 +992,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
                   type: 'payment_failed',
                   title: 'Gói thành viên đã hết hạn',
                   body: 'Chúng tôi chưa nhận được tiền gia hạn nên gói đã hết hiệu lực. Hãy đăng ký lại để tiếp tục.',
-                  link: `/courses/${sub.communityId}`,
+                  link: `/communities/${sub.communityId}`,
                   communityId: sub.communityId,
                 });
                 st.outcome = 'renewalFailed';
@@ -1154,9 +1165,10 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
       const titles = new Map<string, string>();
       for (const id of new Set(items.map((p) => p.communityId))) titles.set(id, await courseTitle(id));
       const refunds = await refundStatuses(items.map((p) => p.id));
+      const returning = await returningPaymentIds(userId, items);
       const moduleTitles = await repo.moduleTitles([...new Set(items.flatMap((p) => (p.moduleId ? [p.moduleId] : [])))]);
       return {
-        data: items.map((p) => ({ ...p, courseTitle: titles.get(p.communityId), ...(p.moduleId ? { moduleTitle: moduleTitles.get(p.moduleId) ?? null } : {}), refundStatus: refunds.get(p.id) ?? null })),
+        data: items.map((p) => ({ ...p, courseTitle: titles.get(p.communityId), ...(p.moduleId ? { moduleTitle: moduleTitles.get(p.moduleId) ?? null } : {}), refundStatus: refunds.get(p.id) ?? null, returning: returning.has(p.id) })),
         meta: pageMeta(total, page, limit),
       };
     },
@@ -1352,7 +1364,7 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
         return await inTx(async (ops, after) => {
           const sub = await ops.findSubscription(subId);
           if (!sub) throw HttpError.notFound('Không tìm thấy gói thành viên');
-          const tell = (t: string, body: string) => later(after, { userId: sub.userId, type: 'system', title: t, body, link: `/courses/${sub.communityId}`, communityId: sub.communityId });
+          const tell = (t: string, body: string) => later(after, { userId: sub.userId, type: 'system', title: t, body, link: `/communities/${sub.communityId}`, communityId: sub.communityId });
           if (action === 'pause') {
             if (!['trialing', 'active', 'past_due'].includes(sub.status)) throw HttpError.conflict('Chỉ tạm dừng được gói đang hoạt động');
             await ops.updateSubscription(sub.id, { status: 'paused' });
@@ -1425,9 +1437,13 @@ export function createPaymentsService(repo: PaymentsRepository = paymentsReposit
         // --- thêm mới (chỉ thêm): phân rã số dư ---
         totalBalanceCents: bal.total, // net − payout đã yêu cầu (có thể âm = còn nợ)
         heldCents: bal.held, // còn trong holding period
-        reserveCents: bal.reserve, // rolling reserve
+        reserveCents: bal.reserve, // rolling reserve (phần đã đủ điều kiện rút)
+        reserveTotalCents: bal.reserveTotal, // rolling reserve tính trên toàn bộ thực nhận
         debtCents: bal.debt, // nợ do hoàn tiền/chargeback sau khi đã rút
         payoutPolicy: {
+          // Ngày số tiền đang giữ đầu tiên được phép rút (giao dịch sớm nhất còn trong holding period + holdDays); null = không có tiền đang giữ.
+          nextEligibleAt: await repo.earliestHeldAt(communityId, bal.policy.eligibleBefore).then((d) => (d ? new Date(d.getTime() + bal.policy.holdDays * DAY_MS).toISOString() : null)),
+          minPayoutCents: toCents(cfg().payments.payoutMinUsd),
           holdDays: bal.policy.holdDays,
           refundWindowDays: bal.policy.refundWindowDays,
           disputeWindowDays: bal.policy.disputeWindowDays,

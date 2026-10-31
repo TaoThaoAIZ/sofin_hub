@@ -56,7 +56,7 @@ describe('nội dung: bài viết và sự kiện', () => {
       const post = await newPost(u.token, { content: 'A'.repeat(300) });
       const got = await c.call('GET', `/posts/${post.id}`, { token: u.token });
       assert.equal(got.status, 200);
-      assert.equal(got.body.data.shareUrl, `/courses/${COURSE}/community?post=${post.id}`);
+      assert.equal(got.body.data.shareUrl, `/communities/${COURSE}/community?post=${post.id}`);
       const share = await c.call('GET', `/posts/${post.id}/share`, { token: u.token });
       assert.equal(share.status, 200);
       assert.equal(share.body.data.url, got.body.data.shareUrl);
@@ -64,7 +64,7 @@ describe('nội dung: bài viết và sự kiện', () => {
       assert.ok(share.body.data.excerpt.length < 300);
     });
 
-    it('sửa bài: tác giả và mod được, member khác bị 403; đặt editedAt; 400 khi rỗng', async () => {
+    it('sửa bài: chỉ tác giả (mod và member khác bị 403); đặt editedAt; 400 khi rỗng', async () => {
       const author = await member('pedit');
       const other = await member('pother');
       const mod = await member('pmod', 'mod');
@@ -77,7 +77,7 @@ describe('nội dung: bài viết và sự kiện', () => {
       assert.equal(ok.body.data.content, 'Đã sửa');
       assert.equal(ok.body.data.category, 'Hỏi đáp');
       assert.ok(ok.body.data.editedAt);
-      assert.equal((await c.call('PATCH', `/posts/${post.id}`, { token: mod.token, body: { content: 'Mod sửa' } })).status, 200);
+      assert.equal((await c.call('PATCH', `/posts/${post.id}`, { token: mod.token, body: { content: 'Mod sửa' } })).status, 403, 'mod không sửa lời người khác');
     });
 
     it('xóa bài: xóa luôn bình luận; member khác 403, tác giả/mod được', async () => {

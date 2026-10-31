@@ -9,3 +9,14 @@ export const presignSchema = z.object({
   communityId: z.string().trim().min(1).max(100).optional(),
 });
 export type PresignInput = z.infer<typeof presignSchema>;
+
+/** Báo upload trực tiếp lên S3 đã xong. Multipart: kèm uploadId + ETag từng phần. */
+export const completeSchema = z.object({
+  uploadId: z.string().trim().min(1).max(2000).optional(),
+  parts: z
+    .array(z.object({ partNumber: z.number().int().min(1).max(10_000), etag: z.string().trim().min(1).max(200) }))
+    .max(10_000)
+    .optional(),
+});
+export type CompleteInput = z.infer<typeof completeSchema>;
+export const abortSchema = z.object({ uploadId: z.string().trim().min(1).max(2000).optional() });

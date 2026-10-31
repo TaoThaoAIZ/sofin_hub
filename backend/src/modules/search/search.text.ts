@@ -87,3 +87,19 @@ export function highlightNeedle(text: string, needle: string, tokens: string[]):
 export function makeSnippetFor(text: string, needle: string, tokens: string[], radius = 60): Segment[] {
   return makeSnippet(text, highlightNeedle(text, needle, tokens) ?? needle, radius);
 }
+
+/** Bỏ ký hiệu Markdown trong mô tả để đoạn trích tìm kiếm là văn bản thuần. */
+export function stripMarkdown(text: string): string {
+  return text
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/^\s{0,3}#{1,6}\s+/gm, '')
+    .replace(/^\s*>\s?/gm, '')
+    .replace(/^\s*(?:[-*+]|\d+\.)\s+/gm, '')
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/(\*\*|__)(.+?)\1/g, '$2')
+    .replace(/(\*|_)(.+?)\1/g, '$2')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/\s*\n\s*/g, ' ')
+    .trim();
+}

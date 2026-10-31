@@ -36,7 +36,10 @@ describe('cộng đồng ↔ khóa học', () => {
     }
     return { moduleId: m.body.data.id as string, lessonIds, module: m.body.data };
   }
-  const complete = (u: U, lessonId: string) => call('POST', `/communities/${cid}/lessons/${lessonId}/complete`, u);
+  const complete = async (u: U, lessonId: string) => {
+    await call('POST', `/communities/${cid}/lessons/${lessonId}/watched`, u); // hoàn thành bài đòi xem hết video (nếu có)
+    return call('POST', `/communities/${cid}/lessons/${lessonId}/complete`, u);
+  };
   /** Hoàn thành mọi bài còn lại của khóa theo đúng thứ tự mở khóa (không bật/tắt lại bài đã xong). */
   async function finish(u: U, course: string) {
     for (let guard = 0; guard < 10; guard++) {

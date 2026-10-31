@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
+import { useCategoryName } from '../../../courses/useCategoryName';
 import { Button } from '../../../../components/ui/Button';
 import { useCategories } from '../../../courses/queries';
 import { CoverField } from '../../../community/components/CoverField';
@@ -23,6 +24,7 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 /** Thông tin chung (admin+). Giá & chế độ riêng tư chỉ Owner/Platform Admin sửa được (BE cũng chặn). */
 export function GeneralTab({ course, viewerRole }: { course: CommunityDetail; viewerRole: ViewerRole }) {
   const { t } = useTranslation('communities');
+  const catName = useCategoryName();
   const { data: categories = [] } = useCategories();
   const update = useUpdateCommunity(course.id);
   const isOwner = ROLE_RANK[viewerRole] >= ROLE_RANK.owner;
@@ -81,7 +83,7 @@ export function GeneralTab({ course, viewerRole }: { course: CommunityDetail; vi
           <select value={category} onChange={(e) => setCategory(e.target.value as CategoryId)} className={INPUT_CLASS}>
             {categories.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.name}
+                {catName(c)}
               </option>
             ))}
           </select>

@@ -97,6 +97,8 @@ enum PointReason {
   like_received
   lesson_complete
   event_rsvp
+  /// Chơi xong trò chơi lật thẻ cuối bài học (cộng một lần cho mỗi bài).
+  game_play
   /// Điểm âm bù khi xóa bài/sự kiện đã sinh điểm (cùng transaction với việc xóa).
   revoked
 }
@@ -409,6 +411,8 @@ model User {
   referredBy                 Referral?                   @relation("ReferralReferred")
   commissionsEarned          ReferralCommission[]        @relation("CommissionReferrer")
   commissionsCaused          ReferralCommission[]        @relation("CommissionReferred")
+  referralPayoutAccount      ReferralPayoutAccount?
+  referralWithdrawals        ReferralWithdrawal[]
   oneTimeTokens              OneTimeToken[]
   emailOtps                  EmailOtp[]
   socialAccounts             SocialAccount[]
@@ -465,9 +469,14 @@ model User {
   /// Cột GENERATED ALWAYS (họ tên đã gập dấu).
   searchVector               Unsupported("tsvector")?
   quizAttempts               QuizAttempt[]
+  surveyResponses            SurveyResponse[]
+  lessonVideoWatches         LessonVideoWatch[]
+  lessonGamePlays            LessonGamePlay[]
   communityOnboardings       CommunityOnboarding[]
   communityReferralsGiven    CommunityReferral[]         @relation("CommunityReferralReferrer")
   communityReferralsReceived CommunityReferral[]         @relation("CommunityReferralReferred")
+  commissionPayoutsReceived  CommunityCommissionPayout[] @relation("CommissionPayoutReferrer")
+  commissionPayoutsMade      CommunityCommissionPayout[] @relation("CommissionPayoutPaidBy")
 
   @@index([isDemo])
   @@index([status])
@@ -660,6 +669,7 @@ model Community {
   /// Cột GENERATED ALWAYS (title A + description B, đã gập dấu).
   searchVector       Unsupported("tsvector")?
   communityReferrals CommunityReferral[]
+  commissionPayouts  CommunityCommissionPayout[]
   onboardings        CommunityOnboarding[]
 
   @@index([category])
@@ -1059,6 +1069,10 @@ model ClassroomLesson {
   community Community        @relation(fields: [communityId], references: [id], onDelete: Cascade)
   progress  LessonProgress[]
   quiz      LessonQuiz?
+  survey    LessonSurvey?
+  videoWatches LessonVideoWatch[]
+  games     LessonGame[]
+  gamePlays LessonGamePlay[]
 
   @@index([moduleId, index])
   @@index([communityId])
@@ -1090,6 +1104,21 @@ model LessonProgress {
   lesson ClassroomLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
   @@id([userId, lessonId])
+  @@index([lessonId])
+}
+
+/// Đã xem hết video của bài (FE báo khi video kết thúc). Phải có thì học viên mới làm được trắc nghiệm của bài.
+model LessonVideoWatch {
+  userId    String
+  lessonId  String
+  /// 'main' = video chính (videoUrl); video bổ sung = mã băm URL (lessonVideoKeys).
+  videoKey  String   @default("main")
+  createdAt DateTime @default(now())
+
+  user   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson ClassroomLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@id([userId, lessonId, videoKey])
   @@index([lessonId])
 }
 
@@ -1577,6 +1606,9 @@ model Upload {
   modAt       DateTime?
   modById     String?
   createdAt   DateTime      @default(now())
+  /// Bản web của video bài học (MediaConvert): null = chưa chuyển mã; processing | ready | failed. Bản web nằm ở web/<khóa không đuôi>.mp4.
+  webStatus   String?
+  webJobId    String?
 
   owner     User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   community Community? @relation(fields: [communityId], references: [id], onDelete: SetNull)
@@ -1935,13 +1967,68 @@ model ReferralCommission {
   amountCents    Int
   status         CommissionStatus @default(pending)
   payoutOn       DateTime?
+  /// Hoa hồng cộng đồng do CHỦ CỘNG ĐỒNG tự chuyển khoản rồi đánh dấu đã chi: trỏ tới đợt chi trả. Có giá trị = không còn nằm trong số dư rút của người nhận và không còn trừ vào doanh thu creator.
+  payoutId       String?
   createdAt      DateTime         @default(now())
 
+  payout       CommunityCommissionPayout? @relation(fields: [payoutId], references: [id], onDelete: SetNull)
   referrer     User @relation("CommissionReferrer", fields: [referrerId], references: [id], onDelete: Cascade)
   referredUser User @relation("CommissionReferred", fields: [referredUserId], references: [id], onDelete: Cascade)
 
   @@index([referrerId, createdAt])
   @@index([referredUserId])
+  @@index([payoutId])
+}
+
+enum ReferralWithdrawalStatus {
+  /// Đã tạo, chờ admin chuyển khoản (hoặc SePay báo tiền ra khớp mã).
+  requested
+  paid
+  rejected
+}
+
+/// Tài khoản nhận hoa hồng của MỘT người dùng. Số tài khoản mã hóa AES-256-GCM (accountNumberEnc); giao diện chỉ thấy 4 số cuối.
+model ReferralPayoutAccount {
+  userId           String   @id
+  bankBin          String
+  bankName         String
+  accountHolder    String
+  accountNumberEnc String
+  accountLast4     String
+  updatedAt        DateTime @updatedAt
+  createdAt        DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// Yêu cầu rút hoa hồng giới thiệu. Cơ chế giống nạp: mã tham chiếu `refCode` (nội dung CK), trạng thái requested -> paid,
+/// SePay báo TIỀN RA khớp mã + số tiền thì tự chuyển paid (bankTxExternalId = id giao dịch). Số dư rút được = hoa hồng (trừ void) − các yêu cầu chưa bị từ chối.
+/// Ảnh chụp tài khoản nhận (bankBin/bankName/accountHolder/accountNumberEnc) giữ nguyên dù người dùng đổi tài khoản sau đó.
+model ReferralWithdrawal {
+  id                String                   @id @default(uuid())
+  userId            String
+  amountCents       Int
+  refCode           String                   @unique
+  status            ReferralWithdrawalStatus @default(requested)
+  bankBin           String
+  bankName          String
+  accountHolder     String
+  accountNumberEnc  String
+  accountLast4      String
+  note              String?
+  bankTxExternalId  String?                  @unique
+  resolvedById      String?
+  paidAt            DateTime?
+  /// Rút từ hoa hồng của riêng một cộng đồng (NULL = ví chung, dữ liệu cũ).
+  communityId       String?
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@index([communityId, userId])
 }
 
 // =====================================================================// CHATBOT HỖ TRỢ (chatbot.md) — kho câu hỏi mẫu, tài liệu tri thức, hội thoại
@@ -2202,6 +2289,36 @@ model QuizAttempt {
   @@index([userId])
 }
 
+/// Khảo sát của MỘT bài học (không bắt buộc, không chặn hoàn thành bài). Chủ/mod đọc kết quả để biết mong muốn của học viên.
+/// `questions` = [{ id, text, type: 'single'|'multiple'|'text', options: string[] (rỗng nếu type = text), required }].
+model LessonSurvey {
+  id        String   @id @default(uuid())
+  lessonId  String   @unique
+  questions Json     @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lesson    ClassroomLesson  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  responses SurveyResponse[]
+}
+
+/// Câu trả lời khảo sát của một học viên (mỗi người một bản, nộp lại thì ghi đè).
+/// `answers` = [{ questionId, choices: string[] (lưu NỘI DUNG lựa chọn để sửa khảo sát không lệch), text? }].
+model SurveyResponse {
+  id        String   @id @default(uuid())
+  surveyId  String
+  userId    String
+  answers   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  survey LessonSurvey @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([surveyId, userId])
+  @@index([userId])
+}
+
 /// Ghi nhận ai giới thiệu ai vào MỘT cộng đồng (người đầu tiên thắng; ghi lúc người được mời tạo thanh toán qua link có mã). Hoa hồng ở ReferralCommission (kind = community).
 model CommunityReferral {
   id             String   @id @default(uuid())
@@ -2273,4 +2390,63 @@ model CommunityAnnouncementSeen {
 
   @@id([announcementId, userId])
   @@index([userId])
+}
+
+/// Một lần CHỦ CỘNG ĐỒNG chi trả hoa hồng giới thiệu cho một cộng tác viên (chuyển khoản ngoài hệ thống rồi bấm "Chi trả" để ghi nhận).
+model CommunityCommissionPayout {
+  id              String   @id @default(uuid())
+  communityId     String   @map("courseId")
+  referrerId      String
+  paidById        String
+  amountCents     Int
+  commissionCount Int
+  note            String?
+  createdAt       DateTime @default(now())
+
+  community   Community            @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  referrer    User                 @relation("CommissionPayoutReferrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  paidBy      User                 @relation("CommissionPayoutPaidBy", fields: [paidById], references: [id], onDelete: Cascade)
+  commissions ReferralCommission[]
+
+  @@index([communityId, createdAt])
+  @@index([referrerId])
+  @@index([paidById])
+}
+
+/// Trò chơi cuối bài học (chủ cộng đồng nhập); một bài có thể gắn nhiều trò chơi. `kind` = memory | match | swipe | scramble.
+/// `pairs` = [{ id, term, definition }] (2..8 cặp); scramble: term = từ cần xếp, definition = gợi ý.
+model LessonGame {
+  id        String   @id @default(uuid())
+  lessonId  String
+  kind      String   @default("memory")
+  position  Int      @default(0)
+  pairs     Json     @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lesson ClassroomLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  plays  LessonGamePlay[]
+
+  @@index([lessonId, position])
+}
+
+/// Kết quả tốt nhất của một học viên ở MỘT trò chơi (điểm thưởng chỉ cộng ở lần chơi đầu tiên của mỗi trò chơi).
+model LessonGamePlay {
+  userId    String
+  gameId    String
+  lessonId  String
+  stars     Int
+  moves     Int
+  seconds   Int
+  plays     Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game   LessonGame      @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  lesson ClassroomLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@id([userId, gameId])
+  @@index([gameId])
+  @@index([lessonId])
 }

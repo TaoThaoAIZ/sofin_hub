@@ -37,7 +37,7 @@ function MemberPicker({ communityId, value, onChange }: { communityId: string; v
                   else next[m.id] = m.name;
                   onChange(next);
                 }}
-                className="accent-[#f26a1b]"
+                className="accent-[#ff570a]"
               />
               <span className="min-w-0 flex-1 truncate">{m.name}</span>
             </label>
@@ -372,7 +372,6 @@ export function ModuleWizard({ communityId, courseId, module: initial, onClose }
             courseId={courseId}
             moduleId={moduleId}
             {...(editing && editing !== 'new' ? { lesson: editing } : {})}
-            defaultPreview={lessons.length === 0}
             onSaved={() => {
               toast(editing && editing !== 'new' ? t('editor.lesson.toastUpdated') : t('editor.lesson.toastCreated'));
               setEditing(null);

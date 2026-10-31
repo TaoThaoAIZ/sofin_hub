@@ -21,7 +21,7 @@ import { ProfilePreview } from '../profile/ProfilePreview';
 import { useUnsavedGuard } from '../profile/unsaved';
 import { useDebounced, useHandleAvailability } from '../profile/queries';
 
-const SECTION = 'rounded-[20px] border border-[rgba(120,60,20,.07)] bg-white px-7 pt-6 pb-[26px]';
+const SECTION = 'min-w-0 rounded-[20px] border border-[rgba(120,60,20,.07)] bg-white px-4 pt-5 pb-[22px] sm:px-7 sm:pt-6 sm:pb-[26px]';
 const LABEL = 'flex flex-col gap-2 text-[14.5px] font-bold';
 
 /** Tab "Hồ sơ" (thiết kế "Cai dat ho so"): form bên trái, thẻ xem trước bên phải (≥1240px; hẹp hơn thì nằm dưới form). */
@@ -174,7 +174,7 @@ export function ProfileTab() {
                 }}
               />
             </div>
-            <div className="min-w-[240px] flex-1">
+            <div className="min-w-0 flex-1 basis-[240px]">
               <div className="flex flex-wrap items-center gap-[18px]">
                 <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading} className={OUTLINE_BTN}>
                   <MaterialIcon name="account_circle" size={20} />
@@ -212,7 +212,7 @@ export function ProfileTab() {
             </div>
           </div>
 
-          <div className="mt-[22px] grid gap-[18px] [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
+          <div className="mt-[22px] grid gap-[18px] [grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr))]">
             <label className={LABEL}>
               {t('profileTab.lastName')}
               <IconInput icon="person">
@@ -229,12 +229,12 @@ export function ProfileTab() {
 
           <div className="mt-[18px] text-[14.5px] font-bold">{t('profileTab.handleLabel')}</div>
           <div className="mt-2 flex h-[50px] overflow-hidden rounded-xl border-[1.5px] border-[#e7e0da] focus-within:border-[#fdba74]">
-            <span className="flex flex-none items-center border-r-[1.5px] border-[#e7e0da] bg-[#f5f2ef] px-4 text-[15px] text-stone-600">sofinhub.com/@</span>
+            <span className="flex flex-none items-center border-r-[1.5px] border-[#e7e0da] bg-[#f5f2ef] px-3 text-[13px] text-stone-600 sm:px-4 sm:text-[15px]">sofinhub.com/@</span>
             <input
               value={form.handle}
               onChange={(e) => set('handle', sanitizeHandle(e.target.value))}
               aria-label={t('profileTab.handleLabel')}
-              className="min-w-0 flex-1 border-0 px-3.5 text-[15px] font-medium outline-0"
+              className="min-w-0 flex-1 border-0 bg-transparent px-3.5 text-[15px] font-medium outline-0"
             />
             {(form.handle || fmtErr) && (
               <span className={`flex flex-none items-center gap-1.5 px-3.5 text-[13px] font-semibold ${hOk && !hPending ? 'text-[#16a34a]' : hPending ? 'text-stone-500' : 'text-[#dc2626]'}`}>
@@ -266,14 +266,14 @@ export function ProfileTab() {
         <section className={SECTION}>
           <div className="flex items-start gap-4">
             <span className="grid size-[46px] flex-none place-items-center rounded-full bg-[#fff1e6]">
-              <MaterialIcon name="link" size={24} weight={600} color="#f26a1b" />
+              <MaterialIcon name="link" size={24} weight={600} color="#ff570a" />
             </span>
             <div>
               <div className="text-xl font-extrabold">{t('profileTab.linksTitle')}</div>
               <div className="mt-[3px] text-sm text-stone-500">{t('profileTab.linksSub')}</div>
             </div>
           </div>
-          <div className="mt-5 grid gap-[18px] [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
+          <div className="mt-5 grid gap-[18px] [grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr))]">
             {links.map((l) => (
               <label key={l.key} className={LABEL}>
                 {l.label}

@@ -103,9 +103,88 @@
     "leave": "Leave community",
     "leaving": "Leaving…",
     "leftToast": "You have left the community",
-    "approvedPay": "Approved – pay to join"
+    "approvedPay": "Approved – pay to join",
+    "perks": {
+      "instant": {
+        "title": "Instant access",
+        "desc": "After payment"
+      },
+      "anywhere": {
+        "title": "Learn anywhere, anytime",
+        "desc": "On web, mobile, tablet"
+      },
+      "updates": {
+        "title": "Continuously updated content",
+        "desc": "Always improving"
+      },
+      "support": {
+        "title": "Community support",
+        "desc": "Q&A, share experience"
+      }
+    },
+    "facts": {
+      "label": {
+        "members": "Members",
+        "lessons": "Lessons",
+        "admins": "Admins",
+        "cost": "Membership fee",
+        "community": "Community"
+      },
+      "value": {
+        "free": "Free",
+        "private": "Private",
+        "public": "Public",
+        "perMonth": "{{price}} VND/month"
+      },
+      "note": {
+        "cancelAnytime": "Cancel anytime",
+        "trial": "{{n}}-day free trial"
+      }
+    },
+    "cancelRequestConfirm": "Cancel your request to join this community?",
+    "toolsTitle": "Tools in this community",
+    "toolsSub": "SofinHub tools available to members to help you make videos, automate work and move faster."
   },
   "lesson": {
+    "reqTitle": "To complete this lesson you need to:",
+    "req": {
+      "video": "Watch the whole lesson video",
+      "quiz": "Pass the quiz ({{pct}}% or higher)",
+      "survey": "Answer the required survey questions"
+    },
+    "videoSkipped": "You skipped through the video, so it does not count as watched. Please watch it from start to finish.",
+    "videoWatched": "You have watched every video in this lesson.",
+    "videosProgress": "Watch every video in this lesson to complete it and unlock the quiz. Watched {{done}}/{{total}} videos.",
+    "videoMustWatch": "Watch every video in this lesson to complete it and unlock the quiz.",
+    "test": {
+      "quizTitle": "Quiz",
+      "quizDone": "Quiz completed",
+      "quizDoneSub": "You passed this quiz · tap to review",
+      "quizSub": "{{n}} questions · pass mark {{pct}}%",
+      "quizReview": "Completed · Review",
+      "surveyTitle": "Quick survey",
+      "surveySub": "Share what you need with the community owner",
+      "surveyDone": "Survey submitted",
+      "surveyDoneSub": "Thank you! Tap to review or take it again",
+      "surveyStart": "Take survey",
+      "surveyAgain": "Submitted · Take again",
+      "surveyPageTitle": "Survey: {{title}}",
+      "title": "Quiz & survey",
+      "quizPassed": "You passed the quiz",
+      "surveyOnly": "Quick survey for this lesson",
+      "withSurvey": "with survey",
+      "start": "Take the quiz",
+      "review": "Review",
+      "locked": "Watch the video to unlock",
+      "pageTitle": "Quiz: {{title}}",
+      "loadingTitle": "Loading your quiz...",
+      "loadingSub": "Hang on, we are getting everything ready for you.",
+      "backToLesson": "Back to lesson",
+      "backToComplete": "Back to the lesson to complete it",
+      "lockedTitle": "Not unlocked yet",
+      "watchVideo": "Back to the video",
+      "none": "This lesson has no quiz or survey."
+    },
     "loadingAttachment": "{{name}} (loading…)",
     "invalidLink": "{{name}} (invalid link)",
     "loading": "Loading lesson…",
@@ -133,10 +212,147 @@
     "prev": "Previous lesson",
     "next": "Next lesson",
     "toClassroom": "Back to classroom",
+    "celebrate": {
+      "title": "Congratulations on completing module {{n}}!",
+      "desc": "You have completed every lesson in this module on your learning journey. Great job! Keep up the momentum!",
+      "review": "Review lessons",
+      "continue": "Continue to module {{n}}"
+    },
     "loadingShort": "Loading…",
-    "slides": "Lecture slides"
+    "videoN": "Video {{n}}",
+    "videoList": "Lesson videos",
+    "filesMore": "Show {{n}} more files",
+    "previewBanner": "This is a free preview lesson of a module you have not unlocked. Unlock the module to continue with the next lessons.",
+    "previewBannerCta": "View classroom",
+    "slides": "Lecture slides",
+    "bodyMore": "Show more",
+    "bodyLess": "Show less"
+  },
+  "surveyResults": {
+    "staffOnly": "Only the community owner and admins can view survey results",
+    "pageTitle": "Surveys",
+    "pageSubtitle": "See what learners want through the surveys in your lessons.",
+    "empty": "No surveys yet. Add one when editing a lesson (Classroom > Edit lesson).",
+    "questionCount": "{{count}} questions",
+    "responses": "responses",
+    "rate": "{{pct}}% of {{total}} members",
+    "lastAnswered": "Last answered: {{time}}",
+    "noAnswerYet": "No answers yet",
+    "back": "Back to surveys",
+    "notFound": "This lesson has no survey.",
+    "summary": "{{n}} of {{total}} members answered",
+    "csv": "Download CSV",
+    "csvDone": "Survey results downloaded (.csv)",
+    "tabs": {
+      "overview": "Overview",
+      "texts": "Free-text answers",
+      "people": "By learner"
+    },
+    "sortByVotes": "Sort by most chosen option",
+    "textQuestionHint": "Free-text question: read the answers in the \"Free-text answers\" tab.",
+    "otherHint": "Learners can add their own comment: read it in the \"Free-text answers\" tab.",
+    "noTextQuestions": "This survey has no free-text questions.",
+    "pickQuestion": "Pick a question",
+    "searchText": "Search answers…",
+    "searchName": "Search learner name…",
+    "totalFound": "{{count}} results",
+    "filterQuestion": "Filter by question",
+    "filterNone": "No answer filter",
+    "filterChoice": "Pick an answer",
+    "filterChoicePh": "Pick the answer to filter",
+    "stats": {
+      "total": "Total surveys",
+      "responses": "Total responses",
+      "avgRate": "Avg. completion rate",
+      "active": "Active surveys"
+    },
+    "cols": {
+      "survey": "Survey",
+      "lesson": "Module",
+      "questions": "Questions",
+      "responses": "Responses",
+      "rate": "Completion rate",
+      "status": "Status",
+      "updated": "Last updated"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Hidden"
+    },
+    "questionsShort": "{{count}} questions",
+    "viewResults": "Results",
+    "noAnswerShort": "—"
+  },
+  "survey": {
+    "needRequired": "Answer the required (*) survey questions above to complete this lesson.",
+    "loading": "Loading survey…",
+    "title": "Quick survey",
+    "intro": "Tell the community owner what you need. Optional and does not affect completing the lesson.",
+    "required": "required",
+    "multipleHint": "(you can pick several)",
+    "otherPh": "Anything else you want to add (optional)…",
+    "textPh": "Type your answer…",
+    "send": "Submit survey",
+    "update": "Update my answers",
+    "sending": "Sending…",
+    "thanks": "Your answers were saved. Thank you!",
+    "alreadyAnswered": "You already answered this survey; you can edit and resubmit.",
+    "fillRequired": "Please answer the required questions (*)"
+  },
+  "surveyEditor": {
+    "errNoOptions": "Question {{n}}: add at least one option or tick \"Let learners add their own comment\"",
+    "noOptionsHint": "No options: learners will only type their own comment under the question.",
+    "saveWithLesson": "Changes are saved when you click \"Save lesson\"",
+    "autoHint": "Changes are saved automatically",
+    "autoIncomplete": "Complete every question and option to auto-save",
+    "title": "Lesson survey",
+    "optional": "(optional)",
+    "rule": "Learners pick any answers or type their own; the survey never blocks lesson completion. Saving keeps collected answers.",
+    "question": "Question {{n}}",
+    "typeLabel": "Question type",
+    "types": {
+      "single": "Pick one",
+      "multiple": "Pick several",
+      "text": "Free text"
+    },
+    "required": "Required",
+    "optionPh": "Option {{n}}",
+    "addOption": "Add option",
+    "removeOption": "Remove option {{n}}",
+    "removeQuestion": "Remove question {{n}}",
+    "addQuestion": "Add survey question",
+    "allowText": "Let learners add their own comment (shows an input right under the options)",
+    "textHint": "Learners type their own answer; you can read it in the results.",
+    "save": "Save survey",
+    "saving": "Saving…",
+    "saved": "Survey saved",
+    "removed": "Survey removed from this lesson",
+    "errText": "Question {{n}}: enter the question text",
+    "errOption": "Question {{n}}: options cannot be empty",
+    "errDup": "Question {{n}}: options must be unique",
+    "viewResults": "View survey results",
+    "responseCount": "{{count}} learners answered",
+    "answeredCount": "{{n}}/{{total}} answered",
+    "viewByPerson": "View by learner",
+    "viewByQuestion": "View by question",
+    "noResponses": "No answers yet.",
+    "noText": "No answers yet.",
+    "truncated": "Showing the latest 500 responses only"
   },
   "quiz": {
+    "mascot": {
+      "intro": "Ready? Let's take the quiz!",
+      "next": "Here's the next one, you've got this!",
+      "right": "Correct! Great job!",
+      "wrong": "Not quite, try again!"
+    },
+    "stepOf": "Question {{n}}/{{total}}",
+    "progress": "{{pct}}% complete",
+    "questionN": "Question {{n}}",
+    "rightNow": "Correct! 🎉",
+    "wrongNow": "Not quite, please choose again.",
+    "back": "Back",
+    "next": "Next",
     "loading": "Loading quiz…",
     "title": "Lesson quiz",
     "passRule": "{{n}} questions · pass mark {{pct}}%",
@@ -150,10 +366,13 @@
     "score": "Score: {{pct}}% ({{ok}}/{{total}} correct)",
     "passed": "Passed",
     "failed": "Not passed (need at least {{need}}%)",
-    "passedHint": "You passed! Press \"Complete\" above to mark the lesson done.",
+    "passedHint": "You passed! Go back to the lesson page and click \"Complete\" to mark the lesson done.",
     "needPass": "You need at least {{pct}}% on the quiz to complete this lesson."
   },
   "quizEditor": {
+    "saveWithLesson": "Changes are saved when you click \"Save lesson\"",
+    "autoHint": "Changes are saved automatically",
+    "autoIncomplete": "Complete every question and option to auto-save",
     "title": "Lesson quiz",
     "optional": "(optional)",
     "rule": "With questions, learners must reach the pass mark to complete the lesson. Saving clears previous attempts; lessons already completed stay completed. Remove every question and save to delete the quiz.",
@@ -174,5 +393,107 @@
     "errText": "Question {{n}}: enter the question text",
     "errOption": "Question {{n}}: options cannot be empty",
     "errDup": "Question {{n}}: options must be different"
+  },
+  "game": {
+    "title": "End-of-lesson games",
+    "loading": "Loading the game…",
+    "none": "This lesson has no game yet.",
+    "moves": "{{n}} moves",
+    "cardBack": "Face-down card, tap to flip",
+    "skip": "Skip the game",
+    "back": "Pick another game",
+    "another": "Another game",
+    "continue": "Continue",
+    "replay": "Play again",
+    "playNow": "Play the games",
+    "playAgain": "Play the games again",
+    "pickTitle": "Pick a game",
+    "pickHint": "The fewer moves in a game, the more stars; each star is worth {{n}} points (awarded once per game).",
+    "pairCount": "{{n}} pairs",
+    "notPlayed": "Not played",
+    "starsAria": "{{n}} out of 3 stars",
+    "rating": {
+      "1": "Completed!",
+      "2": "Well done!",
+      "3": "Excellent!"
+    },
+    "stats": "{{moves}} moves · {{time}}",
+    "pointsEarned": "+{{n}} points",
+    "pointsNeedComplete": "Mark the lesson as complete to earn the bonus points.",
+    "pointsOnce": "Bonus points are awarded only once per game.",
+    "match": {
+      "terms": "Terms",
+      "defs": "Definitions"
+    },
+    "swipe": {
+      "term": "Term",
+      "def": "Definition",
+      "true": "True",
+      "false": "False",
+      "right": "Correct!",
+      "wasTrue": "Not quite — this definition does match the term.",
+      "wasFalse": "Not quite — the correct definition is: {{answer}}",
+      "keys": "Use ← (False) and → (True), or swipe the card."
+    },
+    "scramble": {
+      "hintLabel": "Hint",
+      "answer": "Your answer",
+      "pool": "Pieces to arrange",
+      "clear": "Clear and start over"
+    },
+    "kinds": {
+      "memory": {
+        "name": "Memory cards",
+        "title": "Memory card game",
+        "hint": "Flip two cards at a time to match each term with its definition. The fewer flips, the more stars; each star is worth {{n}} points.",
+        "editorHint": "Students flip cards to match terms with definitions. Definitions must be different.",
+        "termPh": "Term",
+        "defPh": "Definition / meaning"
+      },
+      "match": {
+        "name": "Matching",
+        "title": "Matching",
+        "hint": "Pick a term, then pick its definition. The fewer wrong matches, the more stars; each star is worth {{n}} points.",
+        "editorHint": "Students connect terms in the left column with definitions in the right column. Definitions must be different.",
+        "termPh": "Term",
+        "defPh": "Definition / meaning"
+      },
+      "swipe": {
+        "name": "True / False",
+        "title": "True or False?",
+        "hint": "Does the definition below match the term? The fewer mistakes, the more stars; each star is worth {{n}} points.",
+        "editorHint": "Each pair is shown sometimes correctly and sometimes mixed up with another definition; students answer True/False. Use at least 3 pairs for more variety.",
+        "termPh": "Concept",
+        "defPh": "Correct definition"
+      },
+      "scramble": {
+        "name": "Word scramble",
+        "title": "Word scramble",
+        "hint": "Read the hint and arrange the pieces into the right term. The fewer wrong tries, the more stars; each star is worth {{n}} points.",
+        "editorHint": "Students read the hint and unscramble the term (one word: arrange letters; several words: arrange words).",
+        "termPh": "Word to unscramble (e.g. Marketing)",
+        "defPh": "Hint (describe the word)"
+      }
+    },
+    "finished": "Done! Tallying your score…"
+  },
+  "gameEditor": {
+    "title": "End-of-lesson games",
+    "optional": "(optional)",
+    "rule": "Up to {{maxGames}} games per lesson, {{min}}–{{max}} pairs each. After completing the lesson, students play them to earn bonus points. Leave empty = no game.",
+    "gameN": "Game {{n}}",
+    "kindLabel": "Type of game {{n}}",
+    "removeGame": "Remove game {{n}}",
+    "addGame": "Add a game ({{n}}/{{max}}):",
+    "term": "Left column of pair {{n}}",
+    "def": "Right column of pair {{n}}",
+    "remove": "Remove pair {{n}}",
+    "add": "Add a pair ({{n}}/{{max}})",
+    "errGame": "Game {{n}} ({{kind}}): {{msg}}",
+    "errBlank": "every pair needs both fields.",
+    "errMin": "at least {{min}} pairs are needed (or remove this game).",
+    "errDupTerm": "terms must be different.",
+    "errDupDef": "definitions must be different.",
+    "errScramble": "the word to unscramble needs at least 2 different letters (or 2 different words)."
   }
 }

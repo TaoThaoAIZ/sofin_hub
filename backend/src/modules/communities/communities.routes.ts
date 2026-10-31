@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { communityReferralService } from '../referrals/community-referral.service.js';
 import { requireAuth } from '../../middlewares/auth.js';
 import { getRole } from '../permissions/policy.js';
 import {
@@ -48,7 +49,9 @@ communitiesRouter.post('/admin/courses/:id/unlock', requireAuth, async (req, res
 
 // ---- yêu cầu tham gia ----
 communitiesRouter.post('/courses/:id/join-requests', requireAuth, async (req, res) => {
-  const { message, answers, acceptRules } = joinRequestBody.parse(req.body ?? {});
+  const { message, answers, acceptRules, referralCode } = joinRequestBody.parse(req.body ?? {});
+  // Ghi nhận người giới thiệu khi gửi yêu cầu (lúc này chưa là thành viên); hoa hồng chỉ phát sinh khi có thanh toán sau đó.
+  await communityReferralService.attribute(req.userId!, p(req.params.id), referralCode);
   res.status(201).json({ data: await svc.createJoinRequest(req.userId!, p(req.params.id), message, { answers, acceptRules }) });
 });
 

@@ -6,6 +6,7 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { PopupProvider } from './components/ui/PopupProvider';
 import { AuthProvider } from './features/auth/AuthContext';
+import { ThemeProvider } from './features/theme/ThemeProvider';
 import './i18n';
 import './index.css';
 
@@ -20,9 +21,11 @@ createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
-          <PopupProvider>
-            <App />
-          </PopupProvider>
+          <ThemeProvider>
+            <PopupProvider>
+              <App />
+            </PopupProvider>
+          </ThemeProvider>
         </AuthProvider>
       </BrowserRouter>
       {/* Góc phải dưới dành cho nút trợ lý chatbot (features/chatbot/ChatWidget.tsx). */}

@@ -72,7 +72,7 @@ export function ToolsContent() {
 
 export function ToolsPage() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen">
       <Header active="tools" />
       <main className="mx-auto w-full max-w-[1320px] px-4 py-8 md:px-10 md:py-12">
         <ToolsContent />

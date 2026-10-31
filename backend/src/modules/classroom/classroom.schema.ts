@@ -65,13 +65,29 @@ const level = z.number().int('Cấp độ phải là số nguyên').min(1, 'Cấ
 
 const title = z.string().trim().min(1, 'Vui lòng nhập tiêu đề').max(200, 'Tiêu đề tối đa 200 ký tự');
 
-const attachment = z.object({
-  name: z.string().trim().min(1, 'Tên tệp không được trống').max(200),
-  url: httpUrl,
-  size: z.number().int().min(0).max(5_000_000_000).optional(),
-  /** 'slide' = slide bài giảng (hiện ở mục riêng); bỏ trống = tệp đính kèm thường. */
-  kind: z.enum(['slide']).optional(),
-});
+const attachment = z
+  .object({
+    name: z.string().trim().min(1, 'Tên tệp không được trống').max(200),
+    url: z.string().trim().max(1000, 'Đường dẫn quá dài'),
+    size: z.number().int().min(0).max(5_000_000_000).optional(),
+    /** 'slide' = slide bài giảng; 'video' = video bổ sung (YouTube/Vimeo hoặc tải lên); bỏ trống = tệp đính kèm thường. */
+    kind: z.enum(['slide', 'video']).optional(),
+  })
+  .superRefine((a, ctx) => {
+    // Video bổ sung: link YouTube/Vimeo, hoặc video tải lên (BE lưu dạng đường dẫn nội bộ /api/files/<key> nên sửa bài gửi lại phải nhận được).
+    // Tệp/slide thường: bắt buộc http(s).
+    const ok = a.kind === 'video' ? toEmbedUrl(a.url) !== null || uploadedVideoPath(a.url) !== null : parseHttpUrl(a.url) !== null;
+    if (!ok) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['url'],
+        message: a.kind === 'video' ? 'Video bổ sung chỉ chấp nhận link YouTube/Vimeo hợp lệ hoặc video tải lên (mp4, webm, mov)' : 'Đường dẫn phải bắt đầu bằng http:// hoặc https://',
+      });
+    }
+  });
+
+/** Số video bổ sung tối đa của một bài (ngoài video chính). */
+export const MAX_EXTRA_VIDEOS = 10;
 
 const accessMode = z.enum(['all', 'level', 'paid', 'selected']);
 const modulePublishStatus = z.enum(['published', 'draft', 'archived']);
@@ -116,7 +132,10 @@ const lessonFields = {
   durationMin: z.number().int('Thời lượng phải là số nguyên').min(0).max(1000),
   body: z.string().max(50_000, 'Nội dung tối đa 50.000 ký tự'),
   videoUrl,
-  attachments: z.array(attachment).max(30, 'Tối đa 30 tệp đính kèm (gồm cả slide)'),
+  attachments: z
+    .array(attachment)
+    .max(30, 'Tối đa 30 tệp đính kèm (gồm cả slide và video bổ sung)')
+    .refine((a) => a.filter((x) => x.kind === 'video').length <= MAX_EXTRA_VIDEOS, `Tối đa ${MAX_EXTRA_VIDEOS} video bổ sung`),
   isPreview: z.boolean(),
 };
 

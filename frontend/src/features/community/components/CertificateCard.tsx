@@ -12,10 +12,10 @@ export const verifyUrl = (code: string) => `${window.location.origin}/certificat
 export function CertificateView({ holderName, courseTitle, issuedAt, code }: { holderName: string; courseTitle: string; issuedAt: string; code?: string }) {
   const { t } = useTranslation('community');
   return (
-    <div className="relative overflow-hidden rounded-3xl border-2 border-brand/30 bg-gradient-to-br from-[#fff7f0] via-white to-[#ffe9d9] p-7 text-center shadow-[0_12px_32px_rgba(242,106,27,.14)]">
+    <div className="relative overflow-hidden rounded-3xl border-2 border-brand/30 bg-gradient-to-br from-[#fff7f0] via-white to-[#ffe9d9] p-7 text-center shadow-[0_12px_32px_rgba(255,87,10,.14)]">
       <div className="pointer-events-none absolute inset-2 rounded-[20px] border border-brand/20" />
       <span className="mx-auto grid size-14 place-items-center rounded-full bg-brand/10">
-        <MaterialIcon name="workspace_premium" size={34} filled color="#f26a1b" />
+        <MaterialIcon name="workspace_premium" size={34} filled color="#ff570a" />
       </span>
       <div className="mt-3 text-[12px] font-bold tracking-[.2em] text-brand uppercase">{t('certificate.title')}</div>
       <div className="mt-4 text-[13px] text-stone-500">{t('certificate.certifies')}</div>

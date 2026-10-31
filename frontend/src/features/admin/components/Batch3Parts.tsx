@@ -37,7 +37,7 @@ export interface BarSeries {
   color?: string;
 }
 
-const COLORS = ['#f26a1b', '#2563eb', '#16a34a', '#a855f7', '#dc2626'];
+const COLORS = ['#ff570a', '#2563eb', '#16a34a', '#a855f7', '#dc2626'];
 const compact = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(1).replace(/\.0$/, '')}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1).replace(/\.0$/, '')}K` : String(Math.round(n)));
 
 /** Biểu đồ cột nhóm (SVG) — dùng cho dữ liệu theo khoảng thời gian khi đường không hợp (vd. chuyển đổi, số lượng). */
@@ -128,7 +128,7 @@ export function FunnelCard({ title, sub, steps }: { title: string; sub?: string;
                 <span className="flex-none font-bold tabular-nums">{s.value}</span>
               </div>
               <div className="h-7 overflow-hidden rounded-[9px] bg-[#f5f1ed]">
-                <div className="h-full rounded-[9px]" style={{ width: `${Math.max(1.5, Math.min(100, s.pct))}%`, background: `linear-gradient(90deg,#ff8f45,#f26a1b)`, opacity: 1 - i * 0.12 }} />
+                <div className="h-full rounded-[9px]" style={{ width: `${Math.max(1.5, Math.min(100, s.pct))}%`, background: `linear-gradient(90deg,#ff8f45,#ff570a)`, opacity: 1 - i * 0.12 }} />
               </div>
             </div>
           ))}
@@ -154,7 +154,7 @@ export function CohortHeatmap({ title, sub, columns, rows }: { title: string; su
   const cell = (v: number | null) => {
     if (v == null) return { background: '#faf7f4', color: '#d6d3d1' };
     const a = 0.12 + Math.min(100, v) / 100 * 0.78;
-    return { background: `rgba(242,106,27,${a.toFixed(2)})`, color: a > 0.5 ? '#fff' : '#7c2d12' };
+    return { background: `rgba(255,87,10,${a.toFixed(2)})`, color: a > 0.5 ? '#fff' : '#7c2d12' };
   };
   return (
     <Card title={title} sub={sub}>

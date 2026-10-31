@@ -153,6 +153,14 @@ export const useResumeSubscription = () => {
   });
 };
 
+export const useCancelPayment = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (paymentId: string) => api.cancelPayment(paymentId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['payments'] }),
+  });
+};
+
 export const useMyPayments = (page: number) => {
   const { status } = useAuth();
   return useQuery({
@@ -169,14 +177,6 @@ export const useInvoice = (paymentId: string | null) =>
     enabled: !!paymentId,
     retry: false,
   });
-
-export const useRequestRefund = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (v: { paymentId: string; reason: string }) => api.requestRefund(v.paymentId, v.reason),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['payments'] }),
-  });
-};
 
 export const useRevenue = (courseId: string, params: { from?: string; to?: string }) => {
   const { status } = useAuth();

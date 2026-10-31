@@ -2,7 +2,7 @@
   "cta": {
     "badge": "Dành cho chuyên gia, creator, doanh nghiệp",
     "title": "Tạo cộng đồng của riêng bạn",
-    "desc": "Biến kiến thức, kinh nghiệm và tầm ảnh hưởng của bạn thành một cộng đồng học tập, cùng phát triển và tạo giá trị bền vững.",
+    "desc": "Biến kiến thức, kinh nghiệm và tầm ảnh hưởng của bạn thành một cộng đồng học tập, cùng nhau phát triển và tạo giá trị bền vững.",
     "button": "Tạo cộng đồng ngay"
   },
   "hero": {
@@ -16,10 +16,33 @@
     "title1": "Học kỹ năng mới.",
     "title2": "Phát triển cùng cộng đồng.",
     "desc": "Hàng ngàn khóa học thực tế từ chuyên gia trong nhiều lĩnh vực. Học nhanh hơn, ứng dụng ngay và tạo giá trị cho bản thân.",
-    "searchPlaceholder": "Tìm kiếm khóa học, chủ đề, kỹ năng...",
+    "searchPlaceholder": "Tìm khóa học, công cụ, chủ đề bạn quan tâm...",
     "searchAria": "Tìm kiếm khóa học",
     "searchButton": "Tìm kiếm"
   },
   "featured": "Khóa học nổi bật",
-  "viewAll": "Xem tất cả →"
+  "viewAll": "Xem tất cả →",
+  "why": {
+    "title1": "Vì sao nên chọn",
+    "title2": "?",
+    "subtitle": "Tất cả những gì bạn cần để học tập, làm việc và phát triển — trong một nền tảng duy nhất.",
+    "items": {
+      "experts": {
+        "title": "Học từ chuyên gia thực chiến",
+        "desc": "Hàng ngàn khóa học cập nhật, dễ hiểu, áp dụng ngay vào công việc."
+      },
+      "ai": {
+        "title": "Sử dụng công cụ AI mạnh mẽ",
+        "desc": "Tiết kiệm thời gian, tăng năng suất với các công cụ AI hàng đầu."
+      },
+      "community": {
+        "title": "Kết nối cộng đồng hỗ trợ",
+        "desc": "Giao lưu, chia sẻ kinh nghiệm và cùng phát triển với hàng ngàn thành viên."
+      },
+      "career": {
+        "title": "Phát triển sự nghiệp bền vững",
+        "desc": "Trang bị kỹ năng thực tế, mở rộng cơ hội và tạo ra thu nhập mới."
+      }
+    }
+  }
 }

@@ -9,7 +9,13 @@
     "course": "Khóa học",
     "member": "Thành viên · {{role}} · {{course}}",
     "post": "Bài viết của {{author}} · {{course}} · {{time}}",
-    "postTitle": "Bài viết của {{author}}"
+    "postTitle": "Bài viết của {{author}}",
+    "role": {
+      "member": "Thành viên",
+      "mod": "Điều hành viên",
+      "admin": "Quản trị viên",
+      "owner": "Chủ cộng đồng"
+    }
   },
   "box": {
     "placeholder": "Tìm kiếm bài viết, thành viên, chủ đề...",

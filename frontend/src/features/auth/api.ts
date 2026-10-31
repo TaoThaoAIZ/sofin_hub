@@ -1,4 +1,4 @@
-import { API_URL, apiPost } from '../../lib/api';
+import { API_URL, apiGet, apiPost } from '../../lib/api';
 import type { AuthSession, AuthUser, LoginInput, RegisterInput, RegistrationPending, SocialProvider, TwoFactorChallenge } from './types';
 
 // Đăng ký KHÔNG cấp phiên: server gửi OTP về email, hoàn tất bằng verifyRegistration.
@@ -51,6 +51,9 @@ export const forgotPassword = (email: string) =>
 
 export const resetPassword = (token: string, password: string) =>
   apiPost<{ data: { message: string } }>('/auth/reset-password', { token, password }, { skipAuthRetry: true }).then((r) => r.data);
+
+export const checkResetToken = (token: string) =>
+  apiGet<{ data: { valid: boolean } }>('/auth/reset-password/check', { token }, undefined, { skipAuthRetry: true }).then((r) => r.data.valid);
 
 export const verifyEmail = (token: string) =>
   apiPost<{ data: AuthUser }>('/auth/verify-email', { token }, { skipAuthRetry: true }).then((r) => r.data);

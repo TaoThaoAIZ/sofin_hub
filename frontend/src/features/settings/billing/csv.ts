@@ -6,11 +6,17 @@ export const PAY_STATUS: Record<string, { text: string; color: string; dot: stri
   succeeded: { get text() { return i18n.t('csv.statusPaid', { ns: 'settings' }); }, color: '#15803d', dot: '#16a34a' },
   pending: { get text() { return i18n.t('csv.statusPending', { ns: 'settings' }); }, color: '#b45309', dot: '#f59e0b' },
   failed: { get text() { return i18n.t('csv.statusFailed', { ns: 'settings' }); }, color: '#b91c1c', dot: '#dc2626' },
+  expired: { get text() { return i18n.t('csv.statusExpired', { ns: 'settings' }); }, color: '#78716c', dot: '#a8a29e' },
+  cancelled: { get text() { return i18n.t('csv.statusCancelled', { ns: 'settings' }); }, color: '#78716c', dot: '#a8a29e' },
   refunded: { get text() { return i18n.t('csv.statusRefunded', { ns: 'settings' }); }, color: '#57534e', dot: '#a8a29e' },
 };
 
+/** Khóa tra PAY_STATUS: hóa đơn quá hạn / người dùng tự hủy không phải "thất bại". */
+export const payStatusKey = (p: PaymentRecord) => (p.status === 'failed' && (p.failureReason === 'expired' || p.failureReason === 'cancelled') ? p.failureReason : p.status);
+
 export function paymentDescription(p: PaymentRecord): string {
-  const kind = p.kind === 'renewal' ? i18n.t('csv.renewal', { ns: 'settings' }) : i18n.t('csv.firstPayment', { ns: 'settings' });
+  if (p.kind === 'module') return `${p.courseTitle ?? p.courseId} · ${i18n.t('csv.modulePurchase', { ns: 'settings' })}${p.moduleTitle ? `: ${p.moduleTitle}` : ''}`;
+  const kind = p.kind === 'renewal' || p.returning ? i18n.t('csv.renewal', { ns: 'settings' }) : i18n.t('csv.firstPayment', { ns: 'settings' });
   return `${p.courseTitle ?? p.courseId} · ${kind}${p.interval === 'annual' ? i18n.t('csv.annualPlan', { ns: 'settings' }) : ''}`;
 }
 
@@ -28,7 +34,7 @@ export function buildPaymentsCsv(rows: PaymentRecord[]): string {
       paymentDescription(p),
       String(cents),
       String(p.refundedCents ?? 0),
-      (PAY_STATUS[p.status] ?? { text: p.status }).text,
+      (PAY_STATUS[payStatusKey(p)] ?? { text: p.status }).text,
       p.invoiceNumber ?? '',
     ]
       .map(cell)

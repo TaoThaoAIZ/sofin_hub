@@ -5,6 +5,7 @@ import { enrollmentService } from '../enrollments/enrollments.service.js';
 import { notify } from '../notifications/notifications.service.js';
 import { pointsService } from '../points/points.service.js';
 import { buildIcs } from './events.ics.js';
+import { buildEventsDocx } from './events.docx.js';
 import { eventsRepository, type EventPatch, type EventsRepository } from './events.repository.js';
 import type { CommunityEvent, CommunityEventView } from './events.types.js';
 import type { CreateEventBody, UpdateEventBody } from './events.schema.js';
@@ -15,7 +16,7 @@ import type { CreateEventBody, UpdateEventBody } from './events.schema.js';
  */
 const EVENT_NOTIFY_BATCH = 500;
 
-export const eventPath = (e: Pick<CommunityEvent, 'communityId'>) => `/courses/${e.communityId}/community/lich`;
+export const eventPath = (e: Pick<CommunityEvent, 'communityId'>) => `/communities/${e.communityId}/community/lich`;
 
 export function createEventsService(repo: EventsRepository = eventsRepository) {
   async function toViews(events: CommunityEvent[], viewerId: string): Promise<CommunityEventView[]> {
@@ -43,6 +44,7 @@ export function createEventsService(repo: EventsRepository = eventsRepository) {
 
     async create(communityId: string, hostId: string, body: CreateEventBody) {
       const { inviteeIds: rawInvitees, ...fields } = body;
+      if (new Date(fields.startAt).getTime() < Date.now()) throw HttpError.badRequest('Không thể đặt lịch sự kiện ở thời điểm đã qua');
       const inviteeIds = [...new Set(rawInvitees)].filter((id) => id !== hostId);
       for (const id of inviteeIds) {
         if (!(await enrollmentService.getActiveRole(id, communityId))) throw HttpError.badRequest('Chỉ có thể mời thành viên đang tham gia cộng đồng');
@@ -90,6 +92,9 @@ export function createEventsService(repo: EventsRepository = eventsRepository) {
     async update(eventId: string, body: UpdateEventBody, viewerId: string) {
       const event = await this.getOrThrow(eventId);
       const { meetingLink, capacity, ...rest } = body;
+      if (body.startAt && new Date(body.startAt).getTime() !== new Date(event.startAt).getTime() && new Date(body.startAt).getTime() < Date.now()) {
+        throw HttpError.badRequest('Không thể đặt lịch sự kiện ở thời điểm đã qua');
+      }
       if (capacity != null && capacity < (await repo.rsvpCount(eventId))) {
         throw HttpError.conflict('Sức chứa không được nhỏ hơn số người đã đăng ký');
       }
@@ -144,6 +149,18 @@ export function createEventsService(repo: EventsRepository = eventsRepository) {
     async icsForEvent(eventId: string, baseUrl?: string) {
       const event = await this.getOrThrow(eventId);
       return buildIcs([{ event, hostName: await hostName(event), url: baseUrl }], event.title);
+    },
+
+    async docxForEvent(eventId: string) {
+      const event = await this.getOrThrow(eventId);
+      return buildEventsDocx([{ event, hostName: await hostName(event) }], event.title);
+    },
+
+    async docxForCourse(communityId: string) {
+      const course = await catalogService.getById(communityId);
+      const events = await repo.listByCourse(communityId);
+      const names = new Map(await Promise.all([...new Set(events.map((e) => e.hostId))].map(async (id) => [id, (await userBriefView(id)).name] as const)));
+      return buildEventsDocx(events.map((event) => ({ event, hostName: names.get(event.hostId) })), `Lịch sự kiện — ${course.title}`);
     },
 
     async icsForCourse(communityId: string) {

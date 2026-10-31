@@ -21,7 +21,7 @@ function MessagesInner() {
   const current = conversations.data?.find((c) => c.id === id);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen">
       <Header />
       <div className="mx-auto mt-4 h-[calc(100vh-110px)] min-h-[480px] max-w-[1100px] px-4 pb-4 md:px-0">
         <div className="glass grid h-full grid-cols-1 overflow-hidden rounded-3xl md:grid-cols-[320px_minmax(0,1fr)]">

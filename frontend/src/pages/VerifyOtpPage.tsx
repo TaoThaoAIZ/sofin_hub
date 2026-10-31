@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, type ClipboardEvent, type KeyboardEvent } from 'react';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { ApiError } from '../lib/api';
+import { shortEmail } from '../lib/email';
 import { useAuth } from '../features/auth/AuthContext';
-import { clearReferralCode, readReferralCode } from '../features/referral/storage';
+import { clearReferralCode, readReferralCode, readReferralDestination } from '../features/referral/storage';
 import { AuthShell } from '../features/account/components/AuthShell';
 import { Alert } from '../features/account/components/Field';
 
@@ -59,13 +60,14 @@ export function VerifyOtpPage() {
     setInfo(null);
     try {
       await verifyRegistration(email, code, readReferralCode());
+      const referralDest = readReferralDestination(); // lấy trước khi xóa: người đăng ký từ link giới thiệu vào đúng cộng đồng
       clearReferralCode();
       try {
         sessionStorage.removeItem(DRAFT_KEY);
       } catch {
         /* bỏ qua */
       }
-      navigate(state.from ?? '/', { replace: true });
+      navigate(state.from ?? referralDest ?? '/', { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('otp.fail'));
       setDigits(Array(LENGTH).fill(''));
@@ -112,7 +114,7 @@ export function VerifyOtpPage() {
       setCooldown(r.resendInSec ?? DEFAULT_COOLDOWN);
       setDigits(Array(LENGTH).fill(''));
       submittedCode.current = null;
-      if (r.emailSent) setInfo(t('otp.resent', { email }));
+      if (r.emailSent) setInfo(t('otp.resent', { email: shortEmail(email) }));
       else setError(t('otp.sendFailed'));
       inputs.current[0]?.focus();
     } catch (err) {
@@ -136,7 +138,7 @@ export function VerifyOtpPage() {
   }
 
   return (
-    <AuthShell title={t('otp.title')} subtitle={t('otp.subtitle', { email })}>
+    <AuthShell title={t('otp.title')} subtitle={<Trans ns="auth" i18nKey="otp.subtitle" values={{ email }} components={{ email: <strong title={email} className="inline-block max-w-full truncate align-bottom font-semibold text-stone-800" /> }} />}>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -184,7 +186,7 @@ export function VerifyOtpPage() {
       </form>
 
       <p className="m-0 text-center text-sm text-stone-500">{t('otp.spamHint')}</p>
-      {import.meta.env.DEV && <p className="m-0 text-center text-xs text-stone-400">{t('otp.devHint', { email })}</p>}
+      {import.meta.env.DEV && <p className="m-0 text-center text-xs break-all text-stone-400">{t('otp.devHint', { email })}</p>}
       <Link to="/register" className="text-center text-[15px] font-semibold text-stone-700 underline">
         {t('otp.changeEmail')}
       </Link>

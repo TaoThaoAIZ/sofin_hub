@@ -9,7 +9,13 @@
     "course": "Course",
     "member": "Member · {{role}} · {{course}}",
     "post": "Post by {{author}} · {{course}} · {{time}}",
-    "postTitle": "Post by {{author}}"
+    "postTitle": "Post by {{author}}",
+    "role": {
+      "member": "Member",
+      "mod": "Moderator",
+      "admin": "Admin",
+      "owner": "Owner"
+    }
   },
   "box": {
     "placeholder": "Search posts, members, topics...",

@@ -2,16 +2,25 @@ import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { MaterialIcon } from '../../../components/ui/MaterialIcon';
+import { ThemedImg } from '../../../components/ui/ThemedImg';
 import { formatRelative } from '../../../lib/datetime';
 import { useClickOutside } from '../../../lib/useClickOutside';
 import { useNotificationsContext } from '../NotificationsProvider';
 import { useMarkAllNotificationsRead, useNotifications } from '../queries';
 import { NOTIFICATION_TYPE_ICON } from '../types';
 
-export function CountBadge({ count }: { count: number }) {
+/** Nút tròn 50px của Header (Figma: nền trắng .72 + viền trắng; tối: xám .3 + viền xám). */
+export const HEADER_ICON_BTN =
+  'grid size-[clamp(42px,2.8vw,50px)] place-items-center rounded-full border border-white bg-white/70 dark:border-[rgba(81,81,81,.2)] dark:bg-[rgba(51,51,51,.3)]';
+
+export function CountBadge({ count, large = false }: { count: number; large?: boolean }) {
   if (count <= 0) return null;
   return (
-    <span className="absolute -top-1.5 -right-1.5 grid min-w-[18px] place-items-center rounded-full bg-brand px-1 text-[10.5px] leading-[18px] font-bold text-white">
+    <span
+      className={`absolute grid place-items-center rounded-full bg-brand font-bold text-white ${
+        large ? '-top-2 -right-2 min-w-[23px] px-1 text-[13px] leading-[23px]' : '-top-1.5 -right-1.5 min-w-[18px] px-1 text-[10.5px] leading-[18px]'
+      }`}
+    >
       {count > 99 ? '99+' : count}
     </span>
   );
@@ -27,7 +36,7 @@ export function NotificationBell({ variant = 'topbar' }: { variant?: 'topbar' | 
   const list = useNotifications({ page: 1, limit: 10 }, isOpen);
   const markAll = useMarkAllNotificationsRead();
 
-  const btnClass = variant === 'header' ? 'glass grid size-10 place-items-center rounded-full' : 'grid place-items-center';
+  const btnClass = variant === 'header' ? HEADER_ICON_BTN : 'grid place-items-center';
 
   return (
     <div ref={ref} className="relative">
@@ -38,8 +47,8 @@ export function NotificationBell({ variant = 'topbar' }: { variant?: 'topbar' | 
         aria-expanded={isOpen}
         className={`relative ${btnClass}`}
       >
-        <MaterialIcon name="notifications" size={variant === 'header' ? 22 : 24} />
-        <CountBadge count={unreadCount} />
+        {variant === 'header' ? <ThemedImg name="bell" className="size-[28px]" /> : <MaterialIcon name="notifications" size={24} />}
+        <CountBadge count={unreadCount} large={variant === 'header'} />
       </button>
       {isOpen && (
         <div className="absolute top-[calc(100%+10px)] right-[-60px] z-50 flex max-h-[70vh] w-[min(380px,calc(100vw-24px))] flex-col rounded-2xl border border-[rgba(120,60,20,.12)] bg-white shadow-xl sm:right-0">
@@ -69,7 +78,7 @@ export function NotificationBell({ variant = 'topbar' }: { variant?: 'topbar' | 
                 className={`flex w-full items-start gap-3 border-b border-[rgba(120,60,20,.05)] px-4 py-3 text-left hover:bg-[#fff7f0] ${n.readAt ? '' : 'bg-brand/5'}`}
               >
                 <span className="grid size-9 flex-none place-items-center rounded-full bg-brand/10">
-                  <MaterialIcon name={NOTIFICATION_TYPE_ICON[n.type] ?? 'notifications'} size={19} color="#f26a1b" />
+                  <MaterialIcon name={NOTIFICATION_TYPE_ICON[n.type] ?? 'notifications'} size={19} color="#ff570a" />
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className={`block text-[13.5px] ${n.readAt ? 'font-medium' : 'font-bold'}`}>{n.title}</span>

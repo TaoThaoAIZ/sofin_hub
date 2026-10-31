@@ -6,13 +6,13 @@ import { ButtonLink } from '../ui/Button';
 import { Header } from './Header';
 
 /** Bọc các trang cần đăng nhập: hiện Header + thông báo (thay vì chuyển hướng cứng) khi chưa đăng nhập. */
-export function RequireLogin({ children, active = 'discover' }: { children: ReactNode; active?: string }) {
+export function RequireLogin({ children, active }: { children: ReactNode; active?: string }) {
   const { t } = useTranslation('layout');
   const { status } = useAuth();
   const location = useLocation();
   if (status === 'authenticated') return <>{children}</>;
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen">
       <Header active={active} />
       <div className="mx-auto max-w-md px-4 py-24 text-center">
         {status === 'loading' ? (
