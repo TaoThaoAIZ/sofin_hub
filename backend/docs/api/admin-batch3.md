@@ -212,7 +212,7 @@ Biến cú pháp `{{ten}}`. Các mẫu `verify_email`, `reset_password` đang `a
 ## C9. Global Settings (`system.settings`)
 ```json
 GET /admin/system/settings -> { "data": {
-  "platform": { "name": "SofinHub", "supportEmail": "support@sofinhub.com", "defaultLanguage": "en|vi", "timezone": "GMT+7 · Ho Chi Minh City" },
+  "platform": { "name": "SofinHub", "supportEmail": "Contact@sofin.ai", "defaultLanguage": "en|vi", "timezone": "GMT+7 · Ho Chi Minh City" },
   "payments": { "commissionPct": 10, "gatewayFeePct": 2.9, "gatewayFeeFixedCents": 30, "refundWindowDays": 7, "payoutMinUsd": 50, "trialDays": 7,
                 "subscriptionPeriodDays": 30, "currency": "USD|VND|EUR", "autoPayouts": true },
   "security": { "require2fa": true, "sessionTimeoutMin": 15|30|120, "maintenanceMode": false },

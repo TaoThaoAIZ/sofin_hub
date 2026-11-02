@@ -52,7 +52,7 @@
     },
     "s10": {
       "title": "10. Liên hệ",
-      "p1": "Nếu có câu hỏi về Điều khoản sử dụng, vui lòng liên hệ đội ngũ SofinHub qua email <mail>support@sofinhub.com</mail>."
+      "p1": "Nếu có câu hỏi về Điều khoản sử dụng, vui lòng liên hệ đội ngũ SofinHub qua email <mail>Contact@sofin.ai</mail>."
     }
   },
   "privacy": {
@@ -111,12 +111,12 @@
     },
     "s10": {
       "title": "10. Liên hệ",
-      "p1": "Mọi câu hỏi về Chính sách bảo mật, vui lòng liên hệ <mail>support@sofinhub.com</mail>. Xem thêm <terms>Điều khoản sử dụng</terms>."
+      "p1": "Mọi câu hỏi về Chính sách bảo mật, vui lòng liên hệ <mail>Contact@sofin.ai</mail>. Xem thêm <terms>Điều khoản sử dụng</terms>."
     }
   },
   "faq": {
     "title": "Câu hỏi thường gặp",
-    "subtitle": "Chưa tìm thấy câu trả lời? Liên hệ chúng tôi qua <mail>support@sofinhub.com</mail>.",
+    "subtitle": "Chưa tìm thấy câu trả lời? Liên hệ chúng tôi qua <mail>Contact@sofin.ai</mail>.",
     "stillQuestion": "Vẫn còn thắc mắc?",
     "teamReady": "Đội ngũ SofinHub luôn sẵn sàng hỗ trợ bạn.",
     "contactSupport": "Liên hệ hỗ trợ",
@@ -161,7 +161,7 @@
     "support": {
       "title": "Hỗ trợ",
       "q0": "Làm sao để liên hệ hỗ trợ?",
-      "a0": "Gửi biểu mẫu ở trang Liên hệ hoặc email tới support@sofinhub.com. Yêu cầu của bạn được ghi nhận thành phiếu hỗ trợ và đội ngũ phản hồi qua email.",
+      "a0": "Gửi biểu mẫu ở trang Liên hệ hoặc email tới Contact@sofin.ai. Yêu cầu của bạn được ghi nhận thành phiếu hỗ trợ và đội ngũ phản hồi qua email.",
       "q1": "Dữ liệu cá nhân của tôi có được bảo mật không?",
       "a1": "Xem chi tiết cách chúng tôi thu thập, sử dụng và bảo vệ dữ liệu tại trang Chính sách bảo mật."
     }

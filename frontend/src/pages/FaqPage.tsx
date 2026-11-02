@@ -15,7 +15,7 @@ const CATEGORIES = [
 const COMPONENTS = {
   privacy: <Link to="/privacy" className="font-semibold underline" />,
   terms: <Link to="/terms" className="font-semibold underline" />,
-  mail: <a href="mailto:support@sofinhub.com" className="font-semibold underline" />,
+  mail: <a href="mailto:Contact@sofin.ai" className="font-semibold underline" />,
 };
 
 export function FaqPage() {

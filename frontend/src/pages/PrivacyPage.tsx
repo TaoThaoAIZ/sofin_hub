@@ -6,7 +6,7 @@ import { markPrivacyRead } from '../features/auth/legalConsent';
 const COMPONENTS = {
   privacy: <Link to="/privacy" className="font-semibold underline" />,
   terms: <Link to="/terms" className="font-semibold underline" />,
-  mail: <a href="mailto:support@sofinhub.com" className="font-semibold underline" />,
+  mail: <a href="mailto:Contact@sofin.ai" className="font-semibold underline" />,
   b: <b className="text-stone-800" />,
 };
 

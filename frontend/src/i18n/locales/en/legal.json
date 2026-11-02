@@ -52,7 +52,7 @@
     },
     "s10": {
       "title": "10. Contact",
-      "p1": "If you have any questions about these Terms of Use, please contact the SofinHub team by email at <mail>support@sofinhub.com</mail>."
+      "p1": "If you have any questions about these Terms of Use, please contact the SofinHub team by email at <mail>Contact@sofin.ai</mail>."
     }
   },
   "privacy": {
@@ -111,12 +111,12 @@
     },
     "s10": {
       "title": "10. Contact",
-      "p1": "If you have any questions about this Privacy Policy, please contact <mail>support@sofinhub.com</mail>. See also our <terms>Terms of Use</terms>."
+      "p1": "If you have any questions about this Privacy Policy, please contact <mail>Contact@sofin.ai</mail>. See also our <terms>Terms of Use</terms>."
     }
   },
   "faq": {
     "title": "Frequently asked questions",
-    "subtitle": "Can't find an answer? Contact us at <mail>support@sofinhub.com</mail>.",
+    "subtitle": "Can't find an answer? Contact us at <mail>Contact@sofin.ai</mail>.",
     "stillQuestion": "Still have questions?",
     "teamReady": "The SofinHub team is always ready to help.",
     "contactSupport": "Contact support",
@@ -161,7 +161,7 @@
     "support": {
       "title": "Support",
       "q0": "How do I contact support?",
-      "a0": "Submit the form on the Contact page or email support@sofinhub.com. Your request is logged as a support ticket and our team replies by email.",
+      "a0": "Submit the form on the Contact page or email Contact@sofin.ai. Your request is logged as a support ticket and our team replies by email.",
       "q1": "Is my personal data kept secure?",
       "a1": "See the Privacy Policy page for details on how we collect, use and protect data."
     }
