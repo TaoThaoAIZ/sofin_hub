@@ -59,7 +59,7 @@ test.describe('Trợ lý AI của cộng đồng', () => {
     const panel = await openBot(page, 'photo', 'Trợ lý Nhiếp ảnh');
     await expect(panel.getByText('Chủ cộng đồng có thể xem nội dung trò chuyện với trợ lý.')).toBeVisible();
     await expect(panel.getByRole('link', { name: /Nâng cấp VIP/ })).toHaveCount(0);
-    await panel.getByRole('button', { name: 'Nhân cách: Bạn đồng hành vui vẻ' }).click();
+    await panel.getByRole('button', { name: /Nhân cách:/ }).click();
     await expect(panel.getByRole('menuitemradio', { name: /Thầy\/cô tận tâm/ })).toBeDisabled();
     await expect(panel.getByText(/Nâng cấp VIP \(thành viên trả phí\) để chọn nhân cách/)).toBeVisible();
     await ask(panel, 'nội quy cộng đồng là gì');

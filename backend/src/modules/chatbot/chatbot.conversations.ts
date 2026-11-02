@@ -13,6 +13,18 @@ export const CONVERSATION_IDLE_MS = 24 * 3600_000;
 export const conversationRepository = {
   create: (userId: string, communityId: string | null = null) => prisma.chatbotConversation.create({ data: { userId, communityId } }),
 
+  /**
+   * Hội thoại "trống" gần nhất của user (đang mở, chưa có tin nào, chưa chuyển hỗ trợ, còn trong 24h) — bấm "Cuộc mới" nhiều lần thì
+   * dùng lại hội thoại này thay vì tạo thêm hội thoại rỗng. Làm mới lastMessageAt để nó thành hội thoại hiện tại (F5 vẫn thấy cuộc mới).
+   */
+  async reuseEmpty(userId: string, communityId: string | null = null) {
+    const c = await prisma.chatbotConversation.findFirst({
+      where: { userId, communityId, status: 'open', ticketId: null, messages: { none: {} }, lastMessageAt: { gt: new Date(Date.now() - CONVERSATION_IDLE_MS) } },
+      orderBy: { createdAt: 'desc' },
+    });
+    return c ? prisma.chatbotConversation.update({ where: { id: c.id }, data: { lastMessageAt: new Date() } }) : null;
+  },
+
   /** Hội thoại gần nhất của user còn "sống" (open/handed_off, nhắn trong 24h). */
   current: (userId: string, communityId: string | null = null) =>
     prisma.chatbotConversation.findFirst({

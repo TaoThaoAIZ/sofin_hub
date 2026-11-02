@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { API_BASE, snapEvidence } from './helpers';
+import { API_BASE, fillLoginForm, snapEvidence } from './helpers';
 
 /**
  * Chatbot hỗ trợ (chatbot.md). Backend phải chạy với model giả để không gọi OpenAI:
@@ -41,7 +41,9 @@ test.describe('Chatbot hỗ trợ', () => {
     await uiLogin(page, 'member1@sofinhub.test');
     const panel = await openWidget(page);
     await ask(panel, 'Tôi quên mật khẩu thì làm sao?');
-    await expect(panel.getByText(/Quên mật khẩu" và nhập email/)).toBeVisible();
+    // Dữ liệu nền v5: đủ ý + chip link trang Quên mật khẩu.
+    await expect(panel.getByText(/hiệu lực 30 phút/)).toBeVisible();
+    await expect(panel.getByRole('link', { name: 'Quên mật khẩu' })).toHaveAttribute('href', '/forgot-password');
     await expect(panel.getByRole('button', { name: 'Câu trả lời hữu ích' }).last()).toBeVisible();
   });
 
@@ -102,6 +104,125 @@ test.describe('Chatbot hỗ trợ', () => {
     await expect(panel.getByText(/chờ gửi/)).toHaveCount(0);
     expect(sent).toEqual(['alo tào ơi', 'cho hỏi chút\ntool grok làm được gì']);
     for (const t of ['alo tào ơi', 'cho hỏi chút', 'tool grok làm được gì']) await expect(panel.getByText(t, { exact: true })).toBeVisible();
+  });
+
+  /** Làm chậm lượt gửi tin đầu tiên `ms` mili giây (để kịp thao tác khi bot đang trả lời). */
+  const slowFirstSend = async (page: Page, ms: number) => {
+    let n = 0;
+    await page.route('**/chatbot/conversations/*/messages', async (route) => {
+      n += 1;
+      if (n === 1) await new Promise((r) => setTimeout(r, ms));
+      await route.continue();
+    });
+  };
+
+  test('TC-CHATBOT-009 (CB-02-06): đóng khung chat khi Tào đang trả lời, mở lại vẫn thấy câu hỏi + câu trả lời', async ({ page }) => {
+    await uiLogin(page, 'member1@sofinhub.test');
+    const panel = await openWidget(page);
+    await slowFirstSend(page, 2000);
+    await ask(panel, 'Có hoàn tiền không?');
+    await expect(panel.getByText('Tào đang trả lời…')).toBeVisible();
+    await panel.getByRole('button', { name: 'Đóng' }).click();
+    await expect(panel).toBeHidden();
+    await page.waitForTimeout(2500);
+    await page.getByRole('button', { name: 'Mở trợ lý hỗ trợ' }).click();
+    await expect(panel).toBeVisible();
+    await expect(panel.getByText('Có hoàn tiền không?', { exact: true })).toHaveCount(1);
+    await expect(panel.getByText(/không hỗ trợ hoàn tiền/)).toHaveCount(1);
+  });
+
+  test('TC-CHATBOT-010 (CB-11-02): bấm "Cuộc mới" khi Tào đang trả lời => câu trả lời cũ không chèn vào cuộc mới', async ({ page }) => {
+    await uiLogin(page, 'member1@sofinhub.test');
+    const panel = await openWidget(page);
+    await slowFirstSend(page, 2000);
+    await ask(panel, 'hoàn tiền được không');
+    await expect(panel.getByText('Tào đang trả lời…')).toBeVisible();
+    await panel.getByRole('button', { name: 'Cuộc mới' }).click();
+    await expect(panel.getByText(/Tào nghe đây/)).toBeVisible();
+    await page.waitForTimeout(3000);
+    await expect(panel.getByText(/không hỗ trợ hoàn tiền/)).toHaveCount(0);
+    await expect(panel.getByText('hoàn tiền được không', { exact: true })).toHaveCount(0);
+    // Tin tiếp theo vào đúng cuộc mới.
+    await ask(panel, 'Tôi quên mật khẩu thì làm sao?');
+    await expect(panel.getByText(/hiệu lực 30 phút/)).toBeVisible();
+    await expect(panel.getByText(/không hỗ trợ hoàn tiền/)).toHaveCount(0);
+  });
+
+  test('TC-CHATBOT-011 (CB-11-05): đăng xuất A rồi đăng nhập B (không tải lại trang) => B không thấy tin của A', async ({ page }) => {
+    await uiLogin(page, 'member1@sofinhub.test');
+    const panel = await openWidget(page);
+    await ask(panel, 'hoàn tiền được không');
+    await expect(panel.getByText(/không hỗ trợ hoàn tiền/)).toBeVisible();
+    await panel.getByRole('button', { name: 'Đóng' }).click();
+    await page.getByRole('button', { name: /^Tài khoản của/ }).click();
+    await page.getByRole('menuitem', { name: 'Đăng xuất' }).click();
+    await page.getByRole('link', { name: 'Đăng nhập' }).first().click();
+    await fillLoginForm(page, 'member2@sofinhub.test', PW);
+    await page.getByRole('button', { name: 'Đăng nhập' }).click();
+    await page.getByRole('button', { name: 'Mở trợ lý hỗ trợ' }).click();
+    const panelB = page.getByRole('dialog', { name: /trợ lý SofinHub/ });
+    await expect(panelB).toBeVisible();
+    await expect(panelB.getByText('hoàn tiền được không', { exact: true })).toHaveCount(0);
+  });
+
+  test('TC-CHATBOT-012 (CB-12-04): stream bị ngắt giữa chừng => câu báo tiếng Việt, không hiện "stream ended"', async ({ page }) => {
+    await uiLogin(page, 'member1@sofinhub.test');
+    const panel = await openWidget(page);
+    await page.route('**/chatbot/conversations/*/messages', (route) =>
+      route.fulfill({ status: 200, headers: { 'content-type': 'text/event-stream' }, body: 'event: delta\ndata: {"text":"dạ"}\n\n' }),
+    );
+    await ask(panel, 'alo');
+    await expect(panel.getByRole('alert')).toContainText('Kết nối bị gián đoạn');
+    await expect(panel.getByText(/stream/)).toHaveCount(0);
+    await expect(panel.getByLabel('Nhập câu hỏi…')).toHaveValue('alo');
+  });
+
+  test('TC-CHATBOT-013 (CB-05-12, CB-05-13): ô nhập tự giãn; tin nhiều dòng là 1 bong bóng cả lúc chờ lẫn sau khi xong', async ({ page }) => {
+    await uiLogin(page, 'member1@sofinhub.test');
+    const panel = await openWidget(page);
+    const input = panel.getByLabel('Nhập câu hỏi…');
+    const h1 = (await input.boundingBox())!.height;
+    await input.fill('Dòng 1\nDòng 2\nDòng 3');
+    expect((await input.boundingBox())!.height).toBeGreaterThan(h1 + 20);
+    await input.fill(Array.from({ length: 12 }, (_, i) => `Dòng ${i + 1}`).join('\n'));
+    expect((await input.boundingBox())!.height).toBeLessThanOrEqual(130);
+    await slowFirstSend(page, 1500);
+    await input.fill('Dòng 1\nDòng 2');
+    await panel.getByRole('button', { name: 'Gửi' }).click();
+    await expect(panel.getByText('Tào đang trả lời…')).toBeVisible();
+    // Không tách thành bong bóng "Dòng 1" riêng.
+    await expect(panel.getByText('Dòng 1', { exact: true })).toHaveCount(0);
+    await expect(panel.getByText(/^Dòng 1\s+Dòng 2$/)).toHaveCount(1);
+    await expect(panel.getByText('Tào đang trả lời…')).toHaveCount(0, { timeout: 15_000 });
+    await expect(panel.getByText(/^Dòng 1\s+Dòng 2$/)).toHaveCount(1);
+  });
+
+  test('TC-CHATBOT-014 (CB-10-03): mã hỗ trợ vẫn hiện sau khi đóng / mở lại khung chat và sau F5', async ({ page }) => {
+    await uiLogin(page, 'member2@sofinhub.test');
+    const panel = await openWidget(page);
+    await panel.getByRole('button', { name: 'Gặp người hỗ trợ' }).or(panel.getByRole('link', { name: 'Nhắn Zalo hỗ trợ' })).click();
+    const banner = panel.getByText(/Mã hỗ trợ của bạn: T-\d+/);
+    await expect(banner).toBeVisible();
+    const code = (await banner.textContent())!.match(/T-\d+/)![0];
+    await panel.getByRole('button', { name: 'Đóng' }).click();
+    await page.getByRole('button', { name: 'Mở trợ lý hỗ trợ' }).click();
+    await expect(panel.getByText(new RegExp(`Mã hỗ trợ của bạn: ${code}`))).toBeVisible();
+    await page.reload();
+    await page.getByRole('button', { name: 'Mở trợ lý hỗ trợ' }).click();
+    await expect(page.getByRole('dialog', { name: /trợ lý SofinHub/ }).getByText(new RegExp(`Mã hỗ trợ của bạn: ${code}`))).toBeVisible();
+  });
+
+  test('TC-CHATBOT-015 (CB-11-03): bấm "Cuộc mới" nhiều lần khi cuộc đang trống => không tạo thêm hội thoại rỗng', async ({ page }) => {
+    await uiLogin(page, 'member1@sofinhub.test');
+    const panel = await openWidget(page);
+    await expect(panel.getByText(/Tào nghe đây/)).toBeVisible();
+    let created = 0;
+    page.on('request', (r) => {
+      if (r.method() === 'POST' && /\/api\/chatbot\/conversations$/.test(r.url())) created += 1;
+    });
+    for (let i = 0; i < 5; i++) await panel.getByRole('button', { name: 'Cuộc mới' }).click();
+    await page.waitForTimeout(500);
+    expect(created).toBe(0);
   });
 
   test('TC-CHATBOT-006: admin xem trang Chatbot (kho mẫu, chờ duyệt, cài đặt)', async ({ page }) => {

@@ -2,10 +2,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Fragment, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { ApiError } from '../../lib/api';
 import { ChatLauncher } from '../chatbot/ChatLauncher';
 import { ChatIcon, CloseIcon, MessageBubble, PANEL_CLASS, SendIcon, type Bubble } from '../chatbot/ChatWidget';
-import { useMessageQueue } from '../chatbot/useMessageQueue';
+import { chatErrorText, useMessageQueue } from '../chatbot/useMessageQueue';
 import { handoffToOwner, sendBotFeedback, sendBotMessage, setMyPersona, startBotConversation } from './api';
 import { botKeys, useBotCurrent, useCommunityBotStatus } from './queries';
 import type { BotConversation, BotConversationState, CommunityBotStatus, QuotaView } from './types';
@@ -68,7 +67,7 @@ function BotSession({ communityId, status, onClose, initial }: { communityId: st
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  const errText = (e: unknown) => (e instanceof ApiError || e instanceof Error ? e.message : t('error'));
+  const errText = (e: unknown) => chatErrorText(e, t('error'), t('interrupted'));
 
   async function ensureConversation(): Promise<BotConversation> {
     const cur = convRef.current;
@@ -85,6 +84,7 @@ function BotSession({ communityId, status, onClose, initial }: { communityId: st
     async (text, parts, h) => {
       const conv = await ensureConversation();
       const done = await sendBotMessage(communityId, conv.id, text, h);
+      if (h.cancelled?.()) return;
       const userMsgs: Bubble[] = parts.map((content, i) => ({ id: `local-${done.message.id}-${i}`, role: 'user', content, answerSource: null, feedback: 0, createdAt: done.message.createdAt }));
       setMessages((m) => [...m, ...userMsgs, { ...done.message, suggestions: done.suggestions }]);
       convRef.current = done.conversation;
@@ -246,8 +246,8 @@ function BotSession({ communityId, status, onClose, initial }: { communityId: st
         ))}
         {pending && (
           <>
-            {pending.user.split('\n').map((line, i) => (
-              <MessageBubble key={`p-user-${i}`} m={{ id: `p-user-${i}`, role: 'user', content: line, answerSource: null, feedback: 0, createdAt: '' }} />
+            {pending.parts.map((part, i) => (
+              <MessageBubble key={`p-user-${i}`} m={{ id: `p-user-${i}`, role: 'user', content: part, answerSource: null, feedback: 0, createdAt: '' }} />
             ))}
             <MessageBubble m={{ id: 'p-bot', role: 'assistant', content: pending.reply || (pending.ahead !== undefined ? t('queuePosition', { count: pending.ahead }) : t('typing')), answerSource: null, feedback: 0, createdAt: '' }} streaming />
           </>

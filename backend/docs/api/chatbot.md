@@ -111,7 +111,7 @@ Hội thoại im ≥ 30 phút và chưa `learnedAt`:
 
 Backend **không** tự nạp (chủ dự án chốt 2026-10-14). Dữ liệu nằm trong code (`chatbot.baseline.ts` + `prisma/chatbot-kb/*.md`, đi theo branch/image) nhưng chỉ vào DB khi người vận hành chạy lệnh riêng `src/cli/chatbot-baseline.ts` (build ra `dist/cli/chatbot-baseline.js` ⇒ chạy được trong image production, không cần `tsx`):
 - dev: `npm run chatbot:baseline:dev [-- --status | --force]`; sau `npm run build`: `npm run chatbot:baseline`; AWS: `docker compose exec backend node dist/cli/chatbot-baseline.js [--status | --force]`.
-- Mặc định: nạp nếu PlatformSetting `chatbot.baseline.version` < `CHATBOT_BASELINE_VERSION` (hiện **3**) rồi ghi version; đã nạp ⇒ không làm gì. `--force` nạp lại phần còn thiếu dù đã nạp. `--status` chỉ xem (version DB / code, số câu mẫu nền theo trạng thái, số tài liệu).
+- Mặc định: nạp nếu PlatformSetting `chatbot.baseline.version` < `CHATBOT_BASELINE_VERSION` (hiện **5**) rồi ghi version; đã nạp ⇒ không làm gì. `--force` nạp lại phần còn thiếu dù đã nạp. `--status` chỉ xem (version DB / code, số câu mẫu nền theo trạng thái, số tài liệu).
 - Chưa nạp bản hiện tại ⇒ backend ghi cảnh báo log lúc khởi động và `GET /admin/support/chatbot/summary` có `baseline: { loaded, current }` ⇒ trang Admin > Chatbot hiện dải nhắc kèm lệnh. `npm run db:seed` (dev) vẫn nạp câu mẫu + tài liệu như trước.
 - Câu mẫu (id `seed-chatbot-qa-<key>`, `source=admin`, createMany skipDuplicates — câu admin đã sửa không bị ghi đè):
   - `CHATBOT_FAQ` (16, `active`): viết lại từ FAQ công khai.

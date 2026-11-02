@@ -229,7 +229,7 @@ export const chatbotService = {
 
   async startConversation(userId: string) {
     assertAvailable();
-    const c = await conversationRepository.create(userId);
+    const c = (await conversationRepository.reuseEmpty(userId)) ?? (await conversationRepository.create(userId));
     return { conversation: convView(c), messages: [] as MessageView[] };
   },
 

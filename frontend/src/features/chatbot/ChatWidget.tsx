@@ -1,12 +1,11 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { Fragment, useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
+import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
-import { ApiError } from '../../lib/api';
 import { useAuth } from '../auth/AuthContext';
 import { requestHandoff, sendChatMessage, sendFeedback, startConversation } from './api';
 import { ChatLauncher } from './ChatLauncher';
-import { useMessageQueue } from './useMessageQueue';
+import { chatErrorText, useMessageQueue } from './useMessageQueue';
 import { useCommunityBotStatus } from '../community-bot/queries';
 import { chatbotKeys, useChatbotStatus, useCurrentConversation } from './queries';
 import type { ChatConversation, ChatMessage, Handoff, ToolCard } from './types';
@@ -16,15 +15,41 @@ import type { ChatConversation, ChatMessage, Handoff, ToolCard } from './types';
  * Trả lời được stream từng mẩu chữ; tin của bot có 👍/👎; nút "Nhắn Zalo hỗ trợ" mở link Zalo kèm mã hỗ trợ.
  */
 export function ChatWidget() {
-  const { status: authStatus } = useAuth();
+  const { status: authStatus, user } = useAuth();
   const { pathname } = useLocation();
   const status = useChatbotStatus();
-  const [open, setOpen] = useState(false);
+  const qc = useQueryClient();
+  // Lưu theo userId: đổi tài khoản thì tự về trạng thái đóng, không mang khung chat của người trước sang.
+  const [openFor, setOpenFor] = useState<string | null>(null);
+  // Đã mở ít nhất 1 lần => giữ khung chat (ẩn khi đóng) để lượt đang trả lời chạy tiếp, mở lại thấy đủ câu hỏi + câu trả lời.
+  const [mountedFor, setMountedFor] = useState<string | null>(null);
+  const open = Boolean(user) && openFor === user?.id;
+  const mounted = Boolean(user) && mountedFor === user?.id;
+  const close = useCallback(() => setOpenFor(null), []);
+  // Đăng xuất => xóa hội thoại trong bộ nhớ đệm (máy dùng chung: người sau không thấy lịch sử của người trước).
+  useEffect(() => {
+    if (authStatus === 'guest') qc.removeQueries({ queryKey: ['chatbot', 'current'] });
+  }, [authStatus, qc]);
   // Trang cộng đồng có trợ lý AI riêng đang dùng được (CommunityBotWidget, cùng góc màn hình) => ẩn Tào để không chồng nhau.
   const communityId = /^\/communities\/([^/]+)\/community(\/|$)/.exec(pathname)?.[1];
   const communityBot = useCommunityBotStatus(communityId);
-  if (authStatus !== 'authenticated' || pathname.startsWith('/admin') || communityBot.data?.available || !status.data?.available) return null;
-  return open ? <ChatPanel onClose={() => setOpen(false)} zaloUrl={status.data.zaloSupportUrl} maxChars={status.data.maxInputChars} /> : <Launcher onOpen={() => setOpen(true)} />;
+  if (authStatus !== 'authenticated' || !user || pathname.startsWith('/admin') || communityBot.data?.available || !status.data?.available) return null;
+  return (
+    <>
+      {(open || mounted) && (
+        // key = userId: đổi tài khoản thì dựng lại phiên chat từ đầu, không giữ state của người trước.
+        <ChatPanel key={user.id} userId={user.id} hidden={!open} onClose={close} zaloUrl={status.data.zaloSupportUrl} maxChars={status.data.maxInputChars} />
+      )}
+      {!open && (
+        <Launcher
+          onOpen={() => {
+            setOpenFor(user.id);
+            setMountedFor(user.id);
+          }}
+        />
+      )}
+    </>
+  );
 }
 
 function Launcher({ onOpen }: { onOpen: () => void }) {
@@ -38,33 +63,32 @@ export interface Bubble extends ChatMessage {
   suggestions?: string[];
 }
 
-function ChatPanel(props: { onClose: () => void; zaloUrl: string | null; maxChars: number }) {
+interface PanelProps {
+  userId: string;
+  hidden: boolean;
+  onClose: () => void;
+  zaloUrl: string | null;
+  maxChars: number;
+}
+
+function ChatPanel(props: PanelProps) {
   const { t } = useTranslation('chatbot');
-  const current = useCurrentConversation(true);
+  const current = useCurrentConversation(props.userId);
   if (current.isPending) {
     return (
-      <section role="dialog" aria-label={t('title')} className={PANEL_CLASS}>
+      <section role="dialog" aria-label={t('title')} className={`${PANEL_CLASS} ${props.hidden ? 'hidden' : ''}`}>
         <p className="m-auto text-sm text-stone-400">{t('loading')}</p>
       </section>
     );
   }
+  // Lỗi tải hội thoại => vẫn mở màn hình chào, gửi tin được (tạo hội thoại mới khi gửi).
   return <ChatSession {...props} initial={current.data ?? null} />;
 }
 
 export const PANEL_CLASS =
   'glass fixed inset-0 z-[60] flex flex-col overflow-hidden [--glass-bg:rgba(255,255,255,.92)] sm:inset-auto sm:right-6 sm:bottom-6 sm:h-[min(620px,calc(100vh-48px))] sm:w-[400px] sm:rounded-3xl';
 
-function ChatSession({
-  onClose,
-  zaloUrl,
-  maxChars,
-  initial,
-}: {
-  onClose: () => void;
-  zaloUrl: string | null;
-  maxChars: number;
-  initial: { conversation: ChatConversation; messages: ChatMessage[] } | null;
-}) {
+function ChatSession({ userId, hidden, onClose, zaloUrl, maxChars, initial }: PanelProps & { initial: { conversation: ChatConversation; messages: ChatMessage[] } | null }) {
   const { t } = useTranslation('chatbot');
   const qc = useQueryClient();
   // Cộng đồng khách đang xem (/communities/:id/...) — gửi kèm để Tào hiểu "cộng đồng này", "người hướng dẫn này".
@@ -83,28 +107,72 @@ function ChatSession({
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
+    if (hidden) return;
     inputRef.current?.focus();
     const onKey = (e: globalThis.KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, [onClose, hidden]);
 
-  const errText = (e: unknown) => (e instanceof ApiError || e instanceof Error ? e.message : t('error'));
+  // Ô nhập tự giãn theo nội dung tới max-h-32 (128px), quá thì cuộn trong ô.
+  useLayoutEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 128)}px`;
+  }, [draft, hidden]);
+
+  const errText = (e: unknown) => chatErrorText(e, t('error'), t('interrupted'));
+
+  // Ghi trạng thái mới nhất vào bộ nhớ đệm (theo userId): khung chat bị gỡ (sang trang admin / trang có trợ lý cộng đồng) rồi mở lại
+  // vẫn thấy đủ tin + mã hỗ trợ, không phải hội thoại cũ lúc mới mở.
+  const cacheKey = chatbotKeys.current(userId);
+  useEffect(() => {
+    qc.setQueryData(cacheKey, conversation ? { conversation, messages } : null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- cacheKey dựng lại mỗi render nhưng chỉ phụ thuộc userId
+  }, [conversation, messages, qc, userId]);
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   // Ref: vòng gửi hàng chờ (drain) chạy qua nhiều lần render — đọc state trực tiếp sẽ thấy giá trị cũ và tạo nhầm hội thoại mới.
   const convRef = useRef(conversation);
   useEffect(() => {
     convRef.current = conversation;
   }, [conversation]);
+  // "Cuộc mới" đang tạo hội thoại: tin gửi ngay sau đó chờ hội thoại này thay vì tạo thêm một hội thoại nữa.
+  const startingRef = useRef<Promise<ChatConversation> | null>(null);
+  const startIdRef = useRef(0);
+
+  function beginConversation(): Promise<ChatConversation> {
+    // Lỗi tạo hội thoại ném tiếp cho bên gọi (hàng chờ => hiện lỗi + trả tin về ô nhập; "Cuộc mới" => hiện lỗi).
+    const id = ++startIdRef.current; // lần tạo mới nhất mới được ghi state (bấm "Cuộc mới" liên tiếp)
+    const p = (async () => {
+      try {
+        const r = await startConversation();
+        if (startIdRef.current === id) {
+          convRef.current = r.conversation;
+          setConversation(r.conversation);
+        }
+        return r.conversation;
+      } finally {
+        if (startIdRef.current === id) startingRef.current = null;
+      }
+    })();
+    startingRef.current = p;
+    return p;
+  }
 
   async function ensureConversation(): Promise<ChatConversation> {
+    if (startingRef.current) return startingRef.current;
     const cur = convRef.current;
     if (cur && cur.status !== 'closed') return cur;
-    const r = await startConversation();
-    convRef.current = r.conversation;
-    setConversation(r.conversation);
     setMessages([]);
-    return r.conversation;
+    return beginConversation();
   }
 
   /** Hàng chờ gộp tin nhắn liên tiếp (useMessageQueue): mỗi lượt gửi các tin gộp, xong thì thêm tin khách + tin bot vào danh sách. */
@@ -112,13 +180,24 @@ function ChatSession({
     maxChars,
     async (text, parts, h) => {
       const conv = await ensureConversation();
+      if (h.cancelled?.()) return;
       const done = await sendChatMessage(conv.id, text, h, pageRef.current);
+      // Khách đã bấm "Cuộc mới" trong lúc chờ => câu trả lời thuộc hội thoại cũ, không chèn vào cuộc mới.
+      if (h.cancelled?.()) return;
       const userMsgs: Bubble[] = parts.map((content, i) => ({ id: `local-${done.message.id}-${i}`, role: 'user', content, answerSource: null, feedback: 0, createdAt: done.message.createdAt }));
-      setMessages((m) => [...m, ...userMsgs, { ...done.message, tools: done.tools, suggestions: done.suggestions }]);
+      const added: Bubble[] = [...userMsgs, { ...done.message, tools: done.tools, suggestions: done.suggestions }];
+      if (!mountedRef.current) {
+        // Khung chat đã bị gỡ trong lúc chờ: ghi thẳng vào bộ nhớ đệm để mở lại vẫn thấy câu hỏi + câu trả lời.
+        qc.setQueryData<{ conversation: ChatConversation; messages: Bubble[] } | null>(cacheKey, (old) => ({
+          conversation: done.conversation,
+          messages: [...(old?.conversation.id === done.conversation.id ? old.messages : []), ...added],
+        }));
+        return;
+      }
+      setMessages((m) => [...m, ...added]);
       convRef.current = done.conversation;
       setConversation(done.conversation);
       if (done.handoff) setHandoff(done.handoff);
-      void qc.invalidateQueries({ queryKey: chatbotKeys.current });
     },
     // Lỗi: trả các tin chưa gửi về ô nhập để khách gửi lại, không mất chữ.
     (err, unsent) => {
@@ -148,6 +227,7 @@ function ChatSession({
       const conv = await ensureConversation();
       const r = await requestHandoff(conv.id);
       setHandoff(r.handoff);
+      convRef.current = r.conversation;
       setConversation(r.conversation);
       if (r.message) setMessages((m) => [...m, r.message!]);
     } catch (err) {
@@ -166,14 +246,16 @@ function ChatSession({
   }
 
   function newChat() {
-    queue.clear();
+    setError(null);
+    // Đang ở một cuộc trống (chưa nhắn gì, chưa chuyển hỗ trợ) => không tạo thêm hội thoại rỗng trên server.
+    const cur = convRef.current;
+    if (startingRef.current || (cur && cur.status === 'open' && !cur.ticketCode && messages.length === 0 && !pending && queued.length === 0)) return;
+    queue.clear(); // hủy cả lượt đang trả lời: kết quả của nó không chèn vào cuộc mới
+    convRef.current = null;
     setConversation(null);
     setMessages([]);
     setHandoff(null);
-    setError(null);
-    void startConversation()
-      .then((r) => setConversation(r.conversation))
-      .catch((err) => setError(errText(err)));
+    beginConversation().catch((err: unknown) => setError(errText(err)));
   }
 
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -187,7 +269,7 @@ function ChatSession({
   const ticketCode = handoff?.ticketCode ?? conversation?.ticketCode ?? null;
 
   return (
-    <section role="dialog" aria-label={t('title')} className={PANEL_CLASS}>
+    <section role="dialog" aria-label={t('title')} className={`${PANEL_CLASS} ${hidden ? 'hidden' : ''}`}>
       <header className="bg-brand-gradient flex items-center gap-3 px-4 py-3 text-white">
         <div className="grid size-9 flex-none place-items-center rounded-full bg-white/20">
           <ChatIcon size={18} />
@@ -239,8 +321,8 @@ function ChatSession({
         ))}
         {pending && (
           <>
-            {pending.user.split('\n').map((line, i) => (
-              <MessageBubble key={`p-user-${i}`} m={{ id: `p-user-${i}`, role: 'user', content: line, answerSource: null, feedback: 0, createdAt: '' }} />
+            {pending.parts.map((part, i) => (
+              <MessageBubble key={`p-user-${i}`} m={{ id: `p-user-${i}`, role: 'user', content: part, answerSource: null, feedback: 0, createdAt: '' }} />
             ))}
             <MessageBubble m={{ id: 'p-bot', role: 'assistant', content: pending.reply || (pending.ahead !== undefined ? t('queuePosition', { count: pending.ahead }) : t('typing')), answerSource: null, feedback: 0, createdAt: '' }} streaming />
           </>
@@ -297,7 +379,7 @@ function ChatSession({
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={onKeyDown}
           placeholder={t('placeholder')}
-          className="max-h-32 min-h-10 flex-1 resize-none rounded-2xl border border-stone-200 bg-white px-3 py-2 text-sm outline-none focus:border-brand"
+          className="max-h-32 min-h-10 flex-1 resize-none overflow-y-auto rounded-2xl border border-stone-200 bg-white px-3 py-2 text-sm outline-none focus:border-brand"
         />
         <button
           type="submit"

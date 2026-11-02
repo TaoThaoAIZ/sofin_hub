@@ -68,6 +68,21 @@ describe('chatbot', () => {
     assert.equal((await c.call('POST', '/chatbot/conversations', { token: u.token })).status, 201);
   });
 
+  it('"Cuộc mới" liên tục khi đang ở cuộc trống => dùng lại hội thoại đó, không tạo hội thoại rỗng (CB-11-03)', async () => {
+    const u = await c.registerUser('cbreuse');
+    const a = await start(u);
+    assert.equal(await start(u), a);
+    assert.equal(await start(u), a);
+    assert.equal(await prisma.chatbotConversation.count({ where: { userId: u.id } }), 1);
+    await say(u, a, 'Có hoàn tiền không?');
+    const b = await start(u);
+    assert.notEqual(b, a);
+    // Hội thoại hiện tại (F5) là cuộc mới vừa bấm, không quay về cuộc cũ.
+    const cur = await c.call('GET', '/chatbot/conversations/current', { token: u.token });
+    assert.equal(cur.body.data.conversation.id, b);
+    assert.deepEqual(cur.body.data.messages, []);
+  });
+
   it('khớp câu hỏi mẫu => trả nguyên câu admin (qa_direct, không gọi AI), hitCount tăng', async () => {
     const qa = await ADM('POST', '/qa', { question: 'Làm sao đổi ảnh đại diện?', answer: 'dạ bạn vào Cài đặt > Hồ sơ để đổi ảnh nha', variants: ['đổi avatar'] });
     assert.equal(qa.status, 201, JSON.stringify(qa.body));
@@ -235,6 +250,28 @@ describe('chatbot', () => {
       const q = await prisma.chatbotQA.findFirstOrThrow({ where: { sourceConversationId: pii } });
       assert.doesNotMatch(q.question, /0912345678/);
       assert.doesNotMatch(q.answer, /abc@x\.com/);
+    });
+
+    it('dữ liệu nền v5 (bộ test QA CB-13-xx): hoàn tiền đúng chính sách, câu trả lời có link trang', async () => {
+      const u = await c.registerUser('cbv5');
+      const ask = async (text: string) => (await say(u, await start(u), text)).message;
+      const forgot = await ask('Quên mật khẩu thì làm sao?');
+      assert.equal(forgot.answerSource, 'qa_direct');
+      assert.match(forgot.content, /\/forgot-password/);
+      assert.match(forgot.content, /30 phút/);
+      assert.match(forgot.content, /Spam/);
+      const refund = await ask('Có hoàn tiền không?');
+      assert.equal(refund.answerSource, 'qa_direct');
+      assert.match(refund.content, /không hỗ trợ hoàn tiền/);
+      assert.doesNotMatch(refund.content, /có ạ/);
+      for (const [key, link] of [
+        ['community-create', '/communities/new'],
+        ['account-settings', '/settings/bao-mat'],
+        ['referral', '/settings/gioi-thieu'],
+      ]) {
+        const qa = await prisma.chatbotQA.findUniqueOrThrow({ where: { id: `seed-chatbot-qa-${key}` } });
+        assert.ok(qa.answer.includes(link), key);
+      }
     });
 
     it('câu trùng với câu mẫu => không tạo mới; câu trả bằng câu mẫu => thêm cách hỏi khác', async () => {
