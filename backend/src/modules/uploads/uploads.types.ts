@@ -10,6 +10,7 @@ export const UPLOAD_PURPOSES = [
   'community_media',
   'lesson_video',
   'lesson_slide',
+  'chatbot_image',
 ] as const;
 export type UploadPurpose = (typeof UPLOAD_PURPOSES)[number];
 
@@ -66,6 +67,9 @@ export const SLIDE_TYPES: Record<string, string> = {
   'application/vnd.ms-powerpoint': 'ppt',
 };
 
+/** Ảnh khách gửi cho chatbot (model đọc được): jpeg/png/webp. */
+export const CHATBOT_IMAGE_TYPES: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+
 /** Đuôi → Content-Type khi phục vụ file (không tin gì từ tên file người dùng). */
 /** Loại file bất kỳ (exe, rar, json...): lưu với đuôi 'bin', luôn phục vụ dạng tải về (attachment + nosniff + CSP sandbox), tên gốc nằm ở bản ghi. */
 export const GENERIC_TYPE = 'application/octet-stream';
@@ -104,6 +108,9 @@ export function purposeRule(purpose: UploadPurpose): PurposeRule {
       return { types: { ...DOC_TYPES, ...IMAGE_TYPES, ...LESSON_VIDEO_TYPES }, maxBytes: file };
     case 'message_attachment':
       return { types: { ...IMAGE_TYPES, ...DOC_TYPES, ...LESSON_VIDEO_TYPES }, maxBytes: file, anyType: true };
+    case 'chatbot_image':
+      // Ảnh gửi cho model đọc: không nhận gif (ảnh động), giới hạn như ảnh bài viết.
+      return { types: CHATBOT_IMAGE_TYPES, maxBytes: env.UPLOAD_MAX_IMAGE_MB * MB };
   }
 }
 

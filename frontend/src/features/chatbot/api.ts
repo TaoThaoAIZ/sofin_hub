@@ -13,10 +13,11 @@ import { StreamInterruptedError, StreamServerError, type StreamHandlers } from '
 
 /** Gửi tin và nhận trả lời dạng stream. Resolve với tin đã lưu (sự kiện `done`); sự kiện `error` => ném lỗi. */
 /** `pageCommunityId`: cộng đồng khách đang xem (theo URL) — bot dùng thông tin công khai của cộng đồng đó để hiểu "cộng đồng này", "người này". */
-export async function sendChatMessage(conversationId: string, text: string, h: StreamHandlers, pageCommunityId?: string): Promise<DoneData> {
+/** `image`: ảnh đã upload (purpose chatbot_image) gửi kèm lượt này. */
+export async function sendChatMessage(conversationId: string, text: string, h: StreamHandlers, pageCommunityId?: string, image?: { url: string }): Promise<DoneData> {
   let done: DoneData | null = null;
   let failure: string | null = null;
-  await apiPostStream(`/chatbot/conversations/${conversationId}/messages`, { text, ...(pageCommunityId ? { pageCommunityId } : {}) }, (event, data) => {
+  await apiPostStream(`/chatbot/conversations/${conversationId}/messages`, { text, ...(pageCommunityId ? { pageCommunityId } : {}), ...(image ? { image: { url: image.url } } : {}) }, (event, data) => {
     if (event === 'delta') h.onDelta((data as { text: string }).text);
     else if (event === 'replace') h.onReplace((data as { text: string }).text);
     else if (event === 'queued') h.onQueued?.((data as { ahead: number }).ahead);

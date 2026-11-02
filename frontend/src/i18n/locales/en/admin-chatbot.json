@@ -110,6 +110,8 @@
     "maxHistory": "History messages sent to the AI",
     "maxInputChars": "Max characters per message",
     "dailyMessagesPerUser": "Max messages per user per day (0 = unlimited)",
+    "imagesEnabled": "Let customers send images (error screenshots) for Tào to read",
+    "dailyImagesPerUser": "Max images per user / day (0 = unlimited)",
     "zaloHandoffText": "Message when handing off to Zalo ({code} = support code)",
     "refusalText": "Out-of-scope refusal",
     "persona": "Voice",
@@ -157,5 +159,7 @@
     "securityLink": "Open ChatGPT > Settings > Security"
   },
   "quota": "The chatbot's ChatGPT account hit its USAGE LIMIT ({{time}}): customers get a \"temporarily busy\" reply and are pointed to Zalo. Sample-answer matches still work. Wait for the limit to reset or sign in with a higher-plan account in Settings. Details: {{message}}",
-  "baselineMissing": "Chatbot baseline data not loaded (v{{current}}, DB has: {{loaded}}): bundled sample answers and documents are missing. Run on the server: `npm run chatbot:baseline` (Docker: `docker compose exec backend node dist/cli/chatbot-baseline.js`). Admin edits are never overwritten."
+  "baselineMissing": "Chatbot baseline data not loaded (v{{current}}, DB has: {{loaded}}): bundled sample answers and documents are missing. Run on the server: `npm run chatbot:baseline` (Docker: `docker compose exec backend node dist/cli/chatbot-baseline.js`). Admin edits are never overwritten.",
+  "imageDescription": "AI read the image: {{text}}",
+  "imageUnread": "AI could not read this image"
 }

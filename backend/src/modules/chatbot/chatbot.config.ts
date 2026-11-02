@@ -28,6 +28,10 @@ export const chatbotSettingsSchema = z.object({
   maxInputChars: z.number().int().min(100).max(4000),
   /** Số tin khách gửi tối đa mỗi ngày (0 = không giới hạn). */
   dailyMessagesPerUser: z.number().int().min(0).max(10_000),
+  /** Cho khách gửi ảnh (ảnh chụp lỗi, màn hình...) để Tào đọc. */
+  imagesEnabled: z.boolean(),
+  /** Số ảnh khách gửi tối đa mỗi ngày (ảnh tốn hạn mức ChatGPT hơn chữ; 0 = không giới hạn). */
+  dailyImagesPerUser: z.number().int().min(0).max(1000),
   refusalText: z.string().trim().min(1).max(500),
   persona: z.string().trim().min(1).max(4000),
   extraInstructions: z.string().trim().max(4000),
@@ -46,6 +50,8 @@ export function chatbotDefaults(): ChatbotSettings {
     maxHistory: 12,
     maxInputChars: 1000,
     dailyMessagesPerUser: 200,
+    imagesEnabled: true,
+    dailyImagesPerUser: 20,
     refusalText: 'dạ Tào chỉ hỗ trợ các câu hỏi về SofinHub và các tool đang bán thôi ạ, bạn cần hỗ trợ gì về những phần này không ạ',
     persona: DEFAULT_PERSONA,
     extraInstructions: '',

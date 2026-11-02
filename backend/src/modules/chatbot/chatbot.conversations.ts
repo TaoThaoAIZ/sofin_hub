@@ -1,5 +1,5 @@
 import { prisma } from '../../db/prisma.js';
-import type { Prisma } from '../../generated/prisma/client.js';
+import { Prisma } from '../../generated/prisma/client.js';
 import type { ChatbotAnswerSource, ChatbotConversationStatus } from '../../generated/prisma/client.js';
 
 /**
@@ -46,7 +46,7 @@ export const conversationRepository = {
 
   async addMessage(
     conversationId: string,
-    m: { role: 'user' | 'assistant'; content: string; answerSource?: ChatbotAnswerSource; matchedQaId?: string | null; toolCalls?: Prisma.InputJsonValue; redacted?: boolean },
+    m: { role: 'user' | 'assistant'; content: string; answerSource?: ChatbotAnswerSource; matchedQaId?: string | null; toolCalls?: Prisma.InputJsonValue; redacted?: boolean; attachments?: Prisma.InputJsonValue },
     usage?: { tokensIn: number; tokensOut: number },
   ) {
     const [msg] = await prisma.$transaction([
@@ -59,6 +59,7 @@ export const conversationRepository = {
           matchedQaId: m.matchedQaId ?? null,
           ...(m.toolCalls !== undefined ? { toolCalls: m.toolCalls } : {}),
           redacted: m.redacted ?? false,
+          ...(m.attachments !== undefined ? { attachments: m.attachments } : {}),
         },
       }),
       prisma.chatbotConversation.update({
@@ -78,6 +79,12 @@ export const conversationRepository = {
   /** Số tin user đã gửi từ `since` (giới hạn mỗi ngày). */
   countUserMessagesSince: (userId: string, since: Date, communityId: string | null = null) =>
     prisma.chatbotMessage.count({ where: { role: 'user', createdAt: { gte: since }, conversation: { userId, communityId } } }),
+
+  /** Số ảnh user đã gửi cho Tào từ `since` (hạn mức ảnh mỗi ngày; mỗi tin tối đa 1 ảnh). */
+  countUserImagesSince: (userId: string, since: Date) =>
+    prisma.chatbotMessage.count({ where: { role: 'user', createdAt: { gte: since }, attachments: { not: Prisma.DbNull }, conversation: { userId, communityId: null } } }),
+
+  setAttachments: (messageId: string, attachments: Prisma.InputJsonValue) => prisma.chatbotMessage.update({ where: { id: messageId }, data: { attachments } }),
 
   /** Đặt 👍/👎 cho tin của bot — chỉ khi tin thuộc hội thoại của chính user. Trả về null nếu không tìm thấy. */
   async setFeedback(messageId: string, userId: string, value: -1 | 0 | 1) {

@@ -8,6 +8,13 @@ export interface ChatMessage {
   answerSource: AnswerSource | null;
   feedback: -1 | 0 | 1;
   createdAt: string;
+  /** Ảnh khách gửi kèm (link riêng tư /api/files/<key>). */
+  attachments?: ChatAttachment[];
+}
+
+export interface ChatAttachment {
+  url: string;
+  contentType: string;
 }
 
 export interface ChatConversation {
@@ -20,6 +27,8 @@ export interface ChatbotStatus {
   available: boolean;
   zaloSupportUrl: string | null;
   maxInputChars: number;
+  /** Cho gửi ảnh (ảnh chụp lỗi, màn hình...) để Tào đọc. */
+  imagesEnabled?: boolean;
 }
 
 export interface Handoff {

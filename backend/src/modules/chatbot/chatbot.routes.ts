@@ -10,7 +10,9 @@ export const chatbotRouter = Router();
 const p = (v: string | string[] | undefined) => String(v);
 
 const messageBody = z.object({
-  text: z.string().min(1, 'Vui lòng nhập nội dung').max(4000),
+  text: z.string().max(4000).default(''),
+  /** Ảnh đính kèm (đã upload qua /uploads/presign với purpose chatbot_image): `/api/files/<key>`. */
+  image: z.object({ url: z.string().trim().min(1).max(300) }).optional(),
   /** Cộng đồng khách đang xem (widget lấy từ URL) — chỉ thêm thông tin CÔNG KHAI của cộng đồng đó vào ngữ cảnh. */
   pageCommunityId: z.string().trim().min(1).max(100).optional(),
 });
@@ -33,8 +35,8 @@ chatbotRouter.post('/chatbot/conversations', requireAuth, writeRateLimit('genera
  * ngược lại trả JSON `{ data: DoneData }` khi xong. Lỗi xảy ra TRƯỚC khi bắt đầu stream (503/400/404/409/429) trả JSON lỗi như thường.
  */
 chatbotRouter.post('/chatbot/conversations/:id/messages', requireAuth, writeRateLimit('chatbot'), async (req, res, next) => {
-  const { text, pageCommunityId } = messageBody.parse(req.body ?? {});
-  const opts = pageCommunityId ? { pageCommunityId } : {};
+  const { text, pageCommunityId, image } = messageBody.parse(req.body ?? {});
+  const opts = { ...(pageCommunityId ? { pageCommunityId } : {}), ...(image ? { image } : {}) };
   const wantsStream = (req.get('accept') ?? '').includes('text/event-stream');
   if (!wantsStream) {
     res.json({ data: await chatbotService.sendMessage(req.userId!, p(req.params.id), text, () => undefined, opts) });

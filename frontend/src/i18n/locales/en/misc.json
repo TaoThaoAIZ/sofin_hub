@@ -25,7 +25,8 @@
       "message": "images, PDF, ZIP, DOCX, XLSX, PPTX, PPT, DOC, XLS, CSV, TXT",
       "media": "JPG, PNG, WEBP, GIF images or MP4 video",
       "video": "MP4, WEBM or MOV video",
-      "slides": "PDF, PPT, PPTX or PPSX"
+      "slides": "PDF, PPT, PPTX or PPSX",
+      "chatImage": "JPG, PNG or WEBP image"
     },
     "failedStatus": "File upload failed ({{status}})",
     "failed": "File upload failed, please try again",

@@ -10,8 +10,21 @@ export interface StreamHandlers {
   cancelled?: () => boolean;
 }
 
-/** Gửi 1 lượt (các tin gộp `parts`, nối bằng xuống dòng = `text`) lên server; ném lỗi nếu thất bại. */
-export type Deliver = (text: string, parts: string[], h: StreamHandlers) => Promise<void>;
+/** Ảnh gửi kèm 1 tin: `url` = file đã upload (/api/files/<key>), `preview` = blob URL để hiện ngay trên máy khách. */
+export interface QueueImage {
+  url: string;
+  contentType: string;
+  preview: string;
+}
+
+/** 1 tin trong hàng chờ (có thể kèm 1 ảnh). */
+export interface QueueItem {
+  text: string;
+  image?: QueueImage;
+}
+
+/** Gửi 1 lượt (các tin gộp `parts`, nối bằng xuống dòng = `text`; `image` = ảnh của lượt, nếu có) lên server; ném lỗi nếu thất bại. */
+export type Deliver = (text: string, parts: string[], h: StreamHandlers, image?: QueueImage) => Promise<void>;
 
 /** Lượt đang chờ bot trả lời. `parts` = từng tin khách đã gửi (mỗi tin 1 bong bóng, giữ nguyên xuống dòng trong tin). */
 export interface PendingTurn {
@@ -19,6 +32,7 @@ export interface PendingTurn {
   parts: string[];
   reply: string;
   ahead?: number;
+  image?: QueueImage;
 }
 
 /** Lỗi do stream bị ngắt giữa chừng (không nhận được sự kiện `done`). Widget hiện câu báo thân thiện thay cho thông điệp kỹ thuật. */
@@ -48,14 +62,15 @@ export function chatErrorText(e: unknown, fallback: string, interrupted: string)
  * Hàng chờ tin nhắn dùng chung cho các widget chatbot (bot Tào + bot cộng đồng). Khách nhắn liên tục (kiểu Zalo: 3-4 tin ngắn) trong lúc
  * bot đang trả lời: tin mới vào hàng chờ (hiện ngay, nhãn "chờ gửi"), trả lời xong thì GỘP cả hàng chờ thành 1 lượt (mỗi tin 1 dòng,
  * tối đa `maxChars`/lượt) — không gọi AI song song trên cùng hội thoại (backend cũng khóa theo hội thoại). Lỗi => `onError` nhận các tin
- * chưa gửi để trả về ô nhập. `clear()` hủy cả lượt đang chạy: kết quả của nó bị bỏ, tin mới gửi ngay không phải chờ.
+ * chưa gửi (và ảnh chưa gửi, nếu có) để trả về ô nhập. `clear()` hủy cả lượt đang chạy: kết quả của nó bị bỏ, tin mới gửi ngay không phải chờ.
+ * Tin có ảnh luôn đi thành 1 lượt riêng (không gộp với tin khác) — mỗi lượt tối đa 1 ảnh.
  */
-export function useMessageQueue(maxChars: number, deliver: Deliver, onError: (err: unknown, unsent: string[]) => void) {
+export function useMessageQueue(maxChars: number, deliver: Deliver, onError: (err: unknown, unsent: string[], image?: QueueImage) => void) {
   const busyRef = useRef(false);
-  const queueRef = useRef<string[]>([]);
+  const queueRef = useRef<QueueItem[]>([]);
   // Tăng mỗi lần clear(): vòng drain / lượt đang chạy thuộc "thế hệ" cũ thì dừng, không cập nhật gì nữa.
   const epochRef = useRef(0);
-  const [queued, setQueued] = useState<string[]>([]);
+  const [queued, setQueued] = useState<QueueItem[]>([]);
   const [pending, setPending] = useState<PendingTurn | null>(null);
   // Vòng drain chạy qua nhiều lần render: luôn gọi bản deliver/onError mới nhất.
   const deliverRef = useRef(deliver);
@@ -65,13 +80,13 @@ export function useMessageQueue(maxChars: number, deliver: Deliver, onError: (er
     onErrorRef.current = onError;
   });
 
-  /** Lấy từ đầu hàng chờ các tin gộp được trong maxChars (ít nhất 1 tin). */
-  function takeBatch(): string[] {
+  /** Lấy từ đầu hàng chờ các tin gộp được trong maxChars (ít nhất 1 tin). Tin có ảnh đi riêng 1 lượt. */
+  function takeBatch(): QueueItem[] {
     const q = queueRef.current;
-    const batch: string[] = [];
+    const batch: QueueItem[] = [];
     let len = 0;
-    while (q.length && (batch.length === 0 || len + 1 + q[0]!.length <= maxChars)) {
-      len += (batch.length ? 1 : 0) + q[0]!.length;
+    while (q.length && (batch.length === 0 || (!batch[0]!.image && !q[0]!.image && len + 1 + q[0]!.text.length <= maxChars))) {
+      len += (batch.length ? 1 : 0) + q[0]!.text.length;
       batch.push(q.shift()!);
     }
     setQueued([...q]);
@@ -84,22 +99,32 @@ export function useMessageQueue(maxChars: number, deliver: Deliver, onError: (er
     busyRef.current = true;
     try {
       while (live() && queueRef.current.length) {
-        const parts = takeBatch();
+        const batch = takeBatch();
+        const parts = batch.map((x) => x.text);
+        const image = batch[0]?.image;
         const text = parts.join('\n');
-        setPending({ user: text, parts, reply: '' });
+        setPending({ user: text, parts, reply: '', ...(image ? { image } : {}) });
         try {
-          await deliverRef.current(text, parts, {
-            onDelta: (d) => live() && setPending((p) => (p ? { ...p, reply: p.reply + d } : p)),
-            onReplace: (r) => live() && setPending((p) => (p ? { ...p, reply: r } : p)),
-            onQueued: (ahead) => live() && setPending((p) => (p ? { ...p, ahead } : p)),
-            cancelled: () => !live(),
-          });
+          await deliverRef.current(
+            text,
+            parts,
+            {
+              onDelta: (d) => live() && setPending((p) => (p ? { ...p, reply: p.reply + d } : p)),
+              onReplace: (r) => live() && setPending((p) => (p ? { ...p, reply: r } : p)),
+              onQueued: (ahead) => live() && setPending((p) => (p ? { ...p, ahead } : p)),
+              cancelled: () => !live(),
+            },
+            image,
+          );
         } catch (err) {
           if (!live()) return;
-          const unsent = [...parts, ...queueRef.current];
+          // Ảnh của lượt lỗi (hoặc ảnh đầu tiên còn trong hàng chờ) trả về khung đính kèm để gửi lại.
+          const rest = queueRef.current;
+          const unsent = [...parts, ...rest.map((x) => x.text)].filter(Boolean);
+          const lostImage = image ?? rest.find((x) => x.image)?.image;
           queueRef.current = [];
           setQueued([]);
-          onErrorRef.current(err, unsent);
+          onErrorRef.current(err, unsent, lostImage);
         } finally {
           if (live()) setPending(null);
         }
@@ -112,8 +137,8 @@ export function useMessageQueue(maxChars: number, deliver: Deliver, onError: (er
   return {
     queued,
     pending,
-    enqueue(text: string) {
-      queueRef.current.push(text.slice(0, maxChars));
+    enqueue(text: string, image?: QueueImage) {
+      queueRef.current.push({ text: text.slice(0, maxChars), ...(image ? { image } : {}) });
       setQueued([...queueRef.current]);
       if (!busyRef.current) void drain();
     },

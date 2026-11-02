@@ -254,7 +254,7 @@ function BotSession({ communityId, status, onClose, initial }: { communityId: st
         )}
         {queued.map((q, i) => (
           <div key={`q-${i}`} className="flex flex-col items-end gap-0.5 opacity-70">
-            <MessageBubble m={{ id: `q-${i}`, role: 'user', content: q, answerSource: null, feedback: 0, createdAt: '' }} />
+            <MessageBubble m={{ id: `q-${i}`, role: 'user', content: q.text, answerSource: null, feedback: 0, createdAt: '' }} />
             <span className="pr-1 text-[11px] text-stone-500">{t('queued')}</span>
           </div>
         ))}

@@ -45,14 +45,21 @@ AI = **Codex SDK** (`@openai/codex-sdk`) đăng nhập bằng **tài khoản Cha
 
 | Method | Path | Body | Response | Lỗi |
 |---|---|---|---|---|
-| GET | `/chatbot/status` | — | `{ available, zaloSupportUrl, maxInputChars }` | 401 |
+| GET | `/chatbot/status` | — | `{ available, zaloSupportUrl, maxInputChars, imagesEnabled }` | 401 |
 | GET | `/chatbot/conversations/current` | — | `{ conversation, messages[] }` hoặc `null` (không có hội thoại open/handed_off nhắn trong 24h) | 401 |
 | POST | `/chatbot/conversations` | — | 201 `{ conversation, messages: [] }` | 401, 503 |
-| POST | `/chatbot/conversations/:id/messages` | `{ text, pageCommunityId? }` — `pageCommunityId` = cộng đồng khách đang xem (widget lấy từ URL `/communities/:id…`): thêm khối `<current_page>` chỉ gồm thông tin CÔNG KHAI (tên, mô tả, người hướng dẫn, lợi ích, tên nội quy, giá, số thành viên); cộng đồng riêng tư chỉ khi khách là thành viên; nháp/khóa/id lạ ⇒ bỏ qua | xem dưới | 400, 401, 404, 409, 429, 503 |
+| POST | `/chatbot/conversations/:id/messages` | `{ text, pageCommunityId?, image? }` — `image = { url: '/api/files/<key>' }` (xem "Gửi ảnh"); có ảnh thì `text` được rỗng. `pageCommunityId` = cộng đồng khách đang xem (widget lấy từ URL `/communities/:id…`): thêm khối `<current_page>` chỉ gồm thông tin CÔNG KHAI (tên, mô tả, người hướng dẫn, lợi ích, tên nội quy, giá, số thành viên); cộng đồng riêng tư chỉ khi khách là thành viên; nháp/khóa/id lạ ⇒ bỏ qua | xem dưới | 400, 401, 404, 409, 429, 503 |
 | POST | `/chatbot/conversations/:id/handoff` | — | `{ handoff, conversation, message \| null }` | 404 |
 | POST | `/chatbot/messages/:id/feedback` | `{ value: -1 \| 0 \| 1 }` | `Message` | 400, 404 (không phải tin bot của mình) |
 
-`conversation = { id, status: open|handed_off|closed, ticketCode }`; `Message = { id, role, content, answerSource, feedback, createdAt }`.
+`conversation = { id, status: open|handed_off|closed, ticketCode }`; `Message = { id, role, content, answerSource, feedback, attachments: [{ url, contentType }], createdAt }`.
+
+**Gửi ảnh** (2026-11-02, học từ bot-cskh `describe_image`; `chatbot.images.ts`):
+- Upload qua `POST /uploads/presign` với `purpose: 'chatbot_image'` (jpeg/png/webp, ≤ `UPLOAD_MAX_IMAGE_MB`; file **riêng tư**: chỉ người gửi + Platform Admin xem). Rồi gửi tin với `image.url` = `fileUrl`. Ảnh phải của chính người gửi, đúng purpose, đã upload xong ⇒ sai: 400 `CHATBOT_IMAGE_INVALID`. Cài đặt `imagesEnabled=false` ⇒ 400 `CHATBOT_IMAGES_DISABLED`; quá `dailyImagesPerUser` ảnh/24h (mặc định 20) ⇒ 429 `CHATBOT_IMAGE_LIMIT`.
+- Lượt có ảnh = **2 lần gọi Codex**: (1) đọc ảnh (`local_image`, file tạm xóa ngay sau khi gọi) ⇒ 1-3 câu mô tả tiếng Việt (chép nguyên dòng lỗi; biên lai chuyển khoản chỉ nhận xét khi ảnh giống biên lai; che STK/số thẻ/OTP bằng `***`) + cờ `prohibited`; (2) trả lời như tin chữ với `text + " [Khách gửi ảnh: <mô tả>]"` (tra cứu tài liệu theo mô tả, không khớp thẳng câu mẫu). Token của cả hai lần cộng vào hội thoại.
+- `prohibited` ⇒ từ chối (`answerSource=refusal`). Không đọc được ảnh: không có chữ kèm ⇒ xin khách mô tả bằng chữ (`error`, không gọi bước 2); có chữ ⇒ trả lời với "[Khách gửi 1 ảnh, Tào chưa đọc được]". Hết hạn mức / đông người ⇒ câu báo như tin chữ.
+- Lưu: `ChatbotMessage.attachments = [{ url, contentType, description }]` (tin khách, `redacted=true` ⇒ không dùng để học). Lịch sử các lượt sau thấy mô tả ảnh. Widget nhận `attachments` không kèm `description`; trang admin xem hội thoại thấy ảnh + mô tả AI.
+- Widget: nút "Đính kèm ảnh" + dán ảnh (Ctrl+V) vào ô nhập; upload ngay, xem trước, gửi được khi upload xong; tin có ảnh luôn đi 1 lượt riêng (không gộp với tin chờ). Trợ lý của cộng đồng chưa nhận ảnh.
 
 **Gửi tin**: header `Accept: text/event-stream` ⇒ stream SSE trên chính response (`Cache-Control: no-cache, no-transform` nên middleware nén bỏ qua):
 - `event: delta` `{ text }` — chữ trả lời (hiện gửi trọn câu một lần);
