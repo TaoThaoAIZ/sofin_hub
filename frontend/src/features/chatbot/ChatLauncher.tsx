@@ -1,16 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 
-// Bong bóng nhắc: hiện 10s rồi ẩn 20s, lặp lại (không che nội dung quá lâu).
+// Bong bóng lời chào: hiện 10s rồi ẩn 20s, lặp lại (không che nội dung quá lâu).
 const HINT_SHOW_MS = 10_000;
 const HINT_HIDE_MS = 20_000;
 
 /**
- * Nút mở chatbot nổi góc phải: linh vật bồng bềnh phát sáng + bong bóng nhắc (hiện sau 10s, tự ẩn sau 30s rồi lặp lại).
+ * Nút mở chatbot nổi góc phải: linh vật bồng bềnh phát sáng + bong bóng lời chào.
+ * Linh vật LUÔN hiện vì đó là lối vào khung chat (CB-01-10); chỉ bong bóng chữ hiện 10s / ẩn 20s, lặp lại.
  * Dùng chung cho trợ lý hỗ trợ (Tào) và trợ lý của cộng đồng.
  */
 export function ChatLauncher({ onOpen, label, hint }: { onOpen: () => void; label: string; hint: string }) {
-  // Linh vật hiện 10s rồi ẩn 20s, lặp lại; bong bóng chữ chỉ hiện MỘT lần, trong lần hiện đầu tiên.
-  const [visible, setVisible] = useState(true);
   const [showHint, setShowHint] = useState(true);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -19,8 +18,7 @@ export function ChatLauncher({ onOpen, label, hint }: { onOpen: () => void; labe
     const schedule = (ms: number, show: boolean) => {
       timer.current = setTimeout(() => {
         if (!alive) return;
-        setVisible(show);
-        setShowHint(false);
+        setShowHint(show);
         schedule(show ? HINT_SHOW_MS : HINT_HIDE_MS, !show);
       }, ms);
     };
@@ -30,8 +28,6 @@ export function ChatLauncher({ onOpen, label, hint }: { onOpen: () => void; labe
       if (timer.current) clearTimeout(timer.current);
     };
   }, []);
-
-  if (!visible) return null;
 
   return (
     <>

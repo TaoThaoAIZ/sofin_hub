@@ -7,6 +7,7 @@ import { TOOLS } from '../tools/tools.catalog.js';
 import { chatbotAvailable, chatbotSettings, type ChatbotSettings } from './chatbot.config.js';
 import { conversationRepository } from './chatbot.conversations.js';
 import { qaCoversQuery } from './chatbot.keywords.js';
+import { detectLanguage, retrievalText } from './chatbot.language.js';
 import { checkOutput, type OutputViolation } from './chatbot.guardrails.js';
 import { moderate, moderationReply } from './chatbot.moderation.js';
 import { containsPii } from './chatbot.pii.js';
@@ -175,7 +176,9 @@ async function answerTurn(userId: string, conv: OwnedConversation, text: string,
 
   // B2: khớp trực tiếp câu hỏi mẫu — trừ câu hỏi về dữ liệu của CHÍNH khách ("tôi đã tham gia cộng đồng nào"): câu mẫu là câu chung, dễ khớp nhầm "cách tham gia".
   // Chỉ trả thẳng khi câu mẫu chứa ĐỦ từ khóa của khách (trigram coi "rời cộng đồng" ~ "tạo cộng đồng"); xét 3 câu đầu.
-  const candidates = isPersonalTopic(text) ? [] : await chatbotRepository.matchQa(text, { limit: 3, order: 'similarity' });
+  // Câu hỏi tiếng Anh (CB-13-14): câu mẫu là tiếng Việt nên không trả thẳng; tra cứu bằng từ khóa tiếng Việt tương ứng rồi để AI trả lời tiếng Anh.
+  const language = detectLanguage(text);
+  const candidates = isPersonalTopic(text) || language === 'en' ? [] : await chatbotRepository.matchQa(text, { limit: 3, order: 'similarity' });
   const top = candidates.find((q) => q.similarity >= s.directThreshold && qaCoversQuery(text, q));
   if (top) {
     void chatbotRepository.recordHit(top.id);
@@ -187,8 +190,8 @@ async function answerTurn(userId: string, conv: OwnedConversation, text: string,
   const history = (await conversationRepository.recentMessages(conv.id, s.maxHistory + 1)).slice(0, -1).map((m) => ({ role: m.role, content: m.content }));
   const ctx: ChatContext = { userId, conversationId: conv.id, viewer, ...(pageCommunityId ? { pageCommunityId } : {}) };
   try {
-    const context = await gatherContext(ctx, text, history.filter((m) => m.role === 'user').map((m) => m.content));
-    const prompt = buildAnswerPrompt(s, { firstName: viewer.firstName, history, message: text, context });
+    const context = await gatherContext(ctx, retrievalText(text, language), history.filter((m) => m.role === 'user').map((m) => retrievalText(m.content)));
+    const prompt = buildAnswerPrompt(s, { firstName: viewer.firstName, history, message: text, context, language });
     const { output, usage } = await chatLlm().complete({ kind: 'answer', prompt, schema: answerSchema, hint: { message: text, context }, model: s.model || undefined, onQueued: (ahead) => emit({ event: 'queued', data: { ahead } }) });
     const toolCalls = contextTrace(context, output.toolIds, prompt);
     const matchedQaId = context.sampleAnswers.some((q) => q.id === output.usedSampleId) ? output.usedSampleId : null;

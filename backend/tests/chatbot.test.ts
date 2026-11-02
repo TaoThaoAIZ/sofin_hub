@@ -274,6 +274,23 @@ describe('chatbot', () => {
       }
     });
 
+    it('câu hỏi tiếng Anh (CB-13-14): vẫn tìm đúng câu mẫu tiếng Việt, không trả thẳng câu tiếng Việt, prompt yêu cầu trả lời tiếng Anh', async () => {
+      const { detectLanguage } = await import('../src/modules/chatbot/chatbot.language.js');
+      for (const q of ['How can I reset my password?', 'Do you offer refunds?', 'how do i join a community', 'What is the price of this course?']) assert.equal(detectLanguage(q), 'en', q);
+      for (const q of ['Quên mật khẩu thì làm sao?', 'quen mat khau thi lam sao', 'toi can ho tro', 'alo', 'tool veo', 'AI video là gì']) assert.equal(detectLanguage(q), 'vi', q);
+      const u = await c.registerUser('cben');
+      const r = await say(u, await start(u), 'How can I reset my password?');
+      assert.equal(r.message.answerSource, 'agent', 'không trả thẳng câu mẫu tiếng Việt');
+      const m = await prisma.chatbotMessage.findUniqueOrThrow({ where: { id: r.message.id } });
+      assert.equal(m.matchedQaId, 'seed-chatbot-qa-account-forgot-password', 'tra cứu ra đúng câu mẫu quên mật khẩu');
+      const prompt = ((m.toolCalls ?? []) as { name: string; prompt?: string }[]).find((x) => x.name === '_trace')?.prompt ?? '';
+      assert.match(prompt, /khách đang viết TIẾNG ANH/);
+      assert.match(prompt, /<customer_message>\nHow can I reset my password\?/, 'tin gốc của khách giữ nguyên');
+      // Câu tiếng Việt không bị thêm luật tiếng Anh.
+      const vi = await say(u, await start(u), 'Có hoàn tiền không?');
+      assert.equal(vi.message.answerSource, 'qa_direct');
+    });
+
     it('câu trùng với câu mẫu => không tạo mới; câu trả bằng câu mẫu => thêm cách hỏi khác', async () => {
       const u = await c.registerUser('cbdup');
       const conv = await start(u);
