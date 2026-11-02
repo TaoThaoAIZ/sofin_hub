@@ -9,7 +9,7 @@ export const fetchCurrentConversation = (signal?: AbortSignal) =>
 export const startConversation = () => apiPost<{ data: ConversationState }>('/chatbot/conversations').then((r) => r.data);
 
 export type { StreamHandlers } from './useMessageQueue';
-import type { StreamHandlers } from './useMessageQueue';
+import { StreamInterruptedError, StreamServerError, type StreamHandlers } from './useMessageQueue';
 
 /** Gửi tin và nhận trả lời dạng stream. Resolve với tin đã lưu (sự kiện `done`); sự kiện `error` => ném lỗi. */
 /** `pageCommunityId`: cộng đồng khách đang xem (theo URL) — bot dùng thông tin công khai của cộng đồng đó để hiểu "cộng đồng này", "người này". */
@@ -23,8 +23,8 @@ export async function sendChatMessage(conversationId: string, text: string, h: S
     else if (event === 'done') done = data as DoneData;
     else if (event === 'error') failure = (data as { message?: string }).message ?? 'error';
   });
-  if (failure) throw new Error(failure);
-  if (!done) throw new Error('stream ended');
+  if (failure) throw new StreamServerError(failure);
+  if (!done) throw new StreamInterruptedError();
   return done;
 }
 

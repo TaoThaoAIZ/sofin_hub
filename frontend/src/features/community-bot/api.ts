@@ -1,6 +1,6 @@
 import { apiDelete, apiGet, apiPatch, apiPost, apiPostStream, apiPut } from '../../lib/api';
 import type { ChatMessage } from '../chatbot/types';
-import type { StreamHandlers } from '../chatbot/useMessageQueue';
+import { StreamInterruptedError, StreamServerError, type StreamHandlers } from '../chatbot/useMessageQueue';
 import type {
   BotConversationRow,
   BotConversationState,
@@ -31,8 +31,8 @@ export async function sendBotMessage(id: string, conversationId: string, text: s
     else if (event === 'done') done = data as BotDoneData;
     else if (event === 'error') failure = (data as { message?: string }).message ?? 'error';
   });
-  if (failure) throw new Error(failure);
-  if (!done) throw new Error('stream ended');
+  if (failure) throw new StreamServerError(failure);
+  if (!done) throw new StreamInterruptedError();
   return done;
 }
 

@@ -23,7 +23,8 @@
   "handoffBanner": "Your support code: {{code}} — include it when you message us on Zalo.",
   "download": "Free download",
   "buy": "Buy now",
-  "error": "Something went wrong, please try again.",
+  "error": "Something went wrong, please try again.",
+  "interrupted": "The connection was interrupted before Tào finished answering. Please send it again.",
   "pages": {
     "billing": "Plans & billing",
     "security": "Account security",

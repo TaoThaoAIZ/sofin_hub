@@ -13,8 +13,11 @@ import { BUNDLED_KB_DIR, importKnowledgeDir } from './chatbot.import.js';
  * Thêm/đổi dữ liệu nền => tăng CHATBOT_BASELINE_VERSION.
  * v4 (2026-10-16): sửa "rời cộng đồng" (nút giờ là "Rời cộng đồng"); thêm CHATBOT_GUIDES — hướng dẫn chung rút từ bộ test theo dữ liệu
  * DB (nội dung thành viên, cộng đồng riêng tư, bài khóa, cấp độ, chứng chỉ, sự kiện, tin nhắn, cài đặt, giới hạn lượt hỏi, công cụ của chủ).
+ * v5 (2026-10-31): sửa theo bộ test QA TestCase_Chatbox_SofinHub (CB-13-xx): hoàn tiền đúng chính sách hiện hành (KHÔNG hoàn tiền),
+ * quên mật khẩu đủ ý (link 30 phút, thư rác, quy tắc mật khẩu), thêm đường dẫn trang (/forgot-password, /communities/new,
+ * /settings/bao-mat, /settings/gioi-thieu, /contact) để khung chat hiện chip link; câu liên hệ không gọi tên nút cố định.
  */
-export const CHATBOT_BASELINE_VERSION = 4;
+export const CHATBOT_BASELINE_VERSION = 5;
 export const CHATBOT_BASELINE_KEY = 'chatbot.baseline';
 
 export interface BaselineQa {
@@ -44,9 +47,9 @@ export const CHATBOT_FAQ: BaselineQa[] = [
   {
     key: 'account-forgot-password',
     question: 'Tôi quên mật khẩu thì làm sao?',
-    variants: ['quên mật khẩu', 'lấy lại mật khẩu thế nào', 'đặt lại mật khẩu'],
+    variants: ['quên mật khẩu', 'lấy lại mật khẩu thế nào', 'đặt lại mật khẩu', 'quên mật khẩu thì làm sao', 'không đăng nhập được vì quên mật khẩu'],
     answer:
-      'dạ ở trang Đăng nhập bạn bấm "Quên mật khẩu" và nhập email, hệ thống gửi link đặt lại mật khẩu (link có hạn và chỉ dùng 1 lần) nha. Bạn cũng đổi được mật khẩu trong Cài đặt tài khoản ạ',
+      'dạ bạn vào trang Quên mật khẩu (/forgot-password), nhập email đăng ký, hệ thống gửi link đặt lại mật khẩu có hiệu lực 30 phút và chỉ dùng 1 lần ạ. Không thấy thư thì bạn kiểm tra cả mục Thư rác/Spam nha. Mật khẩu mới tối thiểu 8 ký tự, có ít nhất 1 chữ in hoa và 1 ký tự đặc biệt ạ',
     tags: ['tài khoản'],
   },
   {
@@ -78,7 +81,7 @@ export const CHATBOT_FAQ: BaselineQa[] = [
     question: 'Tôi có thể tạo cộng đồng riêng của mình không?',
     variants: ['tạo cộng đồng thế nào', 'mở cộng đồng riêng'],
     answer:
-      'dạ được ạ, bạn bấm "Tạo cộng đồng" ở thanh trên cùng, điền tên, mô tả, danh mục, công khai/riêng tư và giá. Bạn sẽ là chủ cộng đồng, tự soạn lớp học, sự kiện, mời quản trị viên và xem doanh thu nha',
+      'dạ được ạ, bạn vào trang Tạo cộng đồng (/communities/new) hoặc bấm "Tạo cộng đồng" ở thanh trên cùng, điền tên, mô tả, danh mục, công khai/riêng tư và giá. Bạn sẽ là chủ cộng đồng, tự soạn lớp học, sự kiện, mời quản trị viên và xem doanh thu nha',
     tags: ['cộng đồng'],
   },
   {
@@ -121,16 +124,16 @@ export const CHATBOT_FAQ: BaselineQa[] = [
   {
     key: 'billing-refund',
     question: 'Có hoàn tiền không?',
-    variants: ['hoàn tiền được không', 'muốn hoàn tiền'],
+    variants: ['hoàn tiền được không', 'muốn hoàn tiền', 'chính sách hoàn tiền', 'trả lại tiền được không'],
     answer:
-      'dạ có ạ, trong thời hạn hoàn tiền của nền tảng. Bạn gửi yêu cầu kèm thông tin giao dịch, hóa đơn sẽ hiện "Đã hoàn tiền" khi xong nha',
+      'dạ hiện nền tảng không hỗ trợ hoàn tiền ạ. Bạn hủy gói bất kỳ lúc nào trong Gói & thanh toán (/settings/thanh-toan) để không bị tính kỳ sau. Nếu giao dịch lỗi (ví dụ bị trừ tiền 2 lần) thì bạn bấm nút hỗ trợ ngay dưới khung chat và gửi kèm thông tin giao dịch nha',
     tags: ['thanh toán'],
   },
   {
     key: 'support-contact',
     question: 'Làm sao để liên hệ hỗ trợ?',
     variants: ['liên hệ hỗ trợ', 'gặp nhân viên hỗ trợ'],
-    answer: 'dạ bạn hỏi Tào ngay tại đây, hoặc bấm "Nhắn Zalo hỗ trợ" để gặp người hỗ trợ nha. Bạn cũng gửi được biểu mẫu ở trang Liên hệ ạ',
+    answer: 'dạ bạn hỏi Tào ngay tại đây, hoặc bấm nút hỗ trợ ngay dưới khung chat ("Gặp người hỗ trợ" / "Nhắn Zalo hỗ trợ") để nhận mã hỗ trợ và gặp người hỗ trợ nha. Bạn cũng gửi được biểu mẫu ở trang Liên hệ (/contact) ạ',
     tags: ['hỗ trợ'],
   },
   {
@@ -296,16 +299,16 @@ export const CHATBOT_GUIDES: BaselineQa[] = [
   {
     key: 'account-settings',
     question: 'Đổi tên, ảnh đại diện, email hoặc mật khẩu ở đâu?',
-    variants: ['đổi email tài khoản', 'đổi tên hiển thị', 'đổi ảnh đại diện', 'đổi mật khẩu ở đâu', 'sửa hồ sơ'],
+    variants: ['đổi email tài khoản', 'đổi tên hiển thị', 'đổi ảnh đại diện', 'đổi mật khẩu ở đâu', 'sửa hồ sơ', 'bảo mật tài khoản', 'tài khoản an toàn hơn'],
     answer:
-      'dạ bạn vào Cài đặt (bấm tên ở góc phải trên cùng): mục Hồ sơ để đổi tên, ảnh và giới thiệu; mục Bảo mật để đổi mật khẩu và email (email mới cần xác minh mới có hiệu lực) ạ. Tào chỉ hướng dẫn, không đổi thay bạn được nha',
+      'dạ bạn vào Cài đặt (/settings, bấm tên ở góc phải trên cùng): mục Hồ sơ để đổi tên, ảnh và giới thiệu; mục Bảo mật tài khoản (/settings/bao-mat) để đổi mật khẩu, email (email mới cần xác minh mới có hiệu lực) và bật xác thực 2 lớp ạ. Tào chỉ hướng dẫn, không đổi thay bạn được nha',
     tags: ['tài khoản'],
   },
   {
     key: 'account-2fa',
     question: 'Bật xác thực 2 lớp (2FA) thế nào?',
     variants: ['bật 2fa', 'bảo mật 2 lớp', 'xác thực hai bước'],
-    answer: 'dạ bạn vào Cài đặt > Bảo mật, bật xác thực 2 lớp và quét mã bằng ứng dụng xác thực (Google Authenticator…) trên điện thoại ạ. Sau đó mỗi lần đăng nhập sẽ cần thêm mã 6 số nha',
+    answer: 'dạ bạn vào Bảo mật tài khoản (/settings/bao-mat), bật xác thực 2 lớp và quét mã bằng ứng dụng xác thực (Google Authenticator…) trên điện thoại ạ. Sau đó mỗi lần đăng nhập sẽ cần thêm mã 6 số nha',
     tags: ['tài khoản'],
   },
   {
@@ -318,9 +321,9 @@ export const CHATBOT_GUIDES: BaselineQa[] = [
   {
     key: 'referral',
     question: 'Chương trình giới thiệu bạn bè hoạt động thế nào?',
-    variants: ['mã giới thiệu ở đâu', 'giới thiệu bạn bè được gì', 'hoa hồng giới thiệu', 'link giới thiệu'],
+    variants: ['mã giới thiệu ở đâu', 'giới thiệu bạn bè được gì', 'hoa hồng giới thiệu', 'link giới thiệu', 'lấy link giới thiệu ở đâu', 'chương trình giới thiệu'],
     answer:
-      'dạ bạn lấy mã / link giới thiệu ở Cài đặt > Giới thiệu và gửi cho bạn bè ạ. Khi họ đăng ký qua link và thanh toán trong thời hạn ghi nhận, bạn nhận hoa hồng theo tỉ lệ của chương trình; số người đã mời và hoa hồng cũng xem ở mục đó nha',
+      'dạ bạn vào Cài đặt > Giới thiệu (/settings/gioi-thieu), bấm sao chép link giới thiệu rồi gửi cho bạn bè ạ. Khi họ đăng ký qua link và thanh toán trong thời hạn ghi nhận, bạn nhận hoa hồng theo tỉ lệ ghi ngay trên trang đó; số người đã mời và hoa hồng cũng xem ở mục đó nha',
     tags: ['giới thiệu'],
   },
   {
@@ -367,6 +370,55 @@ export const CHATBOT_GUIDES: BaselineQa[] = [
 
 /** Câu nền đã sửa: nội dung CŨ — chỉ cập nhật khi câu trong DB còn đúng nội dung này (admin chưa sửa tay). */
 export const CHATBOT_BASELINE_REVISIONS: { key: string; previousAnswers: string[] }[] = [
+  {
+    // v5: sửa theo bộ test QA (CB-13-xx).
+    key: 'account-forgot-password',
+    previousAnswers: [
+      'dạ ở trang Đăng nhập bạn bấm "Quên mật khẩu" và nhập email, hệ thống gửi link đặt lại mật khẩu (link có hạn và chỉ dùng 1 lần) nha. Bạn cũng đổi được mật khẩu trong Cài đặt tài khoản ạ',
+    ],
+  },
+  {
+    // v5: sửa theo bộ test QA (CB-13-xx).
+    key: 'community-create',
+    previousAnswers: [
+      'dạ được ạ, bạn bấm "Tạo cộng đồng" ở thanh trên cùng, điền tên, mô tả, danh mục, công khai/riêng tư và giá. Bạn sẽ là chủ cộng đồng, tự soạn lớp học, sự kiện, mời quản trị viên và xem doanh thu nha',
+    ],
+  },
+  {
+    // v5: sửa theo bộ test QA (CB-13-xx).
+    key: 'billing-refund',
+    previousAnswers: [
+      'dạ có ạ, trong thời hạn hoàn tiền của nền tảng. Bạn gửi yêu cầu kèm thông tin giao dịch, hóa đơn sẽ hiện "Đã hoàn tiền" khi xong nha',
+    ],
+  },
+  {
+    // v5: sửa theo bộ test QA (CB-13-xx).
+    key: 'support-contact',
+    previousAnswers: [
+      'dạ bạn hỏi Tào ngay tại đây, hoặc bấm "Nhắn Zalo hỗ trợ" để gặp người hỗ trợ nha. Bạn cũng gửi được biểu mẫu ở trang Liên hệ ạ',
+    ],
+  },
+  {
+    // v5: sửa theo bộ test QA (CB-13-xx).
+    key: 'account-settings',
+    previousAnswers: [
+      'dạ bạn vào Cài đặt (bấm tên ở góc phải trên cùng): mục Hồ sơ để đổi tên, ảnh và giới thiệu; mục Bảo mật để đổi mật khẩu và email (email mới cần xác minh mới có hiệu lực) ạ. Tào chỉ hướng dẫn, không đổi thay bạn được nha',
+    ],
+  },
+  {
+    // v5: sửa theo bộ test QA (CB-13-xx).
+    key: 'account-2fa',
+    previousAnswers: [
+      'dạ bạn vào Cài đặt > Bảo mật, bật xác thực 2 lớp và quét mã bằng ứng dụng xác thực (Google Authenticator…) trên điện thoại ạ. Sau đó mỗi lần đăng nhập sẽ cần thêm mã 6 số nha',
+    ],
+  },
+  {
+    // v5: sửa theo bộ test QA (CB-13-xx).
+    key: 'referral',
+    previousAnswers: [
+      'dạ bạn lấy mã / link giới thiệu ở Cài đặt > Giới thiệu và gửi cho bạn bè ạ. Khi họ đăng ký qua link và thanh toán trong thời hạn ghi nhận, bạn nhận hoa hồng theo tỉ lệ của chương trình; số người đã mời và hoa hồng cũng xem ở mục đó nha',
+    ],
+  },
   {
     // v4: thêm cách hỏi "rời cộng đồng thế nào" (trước đây khớp nhầm câu "tạo cộng đồng thế nào").
     key: 'community-leave',
