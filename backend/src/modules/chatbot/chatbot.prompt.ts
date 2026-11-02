@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { ChatbotSettings } from './chatbot.config.js';
 import type { KnowledgeContext } from './chatbot.context.js';
+import type { ChatLanguage } from './chatbot.language.js';
 import { FORMAT_RULE, nowContext } from './chatbot.persona.js';
 import { redactPii } from './chatbot.pii.js';
 
@@ -60,15 +61,19 @@ ${FORMAT_RULE}
 - Đường dẫn trong site viết dạng tương đối (vd /tools, /settings/thanh-toan).
 - Trả lời bằng ngôn ngữ khách dùng (mặc định tiếng Việt). Chỉ trả về JSON đúng schema.`;
 
+export const ENGLISH_RULE = `Ngôn ngữ: khách đang viết TIẾNG ANH. Viết reply và suggestions hoàn toàn bằng tiếng Anh: dịch ý từ <sample_answers> / <documents> (vẫn đặt usedSampleId nếu dùng câu mẫu), giữ nguyên đường dẫn (/forgot-password...) và để tên nút/tên trang tiếng Việt trong ngoặc kép nếu cần. Không trả lời bằng tiếng Việt.`;
+
 const block = (tag: string, value: unknown) => `<${tag}>\n${typeof value === 'string' ? value : JSON.stringify(value, null, 1)}\n</${tag}>`;
 const clean = (s: string) => s.replace(/<\/?(customer_message|history|context|[a-z_]+)>/gi, ' ');
 
 export function buildAnswerPrompt(
   s: ChatbotSettings,
-  input: { firstName?: string | null; history: { role: 'user' | 'assistant'; content: string }[]; message: string; context: KnowledgeContext },
+  input: { firstName?: string | null; history: { role: 'user' | 'assistant'; content: string }[]; message: string; context: KnowledgeContext; language?: ChatLanguage },
 ): string {
   const parts = [nowContext(), RULES, `Giọng nói:\n${s.persona}`];
   if (s.extraInstructions) parts.push(`Hướng dẫn bổ sung của quản trị viên (không được trái với các nguyên tắc ở trên):\n${s.extraInstructions}`);
+  // CB-13-14: dữ liệu trong <context> là tiếng Việt; khách viết tiếng Anh thì vẫn trả lời bằng tiếng Anh.
+  if (input.language === 'en') parts.push(ENGLISH_RULE);
   if (input.firstName) parts.push(block('customer_name', clean(input.firstName).slice(0, 60)));
   const c = input.context;
   parts.push(
