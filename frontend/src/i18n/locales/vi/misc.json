@@ -25,7 +25,8 @@
       "message": "ảnh, PDF, ZIP, DOCX, XLSX, PPTX, PPT, DOC, XLS, CSV, TXT",
       "media": "ảnh JPG, PNG, WEBP, GIF hoặc video MP4",
       "video": "video MP4, WEBM hoặc MOV",
-      "slides": "PDF, PPT, PPTX hoặc PPSX"
+      "slides": "PDF, PPT, PPTX hoặc PPSX",
+      "chatImage": "ảnh JPG, PNG hoặc WEBP"
     },
     "failedStatus": "Tải tệp lên thất bại ({{status}})",
     "failed": "Tải tệp lên thất bại, vui lòng thử lại",

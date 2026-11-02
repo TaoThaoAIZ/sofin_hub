@@ -235,6 +235,8 @@ export const adminChatbotService = {
         toolCalls: m.toolCalls,
         feedback: m.feedback,
         redacted: m.redacted,
+        // Ảnh khách gửi + mô tả của AI (Platform Admin xem được file riêng tư chatbot_image).
+        attachments: Array.isArray(m.attachments) ? m.attachments : [],
         createdAt: m.createdAt.toISOString(),
       })),
     };

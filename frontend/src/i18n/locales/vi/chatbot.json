@@ -52,5 +52,10 @@
   "queued": "chờ gửi — Tào trả lời xong tin trước sẽ trả lời luôn",
   "queuePosition_zero": "Bạn là người tiếp theo, chờ chút nhé…",
   "queuePosition_one": "Đang có {{count}} người hỏi trước bạn, chờ chút nhé…",
-  "queuePosition_other": "Đang có {{count}} người hỏi trước bạn, chờ chút nhé…"
+  "queuePosition_other": "Đang có {{count}} người hỏi trước bạn, chờ chút nhé…",
+  "attachImage": "Đính kèm ảnh",
+  "removeImage": "Bỏ ảnh",
+  "uploadingImage": "Đang tải ảnh lên…",
+  "imageAlt": "Ảnh đã gửi",
+  "imageTip": "Gửi ảnh chụp màn hình lỗi để Tào xem giúp. Đừng gửi ảnh có mật khẩu, mã OTP hay số thẻ."
 }

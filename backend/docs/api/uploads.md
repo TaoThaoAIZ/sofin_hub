@@ -13,7 +13,7 @@ Module: `src/modules/uploads/`. Tất cả đường dẫn nằm dưới tiền 
 | GET | `/me/uploads` | Bearer | - | `{data:[{key,url,filename,contentType,size,purpose,createdAt}]}` | 401 |
 | DELETE | `/uploads/:key` | Bearer, chủ sở hữu hoặc Platform Admin | - | `{data:{deleted:true}}` | 401, 403, 404 |
 
-`purpose`: `post_image | post_file | avatar | cover | lesson_attachment | message_attachment`.
+`purpose`: `post_image | post_file | avatar | cover | lesson_attachment | message_attachment | chatbot_image` (+ các purpose bài học/media bên dưới).
 
 ## Luồng dùng
 
@@ -30,6 +30,7 @@ Module: `src/modules/uploads/`. Tất cả đường dẫn nằm dưới tiền 
 | cover | ảnh | `UPLOAD_MAX_COVER_MB` = 8MB |
 | post_file, lesson_attachment | pdf, zip, docx, xlsx, pptx, ppsx, doc, ppt, xls, txt, csv, mp4 | `UPLOAD_MAX_FILE_MB` = 25MB |
 | message_attachment | ảnh + pdf, zip, docx, xlsx, pptx, ppsx, doc, ppt, xls, txt, csv | 25MB |
+| chatbot_image | jpeg, png, webp (ảnh gửi cho trợ lý Tào đọc; riêng tư: chủ file + Platform Admin) | `UPLOAD_MAX_IMAGE_MB` (5MB) |
 | **lesson_video** | mp4, webm, mov (H.264) | `UPLOAD_MAX_VIDEO_MB` = **2048MB**, upload dạng **stream** |
 | **lesson_slide** | pdf, ppt, pptx, ppsx | `UPLOAD_MAX_SLIDE_MB` = 200MB, upload dạng **stream** |
 

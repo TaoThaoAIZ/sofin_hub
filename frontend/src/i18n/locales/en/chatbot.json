@@ -52,5 +52,10 @@
   "queued": "queued — Tào will answer right after the current reply",
   "queuePosition_zero": "You're next, one moment…",
   "queuePosition_one": "{{count}} people ahead of you, one moment…",
-  "queuePosition_other": "{{count}} people ahead of you, one moment…"
+  "queuePosition_other": "{{count}} people ahead of you, one moment…",
+  "attachImage": "Attach image",
+  "removeImage": "Remove image",
+  "uploadingImage": "Uploading image…",
+  "imageAlt": "Sent image",
+  "imageTip": "Send a screenshot of the error for Tào to look at. Don't send images with passwords, OTP codes or card numbers."
 }

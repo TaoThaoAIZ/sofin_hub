@@ -1,11 +1,13 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
+import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState, type ChangeEvent, type ClipboardEvent, type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { requestHandoff, sendChatMessage, sendFeedback, startConversation } from './api';
 import { ChatLauncher } from './ChatLauncher';
-import { chatErrorText, useMessageQueue } from './useMessageQueue';
+import { chatErrorText, useMessageQueue, type QueueImage } from './useMessageQueue';
+import { useFileUrl } from '../../lib/files';
+import { useUpload } from '../uploads/useUpload';
 import { useCommunityBotStatus } from '../community-bot/queries';
 import { chatbotKeys, useChatbotStatus, useCurrentConversation } from './queries';
 import type { ChatConversation, ChatMessage, Handoff, ToolCard } from './types';
@@ -38,7 +40,7 @@ export function ChatWidget() {
     <>
       {(open || mounted) && (
         // key = userId: đổi tài khoản thì dựng lại phiên chat từ đầu, không giữ state của người trước.
-        <ChatPanel key={user.id} userId={user.id} hidden={!open} onClose={close} zaloUrl={status.data.zaloSupportUrl} maxChars={status.data.maxInputChars} />
+        <ChatPanel key={user.id} userId={user.id} hidden={!open} onClose={close} zaloUrl={status.data.zaloSupportUrl} maxChars={status.data.maxInputChars} imagesEnabled={status.data.imagesEnabled ?? false} />
       )}
       {!open && (
         <Launcher
@@ -61,6 +63,8 @@ export interface Bubble extends ChatMessage {
   tools?: ToolCard[];
   /** Lựa chọn trả lời nhanh khi bot hỏi lại (chỉ hiện dưới tin mới nhất). */
   suggestions?: string[];
+  /** Ảnh vừa gửi, xem từ máy khách (blob URL) — chưa cần xin link ký từ server. */
+  localImage?: string;
 }
 
 interface PanelProps {
@@ -69,6 +73,7 @@ interface PanelProps {
   onClose: () => void;
   zaloUrl: string | null;
   maxChars: number;
+  imagesEnabled: boolean;
 }
 
 function ChatPanel(props: PanelProps) {
@@ -88,7 +93,7 @@ function ChatPanel(props: PanelProps) {
 export const PANEL_CLASS =
   'glass fixed inset-0 z-[60] flex flex-col overflow-hidden [--glass-bg:rgba(255,255,255,.92)] sm:inset-auto sm:right-6 sm:bottom-6 sm:h-[min(620px,calc(100vh-48px))] sm:w-[400px] sm:rounded-3xl';
 
-function ChatSession({ userId, hidden, onClose, zaloUrl, maxChars, initial }: PanelProps & { initial: { conversation: ChatConversation; messages: ChatMessage[] } | null }) {
+function ChatSession({ userId, hidden, onClose, zaloUrl, maxChars, imagesEnabled, initial }: PanelProps & { initial: { conversation: ChatConversation; messages: ChatMessage[] } | null }) {
   const { t } = useTranslation('chatbot');
   const qc = useQueryClient();
   // Cộng đồng khách đang xem (/communities/:id/...) — gửi kèm để Tào hiểu "cộng đồng này", "người hướng dẫn này".
@@ -105,6 +110,11 @@ function ChatSession({ userId, hidden, onClose, zaloUrl, maxChars, initial }: Pa
   const [handoff, setHandoff] = useState<Handoff | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  // Ảnh đính kèm tin sắp gửi: upload ngay khi chọn/dán, gửi được khi đã có `url`.
+  const [attached, setAttached] = useState<{ preview: string; contentType: string; url: string | null } | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const { upload, uploading } = useUpload();
+  const uploadIdRef = useRef(0);
 
   useEffect(() => {
     if (hidden) return;
@@ -178,13 +188,22 @@ function ChatSession({ userId, hidden, onClose, zaloUrl, maxChars, initial }: Pa
   /** Hàng chờ gộp tin nhắn liên tiếp (useMessageQueue): mỗi lượt gửi các tin gộp, xong thì thêm tin khách + tin bot vào danh sách. */
   const queue = useMessageQueue(
     maxChars,
-    async (text, parts, h) => {
+    async (text, parts, h, image) => {
       const conv = await ensureConversation();
       if (h.cancelled?.()) return;
-      const done = await sendChatMessage(conv.id, text, h, pageRef.current);
+      const done = await sendChatMessage(conv.id, text, h, pageRef.current, image);
       // Khách đã bấm "Cuộc mới" trong lúc chờ => câu trả lời thuộc hội thoại cũ, không chèn vào cuộc mới.
       if (h.cancelled?.()) return;
-      const userMsgs: Bubble[] = parts.map((content, i) => ({ id: `local-${done.message.id}-${i}`, role: 'user', content, answerSource: null, feedback: 0, createdAt: done.message.createdAt }));
+      // Ảnh nằm ở bong bóng đầu tiên của lượt (lượt có ảnh luôn chỉ có 1 tin).
+      const userMsgs: Bubble[] = parts.map((content, i) => ({
+        id: `local-${done.message.id}-${i}`,
+        role: 'user',
+        content,
+        answerSource: null,
+        feedback: 0,
+        createdAt: done.message.createdAt,
+        ...(image && i === 0 ? { attachments: [{ url: image.url, contentType: image.contentType }], localImage: image.preview } : {}),
+      }));
       const added: Bubble[] = [...userMsgs, { ...done.message, tools: done.tools, suggestions: done.suggestions }];
       if (!mountedRef.current) {
         // Khung chat đã bị gỡ trong lúc chờ: ghi thẳng vào bộ nhớ đệm để mở lại vẫn thấy câu hỏi + câu trả lời.
@@ -200,9 +219,10 @@ function ChatSession({ userId, hidden, onClose, zaloUrl, maxChars, initial }: Pa
       if (done.handoff) setHandoff(done.handoff);
     },
     // Lỗi: trả các tin chưa gửi về ô nhập để khách gửi lại, không mất chữ.
-    (err, unsent) => {
+    (err, unsent, image) => {
       setError(errText(err));
       setDraft((d) => [...unsent, d].filter(Boolean).join('\n').slice(0, maxChars));
+      if (image) setAttached((cur) => cur ?? { preview: image.preview, contentType: image.contentType, url: image.url });
     },
   );
   const { pending, queued } = queue;
@@ -215,10 +235,53 @@ function ChatSession({ userId, hidden, onClose, zaloUrl, maxChars, initial }: Pa
   function send(e?: FormEvent, preset?: string) {
     e?.preventDefault();
     const text = (preset ?? draft).trim();
-    if (!text) return;
+    // Gợi ý trả lời nhanh không mang ảnh đang đính kèm theo.
+    const image: QueueImage | undefined = preset === undefined && attached?.url ? { url: attached.url, contentType: attached.contentType, preview: attached.preview } : undefined;
+    if (preset === undefined && attached && !attached.url) return; // ảnh còn đang tải lên
+    if (!text && !image) return;
     setError(null);
-    if (preset === undefined) setDraft('');
-    queue.enqueue(text);
+    if (preset === undefined) {
+      setDraft('');
+      setAttached(null);
+    }
+    queue.enqueue(text, image);
+  }
+
+  /** Chọn / dán ảnh: hiện xem trước ngay, upload lên kho file (purpose chatbot_image). */
+  async function attachFile(file: File) {
+    setError(null);
+    const id = ++uploadIdRef.current;
+    const preview = URL.createObjectURL(file);
+    setAttached({ preview, contentType: file.type, url: null });
+    try {
+      const up = await upload(file, { purpose: 'chatbot_image' });
+      if (uploadIdRef.current === id) setAttached({ preview, contentType: up.contentType, url: up.url });
+    } catch (err) {
+      if (uploadIdRef.current !== id) return;
+      URL.revokeObjectURL(preview);
+      setAttached(null);
+      setError(err instanceof Error && err.message ? err.message : t('error'));
+    }
+  }
+
+  function removeAttached() {
+    uploadIdRef.current += 1; // bỏ kết quả upload đang chạy (nếu có)
+    if (attached) URL.revokeObjectURL(attached.preview);
+    setAttached(null);
+  }
+
+  function onPickFile(e: ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (f) void attachFile(f);
+  }
+
+  function onPaste(e: ClipboardEvent<HTMLTextAreaElement>) {
+    if (!imagesEnabled) return;
+    const f = Array.from(e.clipboardData.files).find((x) => x.type.startsWith('image/'));
+    if (!f) return;
+    e.preventDefault();
+    void attachFile(f);
   }
 
   async function onHandoff() {
@@ -322,14 +385,17 @@ function ChatSession({ userId, hidden, onClose, zaloUrl, maxChars, initial }: Pa
         {pending && (
           <>
             {pending.parts.map((part, i) => (
-              <MessageBubble key={`p-user-${i}`} m={{ id: `p-user-${i}`, role: 'user', content: part, answerSource: null, feedback: 0, createdAt: '' }} />
+              <MessageBubble
+                key={`p-user-${i}`}
+                m={{ id: `p-user-${i}`, role: 'user', content: part, answerSource: null, feedback: 0, createdAt: '', ...(pending.image && i === 0 ? { localImage: pending.image.preview } : {}) }}
+              />
             ))}
             <MessageBubble m={{ id: 'p-bot', role: 'assistant', content: pending.reply || (pending.ahead !== undefined ? t('queuePosition', { count: pending.ahead }) : t('typing')), answerSource: null, feedback: 0, createdAt: '' }} streaming />
           </>
         )}
         {queued.map((q, i) => (
           <div key={`q-${i}`} className="flex flex-col items-end gap-0.5 opacity-70">
-            <MessageBubble m={{ id: `q-${i}`, role: 'user', content: q, answerSource: null, feedback: 0, createdAt: '' }} />
+            <MessageBubble m={{ id: `q-${i}`, role: 'user', content: q.text, answerSource: null, feedback: 0, createdAt: '', ...(q.image ? { localImage: q.image.preview } : {}) }} />
             <span className="pr-1 text-[11px] text-stone-500">{t('queued')}</span>
           </div>
         ))}
@@ -366,7 +432,38 @@ function ChatSession({ userId, hidden, onClose, zaloUrl, maxChars, initial }: Pa
         )}
       </div>
 
+      {attached && (
+        <div className="mx-4 mb-2 flex items-center gap-2">
+          <div className="relative flex-none">
+            <img src={attached.preview} alt={t('imageAlt')} className={`size-14 rounded-xl border border-stone-200 object-cover ${attached.url ? '' : 'opacity-60'}`} />
+            <button
+              type="button"
+              onClick={removeAttached}
+              aria-label={t('removeImage')}
+              className="absolute -top-1.5 -right-1.5 grid size-5 place-items-center rounded-full bg-stone-800 text-[11px] text-white"
+            >
+              ✕
+            </button>
+          </div>
+          <p className="m-0 text-[12px] text-stone-500">{attached.url ? t('imageTip') : t('uploadingImage')}</p>
+        </div>
+      )}
       <form onSubmit={(e) => void send(e)} className="flex items-end gap-2 border-t border-[rgba(120,60,20,.1)] px-4 py-3">
+        {imagesEnabled && (
+          <>
+            <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={onPickFile} />
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+              aria-label={t('attachImage')}
+              title={t('attachImage')}
+              className="grid size-10 flex-none place-items-center rounded-2xl border border-stone-200 bg-white text-stone-500 hover:text-brand disabled:opacity-50"
+            >
+              <ImageIcon />
+            </button>
+          </>
+        )}
         <label className="sr-only" htmlFor="chatbot-input">
           {t('placeholder')}
         </label>
@@ -378,12 +475,13 @@ function ChatSession({ userId, hidden, onClose, zaloUrl, maxChars, initial }: Pa
           maxLength={maxChars}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={onKeyDown}
+          onPaste={onPaste}
           placeholder={t('placeholder')}
           className="max-h-32 min-h-10 flex-1 resize-none overflow-y-auto rounded-2xl border border-stone-200 bg-white px-3 py-2 text-sm outline-none focus:border-brand"
         />
         <button
           type="submit"
-          disabled={!draft.trim()}
+          disabled={attached ? !attached.url : !draft.trim()}
           aria-label={t('send')}
           className="bg-brand-gradient shadow-brand-chip grid size-10 flex-none place-items-center rounded-2xl text-white disabled:opacity-50"
         >
@@ -404,6 +502,11 @@ export function MessageBubble({ m, onRate, streaming }: { m: Bubble; onRate?: (v
           mine ? 'bg-brand-gradient rounded-br-md text-white' : 'rounded-bl-md bg-white text-stone-800 shadow-[0_1px_4px_rgba(120,60,20,.08)]'
         } ${streaming ? 'opacity-90' : ''}`}
       >
+        {(m.localImage || (m.attachments && m.attachments.length > 0)) && (
+          <div className={`flex flex-col gap-1.5 ${m.content ? 'mb-1.5' : ''}`}>
+            {m.localImage ? <SentImage src={m.localImage} /> : m.attachments!.map((a) => <SentImage key={a.url} url={a.url} />)}
+          </div>
+        )}
         {mine ? m.content : <RichText text={m.content} />}
       </div>
       {!mine && onRate && !streaming && (
@@ -417,6 +520,19 @@ export function MessageBubble({ m, onRate, streaming }: { m: Bubble; onRate?: (v
         </div>
       )}
     </div>
+  );
+}
+
+/** Ảnh trong bong bóng: `src` = blob URL trên máy; `url` = file riêng tư trên server (xin link ký trước khi hiện). */
+function SentImage({ src, url }: { src?: string; url?: string }) {
+  const { t } = useTranslation('chatbot');
+  const signed = useFileUrl(src ? undefined : url);
+  const href = src ?? signed;
+  if (!href) return <div className="h-24 w-40 animate-pulse rounded-xl bg-white/30" aria-label={t('imageAlt')} />;
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" className="block">
+      <img src={href} alt={t('imageAlt')} className="max-h-48 max-w-full rounded-xl object-contain" />
+    </a>
   );
 }
 
@@ -690,5 +806,12 @@ export const CloseIcon = () => (
 export const SendIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7Z" />
+  </svg>
+);
+export const ImageIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <rect x="3" y="3" width="18" height="18" rx="3" />
+    <circle cx="8.5" cy="8.5" r="1.5" />
+    <path d="m21 15-5-5L5 21" />
   </svg>
 );

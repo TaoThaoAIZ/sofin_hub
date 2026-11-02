@@ -22,7 +22,12 @@ export function setFakeHandoffReply(text: string | null) {
 let learnOverride: ((transcript: string) => unknown) | null = null;
 /** Độ trễ giả lập mỗi lượt trả lời (test khách gửi liên tục khi bot đang xử lý). */
 let answerDelayMs = env.CHATBOT_FAKE_DELAY_MS;
-export const fakeCalls: { kind: 'answer' | 'learn'; input: string }[] = [];
+export const fakeCalls: { kind: 'answer' | 'learn' | 'describe'; input: string }[] = [];
+/** Kết quả đọc ảnh giả: null = mặc định; Error = giả lập model không đọc được ảnh. */
+let describeOverride: { description: string; prohibited: boolean } | Error | null = null;
+export function setFakeDescribe(v: { description: string; prohibited: boolean } | Error | null) {
+  describeOverride = v;
+}
 
 export function setFakeReply(fn: ((userText: string) => string) | null) {
   replyOverride = fn;
@@ -38,6 +43,7 @@ export function resetFake() {
   answerDelayMs = env.CHATBOT_FAKE_DELAY_MS;
   replyOverride = null;
   learnOverride = null;
+  describeOverride = null;
   fakeCalls.length = 0;
 }
 
@@ -108,6 +114,11 @@ export class FakeChatModel implements ChatLlm {
             return { pairs: q && a ? [{ question: q, answer: a.replace(/ \[khách [^\]]+\]$/, ''), confidence: 0.9, generalizable: true }] : [] };
           })();
       return { output: req.schema.parse(raw), usage: USAGE };
+    }
+    if (req.kind === 'describe') {
+      fakeCalls.push({ kind: 'describe', input: String(req.images?.length ?? 0) });
+      if (describeOverride instanceof Error) throw describeOverride;
+      return { output: req.schema.parse(describeOverride ?? { description: 'Ảnh chụp màn hình báo lỗi "unusual activity" khi dùng tool', prohibited: false }), usage: USAGE };
     }
     const h = req.hint as { message: string; context: KnowledgeContext; community?: CommunityContext };
     fakeCalls.push({ kind: 'answer', input: h.message });

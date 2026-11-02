@@ -337,6 +337,8 @@ enum UploadPurpose {
   lesson_video
   /// Slide bài giảng (pdf/ppt/pptx/ppsx).
   lesson_slide
+  /// Ảnh khách gửi cho chatbot Tào (jpeg/png/webp, riêng tư: chỉ người gửi + Platform Admin xem).
+  chatbot_image
 }
 
 enum UploadStatus {
@@ -2187,6 +2189,8 @@ model ChatbotMessage {
   feedback       Int                  @default(0)
   /// Tin chứa thông tin cá nhân (SĐT, email, STK...) => không dùng để học.
   redacted       Boolean              @default(false)
+  /// Ảnh khách gửi kèm: [{url, contentType, description}] (description = mô tả của AI, dùng làm lịch sử cho lượt sau).
+  attachments    Json?
   createdAt      DateTime             @default(now())
 
   conversation ChatbotConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)

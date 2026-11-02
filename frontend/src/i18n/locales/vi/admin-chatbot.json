@@ -110,6 +110,8 @@
     "maxHistory": "Số tin lịch sử gửi cho AI",
     "maxInputChars": "Độ dài tối đa mỗi tin",
     "dailyMessagesPerUser": "Số tin tối đa mỗi người / ngày (0 = không giới hạn)",
+    "imagesEnabled": "Cho khách gửi ảnh (ảnh chụp lỗi, màn hình) để Tào đọc",
+    "dailyImagesPerUser": "Số ảnh tối đa mỗi người / ngày (0 = không giới hạn)",
     "zaloHandoffText": "Câu bot nói khi chuyển Zalo ({code} = mã hỗ trợ)",
     "refusalText": "Câu từ chối khi hỏi ngoài phạm vi",
     "persona": "Giọng nói",
@@ -157,5 +159,7 @@
     "securityLink": "Mở ChatGPT > Settings > Security"
   },
   "quota": "Tài khoản ChatGPT của chatbot đã HẾT HẠN MỨC ({{time}}): khách đang nhận câu \"tạm quá tải\" và được mời nhắn Zalo. Câu khớp câu mẫu vẫn trả lời bình thường. Chờ hạn mức hồi hoặc đăng nhập tài khoản gói cao hơn ở tab Cài đặt. Chi tiết: {{message}}",
-  "baselineMissing": "Chưa nạp dữ liệu nền của chatbot (bản v{{current}}, DB đang: {{loaded}}): câu mẫu và tài liệu đi kèm hệ thống chưa có. Người vận hành chạy lệnh trên server: `npm run chatbot:baseline` (Docker: `docker compose exec backend node dist/cli/chatbot-baseline.js`). Câu admin đã sửa không bị ghi đè."
+  "baselineMissing": "Chưa nạp dữ liệu nền của chatbot (bản v{{current}}, DB đang: {{loaded}}): câu mẫu và tài liệu đi kèm hệ thống chưa có. Người vận hành chạy lệnh trên server: `npm run chatbot:baseline` (Docker: `docker compose exec backend node dist/cli/chatbot-baseline.js`). Câu admin đã sửa không bị ghi đè.",
+  "imageDescription": "AI đọc ảnh: {{text}}",
+  "imageUnread": "AI chưa đọc được ảnh này"
 }

@@ -11,7 +11,8 @@ export type UploadPurpose =
   | 'message_attachment'
   | 'community_media'
   | 'lesson_video'
-  | 'lesson_slide';
+  | 'lesson_slide'
+  | 'chatbot_image';
 
 export interface UploadedFile {
   /** Đường dẫn file do BE trả (vd. "/api/files/<key>") — lưu nguyên giá trị này vào bài viết/tin nhắn/avatar. */
@@ -46,7 +47,7 @@ const SLIDES = [
   'application/vnd.ms-powerpoint',
 ];
 
-type Label = 'images' | 'files' | 'message' | 'media' | 'video' | 'slides';
+type Label = 'images' | 'files' | 'message' | 'media' | 'video' | 'slides' | 'chatImage';
 
 // Khớp bảng whitelist ở backend (uploads.types.ts) — chỉ để báo lỗi sớm; BE vẫn kiểm tra lại. Giới hạn video/slide khớp UPLOAD_MAX_VIDEO_MB / UPLOAD_MAX_SLIDE_MB.
 const RULES: Record<UploadPurpose, { types: string[]; maxMb: number; label: Label; anyType?: boolean }> = {
@@ -59,6 +60,8 @@ const RULES: Record<UploadPurpose, { types: string[]; maxMb: number; label: Labe
   community_media: { types: [...IMAGES, 'video/mp4'], maxMb: 2048, label: 'media' },
   lesson_video: { types: LESSON_VIDEOS, maxMb: 2048, label: 'video' },
   lesson_slide: { types: SLIDES, maxMb: 2048, label: 'slides' },
+  // Ảnh gửi cho trợ lý Tào đọc (khớp backend: không gif).
+  chatbot_image: { types: ['image/jpeg', 'image/png', 'image/webp'], maxMb: 5, label: 'chatImage' },
 };
 
 /** Trình duyệt hay trả type rỗng/octet-stream cho Office cũ, ppsx, csv, mov...: suy từ đuôi tệp. */

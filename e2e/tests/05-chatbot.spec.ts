@@ -225,6 +225,23 @@ test.describe('Chatbot hỗ trợ', () => {
     expect(created).toBe(0);
   });
 
+  test('TC-CHATBOT-016: gửi ảnh chụp lỗi kèm câu hỏi => ảnh hiện trong khung chat, Tào trả lời, F5 vẫn thấy ảnh', async ({ page }) => {
+    const PNG = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(32, 1)]);
+    await uiLogin(page, 'member1@sofinhub.test');
+    const panel = await openWidget(page);
+    await panel.locator('input[type=file]').setInputFiles({ name: 'loi.png', mimeType: 'image/png', buffer: PNG });
+    // Upload xong => hiện lời nhắc (không gửi ảnh có mật khẩu/OTP), nút Gửi bấm được.
+    await expect(panel.getByText(/Gửi ảnh chụp màn hình lỗi/)).toBeVisible();
+    await ask(panel, 'lỗi này là sao');
+    await expect(panel.getByRole('img', { name: 'Ảnh đã gửi' })).toHaveCount(1);
+    await expect(panel.getByText('Tào đang trả lời…')).toHaveCount(0, { timeout: 15_000 });
+    await expect(panel.getByRole('alert')).toHaveCount(0);
+    await expect(panel.getByText('lỗi này là sao', { exact: true })).toBeVisible();
+    await page.reload();
+    await page.getByRole('button', { name: 'Mở trợ lý hỗ trợ' }).click();
+    await expect(page.getByRole('dialog', { name: /trợ lý SofinHub/ }).getByRole('img', { name: 'Ảnh đã gửi' })).toHaveCount(1);
+  });
+
   test('TC-CHATBOT-006: admin xem trang Chatbot (kho mẫu, chờ duyệt, cài đặt)', async ({ page }) => {
     await uiLogin(page, 'admin@sofinhub.test');
     await page.goto('/admin/support/chatbot');

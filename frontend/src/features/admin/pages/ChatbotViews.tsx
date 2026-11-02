@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { useSearchParams } from 'react-router-dom';
 import { formatDateTime, formatRelative } from '../../../lib/datetime';
+import { useFileUrl } from '../../../lib/files';
 import { useDialogSlot, useTableState } from '../components/Batch2Parts';
 import { KpiGrid, type Kpi } from '../components/Cards';
 import { DataTable, MainCell, MutedCell, TextCell, type Column, type RowAction } from '../components/DataTable';
@@ -72,7 +73,7 @@ interface ConvDetail {
   ticketCode: string | null;
   tokensIn: number;
   tokensOut: number;
-  messages: { id: string; role: 'user' | 'assistant'; content: string; answerSource: string | null; feedback: number; redacted: boolean; toolCalls: { name: string }[] | null; createdAt: string }[];
+  messages: { id: string; role: 'user' | 'assistant'; content: string; answerSource: string | null; feedback: number; redacted: boolean; toolCalls: { name: string }[] | null; attachments?: { url: string; description: string | null }[]; createdAt: string }[];
 }
 interface Settings {
   enabled: boolean;
@@ -81,6 +82,8 @@ interface Settings {
   maxHistory: number;
   maxInputChars: number;
   dailyMessagesPerUser: number;
+  imagesEnabled: boolean;
+  dailyImagesPerUser: number;
   refusalText: string;
   persona: string;
   extraInstructions: string;
@@ -454,6 +457,24 @@ function ConversationsTab() {
   );
 }
 
+/** Ảnh khách gửi trong hội thoại (file riêng tư: xin link ký) + mô tả AI đã đọc được. */
+function AdminChatImage({ url, description }: { url: string; description: string | null }) {
+  const { t } = useTranslation('admin-chatbot');
+  const href = useFileUrl(url);
+  return (
+    <div className="mb-1.5 flex flex-col gap-1">
+      {href ? (
+        <a href={href} target="_blank" rel="noopener noreferrer">
+          <img src={href} alt="" className="max-h-40 max-w-full rounded-xl object-contain" />
+        </a>
+      ) : (
+        <div className="h-20 w-32 animate-pulse rounded-xl bg-stone-200" />
+      )}
+      <span className="text-[12px] text-stone-500 italic">{description ? t('imageDescription', { text: description }) : t('imageUnread')}</span>
+    </div>
+  );
+}
+
 function ConversationDialog({ id, onClose }: { id: string; onClose: () => void }) {
   const { t } = useTranslation('admin-chatbot');
   const d = useAdminData<ConvDetail>('chatbot', `${B}/conversations/${id}`);
@@ -468,7 +489,10 @@ function ConversationDialog({ id, onClose }: { id: string; onClose: () => void }
         <div className="flex max-h-[55vh] flex-col gap-2.5 overflow-y-auto rounded-2xl bg-stone-50 p-3">
           {c?.messages.map((m) => (
             <div key={m.id} className={`flex flex-col gap-0.5 ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
-              <div className={`max-w-[88%] rounded-2xl px-3 py-2 text-[13.5px] whitespace-pre-wrap ${m.role === 'user' ? 'bg-[#fff1e6] text-stone-800' : 'bg-white text-stone-800 shadow-sm'}`}>{m.content}</div>
+              <div className={`max-w-[88%] rounded-2xl px-3 py-2 text-[13.5px] whitespace-pre-wrap ${m.role === 'user' ? 'bg-[#fff1e6] text-stone-800' : 'bg-white text-stone-800 shadow-sm'}`}>
+                {m.attachments?.map((a) => <AdminChatImage key={a.url} url={a.url} description={a.description} />)}
+                {m.content}
+              </div>
               <span className="px-1 text-[11.5px] text-stone-400">
                 {formatDateTime(m.createdAt)}
                 {m.answerSource ? ` · ${t(`answerSource.${m.answerSource}`)}` : ''}
@@ -504,7 +528,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
   const act = useAdminAction();
   const [s, setS] = useState<Settings>(initial);
   const set = <K extends keyof Settings>(k: K) => (v: Settings[K]) => setS((o) => ({ ...o, [k]: v }));
-  const num = (k: 'directThreshold' | 'maxHistory' | 'maxInputChars' | 'dailyMessagesPerUser') => (v: string) => set(k)(Number(v.replace(',', '.')) || 0);
+  const num = (k: 'directThreshold' | 'maxHistory' | 'maxInputChars' | 'dailyMessagesPerUser' | 'dailyImagesPerUser') => (v: string) => set(k)(Number(v.replace(',', '.')) || 0);
 
   const save = () => {
     const changed = Object.fromEntries(Object.entries(s).filter(([k, v]) => initial[k as keyof Settings] !== v));
@@ -533,7 +557,9 @@ function SettingsForm({ initial }: { initial: Settings }) {
         <InputField label={t('settings.maxHistory')} value={String(s.maxHistory)} onChange={num('maxHistory')} />
         <InputField label={t('settings.maxInputChars')} value={String(s.maxInputChars)} onChange={num('maxInputChars')} />
         <InputField label={t('settings.dailyMessagesPerUser')} value={String(s.dailyMessagesPerUser)} onChange={num('dailyMessagesPerUser')} />
+        <InputField label={t('settings.dailyImagesPerUser')} value={String(s.dailyImagesPerUser)} onChange={num('dailyImagesPerUser')} />
       </div>
+      <CheckField text={t('settings.imagesEnabled')} checked={s.imagesEnabled} onChange={set('imagesEnabled')} />
       <TextArea label={t('settings.zaloHandoffText')} value={s.zaloHandoffText} onChange={set('zaloHandoffText')} rows={2} maxLength={500} />
       <TextArea label={t('settings.refusalText')} value={s.refusalText} onChange={set('refusalText')} rows={2} maxLength={500} />
       <TextArea label={t('settings.persona')} value={s.persona} onChange={set('persona')} rows={5} maxLength={4000} />

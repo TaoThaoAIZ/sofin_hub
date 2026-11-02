@@ -8,6 +8,7 @@ import { chatbotAvailable, chatbotSettings, type ChatbotSettings } from './chatb
 import { conversationRepository } from './chatbot.conversations.js';
 import { qaCoversQuery } from './chatbot.keywords.js';
 import { detectLanguage, retrievalText } from './chatbot.language.js';
+import { describeImage, imageMarker, resolveChatImage, withImageMarker, type ChatAttachment, type ChatImage } from './chatbot.images.js';
 import { checkOutput, type OutputViolation } from './chatbot.guardrails.js';
 import { moderate, moderationReply } from './chatbot.moderation.js';
 import { containsPii } from './chatbot.pii.js';
@@ -55,6 +56,8 @@ export const messageView = (m: ChatbotMessage) => ({
   content: m.content,
   answerSource: m.answerSource,
   feedback: m.feedback,
+  // Ảnh khách gửi kèm (link riêng tư /api/files/<key>; mô tả của AI chỉ dùng nội bộ).
+  attachments: Array.isArray(m.attachments) ? (m.attachments as unknown as ChatAttachment[]).map((a) => ({ url: a.url, contentType: a.contentType })) : [],
   createdAt: m.createdAt.toISOString(),
 });
 export type MessageView = ReturnType<typeof messageView>;
@@ -64,6 +67,8 @@ const SAFE_TEXT: Record<OutputViolation, string> = {
   // Chung cho giá khóa học lẫn tool (trước đây chỉ nói tool => khách hỏi giá khóa học thấy lạc đề).
   unsourced_amount: 'dạ phần số tiền này Tào chưa có thông tin chính xác ạ. Giá khóa học bạn xem ở trang của khóa đó, giá tool thì bấm "Mua ngay" ở trang /tools hoặc nhắn Zalo hỗ trợ nha',
 };
+const IMAGE_UNREADABLE_TEXT = 'dạ Tào chưa đọc được ảnh này ạ, bạn mô tả bằng chữ (hoặc chép dòng báo lỗi) giúp Tào nha';
+const IMAGE_PROHIBITED_TEXT = 'dạ ảnh này có nội dung không phù hợp nên Tào không xử lý được ạ. Bạn cần hỗ trợ gì về SofinHub thì nhắn Tào nha';
 const ERROR_TEXT = 'dạ Tào đang gặp trục trặc một chút, bạn thử lại sau ít phút hoặc nhắn Zalo hỗ trợ nha';
 const BUSY_TEXT = 'dạ hiện nhiều bạn hỏi cùng lúc quá, bạn thử lại sau ít giây hoặc nhắn Zalo hỗ trợ nha';
 const QUOTA_TEXT = 'dạ hiện Tào đang tạm quá tải, bạn thử lại sau ít phút hoặc bấm "Nhắn Zalo hỗ trợ" để gặp người hỗ trợ ngay nha';
@@ -145,9 +150,15 @@ export async function lockConversation(conversationId: string): Promise<() => Pr
 type OwnedConversation = Awaited<ReturnType<typeof ownedConversation>>;
 
 /** B2-B4 của một lượt (đã qua kiểm tra + đang giữ khóa hội thoại). */
-async function answerTurn(userId: string, conv: OwnedConversation, text: string, s: ChatbotSettings, emit: (e: ChatEvent) => void, pageCommunityId?: string): Promise<DoneData> {
+async function answerTurn(userId: string, conv: OwnedConversation, text: string, s: ChatbotSettings, emit: (e: ChatEvent) => void, pageCommunityId?: string, image?: ChatImage): Promise<DoneData> {
   const viewer = await viewerOf(userId);
-  await conversationRepository.addMessage(conv.id, { role: 'user', content: text, redacted: containsPii(text) });
+  // Tin có ảnh: redacted (ảnh có thể chứa thông tin cá nhân => không dùng để học).
+  const userMsg = await conversationRepository.addMessage(conv.id, {
+    role: 'user',
+    content: text,
+    redacted: containsPii(text) || Boolean(image),
+    ...(image ? { attachments: [{ url: image.url, contentType: image.contentType, description: null }] } : {}),
+  });
 
   const finish = async (
     content: string,
@@ -174,11 +185,43 @@ async function answerTurn(userId: string, conv: OwnedConversation, text: string,
     return finish(reply, 'refusal', { toolCalls: [{ name: 'moderation', category: mod.category }] });
   }
 
+  // Ảnh (học từ bot-cskh): model đọc ảnh => mô tả tiếng Việt, ghép vào tin của khách rồi đi tiếp luồng chữ.
+  let turnText = text;
+  let imageUsage: { tokensIn: number; tokensOut: number } | undefined;
+  if (image) {
+    let description: string | null = null;
+    try {
+      const d = await describeImage(image, { ...(s.model ? { model: s.model } : {}), onQueued: (ahead) => emit({ event: 'queued', data: { ahead } }) });
+      imageUsage = d.usage;
+      if (d.prohibited) {
+        await conversationRepository.setAttachments(userMsg.id, [{ url: image.url, contentType: image.contentType, description: 'ảnh có nội dung không phù hợp' }]);
+        emit({ event: 'delta', data: { text: IMAGE_PROHIBITED_TEXT } });
+        return finish(IMAGE_PROHIBITED_TEXT, 'refusal', { usage: d.usage, toolCalls: [{ name: 'image', prohibited: true }] });
+      }
+      description = d.description || null;
+    } catch (e) {
+      if (e instanceof LlmQuotaError || e instanceof LlmBusyError) {
+        const t = e instanceof LlmQuotaError ? QUOTA_TEXT : BUSY_TEXT;
+        emit({ event: 'delta', data: { text: t } });
+        return finish(t, 'error');
+      }
+      console.error('[chatbot] đọc ảnh khách gửi lỗi:', e instanceof Error ? e.message : e);
+    }
+    await conversationRepository.setAttachments(userMsg.id, [{ url: image.url, contentType: image.contentType, description }]);
+    // Không đọc được ảnh mà khách không gõ gì => xin khách mô tả bằng chữ, không đoán.
+    if (!description && !text) {
+      emit({ event: 'delta', data: { text: IMAGE_UNREADABLE_TEXT } });
+      return finish(IMAGE_UNREADABLE_TEXT, 'error', { ...(imageUsage ? { usage: imageUsage } : {}), toolCalls: [{ name: 'image', described: false }] });
+    }
+    turnText = [text, imageMarker(description)].filter(Boolean).join(' ');
+  }
+
   // B2: khớp trực tiếp câu hỏi mẫu — trừ câu hỏi về dữ liệu của CHÍNH khách ("tôi đã tham gia cộng đồng nào"): câu mẫu là câu chung, dễ khớp nhầm "cách tham gia".
   // Chỉ trả thẳng khi câu mẫu chứa ĐỦ từ khóa của khách (trigram coi "rời cộng đồng" ~ "tạo cộng đồng"); xét 3 câu đầu.
   // Câu hỏi tiếng Anh (CB-13-14): câu mẫu là tiếng Việt nên không trả thẳng; tra cứu bằng từ khóa tiếng Việt tương ứng rồi để AI trả lời tiếng Anh.
+  // Có ảnh: trả lời theo nội dung ảnh, không trả thẳng câu mẫu.
   const language = detectLanguage(text);
-  const candidates = isPersonalTopic(text) || language === 'en' ? [] : await chatbotRepository.matchQa(text, { limit: 3, order: 'similarity' });
+  const candidates = isPersonalTopic(text) || language === 'en' || image ? [] : await chatbotRepository.matchQa(text, { limit: 3, order: 'similarity' });
   const top = candidates.find((q) => q.similarity >= s.directThreshold && qaCoversQuery(text, q));
   if (top) {
     void chatbotRepository.recordHit(top.id);
@@ -187,13 +230,17 @@ async function answerTurn(userId: string, conv: OwnedConversation, text: string,
   }
 
   // B3: gom ngữ cảnh + gọi Codex (1 lượt, JSON).
-  const history = (await conversationRepository.recentMessages(conv.id, s.maxHistory + 1)).slice(0, -1).map((m) => ({ role: m.role, content: m.content }));
+  const history = (await conversationRepository.recentMessages(conv.id, s.maxHistory + 1)).slice(0, -1).map((m) => ({ role: m.role, content: withImageMarker(m.content, m.attachments) }));
   const ctx: ChatContext = { userId, conversationId: conv.id, viewer, ...(pageCommunityId ? { pageCommunityId } : {}) };
   try {
-    const context = await gatherContext(ctx, retrievalText(text, language), history.filter((m) => m.role === 'user').map((m) => retrievalText(m.content)));
-    const prompt = buildAnswerPrompt(s, { firstName: viewer.firstName, history, message: text, context, language });
-    const { output, usage } = await chatLlm().complete({ kind: 'answer', prompt, schema: answerSchema, hint: { message: text, context }, model: s.model || undefined, onQueued: (ahead) => emit({ event: 'queued', data: { ahead } }) });
-    const toolCalls = contextTrace(context, output.toolIds, prompt);
+    const context = await gatherContext(ctx, retrievalText(turnText, language), history.filter((m) => m.role === 'user').map((m) => retrievalText(m.content)));
+    const prompt = buildAnswerPrompt(s, { firstName: viewer.firstName, history, message: turnText, context, language });
+    const answered = await chatLlm().complete({ kind: 'answer', prompt, schema: answerSchema, hint: { message: turnText, context }, model: s.model || undefined, onQueued: (ahead) => emit({ event: 'queued', data: { ahead } }) });
+    const output = answered.output;
+    // Lượt có ảnh = 2 lần gọi model (đọc ảnh + trả lời): cộng cả hai vào số token của hội thoại.
+    const usage = imageUsage ? { tokensIn: answered.usage.tokensIn + imageUsage.tokensIn, tokensOut: answered.usage.tokensOut + imageUsage.tokensOut } : answered.usage;
+    const traced = contextTrace(context, output.toolIds, prompt);
+    const toolCalls = (image ? [{ name: 'image', described: turnText !== text }, ...(traced as Prisma.InputJsonArray)] : traced) as Prisma.InputJsonValue;
     const matchedQaId = context.sampleAnswers.some((q) => q.id === output.usedSampleId) ? output.usedSampleId : null;
 
     if (!output.onTopic || output.injection) {
@@ -201,12 +248,12 @@ async function answerTurn(userId: string, conv: OwnedConversation, text: string,
       return finish(s.refusalText, 'refusal', { usage, toolCalls });
     }
     let reply = output.reply.trim();
-    const sources = sourcesOf(context, text);
+    const sources = sourcesOf(context, turnText);
     const violation = checkOutput(reply, sources);
     if (violation) reply = SAFE_TEXT[violation];
     let handoff: HandoffResult | null = null;
     if (output.handoff) {
-      handoff = await handoffToZalo(ctx, { reason: output.handoffReason || text, category: output.handoffCategory });
+      handoff = await handoffToZalo(ctx, { reason: output.handoffReason || turnText, category: output.handoffCategory });
       // Câu trả lời đã mời nhắn Zalo => không nối thêm (mã hỗ trợ hiện ở dải dưới khung chat); chưa có => nối câu hướng dẫn kèm mã.
       reply = !reply ? handoff.message : /zalo/i.test(reply) ? reply : `${reply}\n${handoff.message}`;
     }
@@ -227,7 +274,7 @@ export const chatbotService = {
   /** Trạng thái widget: có bật không + link Zalo (để hiện nút ngay cả khi chưa chat). */
   status() {
     const s = chatbotSettings();
-    return { available: chatbotAvailable(s), zaloSupportUrl: s.zaloSupportUrl || null, maxInputChars: s.maxInputChars };
+    return { available: chatbotAvailable(s), zaloSupportUrl: s.zaloSupportUrl || null, maxInputChars: s.maxInputChars, imagesEnabled: s.imagesEnabled };
   },
 
   async startConversation(userId: string) {
@@ -244,11 +291,19 @@ export const chatbotService = {
     return { conversation: convView(c), messages: messages.map(messageView) };
   },
 
-  async sendMessage(userId: string, conversationId: string, rawText: string, emit: (e: ChatEvent) => void, opts: { pageCommunityId?: string } = {}): Promise<DoneData> {
+  async sendMessage(
+    userId: string,
+    conversationId: string,
+    rawText: string,
+    emit: (e: ChatEvent) => void,
+    opts: { pageCommunityId?: string; image?: { url: string } } = {},
+  ): Promise<DoneData> {
     assertAvailable();
     const s = chatbotSettings();
     const text = rawText.trim();
-    if (!text) throw HttpError.badRequest('Vui lòng nhập nội dung');
+    // Gửi ảnh thì được để trống chữ.
+    if (!text && !opts.image) throw HttpError.badRequest('Vui lòng nhập nội dung');
+    if (opts.image && !s.imagesEnabled) throw new HttpError(400, 'CHATBOT_IMAGES_DISABLED', 'Trợ lý chưa nhận ảnh, bạn mô tả bằng chữ giúp Tào nha');
     if (text.length > s.maxInputChars) throw HttpError.badRequest(`Tin nhắn tối đa ${s.maxInputChars} ký tự`);
     const conv = await ownedConversation(conversationId, userId);
     if (conv.status === 'closed') throw HttpError.conflict('Hội thoại đã đóng, vui lòng bắt đầu hội thoại mới');
@@ -258,10 +313,17 @@ export const chatbotService = {
         throw HttpError.tooMany('Bạn đã hỏi rất nhiều hôm nay, vui lòng thử lại sau hoặc nhắn Zalo hỗ trợ');
       }
     }
+    if (opts.image && s.dailyImagesPerUser > 0) {
+      const since = new Date(Date.now() - 24 * 3600_000);
+      if ((await conversationRepository.countUserImagesSince(userId, since)) >= s.dailyImagesPerUser) {
+        throw new HttpError(429, 'CHATBOT_IMAGE_LIMIT', `Hôm nay bạn đã gửi ${s.dailyImagesPerUser} ảnh rồi, bạn mô tả bằng chữ giúp Tào nha`);
+      }
+    }
+    const image = opts.image ? await resolveChatImage(userId, opts.image.url) : undefined;
     // Khóa theo hội thoại: khách bấm gửi liên tục / mở 2 tab => không gọi AI song song trên cùng hội thoại (lịch sử lẫn, trả lời lộn thứ tự).
     const release = await lockConversation(conv.id);
     try {
-      return await answerTurn(userId, conv, text, s, emit, opts.pageCommunityId);
+      return await answerTurn(userId, conv, text, s, emit, opts.pageCommunityId, image);
     } finally {
       await release();
     }

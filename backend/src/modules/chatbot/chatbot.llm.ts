@@ -24,9 +24,11 @@ export interface LlmUsage {
 }
 
 export interface LlmRequest<T> {
-  /** answer = trả lời khách; learn = trích xuất tri thức (job học). */
-  kind: 'answer' | 'learn';
+  /** answer = trả lời khách; learn = trích xuất tri thức (job học); describe = đọc ảnh khách gửi. */
+  kind: 'answer' | 'learn' | 'describe';
   prompt: string;
+  /** Đường dẫn tuyệt đối tới ảnh gửi kèm (file tạm), Codex đọc qua đầu vào local_image. */
+  images?: string[];
   schema: z.ZodType<T>;
   /** Dữ liệu có cấu trúc đi kèm prompt — model giả dùng để dựng câu trả lời xác định (model thật bỏ qua). */
   hint?: unknown;
@@ -275,7 +277,8 @@ export class CodexLlm implements ChatLlm {
         modelReasoningEffort: 'low',
       });
       const signal = req.signal ? AbortSignal.any([req.signal, AbortSignal.timeout(env.CHATBOT_TIMEOUT_MS)]) : AbortSignal.timeout(env.CHATBOT_TIMEOUT_MS);
-      const turn = await thread.run(req.prompt, { outputSchema: jsonSchemaOf(req.schema), signal });
+      const input = req.images?.length ? [{ type: 'text' as const, text: req.prompt }, ...req.images.map((path) => ({ type: 'local_image' as const, path }))] : req.prompt;
+      const turn = await thread.run(input, { outputSchema: jsonSchemaOf(req.schema), signal });
       const used = turn.items.filter((i) => i.type === 'command_execution' || i.type === 'file_change' || i.type === 'mcp_tool_call' || i.type === 'web_search');
       if (used.length) console.warn(`[chatbot] Codex đã cố dùng tool (${used.map((i) => i.type).join(', ')}) — bỏ qua, chỉ lấy câu trả lời`);
       const raw = turn.finalResponse.trim();
